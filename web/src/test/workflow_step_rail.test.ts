@@ -1,40 +1,68 @@
 import { describe, it, expect } from 'vitest';
 import { CANONICAL_JOURNEY_STEPS } from '../components/jobs/WorkflowStepRail';
-import { COMMAND_SEATS } from '../../../contracts/commands';
+import { COMMAND_SEATS, CommandName } from '../../../contracts/commands';
 
 describe('SERP-146 & SERP-145 — 13-Step Workflow Journey Rail & Seat Signpost', () => {
-  it('SERP-146: All canonical journey steps map to valid required seats from COMMAND_SEATS', () => {
-    expect(CANONICAL_JOURNEY_STEPS.length).toBeGreaterThanOrEqual(9);
+  it('SERP-146: Workflow journey contains EXACTLY 13 canonical operational steps', () => {
+    // Acceptance criterion: exactly 13 steps visible on the journey rail
+    expect(CANONICAL_JOURNEY_STEPS).toHaveLength(13);
 
-    CANONICAL_JOURNEY_STEPS.forEach((step) => {
-      expect(step.code).toBeDefined();
+    const expectedCodes: CommandName[] = [
+      'CALL',
+      'BOOKING',
+      'INTAKE',
+      'ESTIMATE',
+      'AUTHORISATION',
+      'JOB_CARD',
+      'PARTS_PROCUREMENT',
+      'WORK',
+      'QC',
+      'HANDOVER',
+      'INVOICE',
+      'INVOICE_PAYMENT',
+      'CLOSE',
+    ];
+
+    CANONICAL_JOURNEY_STEPS.forEach((step, index) => {
+      expect(step.code).toBe(expectedCodes[index]);
       expect(step.name).toBeDefined();
-      expect(step.requiredSeat).toBeDefined();
-      expect(step.roleName).toBeDefined();
+      expect(step.roleLabel).toBeDefined();
 
-      // Verify seat code is a legal seat code in the authorization matrix
-      expect(['counter', 'estimator', 'technician', 'qc_signer', 'financial_controller', 'owner']).toContain(step.requiredSeat);
+      // Required seats must exactly match the canonical authorization source COMMAND_SEATS
+      expect(step.requiredSeats).toEqual(COMMAND_SEATS[step.code]);
     });
   });
 
-  it('SERP-146: Workflow journey correctly partitions counter, technician, and QC signer seats', () => {
-    const intakeStep = CANONICAL_JOURNEY_STEPS.find((s) => s.code === 'CHECK_IN')!;
-    expect(intakeStep.requiredSeat).toBe('counter');
+  it('SERP-146: Step seats partition correctly across counter, technician, and qc_signer roles', () => {
+    const intakeStep = CANONICAL_JOURNEY_STEPS.find((s) => s.code === 'INTAKE')!;
+    expect(intakeStep.requiredSeats).toContain('counter');
 
-    const prepStep = CANONICAL_JOURNEY_STEPS.find((s) => s.code === 'SURFACE_PREP')!;
-    expect(prepStep.requiredSeat).toBe('technician');
+    const partsStep = CANONICAL_JOURNEY_STEPS.find((s) => s.code === 'PARTS_PROCUREMENT')!;
+    expect(partsStep.requiredSeats).toContain('technician');
 
-    const qcStep = CANONICAL_JOURNEY_STEPS.find((s) => s.code === 'QC_DETAIL')!;
-    expect(qcStep.requiredSeat).toBe('qc_signer');
+    const workStep = CANONICAL_JOURNEY_STEPS.find((s) => s.code === 'WORK')!;
+    expect(workStep.requiredSeats).toContain('technician');
 
-    const handoverStep = CANONICAL_JOURNEY_STEPS.find((s) => s.code === 'READY_DELIVERY')!;
-    expect(handoverStep.requiredSeat).toBe('counter');
+    const qcStep = CANONICAL_JOURNEY_STEPS.find((s) => s.code === 'QC')!;
+    expect(qcStep.requiredSeats).toContain('qc_signer');
+
+    const handoverStep = CANONICAL_JOURNEY_STEPS.find((s) => s.code === 'HANDOVER')!;
+    expect(handoverStep.requiredSeats).toContain('counter');
+
+    const closeStep = CANONICAL_JOURNEY_STEPS.find((s) => s.code === 'CLOSE')!;
+    expect(closeStep.requiredSeats).toContain('counter');
   });
 
   it('SERP-145: Seat signpost enforces counter/manager seat requirement for empty bay intake', () => {
     const checkCanCreateJob = (roleCode: string, permissions: string[]) => {
       const isSuperAdmin = roleCode === 'superadmin' || roleCode === 'owner';
-      return isSuperAdmin || permissions.includes('jobs') || permissions.includes('all') || roleCode === 'sales' || roleCode === 'manager';
+      return (
+        isSuperAdmin ||
+        permissions.includes('jobs') ||
+        permissions.includes('all') ||
+        roleCode === 'sales' ||
+        roleCode === 'manager'
+      );
     };
 
     // Counter / Service Advisor can create jobs
