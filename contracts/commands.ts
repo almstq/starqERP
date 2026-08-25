@@ -960,6 +960,7 @@ export const ERROR_CODES = [
   'audience_mismatch',
   'rate_limited',
   'statutory_reconciliation_required',
+  'ai_copilot_disabled',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
@@ -1751,6 +1752,32 @@ export function validateCompositeForeignKeyIntegrity(
     return no('cross_tenant_denied');
   }
   return OK;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-168: AI Copilot Proxy & Tenant Isolation Boundaries
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface AICopilotProxyRequest {
+  readonly tenantId: Uuid;
+  readonly userId: Uuid;
+  readonly prompt: string;
+  readonly retrievedDocOrgIds: readonly Uuid[];
+  readonly featureFlagEnabled?: boolean;
+}
+
+export function validateAICopilotProxyRequest(req: AICopilotProxyRequest): Decision {
+  if (!req.tenantId) return no('tenant_not_resolved');
+  if (!req.userId) return no('tenant_not_resolved');
+  if (!req.prompt || req.prompt.trim().length === 0) return no('malformed_envelope');
+
+  // Feature flag default is OFF (Amendment A6 / DEC-068)
+  if (req.featureFlagEnabled !== true) {
+    return no('ai_copilot_disabled');
+  }
+
+  // Cross-tenant document retrieval check
+  return validateAIContextRetrieval(req.tenantId, req.retrievedDocOrgIds);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

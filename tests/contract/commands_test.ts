@@ -85,6 +85,7 @@ import {
   validateInvoiceCommandPayload,
   validateExpenseCommandPayload,
   validateCustomerCommandPayload,
+  validateAICopilotProxyRequest,
 } from '../../contracts/commands.ts';
 
 const ORG = '30222026-0000-4000-8000-000000000001';
@@ -1705,5 +1706,48 @@ Deno.test('SERP-167: migration 202608250020 defines INVOICE, EXPENSE, CUSTOMER, 
   assert(migration0020.includes('sales_invoice'));
   assert(migration0020.includes('direct_expense'));
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-168: AI Copilot Proxy & Isolation Boundaries (Amendment A6 / DEC-068)
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-168: AI copilot proxy defaults to OFF when feature flag is not explicitly true', () => {
+  const decision = validateAICopilotProxyRequest({
+    tenantId: ORG,
+    userId: DIRECTOR_PAYER,
+    prompt: 'Summarize today jobs',
+    retrievedDocOrgIds: [ORG],
+  });
+  assertEquals(decision.ok, false);
+  if (!decision.ok) {
+    assertEquals(decision.error, 'ai_copilot_disabled');
+  }
+});
+
+Deno.test('SERP-168: AI copilot proxy refuses prompt containing cross-tenant documents', () => {
+  const decision = validateAICopilotProxyRequest({
+    tenantId: ORG,
+    userId: DIRECTOR_PAYER,
+    prompt: 'Summarize cross-tenant invoice',
+    retrievedDocOrgIds: [ORG, OTHER_ORG],
+    featureFlagEnabled: true,
+  });
+  assertEquals(decision.ok, false);
+  if (!decision.ok) {
+    assertEquals(decision.error, 'cross_tenant_denied');
+  }
+});
+
+Deno.test('SERP-168: AI copilot proxy allows same-tenant prompt when feature flag is enabled', () => {
+  const decision = validateAICopilotProxyRequest({
+    tenantId: ORG,
+    userId: DIRECTOR_PAYER,
+    prompt: 'List inventory low in stock',
+    retrievedDocOrgIds: [ORG],
+    featureFlagEnabled: true,
+  });
+  assertEquals(decision.ok, true);
+});
+
 
 
