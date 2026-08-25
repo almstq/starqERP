@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420"><rect width="1200" height="420" rx="56" fill="#0A1018"/><g transform="translate(68 82) scale(4)">
+<g fill="none" stroke="#E7ECF0" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M10 18H34C41 18 46 23 46 30V34"/>
+  <path d="M10 32H38"/>
+  <path d="M10 46H30C38 46 43 42 46 36L56 54"/>
+</g></g><g font-family="Noto Sans,Arial" fill="#E7ECF0"><text x="370" y="215" font-size="82" font-weight="800">starqERP</text><rect x="374" y="262" width="398" height="6" rx="3" fill="#E09036"/><text x="374" y="320" font-size="24" fill="#8F9AA4">ONE OPERATING RECORD.</text></g></svg>

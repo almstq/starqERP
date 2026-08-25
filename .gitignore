@@ -1,0 +1,45 @@
+# STARQ-ERP — Repository .gitignore
+# Tier 1 occupancy data and secrets MUST NOT be tracked.
+
+# --- Secrets (Never commit real envs/credentials) ---
+.env
+.env.*
+*.env
+!.env.example
+!web/.env.example
+*_allowlist.json
+!*_allowlist.example.json
+*_secrets/
+
+# --- Node / Web Build Artifacts ---
+node_modules/
+dist/
+.vite/
+.turbo/
+build/
+*.tsbuildinfo
+
+# --- Python / Test Artifacts ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+server.log
+
+# --- Deno / Supabase / Coverage ---
+.deno/
+.supabase/
+supabase/.temp/
+.temp/
+coverage/
+
+# --- OS / Editor / Agent junk ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.claude/
+_ag_packet*.txt
+ops/_ag-*.txt
+ops/_ag_*.txt

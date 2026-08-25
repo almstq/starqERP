@@ -1,0 +1,914 @@
+<title>StarqERP Merge Proposal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<style>
+/* ─────────────────────────────────────────────────────────────
+   TOKENS — light is the complete set on bare :root
+   ───────────────────────────────────────────────────────────── */
+:root{
+  --ground:#FAF8F7;
+  --surface:#FFFFFF;
+  --surface-2:#F4F1EF;
+  --ink:#1A1512;
+  --ink-2:#4A423E;
+  --muted:#7A6F69;
+  --line:#E4DEDA;
+  --line-2:#D2C9C4;
+
+  --accent:#C9291C;          /* industrial red, darkened for white ground */
+  --accent-text:#A31F14;
+  --accent-fill:#FBEEEC;
+  --accent-edge:#E9B4AE;
+
+  --keep:#2C6B4F;      --keep-fill:#EBF3EF;   --keep-edge:#BFD8CC;
+  --shift:#2B5578;     --shift-fill:#EAF0F6;  --shift-edge:#BFCFDE;
+  --drop:#6B625D;      --drop-fill:#F1EEEC;   --drop-edge:#D8D0CB;
+  --hold:#8A5D10;      --hold-fill:#F8F1E4;   --hold-edge:#E0CDA8;
+
+  --radius:3px;
+  --rail:236px;
+  --measure:70ch;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#131110;
+    --surface:#1A1716;
+    --surface-2:#221E1C;
+    --ink:#F2EDEA;
+    --ink-2:#CFC6C1;
+    --muted:#988D87;
+    --line:#2C2725;
+    --line-2:#3B3532;
+
+    --accent:#FF4438;
+    --accent-text:#FF7A70;
+    --accent-fill:#2A1614;
+    --accent-edge:#7A342D;
+
+    --keep:#6FBF95;   --keep-fill:#152219;  --keep-edge:#2F4E3C;
+    --shift:#7FB2DD;  --shift-fill:#141C24; --shift-edge:#2E4459;
+    --drop:#9C918B;   --drop-fill:#201C1B;  --drop-edge:#3A3330;
+    --hold:#D9AC5C;   --hold-fill:#241D12;  --hold-edge:#544224;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#131110;
+  --surface:#1A1716;
+  --surface-2:#221E1C;
+  --ink:#F2EDEA;
+  --ink-2:#CFC6C1;
+  --muted:#988D87;
+  --line:#2C2725;
+  --line-2:#3B3532;
+
+  --accent:#FF4438;
+  --accent-text:#FF7A70;
+  --accent-fill:#2A1614;
+  --accent-edge:#7A342D;
+
+  --keep:#6FBF95;   --keep-fill:#152219;  --keep-edge:#2F4E3C;
+  --shift:#7FB2DD;  --shift-fill:#141C24; --shift-edge:#2E4459;
+  --drop:#9C918B;   --drop-fill:#201C1B;  --drop-edge:#3A3330;
+  --hold:#D9AC5C;   --hold-fill:#241D12;  --hold-edge:#544224;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   BASE
+   ───────────────────────────────────────────────────────────── */
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:"Source Serif 4",Georgia,"Times New Roman",serif;
+  font-size:17px;
+  line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--accent-fill);color:var(--accent-text);}
+a{color:var(--accent-text);text-underline-offset:3px;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+
+.wrap{
+  display:grid;
+  grid-template-columns:var(--rail) minmax(0,1fr);
+  gap:0 56px;
+  max-width:1160px;
+  margin:0 auto;
+  padding:0 32px 120px;
+}
+main{min-width:0;padding-top:56px;}
+
+/* ─────────────────────────────────────────────────────────────
+   RAIL — the A–J structure is the memo's own, so it is a real index
+   ───────────────────────────────────────────────────────────── */
+.rail{padding-top:56px;}
+.rail-inner{position:sticky;top:32px;}
+.rail h2{
+  font-family:Archivo,system-ui,sans-serif;
+  font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 14px;
+}
+.rail ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px;}
+.rail a{
+  display:grid;grid-template-columns:20px 1fr;gap:10px;align-items:baseline;
+  padding:5px 8px;border-radius:var(--radius);
+  font-family:Archivo,system-ui,sans-serif;font-size:12.5px;line-height:1.35;
+  color:var(--ink-2);text-decoration:none;
+  border-left:2px solid transparent;
+}
+.rail a:hover{background:var(--surface-2);color:var(--ink);border-left-color:var(--line-2);}
+.rail .k{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10.5px;font-weight:600;
+  color:var(--muted);
+}
+.rail .gate a{color:var(--accent-text);}
+.rail .gate a:hover{border-left-color:var(--accent);background:var(--accent-fill);}
+
+/* ─────────────────────────────────────────────────────────────
+   MASTHEAD
+   ───────────────────────────────────────────────────────────── */
+.eyebrow{
+  font-family:Archivo,system-ui,sans-serif;
+  font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 18px;
+}
+h1{
+  font-family:Archivo,system-ui,sans-serif;
+  font-size:clamp(38px,5.4vw,60px);font-weight:700;letter-spacing:-.026em;line-height:1.02;
+  margin:0;text-wrap:balance;
+}
+.deck{
+  font-size:20px;line-height:1.5;color:var(--ink-2);
+  max-width:60ch;margin:20px 0 0;
+}
+.meta{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));
+  gap:0;margin:38px 0 0;border-top:1px solid var(--line);
+}
+.meta div{
+  padding:14px 18px 14px 0;border-bottom:1px solid var(--line);
+}
+.meta dt{
+  font-family:Archivo,system-ui,sans-serif;
+  font-size:9.5px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 5px;
+}
+.meta dd{
+  margin:0;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:13px;color:var(--ink);
+}
+
+/* the one accent moment: the gate */
+.status{
+  display:flex;flex-wrap:wrap;align-items:center;gap:14px;
+  margin:34px 0 0;padding:16px 20px;
+  border:1.5px solid var(--accent);border-radius:var(--radius);
+  background:var(--accent-fill);
+}
+.status.ok{border-color:var(--keep-edge);background:var(--keep-fill);}
+.status.ok .dot{background:var(--keep);}
+.status.ok strong{color:var(--keep);}
+.status code{font-size:12px;}
+.status .dot{
+  width:9px;height:9px;border-radius:50%;background:var(--accent);flex:none;
+}
+.status strong{
+  font-family:Archivo,system-ui,sans-serif;font-size:12px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--accent-text);
+}
+.status span{font-size:15px;color:var(--ink-2);}
+
+/* ─────────────────────────────────────────────────────────────
+   TYPE
+   ───────────────────────────────────────────────────────────── */
+section{margin:0;padding:56px 0 0;scroll-margin-top:24px;}
+section + section{border-top:1px solid var(--line);margin-top:56px;}
+
+.sec-head{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:baseline;margin:0 0 26px;}
+.sec-key{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:13px;font-weight:600;color:var(--accent-text);
+  padding-top:4px;
+}
+h2{
+  font-family:Archivo,system-ui,sans-serif;
+  font-size:clamp(23px,2.6vw,30px);font-weight:700;letter-spacing:-.018em;line-height:1.15;
+  margin:0;text-wrap:balance;
+}
+h3{
+  font-family:Archivo,system-ui,sans-serif;
+  font-size:16px;font-weight:600;letter-spacing:-.005em;
+  margin:38px 0 12px;text-wrap:balance;
+}
+h4{
+  font-family:Archivo,system-ui,sans-serif;
+  font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+  margin:30px 0 10px;
+}
+p{margin:0 0 16px;max-width:var(--measure);}
+.lead{font-size:19px;line-height:1.55;}
+strong{font-weight:600;}
+em{font-style:italic;}
+ul,ol{max-width:var(--measure);margin:0 0 16px;padding-left:22px;}
+li{margin:0 0 7px;}
+li::marker{color:var(--muted);}
+
+code{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:.86em;
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  border-radius:2px;
+  padding:1px 5px;
+  color:var(--ink);
+  white-space:nowrap;
+}
+td code,th code{background:transparent;border:0;padding:0;}
+
+/* ─────────────────────────────────────────────────────────────
+   CALLOUTS
+   ───────────────────────────────────────────────────────────── */
+.note{
+  border-left:2px solid var(--line-2);
+  background:var(--surface);
+  padding:20px 24px;margin:0 0 22px;
+  border-radius:0 var(--radius) var(--radius) 0;
+}
+.note.hot{border-left-color:var(--accent);background:var(--accent-fill);}
+.note.hot h4{color:var(--accent-text);}
+.note > :last-child{margin-bottom:0;}
+.note p{max-width:64ch;}
+
+/* ─────────────────────────────────────────────────────────────
+   TABLES
+   ───────────────────────────────────────────────────────────── */
+.tw{
+  overflow-x:auto;margin:0 0 24px;
+  border:1px solid var(--line);border-radius:var(--radius);
+  background:var(--surface);
+}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.45;}
+thead th{
+  font-family:Archivo,system-ui,sans-serif;
+  font-size:9.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);text-align:left;
+  padding:11px 16px;border-bottom:1px solid var(--line-2);
+  background:var(--surface-2);white-space:nowrap;
+}
+tbody td{padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-2);}
+tbody tr:last-child td{border-bottom:0;}
+tbody td:first-child{color:var(--ink);}
+tbody tr:hover td{background:var(--surface-2);}
+.num{font-variant-numeric:tabular-nums;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:13px;white-space:nowrap;}
+
+/* disposition chips — state encoded in form, not only in words */
+.chip{
+  display:inline-block;
+  font-family:Archivo,system-ui,sans-serif;
+  font-size:9.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  padding:3px 8px;border-radius:2px;border:1px solid;white-space:nowrap;
+}
+.c-keep {color:var(--keep); background:var(--keep-fill); border-color:var(--keep-edge);}
+.c-shift{color:var(--shift);background:var(--shift-fill);border-color:var(--shift-edge);}
+.c-drop {color:var(--drop); background:var(--drop-fill); border-color:var(--drop-edge);}
+.c-hold {color:var(--hold); background:var(--hold-fill); border-color:var(--hold-edge);}
+.c-park {color:var(--drop); background:transparent; border-style:dashed; border-color:var(--line-2);}
+.c-gate {color:var(--accent-text);background:var(--accent-fill);border-color:var(--accent-edge);}
+
+/* ─────────────────────────────────────────────────────────────
+   PHASES — a real sequence, so it is numbered
+   ───────────────────────────────────────────────────────────── */
+.phases{display:flex;flex-direction:column;gap:0;margin:0 0 24px;
+  border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);overflow:hidden;}
+.phase{
+  display:grid;grid-template-columns:52px 1fr;gap:0;
+  border-bottom:1px solid var(--line);
+}
+.phase:last-child{border-bottom:0;}
+.phase-n{
+  display:flex;align-items:flex-start;justify-content:center;padding:16px 0 0;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:15px;font-weight:600;
+  color:var(--muted);background:var(--surface-2);border-right:1px solid var(--line);
+}
+.phase-b{padding:15px 20px;}
+.phase-t{
+  font-family:Archivo,system-ui,sans-serif;font-size:15px;font-weight:600;color:var(--ink);
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 5px;
+}
+.phase-b p{font-size:14.5px;margin:0;color:var(--ink-2);max-width:64ch;}
+.phase-b .done{
+  display:block;margin-top:7px;font-size:13px;color:var(--muted);
+}
+.phase-b .done b{
+  font-family:Archivo,system-ui,sans-serif;font-size:9.5px;font-weight:600;
+  letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
+}
+.phase.blocker{background:var(--accent-fill);}
+.phase.blocker .phase-n{background:transparent;color:var(--accent);border-right-color:var(--accent-edge);}
+.tag{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;font-weight:500;
+  color:var(--muted);border:1px solid var(--line-2);border-radius:2px;padding:1px 6px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   GATE
+   ───────────────────────────────────────────────────────────── */
+.gate-card{
+  border:1.5px solid var(--accent);border-radius:var(--radius);
+  background:var(--surface);padding:30px 32px;margin:8px 0 0;
+}
+.gate-card h3{margin-top:0;}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:28px;margin:22px 0 0;}
+.cols h4{margin-top:0;}
+.cols ul{padding-left:18px;font-size:15px;}
+.sign{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px;
+  margin:30px 0 0;padding-top:22px;border-top:1px solid var(--line);
+}
+.sign p{font-size:14.5px;margin:0;}
+.sign b{
+  display:block;font-family:Archivo,system-ui,sans-serif;font-size:10px;font-weight:600;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;
+}
+
+footer{
+  margin-top:56px;padding-top:22px;border-top:1px solid var(--line);
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;color:var(--muted);
+  display:flex;flex-wrap:wrap;gap:8px 22px;
+}
+
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;padding:0 22px 80px;gap:0;}
+  .rail{display:none;}
+  main{padding-top:40px;}
+  body{font-size:16.5px;}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+</style>
+
+<div class="wrap">
+
+<nav class="rail">
+  <div class="rail-inner">
+    <h2>Memo §45 structure</h2>
+    <ol>
+      <li><a href="#a"><span class="k">A</span><span>Current-State Map</span></a></li>
+      <li><a href="#b"><span class="k">B</span><span>Domain Mapping</span></a></li>
+      <li><a href="#c"><span class="k">C</span><span>Database Decision</span></a></li>
+      <li><a href="#d"><span class="k">D</span><span>Front-End Decision</span></a></li>
+      <li><a href="#e"><span class="k">E</span><span>API &amp; Contract</span></a></li>
+      <li><a href="#f"><span class="k">F</span><span>Data Migration</span></a></li>
+      <li><a href="#g"><span class="k">G</span><span>Security Review</span></a></li>
+      <li><a href="#h"><span class="k">H</span><span>Responsive Strategy</span></a></li>
+      <li><a href="#i"><span class="k">I</span><span>Phased Execution</span></a></li>
+      <li><a href="#j"><span class="k">J</span><span>Rollback Point</span></a></li>
+      <li class="gate"><a href="#amend"><span class="k">✎</span><span>Eight amendments</span></a></li>
+      <li><a href="#risks"><span class="k">—</span><span>Risks accepted</span></a></li>
+      <li class="gate"><a href="#gate"><span class="k">■</span><span>What approval means</span></a></li>
+    </ol>
+  </div>
+</nav>
+
+<main>
+
+  <header>
+    <p class="eyebrow">Starq Technologies · Architecture</p>
+    <h1>StarqERP Merge Proposal</h1>
+    <p class="deck">Merging the AI&nbsp;Studio revision into the proven multi-tenant core — what is kept, what is retired, and the nine phases that get there without losing a row.</p>
+
+    <dl class="meta">
+      <div><dt>Date</dt><dd>23 Aug 2026</dd></div>
+      <div><dt>Authors</dt><dd>Elder · Antigravity</dd></div>
+      <div><dt>Structure</dt><dd>Memo §45 A–J</dd></div>
+      <div><dt>Authority</dt><dd>DEC-067</dd></div>
+      <div><dt>Decision</dt><dd>Approved 23 Aug</dd></div>
+    </dl>
+
+    <div class="status ok">
+      <span class="dot"></span>
+      <strong>Approved with amendments</strong>
+      <span>Founder, 23 Aug 2026 · <code>DEC-068</code> · eight conditions, recorded against the phases they bind.</span>
+    </div>
+    <div class="status">
+      <span class="dot"></span>
+      <strong>One gate still open</strong>
+      <span>Migration <code>0013</code> does not touch a live row until the offsite backup has a passed restore test — <code>SERP-173</code>.</span>
+    </div>
+  </header>
+
+  <section id="summary">
+    <div class="sec-head"><span class="sec-key">00</span><h2>The proposal in one paragraph</h2></div>
+
+    <p class="lead">The AI&nbsp;Studio revision becomes the StarqERP client. The proven Supabase core stays underneath and is <em>generalised, not rebuilt</em>. Three things change at the boundary and everything else follows from them: <strong>the tenant stops being a constant, the workflow stops being code, and identity stops being an allowlist.</strong> The Flutter console is parked frozen. Nothing is deleted. The merge runs in nine phases, each leaving the system buildable and testable, behind a rollback tag that must be created before phase one begins.</p>
+
+    <div class="note hot">
+      <h4>The one finding that shaped everything</h4>
+      <p><strong>The core was already multi-tenant.</strong> Every operational table carries <code>organisation_id</code>, and the foreign keys are <strong>composite</strong> — <code>garage_jobs</code> references <code>contacts(organisation_id, id)</code> — so a cross-tenant reference is <em>structurally impossible</em>, not merely policy-blocked. The revision's <code>tenantId</code> already existed in the database.</p>
+      <p>That is why this is a merge measured in weeks rather than a rebuild measured in months.</p>
+    </div>
+  </section>
+
+  <section id="a">
+    <div class="sec-head"><span class="sec-key">A</span><h2>Current-State Map</h2></div>
+
+    <h3>The existing build — <code>starqBooks</code></h3>
+    <div class="tw"><table>
+      <thead><tr><th>Disposition</th><th>What</th><th>Reason</th></tr></thead>
+      <tbody>
+        <tr><td><span class="chip c-keep">Keep</span></td><td>Migrations <code>0001–0011</code></td><td>Organisation-scoped from day one; composite FKs; eleven migrations of proven schema</td></tr>
+        <tr><td><span class="chip c-keep">Keep</span></td><td><code>functions/starq-api</code> — auth, CSRF, session authority, idempotency, audit, security events</td><td>The expensive half. Thirteen defects already beaten out of it</td></tr>
+        <tr><td><span class="chip c-keep">Keep</span></td><td><code>contracts/commands.ts</code> invariants, seat vocabulary, segregation pairs</td><td>The authorization model, and the only reason segregation of duties is provable</td></tr>
+        <tr><td><span class="chip c-keep">Keep</span></td><td>Python engine — <code>books.py</code>, <code>journal_outbox.py</code>, <code>ops/masters/</code></td><td><code>DEC-051</code>. It holds the live Ignition Ink books</td></tr>
+        <tr><td><span class="chip c-shift">Refactor</span></td><td><code>COMMAND_SEATS</code> as a compile-time map</td><td>Keyed by one tenant's twelve steps — see <a href="#e">§E</a>, the load-bearing change</td></tr>
+        <tr><td><span class="chip c-shift">Refactor</span></td><td><code>garage_*</code> table naming</td><td><code>garage_jobs</code> becomes the generic work order. Cosmetic, therefore last — never first</td></tr>
+        <tr><td><span class="chip c-drop">Replace</span></td><td><code>CLUB_IGNITION_ID</code> at <code>index.ts:218</code></td><td>One constant — and the entire single-tenancy of the API layer</td></tr>
+        <tr><td><span class="chip c-drop">Replace</span></td><td><code>garage_jobs.state</code> CHECK constraint</td><td>Workflow as code becomes workflow as data</td></tr>
+        <tr><td><span class="chip c-drop">Replace</span></td><td>The allowlist as a user registry</td><td>“You must be known before you can arrive” is the opposite of self-onboarding</td></tr>
+        <tr><td><span class="chip c-park">Park frozen</span></td><td><code>starq-ops-app</code> + <code>SERP-028</code>, <code>SERP-151</code>, <code>SERP-153</code></td><td>Rule 2. Design system intact. Returns later as the shop-floor client</td></tr>
+        <tr><td><span class="chip c-hold">Defer</span></td><td>Generic <code>assets</code> supertype</td><td><code>vehicles</code> holds live rows; a generality nothing is asking for yet</td></tr>
+        <tr><td><span class="chip c-hold">Defer</span></td><td>Chart of accounts in Postgres</td><td><code>DEC-051</code>. Two charts while the books are live is the worst available failure</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>The revision — AI Studio, 49 files</h3>
+    <div class="tw"><table>
+      <thead><tr><th>Disposition</th><th>What</th></tr></thead>
+      <tbody>
+        <tr><td><span class="chip c-keep">Keep</span></td><td>All forty view and component files — this is the new client</td></tr>
+        <tr><td><span class="chip c-keep">Keep</span></td><td><code>types/erp.ts</code> as the <em>product</em> model — reconciled against the schema, never adopted wholesale</td></tr>
+        <tr><td><span class="chip c-keep">Keep</span></td><td>The Needs-Attention / Starq-AI split (§24), the dashboard philosophy (§25), the visual language (§26)</td></tr>
+        <tr><td><span class="chip c-shift">Refactor</span></td><td><code>ERPContext.tsx</code> → an API client. It coordinates; it does not decide</td></tr>
+        <tr><td><span class="chip c-drop">Replace</span></td><td><code>AppUser.tenantId</code> → membership context. A user belongs to many organisations</td></tr>
+        <tr><td><span class="chip c-drop">Replace</span></td><td><code>WorkflowStage</code> name-as-status → <code>workflow_stage_id</code> UUID</td></tr>
+        <tr><td><span class="chip c-drop">Replace</span></td><td><code>bmlAccount</code> / <code>mibAccount</code> organisation fields → <code>bank_accounts</code> entities</td></tr>
+        <tr><td><span class="chip c-drop">Retire</span></td><td><code>mockData.ts</code> — <strong>deleted last, not first.</strong> It is the fixture the wiring is tested against</td></tr>
+        <tr><td><span class="chip c-drop">Retire</span></td><td>Client-side identity <code>job-${Date.now()}</code>; <code>gstRate</code> in two different units; the “MIRA GST 8% Compliant” badge</td></tr>
+        <tr><td><span class="chip c-drop">Retire</span></td><td><code>@google/genai</code> as a <em>client</em> dependency — the key never reaches the browser</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="b">
+    <div class="sec-head"><span class="sec-key">B</span><h2>Domain Mapping</h2></div>
+    <div class="tw"><table>
+      <thead><tr><th>Revision entity</th><th>Canonical entity</th><th>Migration</th><th>Breaking</th></tr></thead>
+      <tbody>
+        <tr><td><code>OrganisationTenant</code></td><td><code>organisations</code> + <code>business_names</code></td><td>Field additions only — TIN, GST config, FY dates</td><td>no</td></tr>
+        <tr><td><code>AppUser</code></td><td><code>persons</code> + <code>memberships</code></td><td><strong>Conceptual</strong> — <code>tenantId</code> on the user is dropped</td><td><strong>yes</strong> — client</td></tr>
+        <tr><td><code>UserRole</code></td><td>new <code>roles</code> + <code>role_permissions</code></td><td>New tables</td><td>no</td></tr>
+        <tr><td><em>absent</em></td><td><code>seats</code>, <code>membership_seats</code></td><td>Exists — the revision has no concept of it</td><td><strong>yes</strong> — the client must learn seats</td></tr>
+        <tr><td><code>WorkflowStage</code></td><td>new <code>workflow_stages</code></td><td>New tables + backfill of live jobs</td><td><strong>yes</strong> — database</td></tr>
+        <tr><td><code>JobOrder</code></td><td><code>garage_jobs</code> → work order</td><td><code>state</code> → <code>workflow_stage_id</code></td><td><strong>yes</strong></td></tr>
+        <tr><td><code>Customer</code></td><td><code>contacts</code> (+ <code>persons</code>)</td><td>Field mapping</td><td>no</td></tr>
+        <tr><td><code>Vehicle</code></td><td><code>vehicles</code> — stays (<code>asset</code> in the contract)</td><td>None</td><td>no</td></tr>
+        <tr><td><code>Invoice</code> / <code>InvoiceLineItem</code></td><td><code>commercial_documents</code> / <code>_lines</code></td><td>Field mapping; <code>tax_mode</code> added</td><td>no</td></tr>
+        <tr><td><code>Payment</code></td><td><code>commercial_documents</code> type <code>payment</code></td><td>Field mapping</td><td>no</td></tr>
+        <tr><td><code>Expense</code></td><td><code>commercial_documents</code> type <code>supplier_bill</code></td><td>Mapping</td><td>no</td></tr>
+        <tr><td><code>InventoryItem</code> / <code>StockMovement</code></td><td><code>inventory_items</code> / <code>stock_movements</code></td><td>Field mapping</td><td>no</td></tr>
+        <tr><td><code>Supplier</code></td><td><code>contacts</code>, supplier role</td><td>Mapping</td><td>no</td></tr>
+        <tr><td><code>PurchaseOrder</code> / <code>POLineItem</code></td><td><code>commercial_documents</code> type <code>purchase_order</code></td><td><code>purchase_request</code>, <code>rfq</code> added to the type list</td><td>no</td></tr>
+        <tr><td><code>AuditLogEntry</code></td><td><code>audit_events</code></td><td>Client stops writing; server writes</td><td><strong>yes</strong></td></tr>
+        <tr><td>Bank fields on tenant</td><td>new <code>bank_accounts</code></td><td>New table</td><td>no</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>Four breaking changes, all in the client, all deliberate:</strong> user is not tenant; seats exist; stage identity is a UUID; audit is a server consequence, not a client call.</p>
+  </section>
+
+  <section id="c">
+    <div class="sec-head"><span class="sec-key">C</span><h2>Database Decision</h2></div>
+
+    <p><strong>Retained unchanged:</strong> <code>0001</code>–<code>0010</code>. <strong>Applied first</strong>, already written and approved: <code>0011</code> — it closes the last open audit critical.</p>
+
+    <h4>New migrations, in dependency order</h4>
+    <div class="tw"><table>
+      <thead><tr><th>#</th><th>Contents</th><th>Touches live rows</th></tr></thead>
+      <tbody>
+        <tr><td class="num">0012</td><td><code>workflows</code>, <code>workflow_stages</code>, <code>workflow_transitions</code></td><td>no</td></tr>
+        <tr><td class="num">0013</td><td><code>garage_jobs.workflow_stage_id</code>; backfill the twelve steps as tenant-one seed rows; drop the CHECK</td><td><strong>YES</strong> — reversible migration required</td></tr>
+        <tr><td class="num">0014</td><td><code>roles</code>, <code>role_permissions</code>; <code>memberships.role_id</code>; <code>memberships.status</code> gains <code>pending</code></td><td>no</td></tr>
+        <tr><td class="num">0015</td><td><code>bank_accounts</code>; <code>organisations</code> gains TIN, FY start/end, GST config</td><td>no</td></tr>
+        <tr><td class="num">0016</td><td><code>commercial_document_lines.tax_mode</code>; <code>purchase_request</code> and <code>rfq</code> document types</td><td>no</td></tr>
+        <tr><td class="num">0017</td><td>Storage bucket policies mirroring organisation isolation</td><td>no</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Tenant isolation — two layers, and the first is the strong one</h3>
+    <p><strong>Structural:</strong> composite foreign keys make a cross-tenant reference impossible; the database refuses the write regardless of policy. <strong>Policy:</strong> RLS as the second lock. The organisation is resolved from session authority and <em>never</em> from a request payload.</p>
+    <div class="note">
+      <p><a href="#g">§G</a> tests both layers, and <strong>expects the foreign key to fail first.</strong> If a cross-tenant write ever succeeds at the FK layer, a composite key has been dropped somewhere — a graver finding than a missing policy.</p>
+    </div>
+
+    <p><strong>Membership model:</strong> <code>person → membership(organisation, role, status) → membership_seats</code>. One person, many organisations, a different role and different seats in each.</p>
+
+    <p><strong>Accounting additions: none.</strong> <code>DEC-051</code>. <code>journal_lines.account_code</code> stays free text with no accounts table, deliberately, so Postgres cannot hold a second opinion about the chart. The ERP emits <code>journal_proposals</code>; Python remains the only thing that posts.</p>
+
+    <p><strong>Audit:</strong> unchanged in shape, changed in origin. <code>logAuditEvent</code> stops being something the client calls and becomes something the server does inside the same transaction as the mutation. <em>An audit trail the actor can choose not to write is not evidence.</em></p>
+  </section>
+
+  <section id="d">
+    <div class="sec-head"><span class="sec-key">D</span><h2>Front-End Decision</h2></div>
+
+    <p><strong>The revision is the primary UI.</strong> All forty view and component files become the StarqERP web application: dashboard, customers, jobs, invoices, payments, inventory, purchasing, reports, audit, settings, onboarding, AI copilot.</p>
+
+    <h3>What carries across rather than being thrown away</h3>
+    <p>The design tokens and the industrial red discipline — red only on the active action, outline never fill. And, more valuable than the CSS, the <strong>refusal semantics the console proved with a real person clicking things.</strong> <code>SERP-151</code> established that a lock banner must distinguish <em>held</em>, <em>held but not acting</em>, and <em>held by another role</em> — and must name the role, never the person. The new client inherits that as specification.</p>
+
+    <h3>What the revision must learn</h3>
+    <p>Seats. That refusals are routine and correct rather than exceptional. And that some actions are visible-but-refused rather than hidden — <code>DEC-065</code>'s segregation pairs bite even when a person holds every seat.</p>
+
+    <div class="note">
+      <h4>The discipline the whole decision rests on — memo §35</h4>
+      <p><code>ERPContext.tsx</code> becomes an API client: it coordinates, it does not decide. Accounting postings, tenant isolation, permission enforcement, stock mutation, approvals, reconciliation, audit, numbering and tax logic all live behind the API.</p>
+      <p><strong>Front-end state is not a security boundary and not an accounting boundary.</strong></p>
+    </div>
+
+    <p><strong>Flutter console:</strong> parked frozen. It returns as the shop-floor technician client once the web application is live — the founder's own sequence at <code>DEC-066</code>: desktop web app to set up the organisation, then users, then the app. <em>App is last.</em></p>
+  </section>
+
+  <section id="e">
+    <div class="sec-head"><span class="sec-key">E</span><h2>API and Contract Decision</h2></div>
+
+    <div class="note hot">
+      <h4>The finding</h4>
+      <p><code>COMMAND_SEATS</code> is <code>Record&lt;CommandName, SeatCode[]&gt;</code> — a compile-time map whose keys are <code>CALL</code>, <code>BOOKING</code>, <code>INTAKE</code>, <code>ESTIMATE</code>, <code>AUTHORISATION</code>, <code>JOB_CARD</code>, <code>PARTS_PROCUREMENT</code>, <code>WORK</code>, <code>QC</code>, <code>HANDOVER</code>, <code>INVOICE_PAYMENT</code>, <code>CLOSE</code>.</p>
+      <p><strong>Those are one tenant's twelve workflow steps compiled into the authorization contract.</strong> A second tenant with different stages cannot be expressed in it at all.</p>
+      <p>Meanwhile Antigravity's inventory of <code>ERPContext.tsx</code> found <strong>twenty-five mutations</strong>, and the majority — create a customer, raise an invoice, receive stock, invite a user, authorise a user, create a role, create a tenant, add a workflow stage — <strong>have no command in the contract at all.</strong> The contract covers a garage's job journey and almost nothing a business does around it.</p>
+    </div>
+
+    <h3>The decision: the contract splits into two layers</h3>
+    <div class="tw"><table>
+      <thead><tr><th>Layer</th><th>Examples</th><th>Authorization</th><th>Lives as</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Stage transitions</strong></td>
+          <td>The twelve steps — and whatever any other tenant defines</td>
+          <td><code>workflow_stages.allowed_seats</code></td>
+          <td><span class="chip c-shift">Data</span> per tenant</td>
+        </tr>
+        <tr>
+          <td><strong>Platform commands</strong></td>
+          <td><code>CUSTOMER_CREATE</code>, <code>INVOICE_ISSUE</code>, <code>PAYMENT_RECORD</code>, <code>STOCK_RECEIVE</code>, <code>STOCK_ADJUST</code>, <code>PURCHASE_*</code>, <code>USER_INVITE</code>, <code>USER_AUTHORIZE</code>, <code>USER_SUSPEND</code>, <code>ROLE_*</code>, <code>WORKFLOW_*</code>, <code>ORG_*</code></td>
+          <td>Compile-time seat map — unchanged</td>
+          <td><span class="chip c-keep">Constants</span> tenant-independent</td>
+        </tr>
+      </tbody>
+    </table></div>
+
+    <p><code>PURCHASE</code> with its six <code>SCM_STEPS</code> and its segregation pairs is a <strong>platform</strong> command, not a workflow stage, and keeps its matrix exactly as it is. <em>Procurement segregation is universal; paint booth stages are not.</em></p>
+
+    <div class="note">
+      <h4>Consequence to plan for, not discover</h4>
+      <p><code>authorize()</code> currently takes a <code>CommandName</code>. Splitting the layers changes that signature — and the seat vocabulary migration must precede the matrix change. The contract already warns that reversing the order “would convert a silent authorization hole into a hard outage.”</p>
+    </div>
+
+    <p><strong>Contract version → <code>0.2.0</code>.</strong> It reaches <code>1.0.0</code> on its own stated terms: every conformance test passing against a real runtime, and at least two of three runtimes importing their authorization decision from the file rather than reimplementing it.</p>
+
+    <h3>Endpoints — verified against <code>index.ts</code>, not taken on report</h3>
+    <div class="cols">
+      <div>
+        <h4>Exists, confirmed</h4>
+        <ul>
+          <li><code>/api/auth/google</code></li>
+          <li><code>/api/auth/logout</code></li>
+          <li><code>/api/auth/seat</code></li>
+          <li><code>/api/me</code> · <code>/api/meta</code></li>
+          <li><code>/api/ops/job</code> · <code>/api/ops/event</code></li>
+          <li><code>/api/ops/pulse</code></li>
+          <li><code>/api/ops/purchases</code></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Required, absent</h4>
+        <ul>
+          <li>Contacts read / write</li>
+          <li>Inventory read / adjust</li>
+          <li>Commercial documents and payments, general rather than job-scoped</li>
+          <li>Reports aggregation</li>
+          <li>Audit read</li>
+          <li>Admin — organisations, users, roles, workflows</li>
+          <li>Workflow stage query</li>
+          <li>AI copilot proxy</li>
+        </ul>
+      </div>
+    </div>
+
+    <p><strong>Every one of them — reads included — resolves the organisation from session authority and enforces permission.</strong> A read route is not exempt from isolation. Memo §39: search and reports respect organisation and permission, or they become the leak that the row policies prevented everywhere else.</p>
+  </section>
+
+  <section id="f">
+    <div class="sec-head"><span class="sec-key">F</span><h2>Data Migration Strategy</h2></div>
+
+    <p>Three populations, three different fates. <strong>They must never mix.</strong></p>
+
+    <div class="tw"><table>
+      <thead><tr><th>Population</th><th>Where</th><th>Fate</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Live garage rows</strong><br>jobs, contacts, vehicles, stock, documents</td><td>Supabase</td><td><span class="chip c-shift">Migrate</span> Only migration <code>0013</code> touches them. Reversible, rehearsed against a restored copy first</td></tr>
+        <tr><td><strong>Live books</strong><br>journals, ledger, GST position</td><td>Python engine, plain-text journals</td><td><span class="chip c-keep">Untouched</span> <code>DEC-051</code>. Not in scope for any phase of this merge</td></tr>
+        <tr><td><strong>Revision mock data</strong><br>1,984 lines</td><td><code>mockData.ts</code></td><td><span class="chip c-drop">Discard as truth</span> Reseeded as a demo tenant</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="note">
+      <h4>On the demo tenant — where a quiet disaster would otherwise live</h4>
+      <p>The revision carries sample TINs, bank account numbers, phone numbers, emails, supplier identities and invoice numbers. Memo §32 is right that they must be distinguishable from production, and the mechanism is stronger than a naming convention: <strong>the demo data lives in its own organisation</strong>, which the composite foreign keys then make structurally incapable of touching a real tenant's rows.</p>
+      <p>Demo separation becomes a property the database enforces rather than a discipline people remember.</p>
+    </div>
+
+    <p>Reseeded to a coherent <strong>August 2026</strong> period — the revision's records sit in <strong>May 2025</strong> and the interface looks stale the moment it opens — with dates internally consistent across invoices, payments, purchase orders, dashboards and GST periods. Metrics that cannot derive from events are removed rather than fabricated: <code>98.4% First Pass</code> is hardcoded at <code>ReportsView.tsx:261</code> and shows the same value against every technician.</p>
+
+    <p><code>mockData.ts</code> is deleted <strong>after</strong> the wiring proves out, not before.</p>
+  </section>
+
+  <section id="g">
+    <div class="sec-head"><span class="sec-key">G</span><h2>Security Review</h2></div>
+
+    <div class="tw"><table>
+      <thead><tr><th>Area</th><th>Position at approval</th><th>Work required</th></tr></thead>
+      <tbody>
+        <tr><td>Authentication</td><td>Google SSO, CSRF on every state-changing route, session authority <code>0008</code></td><td>none</td></tr>
+        <tr><td>Organisation membership</td><td><code>memberships</code> + <code>membership_seats</code>; revocation permanent until explicit grant</td><td><code>pending</code> status; self-onboarding replaces the allowlist</td></tr>
+        <tr><td>RBAC</td><td>Seats enforced server-side</td><td>Roles added as the visibility layer — <strong>never</strong> as the authorization layer</td></tr>
+        <tr><td>RLS</td><td>Organisation-scoped, plus composite FKs</td><td>Extend to new tables</td></tr>
+        <tr><td><strong>Object / file access</strong></td><td>Rows scoped by <code>unique (organisation_id, storage_key)</code>. <strong>The files themselves are unverified</strong></td><td><code>0017</code>. Do not isolate rows correctly and leave object URLs globally readable</td></tr>
+        <tr><td>Audit</td><td>Table exists, organisation-scoped</td><td>Move authorship from client to server, inside the transaction</td></tr>
+        <tr><td>Cross-tenant isolation</td><td>Structural + policy</td><td>Adversarial suite, §37</td></tr>
+        <tr><td><strong>AI tenant isolation</strong></td><td><strong>Nothing exists yet</strong></td><td>Retrieval, embeddings, prompts, logs and analytics inside the same boundary</td></tr>
+        <tr><td>AI authority</td><td>—</td><td>observe → explain → recommend → prepare → <strong>human approval</strong> → execute</td></tr>
+        <tr><td>Secrets</td><td>—</td><td><code>GEMINI_API_KEY</code> server-side only, rate-limited per organisation, actions audited</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="note hot">
+      <p><strong>Multi-tenancy is not verified because two tenants render correctly. It is verified when attacks fail.</strong> Nine of them, from memo §37, each with a test. A copilot that can read another tenant's data is a breach with a friendly interface.</p>
+    </div>
+  </section>
+
+  <section id="h">
+    <div class="sec-head"><span class="sec-key">H</span><h2>Responsive Strategy</h2></div>
+
+    <p>Specification now, implementation after wiring. Elder disagreed with the memo on timing and the founder accepted it: building transforms against a UI about to be rewired means <strong>building it twice</strong>. The spec is the deliverable at this gate.</p>
+
+    <div class="tw"><table>
+      <thead><tr><th>Surface</th><th>≥ 1280</th><th>768 – 1279</th><th>&lt; 768</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Tables</strong></td><td>Full table</td><td>Fewer columns, no horizontal scroll</td><td><strong>Cards</strong> — number and status, who and what, the money, the due date, two actions</td></tr>
+        <tr><td><strong>Kanban</strong></td><td>All stage columns</td><td>3 columns, horizontal scroll</td><td><strong>Stage strip with counts</strong>, then the active stage's cards. Never tall empty columns stacked vertically</td></tr>
+        <tr><td><strong>Dashboard</strong></td><td>4-up</td><td>2-up</td><td>1-up; Needs Attention first</td></tr>
+        <tr><td><strong>Drawers / modals</strong></td><td>Side drawer</td><td>Side drawer</td><td>Full-screen sheet</td></tr>
+        <tr><td><strong>Navigation</strong></td><td>Persistent sidebar</td><td>Collapsed rail</td><td>Bottom bar, five destinations</td></tr>
+        <tr><td><strong>Reports</strong></td><td>Full</td><td>Full, scroll container</td><td>Summary figures; detail on demand</td></tr>
+      </tbody>
+    </table></div>
+
+    <p>Rule for every wide element: it scrolls inside its own container. <strong>The page body never scrolls horizontally.</strong></p>
+  </section>
+
+  <section id="i">
+    <div class="sec-head"><span class="sec-key">I</span><h2>Phased Execution</h2></div>
+
+    <p>Each phase leaves the system buildable and testable. No phase begins before the previous one is proven.</p>
+
+    <div class="phases">
+      <div class="phase">
+        <div class="phase-n">0</div>
+        <div class="phase-b">
+          <div class="phase-t">Rollback point <span class="tag">SERP-160</span> <span class="chip c-keep">Done · 23 Aug</span></div>
+          <p>Tree resolved in three deliberate commits — console work preserved before the freeze, the <code>0011</code> self-test corrected, the proposal filed. Tagged <code>pre-merge-2026-08-23</code> and restore-tested by clone.</p>
+          <span class="done"><b>Carries a caveat</b> — the tag covers code, not books. The journals are deliberately outside version control, so the rollback position is not complete until <code>SERP-173</code></span>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-n">1</div>
+        <div class="phase-b">
+          <div class="phase-t">Repository <span class="tag">SERP-159</span></div>
+          <p>New <code>starqERP</code> repository on <strong>D:</strong>; revision moved out of <code>scratch</code>; core ported under version control.</p>
+          <span class="done"><b>Done when</b> — both halves build in one tree</span>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-n">2</div>
+        <div class="phase-b">
+          <div class="phase-t">Boundary generalised <span class="tag">SERP-161</span></div>
+          <p><code>CLUB_IGNITION_ID</code> removed; organisation resolved from session; payload organisation ignored.</p>
+          <span class="done"><b>Done when</b> — a second organisation transacts with no code change</span>
+        </div>
+      </div>
+      <div class="phase blocker">
+        <div class="phase-n">3</div>
+        <div class="phase-b">
+          <div class="phase-t">Workflow as data <span class="tag">SERP-162</span> <span class="tag">§E</span> <span class="chip c-gate">Gated · A1</span></div>
+          <p>Contract splits; migrations <code>0012</code> / <code>0013</code>. <strong><code>0013</code> is the only migration in the merge that touches live rows and it will not run until <code>SERP-173</code> closes.</strong></p>
+          <span class="done"><b>Done when</b> — the twelve steps are seed rows; live jobs backfilled reversibly</span>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-n">4</div>
+        <div class="phase-b">
+          <div class="phase-t">Roles and onboarding <span class="tag">SERP-163</span></div>
+          <p>Roles, <code>pending</code> status, founder-of-a-new-organisation exception; migration <code>0014</code>.</p>
+          <span class="done"><b>Done when</b> — a stranger creates an organisation and gets in; an invitee waits</span>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-n">5</div>
+        <div class="phase-b">
+          <div class="phase-t">Endpoints <span class="tag">SERP-167</span></div>
+          <p>The missing routes, specified against the contract, then built.</p>
+          <span class="done"><b>Done when</b> — every screen has a real route</span>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-n">6</div>
+        <div class="phase-b">
+          <div class="phase-t">Wiring <span class="tag">SERP-166</span> <span class="tag">SERP-168</span> <span class="chip c-gate">AI flagged off · A6</span></div>
+          <p>Wire the twenty-five mutations; AI proxy; <code>mockData.ts</code> deleted <strong>last</strong>.</p>
+          <span class="done"><b>Done when</b> — no business invariant left in React state</span>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-n">7</div>
+        <div class="phase-b">
+          <div class="phase-t">Tax and banking <span class="tag">SERP-164</span> <span class="tag">SERP-165</span></div>
+          <p>Tax as effective-dated periods carrying registration status; bank accounts as entities; migrations <code>0015</code> / <code>0016</code>.</p>
+          <span class="done"><b>Done when</b> — <code>SERP-122</code> goes green</span>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-n">8</div>
+        <div class="phase-b">
+          <div class="phase-t">Isolation proven <span class="tag">SERP-172</span> <span class="tag">0017</span></div>
+          <p>Adversarial suite including storage and AI retrieval.</p>
+          <span class="done"><b>Done when</b> — all nine attacks fail</span>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-n">9</div>
+        <div class="phase-b">
+          <div class="phase-t">Surface <span class="tag">SERP-170</span> <span class="tag">SERP-171</span></div>
+          <p>Responsive implementation; demo tenant reseeded to August 2026.</p>
+          <span class="done"><b>Done when</b> — no page scrolls horizontally; no undeliverable metric</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <h4>On the feature freeze</h4>
+      <p><code>DEC-033</code> freezes features until the five audit criticals are closed <em>and proven in effect</em>. Migration <code>0011</code> is written, reviewed and unapplied; it closes the last one and is applied at the start of phase 3. Phases 0–2 are structural, not features, and do not breach the freeze.</p>
+    </div>
+  </section>
+
+  <section id="j">
+    <div class="sec-head"><span class="sec-key">J</span><h2>Rollback Point</h2></div>
+
+    <div class="status ok" style="margin:0 0 24px">
+      <span class="dot"></span>
+      <strong>Phase 0 complete</strong>
+      <span><code>pre-merge-2026-08-23</code> created and clone-tested, 23 Aug 2026.</span>
+    </div>
+
+    <p>The working tree was resolved in <strong>three deliberate commits, not one bulk commit</strong> — a tag over an unreviewed tree preserves the mess rather than the known-good state.</p>
+
+    <div class="tw"><table>
+      <thead><tr><th>Commit</th><th>What</th><th>Why it mattered</th></tr></thead>
+      <tbody>
+        <tr><td class="num">95fcfa1</td><td>Console design system, exactly as it stood before the freeze</td><td><strong>It had never been committed.</strong> Parking the console with this work uncommitted would have lost it — tokens, the red ramp, <code>jobs_list_view</code>, <code>job_card_screen</code>, <code>seat_chip</code>, the intake view, the guidance panel</td></tr>
+        <tr><td class="num">c262a23</td><td><code>0011</code> self-test corrected</td><td>It asserted <code>seat_not_held</code>; the function raises <code>seat_not_authorized</code>, at line 127 of the same file. The name was invented rather than read — precisely the defect class <code>0011</code> exists to close</td></tr>
+        <tr><td class="num">cff9198</td><td>The proposal and the two reviews that produced it</td><td>The decision record enters version control</td></tr>
+      </tbody>
+    </table></div>
+
+    <p>The revision was deliberately <strong>excluded</strong> via <code>.git/info/exclude</code> — it is a reference copy that moves to the new repository in phase 1 and does not belong in this tag.</p>
+
+    <h4>Restore test performed</h4>
+    <p>The tag was cloned to a scratch tree and verified: <strong>335 files, 11 migrations, contract present, Edge boundary present, Python engine present, 22 Dart files.</strong> <code>git fsck</code> clean.</p>
+
+    <div class="note hot">
+      <h4>What the restore test found — and it sharpens A1 rather than contradicting it</h4>
+      <p><strong>The tag does not cover the books.</strong> <code>journals/</code> and <code>books.db</code> are gitignored — deliberately and correctly, because they are Tier 1 ledger data and the repository may go to GitHub. But the consequence is that the live journals sit in <em>no repository at all</em>: three files, protected only by <code>backups/</code> <strong>on the same drive as the thing they protect against.</strong></p>
+      <p>So <code>SERP-173</code> covers three things, not one: the Supabase database, the repository including this tag, and the plain-text journals that <em>are</em> the books.</p>
+    </div>
+
+    <h3>What remains open</h3>
+    <p><strong>Amendment A1 — <code>SERP-173</code>, a hard gate.</strong> An encrypted backup held independently of the development machine, a documented restoration procedure, and a <strong>passed restore test</strong> against that backup.</p>
+    <div class="status" style="margin:0 0 20px">
+      <span class="dot"></span>
+      <strong>Gate</strong>
+      <span>Migration <code>0013</code> must not touch a live row until <code>SERP-173</code> closes. <code>DEC-019</code> closes with it.</span>
+    </div>
+    <p>Every subsequent phase branches, and <code>0013</code> is additionally rehearsed against a restored copy before it runs for real.</p>
+  </section>
+
+  <section id="amend">
+    <div class="sec-head"><span class="sec-key">✎</span><h2>The eight amendments</h2></div>
+
+    <p>Conditions of approval, not suggestions. Each is recorded against the phase it binds. <strong>Two of them can stop work rather than merely guide it.</strong></p>
+
+    <div class="tw"><table>
+      <thead><tr><th>#</th><th>Amendment</th><th>Where it lands</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="num">A1</td>
+          <td><strong>Offsite backup is a hard gate.</strong> Encrypted, off-machine, documented restore procedure, and a <em>passed restore test</em> — before migration <code>0013</code> touches a live row. A tag on the development machine is not protection.</td>
+          <td><span class="chip c-gate">Gate</span> new <code>SERP-173</code>, blocks <code>SERP-162</code></td>
+        </tr>
+        <tr>
+          <td class="num">A2</td>
+          <td><strong>One source of financial truth.</strong> Any statutory figure StarqERP shows must originate from, or reconcile to, the accounting engine. Operational analytics may compute independently; the client must not become a parallel accounting engine <em>by accident</em>.</td>
+          <td>new <code>SERP-174</code> — the invariant goes in the contract, with a conformance test</td>
+        </tr>
+        <tr>
+          <td class="num">A3</td>
+          <td><strong>Revalidate payment and expense mapping</strong> before the endpoints exist. Multiple payments per invoice, partial and unallocated payments, refunds, direct cash and card expense, petty cash, bank charges, bills paid later.</td>
+          <td>new <code>SERP-175</code>, blocks <code>SERP-167</code></td>
+        </tr>
+        <tr>
+          <td class="num">A4</td>
+          <td><strong>Currency is not structurally limited</strong> to MVR and USD. Base currency and transaction currency, ISO and extensible. No FX engine required; the door stays open.</td>
+          <td><span class="chip c-keep">Already true</span> in the schema — recorded as a guard on <code>SERP-165</code>, <code>SERP-166</code></td>
+        </tr>
+        <tr>
+          <td class="num">A5</td>
+          <td><strong>Database identity and document number are separate concepts.</strong> Human references server-generated, organisation-aware, concurrency-safe, idempotency-compatible — with an acceptance test, not an implied responsibility.</td>
+          <td>new <code>SERP-176</code></td>
+        </tr>
+        <tr>
+          <td class="num">A6</td>
+          <td><strong>AI and storage stay feature-flagged off production data</strong> until the phase 8 isolation suite passes. <em>Isolation is proven before exposure, not after.</em></td>
+          <td><span class="chip c-gate">Gate</span> <code>SERP-172</code> now gates <code>SERP-168</code></td>
+        </tr>
+        <tr>
+          <td class="num">A7</td>
+          <td><strong>Seed data uses the real entity model.</strong> Organisation <em>Club Ignition Pvt Ltd</em>, business name <em>Ignition Ink</em>. “Ignition Ink Garage Pvt Ltd” is retired — not as a spelling fix, but to prove the statutory entity is genuinely separated from the operating brand.</td>
+          <td><code>SERP-162</code> seed, <code>SERP-171</code> demo</td>
+        </tr>
+        <tr>
+          <td class="num">A8</td>
+          <td><strong>Roles-versus-seats precedence, written and tested.</strong> A role may make an action visible or generally available, but a protected action executes only when the seat and segregation contract also permits it.</td>
+          <td><code>SERP-163</code> — contract text plus conformance test</td>
+        </tr>
+      </tbody>
+    </table></div>
+
+    <div class="note hot">
+      <h4>The line A8 draws, in one sentence</h4>
+      <p><strong>A role cannot override a segregation-of-duties refusal.</strong> The test that proves it is adversarial: build a role granting every module and every action, hold it, and confirm a segregation pair still refuses. If it does not, roles have quietly become the authorization layer and the seat model is decoration.</p>
+    </div>
+  </section>
+
+  <section id="risks">
+    <div class="sec-head"><span class="sec-key">—</span><h2>Risks we are choosing to accept</h2></div>
+    <ol>
+      <li><strong>A core built with no live user drifts.</strong> Named at <code>DEC-066</code> and unchanged. Mitigation unchanged too: the garage keeps running on paper and on the Python portal, and the paper is the specification, so tenant setup models what Ignition Ink actually does.</li>
+      <li><strong>Migration <code>0013</code> touches live jobs.</strong> The only phase that can lose data. Reversible, rehearsed, tagged.</li>
+      <li><strong>The contract split changes <code>authorize()</code>.</strong> Vocabulary before matrix, or a silent authorization hole becomes a hard outage.</li>
+      <li><strong>Two frontends were parked to avoid paying twice — and the console is where the refusal semantics were actually learned.</strong> The mitigation is that those semantics move into the new client as specification, not that the console stays alive.</li>
+    </ol>
+  </section>
+
+  <section id="gate">
+    <div class="sec-head"><span class="sec-key">■</span><h2>What approval means</h2></div>
+
+    <div class="gate-card">
+      <div class="cols">
+        <div>
+          <h4>Approving this authorises</h4>
+          <ul>
+            <li>Phases 0–9 as scoped</li>
+            <li>The eighteen tasks in epic <code>SERP-E10</code></li>
+            <li>Migrations <code>0011</code>–<code>0017</code></li>
+          </ul>
+        </div>
+        <div>
+          <h4>It does not authorise</h4>
+          <ul>
+            <li>Any deletion — Rule 2</li>
+            <li>A chart of accounts in Postgres — <code>DEC-051</code></li>
+            <li>The generic asset model</li>
+            <li>A live GST line while <code>gst_status</code> is <code>not_registered</code></li>
+            <li>MIRA return generation or bank slip verification</li>
+            <li>Subdomain routing, WebSockets, PWA offline, SMS gateways</li>
+          </ul>
+        </div>
+      </div>
+      <p style="margin-top:22px">Each of those returns as its own decision.</p>
+
+      <div class="sign">
+        <p><b>Antigravity</b>The revision, its mutation inventory, the client wiring, the responsive spec, the demo dataset.</p>
+        <p><b>Elder</b>The core, the boundary, the contract, the migrations, the isolation suite, the rollback.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>DEC-067</span>
+    <span>DEC-068 · approved with amendments</span>
+    <span>Epic SERP-E10 · tasks SERP-155 – SERP-176</span>
+    <span>starqBooks/docs/architecture/</span>
+    <span>23 Aug 2026</span>
+  </footer>
+
+</main>
+</div>

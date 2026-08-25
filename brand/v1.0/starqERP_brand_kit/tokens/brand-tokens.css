@@ -1,0 +1,20 @@
+:root {
+  --starq-radius: .75rem;
+  --starq-font-display: "Lexend", system-ui, sans-serif;
+  --starq-font-ui: "Manrope", system-ui, sans-serif;
+  --starq-font-mono: "Fira Code", ui-monospace, monospace;
+  --starq-font-thaana: "Noto Sans Thaana", sans-serif;
+  --background: #0A1018; --sidebar: #050911; --card: #111923;
+  --foreground: #E7ECF0; --muted-fg: #8F9AA4; --border: rgba(255,255,255,.10);
+  --accent: #E09036; --primary: #7FBEF3; --destructive: #F94144;
+  --success: #43D19A; --warning: #F6C65B; --info: #62A8FF;
+}
+[data-theme="light"] {
+  --background: #F6F8FA; --sidebar: #EEF2F6; --card: #FFFFFF;
+  --foreground: #111A24; --muted-fg: #5F6C78; --border: #D8DEE6;
+  --accent: #E09036; --primary: #2563A8; --destructive: #B42318;
+  --success: #157A54; --warning: #8A5A00; --info: #2563EB;
+}
+
+:root { --chart-1:#65B5FF; --chart-2:#F2A44B; --chart-3:#57C7BD; --chart-4:#B49AEF; --chart-5:#D9C35A; }
+[data-theme="light"] { --chart-1:#1769AA; --chart-2:#A55208; --chart-3:#087C75; --chart-4:#6752A8; --chart-5:#786300; }

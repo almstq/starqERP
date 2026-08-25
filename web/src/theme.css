@@ -1,0 +1,272 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   starqERP — design tokens
+   ─────────────────────────────────────────────────────────────────────────────
+   Founder decisions, 24 Aug 2026:
+     W4  wordmark   starq in Instrument Sans, ERP in Geist Mono — the system tag
+     L4  logomark   the q of starq: a bowl and a descender
+     C   type       Instrument Sans / Instrument Serif, with Geist Mono
+     G3  ground     near-neutral ink — almost no chroma, so every hue on top is
+                    doing deliberate work. This product is one where colour
+                    carries meaning, which is why G3 won.
+
+   ─────────────────────────────────────────────────────────────────────────────
+   LIGHT IS THE DEFAULT AND ALWAYS WILL BE. DARK IS AN OPTION AND ALWAYS STAYS.
+   ─────────────────────────────────────────────────────────────────────────────
+   Founder, 24 Aug: "we shall build in light mode. dark is an option. dont remove
+   any of the dark, but build light and make light as default always. but dark
+   must stays always."
+
+   This inverts what was here before, where dark was designed and light was a
+   derived inversion nobody had reviewed. Both sets below are now designed.
+
+   TWO CONSEQUENCES, both deliberate:
+
+   1. THERE IS NO prefers-color-scheme RULE IN THIS FILE. Light is the default
+      ALWAYS — not "unless the operating system says otherwise". Dark applies
+      only when something adds `.dark`, which is a person choosing it. An owner
+      opening this on a phone in daylight gets light because that is right for
+      the product, not because of a setting they have never seen.
+
+   2. AMBER HAS TWO JOBS AND THEY NEED DIFFERENT VALUES. As a BUTTON FILL it
+      stays bright with dark text over it. As TEXT on a light ground it must
+      darken or it fails contrast. `--accent` fills; `--accent-text` writes.
+      Using the fill value as text on white is the single most likely way to
+      break this palette.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@theme {
+  --font-display: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --radius-card: 0.75rem;
+  --radius-control: 0.625rem;
+  --radius-pill: 9999px;
+}
+
+/* ── LIGHT — the designed default ─────────────────────────────────────────── */
+:root {
+  --background: oklch(98.5% 0.002 250);
+  --surface: oklch(97% 0.003 250);
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(21% 0.008 250);
+  --sidebar: oklch(96.5% 0.003 250);
+  --sidebar-foreground: oklch(28% 0.008 250);
+  --sidebar-accent: oklch(93% 0.005 250);
+  --sidebar-accent-foreground: oklch(18% 0.008 250);
+  --sidebar-border: oklch(0% 0 0 / 0.07);
+
+  --foreground: oklch(21% 0.008 250);
+  --muted: oklch(95% 0.003 250);
+  --muted-foreground: oklch(50% 0.01 250);
+  --border: oklch(0% 0 0 / 0.09);
+  --input: oklch(0% 0 0 / 0.14);
+
+  /* amber fills; amber-text writes */
+  --accent: oklch(72% 0.14 65);
+  --accent-foreground: oklch(24% 0.05 60);
+  --accent-text: oklch(52% 0.13 58);
+  --accent-soft: oklch(72% 0.14 65 / 0.12);
+
+  --primary: oklch(48% 0.13 250);
+  --primary-foreground: oklch(99% 0.002 250);
+  --ring: oklch(60% 0.12 250);
+
+  --positive: oklch(48% 0.14 160);
+  --destructive: oklch(52% 0.21 27);
+  --warning: oklch(52% 0.12 75);
+  --info: oklch(48% 0.14 250);
+
+  --chart-1: oklch(50% 0.14 250);
+  --chart-2: oklch(60% 0.14 65);
+  --chart-3: oklch(50% 0.12 190);
+  --chart-4: oklch(52% 0.18 320);
+  --chart-5: oklch(55% 0.17 25);
+}
+
+/* ── DARK — an option, and it stays. G3, near-neutral ink ─────────────────── */
+html.dark,
+.dark {
+  --background: oklch(15% 0.008 250);
+  --surface: oklch(17% 0.008 250);
+  --card: oklch(19% 0.008 250);
+  --card-foreground: oklch(95% 0.004 250);
+  --sidebar: oklch(12% 0.006 250);
+  --sidebar-foreground: oklch(90% 0.005 250);
+  --sidebar-accent: oklch(23% 0.008 250);
+  --sidebar-accent-foreground: oklch(96% 0.004 250);
+  --sidebar-border: oklch(100% 0 0 / 0.08);
+
+  --foreground: oklch(95% 0.004 250);
+  --muted: oklch(23% 0.008 250);
+  --muted-foreground: oklch(70% 0.008 250);
+  --border: oklch(100% 0 0 / 0.1);
+  --input: oklch(100% 0 0 / 0.15);
+
+  --accent: oklch(72% 0.14 65);
+  --accent-foreground: oklch(17% 0.04 60);
+  --accent-text: oklch(80% 0.13 68);
+  --accent-soft: oklch(72% 0.14 65 / 0.15);
+
+  --primary: oklch(78% 0.1 250);
+  --primary-foreground: oklch(15% 0.008 250);
+  --ring: oklch(62% 0.11 250);
+
+  --positive: oklch(80% 0.14 165);
+  --destructive: oklch(70% 0.19 25);
+  --warning: oklch(82% 0.15 85);
+  --info: oklch(78% 0.1 250);
+
+  --chart-1: oklch(70% 0.13 250);
+  --chart-2: oklch(76% 0.14 65);
+  --chart-3: oklch(70% 0.12 190);
+  --chart-4: oklch(72% 0.17 320);
+  --chart-5: oklch(72% 0.17 25);
+}
+
+/* ── primitives ───────────────────────────────────────────────────────────── */
+
+.erp-shell   { background: var(--background); color: var(--foreground); }
+.erp-sidebar { background: var(--sidebar); border-right: 1px solid var(--sidebar-border); width: 256px; }
+.erp-card    { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-card); }
+.erp-muted   { color: var(--muted-foreground); }
+
+/* Instrument Sans is a touch wide at display sizes; tighten it and let it breathe */
+.erp-display { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.025em; }
+.erp-h1      { font-family: var(--font-display); font-size: 30px; font-weight: 600;
+               letter-spacing: -0.028em; line-height: 1.12; }
+.erp-figure  { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.03em;
+               font-variant-numeric: tabular-nums lining-nums; }
+
+/* Instrument Serif italic is the brand's one warm register — documents,
+   marketing, an empty state that needs a human voice. Never for data. */
+.erp-editorial { font-family: var(--font-serif); font-style: italic; letter-spacing: 0; }
+
+/* W4 — the wordmark. starq in the sans, ERP in the mono, no space between. */
+.erp-wordmark      { display: inline-flex; align-items: baseline; gap: 1px; }
+.erp-wordmark-name { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.03em; }
+.erp-wordmark-tag  { font-family: var(--font-mono); font-weight: 500; letter-spacing: 0.01em;
+                     font-size: 0.66em; }
+
+.erp-nav-item { font-size: 14px; font-weight: 500; padding: 10px 12px;
+                border-radius: var(--radius-card);
+                color: color-mix(in oklab, var(--sidebar-foreground) 72%, transparent);
+                display: flex; align-items: center; gap: 12px; }
+.erp-nav-item:hover { background: color-mix(in oklab, var(--sidebar-accent) 60%, transparent);
+                      color: var(--sidebar-accent-foreground); }
+.erp-nav-item[data-active="true"] { background: var(--sidebar-accent); color: var(--sidebar-accent-foreground); }
+
+/* the one filled control on a page — everything else stays quiet */
+.erp-btn-primary { background: var(--accent); color: var(--accent-foreground);
+                   font-size: 14px; font-weight: 600; padding: 8px 14px;
+                   border-radius: var(--radius-control); }
+.erp-btn-quiet   { background: var(--card); color: var(--foreground);
+                   font-size: 14px; font-weight: 500; padding: 8px 14px;
+                   border-radius: var(--radius-control); border: 1px solid var(--border); }
+
+.erp-input { background: var(--card); border: 1px solid var(--input);
+             border-radius: var(--radius-control); font-size: 14px; padding: 8px 12px;
+             color: var(--foreground); }
+.erp-input::placeholder { color: var(--muted-foreground); }
+
+/* status pill — a state, never an action. NEVER var(--accent). */
+.erp-pill          { font-size: 12px; font-weight: 600; padding: 4px 10px;
+                     border-radius: var(--radius-pill); display: inline-block; white-space: nowrap; }
+.erp-pill-positive { background: color-mix(in oklab, var(--positive) 13%, transparent); color: var(--positive); }
+.erp-pill-warning  { background: color-mix(in oklab, var(--warning) 13%, transparent); color: var(--warning); }
+.erp-pill-danger   { background: color-mix(in oklab, var(--destructive) 13%, transparent); color: var(--destructive); }
+.erp-pill-info     { background: color-mix(in oklab, var(--info) 13%, transparent); color: var(--info); }
+.erp-pill-neutral  { background: var(--muted); color: var(--muted-foreground); }
+
+/* money — direction is colour, and these are never a tenant's to change */
+.erp-money-in  { color: var(--positive); font-variant-numeric: tabular-nums; }
+.erp-money-out { color: var(--destructive); font-variant-numeric: tabular-nums; }
+.erp-amount    { font-variant-numeric: tabular-nums lining-nums; }
+
+.erp-table          { width: 100%; font-size: 14px; border-collapse: collapse; }
+.erp-table thead th { font-size: 12px; font-weight: 500; color: var(--muted-foreground);
+                      text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.erp-table tbody td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.erp-table tbody tr:last-child td { border-bottom: 0; }
+.erp-table tbody tr[data-clickable="true"] { cursor: pointer; }
+.erp-table tbody tr[data-clickable="true"]:hover { background: color-mix(in oklab, var(--foreground) 3%, transparent); }
+
+/* ── FIELDS — one standard, and they size to their content ────────────────────
+   Founder, 24 Aug: "make the text boxes dynamic... maintain a standard."
+
+   TWO THINGS, and the second is the one that gets forgotten.
+
+   DYNAMIC. A field sizes to what is in it. `field-sizing: content` grows a
+   textarea as someone types instead of trapping a long note behind an inner
+   scrollbar, and lets a short field (a plate number, a quantity) stop being as
+   wide as a customer name for no reason. Where the browser does not support it
+   the field falls back to its declared rows/size, which is the old behaviour —
+   nothing breaks, it just stops growing.
+
+   STANDARD. Every field in starqERP is one of three heights and shares one
+   anatomy: label, control, hint or error. A form where six inputs are six
+   heights reads as unfinished no matter how good the colours are.
+
+   THE ERROR STATE IS --destructive, NEVER --accent. Amber is the primary
+   action. A field that is wrong is not an invitation to act on it.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.erp-field        { display: flex; flex-direction: column; gap: 6px; }
+.erp-field-label  { font-size: 13px; font-weight: 500; color: var(--foreground); }
+.erp-field-hint   { font-size: 12px; color: var(--muted-foreground); }
+.erp-field-error  { font-size: 12px; color: var(--destructive); }
+
+.erp-control {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--input);
+  border-radius: var(--radius-control);
+  padding: 0 12px;
+  height: 38px;                 /* md — the default */
+  width: 100%;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.erp-control::placeholder { color: var(--muted-foreground); }
+.erp-control:hover:not(:disabled):not(:focus) { border-color: color-mix(in oklab, var(--foreground) 22%, transparent); }
+.erp-control:focus-visible,
+.erp-control:focus {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 22%, transparent);
+}
+.erp-control:disabled { background: var(--muted); color: var(--muted-foreground); cursor: not-allowed; }
+.erp-control[readonly] { background: var(--muted); }
+.erp-control[aria-invalid="true"] {
+  border-color: var(--destructive);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 18%, transparent);
+}
+
+/* three heights and no others. 44px is the touch floor — use it on anything a
+   person taps on a phone in a workshop. */
+.erp-control-sm { height: 32px; font-size: 13px; padding: 0 10px; }
+.erp-control-lg { height: 44px; font-size: 15px; padding: 0 14px; }
+
+/* dynamic: grow with the content rather than scrolling inside a fixed box */
+.erp-control-auto  { field-sizing: content; min-width: 6ch; width: auto; }
+.erp-textarea      { field-sizing: content; height: auto; min-height: 76px; max-height: 40vh;
+                     padding: 10px 12px; resize: vertical; }
+
+/* money and quantities: right-aligned, tabular, so columns of them line up */
+.erp-control-amount { text-align: right; font-variant-numeric: tabular-nums lining-nums; }
+
+/* an input carrying a leading icon or a currency prefix */
+.erp-control-affix     { position: relative; display: flex; align-items: center; }
+.erp-control-affix > .erp-control { padding-left: 40px; }
+.erp-control-affix > .erp-affix   { position: absolute; left: 12px; display: flex; align-items: center;
+                                    font-size: 13px; color: var(--muted-foreground); pointer-events: none; }
+
+/* wide content scrolls in its own box; the page never scrolls sideways */
+.erp-scroll-x { overflow-x: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

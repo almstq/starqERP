@@ -1,0 +1,56 @@
+{
+  "name": "starqERP",
+  "version": "1.0",
+  "radius": "0.75rem",
+  "fonts": {
+    "display": "Lexend",
+    "ui": "Manrope",
+    "mono": "Fira Code",
+    "thaana": "Noto Sans Thaana"
+  },
+  "dark": {
+    "background": "#0A1018",
+    "sidebar": "#050911",
+    "card": "#111923",
+    "foreground": "#E7ECF0",
+    "mutedForeground": "#8F9AA4",
+    "accent": "#E09036",
+    "primary": "#7FBEF3",
+    "destructive": "#F94144",
+    "success": "#43D19A",
+    "warning": "#F6C65B",
+    "info": "#62A8FF",
+    "border": "rgba(255,255,255,.10)"
+  },
+  "light": {
+    "background": "#F6F8FA",
+    "sidebar": "#EEF2F6",
+    "card": "#FFFFFF",
+    "foreground": "#111A24",
+    "mutedForeground": "#5F6C78",
+    "accent": "#E09036",
+    "primary": "#2563A8",
+    "destructive": "#B42318",
+    "success": "#157A54",
+    "warning": "#8A5A00",
+    "info": "#2563EB",
+    "border": "#D8DEE6"
+  },
+  "charts": {
+    "dark": [
+      "#65B5FF",
+      "#F2A44B",
+      "#57C7BD",
+      "#B49AEF",
+      "#D9C35A"
+    ],
+    "light": [
+      "#1769AA",
+      "#A55208",
+      "#087C75",
+      "#6752A8",
+      "#786300"
+    ]
+  },
+  "markConcept": "Confluence / Course: three operational record lines become one forward course."
+}

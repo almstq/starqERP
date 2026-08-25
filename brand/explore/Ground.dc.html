@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; background: #0F1116; color: #E8EAED; font-family: Geist, ui-sans-serif, system-ui, sans-serif; }
+    a { color: #F0A253; } a:hover { color: #FFC489; }
+    .lab { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; }
+  </style>
+</helmet>
+
+<div style="padding: 48px 52px; display: flex; flex-direction: column; gap: 36px;">
+
+  <div style="display: flex; flex-direction: column; gap: 8px;">
+    <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: #8A9099;">Ground · what the amber sits on</div>
+    <div style="font-size: 30px; font-weight: 600; letter-spacing: -0.02em;">The accent is settled. The ground is not.</div>
+    <div style="font-size: 15px; line-height: 1.55; color: #A8AEB6; max-width: 64ch;">
+      Amber <span style="font-family:'Geist Mono',monospace;">oklch(72% .14 65)</span> stays — it is the one element that already
+      reads as yours. What is open is the near-black behind it, currently a fairly generic blue-black. Each panel below shows the
+      same three surfaces, the same accent, and the same two semantic colours.
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px;">
+
+    <!-- G1 current -->
+    <div style="border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08);">
+      <div style="background: oklch(17% 0.02 258); padding: 26px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display:flex; align-items:baseline; gap:10px;">
+          <span class="lab" style="color:#F0A253;">G1</span>
+          <span style="font-size:13px; font-weight:500; color: oklch(94% 0.008 247);">Blue-black · current</span>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1; height:52px; border-radius:10px; background: oklch(14% 0.02 258);"></div>
+          <div style="flex:1; height:52px; border-radius:10px; background: oklch(21% 0.024 258);"></div>
+          <div style="flex:1; height:52px; border-radius:10px; background: oklch(25% 0.02 258);"></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="background: oklch(72% 0.14 65); color: oklch(17% 0.04 60); font-size:13px; font-weight:600; padding:8px 14px; border-radius:10px;">Create record</span>
+          <span style="color: oklch(84.5% 0.143 165); font-size:14px; font-variant-numeric: tabular-nums;">+MVR 11,250</span>
+          <span style="color: oklch(65% 0.22 25); font-size:14px; font-variant-numeric: tabular-nums;">−MVR 3,640</span>
+        </div>
+        <div style="font-family:'Geist Mono',monospace; font-size:11px; color: oklch(68% 0.02 250);">oklch(17% .02 258)</div>
+      </div>
+      <div style="padding: 16px 26px; background:#151821; font-size:13px; line-height:1.5; color:#8A9099;">Cool and neutral. Also what most dark SaaS looks like — the amber reads as an add-on rather than as the palette.</div>
+    </div>
+
+    <!-- G2 warm -->
+    <div style="border-radius: 14px; overflow: hidden; border: 1px solid rgba(240,162,83,0.28);">
+      <div style="background: oklch(16% 0.015 55); padding: 26px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display:flex; align-items:baseline; gap:10px;">
+          <span class="lab" style="color:#F0A253;">G2</span>
+          <span style="font-size:13px; font-weight:500; color: oklch(94% 0.008 70);">Warm black</span>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1; height:52px; border-radius:10px; background: oklch(13% 0.014 55);"></div>
+          <div style="flex:1; height:52px; border-radius:10px; background: oklch(20% 0.018 55);"></div>
+          <div style="flex:1; height:52px; border-radius:10px; background: oklch(24% 0.016 55);"></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="background: oklch(72% 0.14 65); color: oklch(17% 0.04 60); font-size:13px; font-weight:600; padding:8px 14px; border-radius:10px;">Create record</span>
+          <span style="color: oklch(84.5% 0.143 165); font-size:14px; font-variant-numeric: tabular-nums;">+MVR 11,250</span>
+          <span style="color: oklch(65% 0.22 25); font-size:14px; font-variant-numeric: tabular-nums;">−MVR 3,640</span>
+        </div>
+        <div style="font-family:'Geist Mono',monospace; font-size:11px; color: oklch(68% 0.02 60);">oklch(16% .015 55)</div>
+      </div>
+      <div style="padding: 16px 26px; background:#151821; font-size:13px; line-height:1.5; color:#8A9099;">The ground shares the amber's hue family, so the accent looks chosen rather than applied. Warmest, most distinctive. Green sits slightly less easily.</div>
+    </div>
+
+    <!-- G3 ink -->
+    <div style="border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08);">
+      <div style="background: oklch(15% 0.008 250); padding: 26px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display:flex; align-items:baseline; gap:10px;">
+          <span class="lab" style="color:#F0A253;">G3</span>
+          <span style="font-size:13px; font-weight:500; color: oklch(95% 0.004 250);">Near-neutral ink</span>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1; height:52px; border-radius:10px; background: oklch(12% 0.006 250);"></div>
+          <div style="flex:1; height:52px; border-radius:10px; background: oklch(19% 0.008 250);"></div>
+          <div style="flex:1; height:52px; border-radius:10px; background: oklch(23% 0.008 250);"></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="background: oklch(72% 0.14 65); color: oklch(17% 0.04 60); font-size:13px; font-weight:600; padding:8px 14px; border-radius:10px;">Create record</span>
+          <span style="color: oklch(84.5% 0.143 165); font-size:14px; font-variant-numeric: tabular-nums;">+MVR 11,250</span>
+          <span style="color: oklch(65% 0.22 25); font-size:14px; font-variant-numeric: tabular-nums;">−MVR 3,640</span>
+        </div>
+        <div style="font-family:'Geist Mono',monospace; font-size:11px; color: oklch(70% 0.008 250);">oklch(15% .008 250)</div>
+      </div>
+      <div style="padding: 16px 26px; background:#151821; font-size:13px; line-height:1.5; color:#8A9099;">Almost no colour in the ground, so every hue on top is doing deliberate work. Best for a product where colour carries meaning — which this one is.</div>
+    </div>
+
+    <!-- G4 deep -->
+    <div style="border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08);">
+      <div style="background: oklch(19% 0.03 200); padding: 26px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display:flex; align-items:baseline; gap:10px;">
+          <span class="lab" style="color:#F0A253;">G4</span>
+          <span style="font-size:13px; font-weight:500; color: oklch(95% 0.01 200);">Deep teal</span>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1; height:52px; border-radius:10px; background: oklch(16% 0.028 200);"></div>
+          <div style="flex:1; height:52px; border-radius:10px; background: oklch(23% 0.032 200);"></div>
+          <div style="flex:1; height:52px; border-radius:10px; background: oklch(27% 0.03 200);"></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="background: oklch(72% 0.14 65); color: oklch(17% 0.04 60); font-size:13px; font-weight:600; padding:8px 14px; border-radius:10px;">Create record</span>
+          <span style="color: oklch(84.5% 0.143 165); font-size:14px; font-variant-numeric: tabular-nums;">+MVR 11,250</span>
+          <span style="color: oklch(65% 0.22 25); font-size:14px; font-variant-numeric: tabular-nums;">−MVR 3,640</span>
+        </div>
+        <div style="font-family:'Geist Mono',monospace; font-size:11px; color: oklch(72% 0.02 200);">oklch(19% .03 200)</div>
+      </div>
+      <div style="padding: 16px 26px; background:#151821; font-size:13px; line-height:1.5; color:#8A9099;">Amber against teal is the strongest complement here and the most Maldivian reading without being literal about it. Also the most opinionated — it will not suit every tenant's brand on the counter screens.</div>
+    </div>
+
+  </div>
+
+  <div style="display: flex; gap: 12px; align-items: flex-start; padding: 20px 22px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A9099" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 1px;"><path d="M12 3v18"></path><path d="M5 8h14"></path><path d="M5 16h14"></path></svg>
+    <div style="font-size: 13px; line-height: 1.55; color: #C6CBD2;">
+      <strong style="color:#E8EAED;">Check the green and red in every panel before choosing.</strong> Money in and money out have to stay unmistakable on whichever ground wins — they carry meaning, and unlike the accent they are never a tenant's to change.
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

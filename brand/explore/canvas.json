@@ -1,0 +1,13 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html",     "x": 0,    "y": 0,   "w": 1000, "h": 900 },
+    { "file": "Logomark.dc.html", "x": 1060, "y": 0,   "w": 1000, "h": 900 },
+    { "file": "Type.dc.html",     "x": 0,    "y": 960, "w": 1240, "h": 820 },
+    { "file": "Ground.dc.html",   "x": 1300, "y": 960, "w": 1000, "h": 980 }
+  ],
+  "annotations": [
+    { "id": "how-to-decide", "x": 0, "y": -150, "w": 640,
+      "text": "Four decisions, in this order:\n\n1. Wordmark treatment (W1-W4)\n2. Logomark (L1-L4)\n3. Type direction (A/B/C)\n4. Ground (G1-G4)\n\nThe accent amber is settled and not up for decision.\nPick by the small proofs, not the big ones." }
+  ],
+  "launch": { "view": "canvas" }
+}
