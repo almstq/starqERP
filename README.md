@@ -5,12 +5,13 @@
 
 ---
 
-## 📊 Current Status & CI Pilot Readiness
+## 📊 Current Status & Engineering Metrics
 
 | Metric | Status | Evidence Source |
 |---|---|---|
-| **CI Pilot Readiness** | **35 / 40 Tasks Complete (87.5%)** | `starqNexus/data/starq-erp-tasks.json` |
-| **Active WIP** | **1 Task** (`M0-CLIE-001`) | Skeleton Crew / WIP=1 Operating Standard |
+| **CI Pilot Readiness** | **35 / 40 Tasks Complete (87.5%)** | `starqNexus/data/starq-erp-tasks.json` (CI Pilot vertical slice) |
+| **Overall Engineering Progress** | **79 / 263 Tasks Complete (30.0%)** | `starqNexus/data/starq-erp-tasks.json` (All project epics) |
+| **Active Engineering WIP** | **1 Task** (`M0-CLIE-001`) | Skeleton Crew / WIP=1 Operating Standard |
 | **Contract & Boundary Tests** | **94 / 94 PASS** | Deno automated test suite (`tests/contract/`) |
 | **Web Client Tests** | **11 / 11 PASS** | Vitest automated suite (`web/src/test/`) |
 | **PostgreSQL RLS Security** | **31 / 31 Public Tables Protected** | 27 RLS + 4 revoked public grants + 0 unprotected |
@@ -23,7 +24,7 @@
 ## 🧭 Feature Delivery Matrix
 
 ### 🟢 Built & Verified
-* **Server-Authoritative Command Envelope:** 24-mutation surface map (`contracts/commands.ts`) enforcing seat matrix permissions, session tenant resolution, and zero trust for caller-supplied tenant/user identities (SERP-166, SERP-178).
+* **Server-Authoritative Command Envelope:** 27 mapped client mutations covering all 24 server-backed commands (`contracts/commands.ts`) enforcing seat matrix permissions, session tenant resolution, and zero trust for caller-supplied tenant/user identities (SERP-166, SERP-167, SERP-178).
 * **Statutory Date-Effective Taxation (SERP-122 / SERP-164):** Line tax engine (`calculateLineTax`) resolving effective rate schedules by supply date (0% for unregistered entities, 8% GGST for registered entities) without floating-point drift.
 * **Single Source of Financial Truth (DEC-068 / Amendment A2):** Strict boundary between statutory accounting figures and operational metrics.
 * **Database Migration Baseline (0001–0020):** 20 applied SQL migrations defining multi-tenant garage jobs, inventory, statutory tax schedules, bank accounts as entities, SoD tracked exceptions, sequential document numbering, and composite FK constraints.
@@ -75,8 +76,8 @@ flowchart LR
 
 ## ⚠️ Known Limitations & Intentionally Parked Work
 
-* **Flutter Mobile App Frozen (DEC-067):** The legacy Flutter mobile console (`starq-ops-app` / tasks `SERP-028`, `SERP-151`) is permanently parked. All counter, intake, QC, and seat-banner UX is consolidated directly into the React 19 web client.
-* **Local Scratch DB Restoration Scope:** The local baseline restore test was performed against a vanilla PostgreSQL 17 instance. Because vanilla PostgreSQL lacks the proprietary `supabase_vault` extension, `vault.secrets` was un-restored locally. This verified Starq public application data tables (30 tables), not a full Supabase platform infrastructure DR simulation.
+* **Flutter Mobile App Parked (DEC-067):** The legacy Flutter mobile console (`starq-ops-app` / tasks `SERP-028`, `SERP-151`) is parked/frozen under DEC-067 until explicitly resumed. All counter, intake, QC, and seat-banner UX is consolidated directly into the React 19 web client.
+* **Local Scratch DB Restoration Scope:** The local baseline restore test was performed against a vanilla PostgreSQL 17 instance. Because the Supabase-specific `supabase_vault` extension is unavailable in vanilla local PostgreSQL, `vault.secrets` was not restored locally. This verified Starq application data and public schema (30 tables), not a full Supabase platform infrastructure DR simulation.
 * **Publication Gate (SERP-125):** Public document links are disabled by default until the formal publication boundary gate is reviewed by Elder.
 
 ---
@@ -86,7 +87,7 @@ flowchart LR
 ```
 starqERP/
 ├── contracts/        # Canonical TypeScript command envelope & statutory tax engine (SSOT)
-│   └── commands.ts   # 24 mutation surface map, seat matrix, and calculation rules
+│   └── commands.ts   # 27 mutation surface map (24 server commands), seat matrix, rules
 ├── supabase/         # PostgreSQL database layer & Edge API
 │   ├── migrations/   # Migrations 0001–0020 (RLS, audit logs, tax schedules, SoD)
 │   └── functions/    # Deno Edge Functions (starq-api /api/ops/event)
