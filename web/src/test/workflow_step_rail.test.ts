@@ -54,23 +54,21 @@ describe('SERP-146 & SERP-145 — 13-Step Workflow Journey Rail & Seat Signpost'
   });
 
   it('SERP-145: Seat signpost enforces counter/manager seat requirement for empty bay intake', () => {
-    const checkCanCreateJob = (roleCode: string, permissions: string[]) => {
-      const isSuperAdmin = roleCode === 'superadmin' || roleCode === 'owner';
+    const checkCanCreateJob = (isSystemAdmin: boolean, rolePermissions: { jobs?: string[] }) => {
       return (
-        isSuperAdmin ||
-        permissions.includes('jobs') ||
-        permissions.includes('all') ||
-        roleCode === 'sales' ||
-        roleCode === 'manager'
+        isSystemAdmin ||
+        (rolePermissions.jobs?.includes('create') ?? false) ||
+        (rolePermissions.jobs?.includes('manage') ?? false)
       );
     };
 
-    // Counter / Service Advisor can create jobs
-    expect(checkCanCreateJob('sales', ['jobs'])).toBe(true);
-    expect(checkCanCreateJob('manager', ['jobs'])).toBe(true);
-    expect(checkCanCreateJob('owner', ['all'])).toBe(true);
+    // Counter / Service Advisor / Manager can create jobs
+    expect(checkCanCreateJob(false, { jobs: ['view', 'create', 'edit'] })).toBe(true);
+    expect(checkCanCreateJob(false, { jobs: ['view', 'create', 'approve'] })).toBe(true);
+    expect(checkCanCreateJob(true, {})).toBe(true);
 
-    // Pure technician cannot create new jobs from empty bay without counter seat
-    expect(checkCanCreateJob('technician', ['materials'])).toBe(false);
+    // Pure technician cannot create new jobs from empty bay without counter create permission
+    expect(checkCanCreateJob(false, { jobs: ['view', 'edit'] })).toBe(false);
+    expect(checkCanCreateJob(false, {})).toBe(false);
   });
 });

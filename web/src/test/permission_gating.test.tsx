@@ -1,51 +1,56 @@
 import { describe, it, expect } from 'vitest';
 import { UserRole, AppUser, PermissionModule, PermissionAction } from '../types/erp';
 
-describe('RBAC & Permission Gating Tests (SERP-195 / SERP-163)', () => {
+describe('RBAC & Permission Gating Tests (SERP-195 / SERP-163 / SERP-197)', () => {
   const adminRole: UserRole = {
     id: 'role-admin',
+    tenantId: 'tenant-1',
     name: 'Admin / Owner',
     description: 'Full administrative access',
+    color: 'purple',
     isSystemAdmin: true,
-    permissions: [
-      { module: 'dashboard', actions: ['view'] },
-      { module: 'jobs', actions: ['view', 'create', 'edit', 'delete'] },
-      { module: 'invoices', actions: ['view', 'create', 'edit', 'delete'] },
-      { module: 'payments', actions: ['view', 'create', 'edit', 'delete'] },
-      { module: 'inventory', actions: ['view', 'create', 'edit', 'delete'] },
-      { module: 'purchasing', actions: ['view', 'create', 'edit', 'delete'] },
-      { module: 'expenses', actions: ['view', 'create', 'edit', 'delete'] },
-      { module: 'customers', actions: ['view', 'create', 'edit', 'delete'] },
-      { module: 'suppliers', actions: ['view', 'create', 'edit', 'delete'] },
-      { module: 'reports', actions: ['view', 'export'] },
-      { module: 'settings', actions: ['view', 'edit'] },
-      { module: 'users', actions: ['view', 'edit', 'authorize', 'suspend'] },
-      { module: 'roles', actions: ['view', 'edit'] },
-      { module: 'audit', actions: ['view'] },
-    ]
+    permissions: {
+      dashboard: ['view', 'export'],
+      jobs: ['view', 'create', 'edit', 'delete', 'approve', 'export'],
+      invoices: ['view', 'create', 'edit', 'delete', 'approve', 'export'],
+      payments: ['view', 'create', 'edit', 'delete', 'approve', 'export'],
+      inventory: ['view', 'create', 'edit', 'delete', 'manage', 'export'],
+      purchasing: ['view', 'create', 'edit', 'delete', 'approve', 'export'],
+      expenses: ['view', 'create', 'edit', 'delete', 'approve', 'export'],
+      suppliers: ['view', 'create', 'edit', 'delete', 'export'],
+      reports: ['view', 'export'],
+      audit: ['view', 'export'],
+      workflows: ['view', 'edit', 'manage'],
+      roles: ['view', 'create', 'edit', 'delete', 'manage'],
+      users: ['view', 'create', 'edit', 'delete', 'approve', 'manage'],
+      settings: ['view', 'edit', 'manage'],
+    }
   };
 
   const technicianRole: UserRole = {
     id: 'role-tech',
+    tenantId: 'tenant-1',
     name: 'Technician',
     description: 'Workshop floor technician',
+    color: 'emerald',
     isSystemAdmin: false,
-    permissions: [
-      { module: 'dashboard', actions: ['view'] },
-      { module: 'jobs', actions: ['view', 'edit'] },
-      { module: 'inventory', actions: ['view'] },
-    ]
+    permissions: {
+      dashboard: ['view'],
+      jobs: ['view', 'edit'],
+      inventory: ['view'],
+    }
   };
 
   const activeAdmin: AppUser = {
     id: 'user-1',
+    tenantId: 'tenant-1',
     name: 'Ali Mushthaq',
     email: 'ali@starq.io',
     phone: '7774356',
     roleId: 'role-admin',
     roleName: 'Admin / Owner',
     status: 'Active',
-    joinedDate: '2026-08-01',
+    invitedAt: '2026-08-01',
     authorizedBy: 'Founder',
     authorizedAt: '2026-08-01 00:00',
     lastActiveAt: 'Active now'
@@ -53,13 +58,14 @@ describe('RBAC & Permission Gating Tests (SERP-195 / SERP-163)', () => {
 
   const activeTechnician: AppUser = {
     id: 'user-2',
+    tenantId: 'tenant-1',
     name: 'Ahmed Farish',
     email: 'farish@ignition.mv',
     phone: '7771234',
     roleId: 'role-tech',
     roleName: 'Technician',
     status: 'Active',
-    joinedDate: '2026-08-10',
+    invitedAt: '2026-08-10',
     authorizedBy: 'Ali Mushthaq',
     authorizedAt: '2026-08-10 09:00',
     lastActiveAt: 'Active now'
@@ -67,13 +73,14 @@ describe('RBAC & Permission Gating Tests (SERP-195 / SERP-163)', () => {
 
   const pendingUser: AppUser = {
     id: 'user-3',
+    tenantId: 'tenant-1',
     name: 'New Trainee',
     email: 'trainee@ignition.mv',
     phone: '7779999',
     roleId: 'role-tech',
     roleName: 'Technician',
     status: 'Pending Approval',
-    joinedDate: '2026-08-25',
+    invitedAt: '2026-08-25',
     lastActiveAt: 'Just signed in'
   };
 
@@ -88,9 +95,9 @@ describe('RBAC & Permission Gating Tests (SERP-195 / SERP-163)', () => {
     if (!role) return false;
     if (role.isSystemAdmin) return true;
 
-    const modulePerm = role.permissions.find((p) => p.module === module);
-    if (!modulePerm) return false;
-    return modulePerm.actions.includes(action);
+    const modulePerms = role.permissions[module];
+    if (!modulePerms) return false;
+    return modulePerms.includes(action) || modulePerms.includes('manage');
   }
 
   it('allows active admin to view and edit invoices', () => {

@@ -313,6 +313,7 @@ export type IndustryType =
   | 'Medical Clinic & Diagnostics'
   | 'Retail & Wholesale Trading'
   | 'Construction & Engineering'
+  | 'Software & Engineering Services'
   | 'Custom Service Workshop';
 
 /**

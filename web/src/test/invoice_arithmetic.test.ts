@@ -11,11 +11,11 @@ describe('Invoice Arithmetic & Total Calculations (SERP-195 / DEC-072)', () => {
 
   it('correctly calculates subtotal, GST, and gross total for GST-registered tenant (8% GGST)', () => {
     const lines: InvoiceLineItem[] = [
-      { id: '1', description: 'Brake Pad Replacement', quantity: 2, unitPrice: 450, total: 900 },
-      { id: '2', description: 'Labor - Inspection', quantity: 1, unitPrice: 200, total: 200 },
+      { id: '1', description: 'Brake Pad Replacement', quantity: 2, unitPrice: 450, amount: 900, category: 'Material/Part' },
+      { id: '2', description: 'Labor - Inspection', quantity: 1, unitPrice: 200, amount: 200, category: 'Labor/Service' },
     ];
 
-    const subtotal = lines.reduce((acc, l) => acc + l.total, 0);
+    const subtotal = lines.reduce((acc, l) => acc + l.amount, 0);
     expect(subtotal).toBe(1100);
 
     const gstRate = 0.08;
@@ -28,10 +28,10 @@ describe('Invoice Arithmetic & Total Calculations (SERP-195 / DEC-072)', () => {
 
   it('correctly calculates 0% GST when tenant is not_registered (Starq Tech)', () => {
     const lines: InvoiceLineItem[] = [
-      { id: '1', description: 'Custom AI Consulting', quantity: 10, unitPrice: 1000, total: 10000 },
+      { id: '1', description: 'Custom AI Consulting', quantity: 10, unitPrice: 1000, amount: 10000, category: 'Labor/Service' },
     ];
 
-    const subtotal = lines.reduce((acc, l) => acc + l.total, 0);
+    const subtotal = lines.reduce((acc, l) => acc + l.amount, 0);
     const gstRate = 0.00;
     const gstAmount = Math.round(subtotal * gstRate * 100) / 100;
     const totalAmount = subtotal + gstAmount;

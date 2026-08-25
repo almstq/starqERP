@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeTrialBalance, computeProfitAndLoss, computeBalanceSheet } from '../lib/bookkeeping';
-import { Invoice, Payment, Expense, PurchaseOrder, OrganisationTenant } from '../types/erp';
+import { Invoice, Payment, Expense, PurchaseOrder } from '../types/erp';
 import { INITIAL_TENANTS } from '../data/mockData';
 
 describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)', () => {
@@ -27,9 +27,11 @@ describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)
         invoiceNumber: 'INV-2026-001',
         customerId: 'cust-1',
         customerName: 'Ahmed Rauf',
+        customerPhone: '+960 778-4321',
+        customerIsland: "Male'",
         date: '2026-08-01',
         dueDate: '2026-08-15',
-        items: [{ id: '1', description: 'Full Body Paint', quantity: 1, unitPrice: 25000, amount: 25000, category: 'Labor' }],
+        items: [{ id: '1', description: 'Full Body Paint', quantity: 1, unitPrice: 25000, amount: 25000, category: 'Labor/Service' }],
         subtotal: 25000,
         gstRate: 0.08,
         gstAmount: 2000,
@@ -37,15 +39,18 @@ describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)
         amountPaid: 27000,
         balanceDue: 0,
         status: 'Paid',
+        bankDetails: 'BML 7730000100201'
       },
       {
         id: 'inv-2',
         invoiceNumber: 'INV-2026-002',
         customerId: 'cust-2',
         customerName: 'Ibrahim Shaan',
+        customerPhone: '+960 790-1122',
+        customerIsland: "Hulhumale'",
         date: '2026-08-05',
         dueDate: '2026-08-20',
-        items: [{ id: '2', description: 'Ceramic Coating', quantity: 1, unitPrice: 15000, amount: 15000, category: 'Service' }],
+        items: [{ id: '2', description: 'Ceramic Coating', quantity: 1, unitPrice: 15000, amount: 15000, category: 'Labor/Service' }],
         subtotal: 15000,
         gstRate: 0.08,
         gstAmount: 1200,
@@ -53,6 +58,7 @@ describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)
         amountPaid: 10000,
         balanceDue: 6200,
         status: 'Partially Paid',
+        bankDetails: 'BML 7730000100201'
       },
     ];
 
@@ -65,9 +71,10 @@ describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)
         customerId: 'cust-1',
         customerName: 'Ahmed Rauf',
         amount: 27000,
-        date: '2026-08-02',
+        paymentDate: '2026-08-02',
         method: 'BML Transfer',
-        status: 'Completed',
+        referenceNumber: 'BML-TXN-101',
+        status: 'Verified',
       },
       {
         id: 'pay-2',
@@ -77,9 +84,10 @@ describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)
         customerId: 'cust-2',
         customerName: 'Ibrahim Shaan',
         amount: 10000,
-        date: '2026-08-06',
+        paymentDate: '2026-08-06',
         method: 'BML Transfer',
-        status: 'Completed',
+        referenceNumber: 'BML-TXN-102',
+        status: 'Verified',
       },
     ];
 
@@ -88,6 +96,7 @@ describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)
         id: 'exp-1',
         expenseNumber: 'EXP-101',
         category: 'Workshop Utilities & Rent',
+        description: 'Monthly workshop rent and power bill',
         amount: 12000,
         date: '2026-08-03',
         payee: 'Hulhumale Industrial Corp',
@@ -102,12 +111,13 @@ describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)
         poNumber: 'PO-2026-001',
         supplierId: 'sup-1',
         supplierName: 'PPG Refinish Maldives',
-        items: [{ id: '1', name: 'Ceramic Clearcoat Kit', quantity: 5, unitPrice: 1600, total: 8000 }],
+        items: [{ id: '1', inventoryId: 'inv-1', itemName: 'Ceramic Clearcoat Kit', unit: 'Kit', unitCost: 1600, totalCost: 8000, quantity: 5, receivedQuantity: 5 }],
         subtotal: 8000,
         gstAmount: 0,
         totalAmount: 8000,
         orderDate: '2026-08-04',
-        status: 'Approved',
+        expectedDeliveryDate: '2026-08-08',
+        status: 'Received & Stocked',
         paymentStatus: 'Paid',
       },
     ];
@@ -155,9 +165,11 @@ describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)
         invoiceNumber: 'INV-2026-001',
         customerId: 'cust-1',
         customerName: 'Ahmed Rauf',
+        customerPhone: '+960 778-4321',
+        customerIsland: "Male'",
         date: '2026-08-01',
         dueDate: '2026-08-15',
-        items: [{ id: '1', description: 'Paint Work', quantity: 1, unitPrice: 20000, amount: 20000 }],
+        items: [{ id: '1', description: 'Paint Work', quantity: 1, unitPrice: 20000, amount: 20000, category: 'Labor/Service' }],
         subtotal: 20000,
         gstRate: 0.08,
         gstAmount: 1600,
@@ -165,6 +177,7 @@ describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)
         amountPaid: 21600,
         balanceDue: 0,
         status: 'Paid',
+        bankDetails: 'BML 7730000100201'
       },
     ];
 
@@ -177,9 +190,10 @@ describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)
         customerId: 'cust-1',
         customerName: 'Ahmed Rauf',
         amount: 21600,
-        date: '2026-08-02',
+        paymentDate: '2026-08-02',
         method: 'BML Transfer',
-        status: 'Completed',
+        referenceNumber: 'BML-TXN-103',
+        status: 'Verified',
       },
     ];
 
@@ -188,6 +202,7 @@ describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)
         id: 'exp-1',
         expenseNumber: 'EXP-101',
         category: 'Compressor Service',
+        description: 'Compressor oil filter and valve overhaul',
         amount: 3000,
         date: '2026-08-03',
         payee: 'Island Machinery',
@@ -202,12 +217,13 @@ describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)
         poNumber: 'PO-2026-001',
         supplierId: 'sup-1',
         supplierName: 'Paint Store',
-        items: [{ id: '1', name: 'Paint Cans', quantity: 2, unitPrice: 2500, total: 5000 }],
+        items: [{ id: '1', inventoryId: 'inv-1', itemName: 'Paint Cans', unit: 'Cans', unitCost: 2500, totalCost: 5000, quantity: 2, receivedQuantity: 2 }],
         subtotal: 5000,
         gstAmount: 0,
         totalAmount: 5000,
         orderDate: '2026-08-04',
-        status: 'Approved',
+        expectedDeliveryDate: '2026-08-08',
+        status: 'Received & Stocked',
         paymentStatus: 'Paid',
       },
     ];
@@ -249,9 +265,11 @@ describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)
           invoiceNumber: 'INV-2026-001',
           customerId: 'cust-x',
           customerName: 'Client X',
+          customerPhone: '+960 777-0000',
+          customerIsland: "Male'",
           date: '2026-08-10',
           dueDate: '2026-08-25',
-          items: [{ id: '1', description: 'Consulting', quantity: 1, unitPrice: 50000, amount: 50000 }],
+          items: [{ id: '1', description: 'Consulting', quantity: 1, unitPrice: 50000, amount: 50000, category: 'Labor/Service' }],
           subtotal: 50000,
           gstRate: 0,
           gstAmount: 0,
@@ -259,6 +277,7 @@ describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)
           amountPaid: 50000,
           balanceDue: 0,
           status: 'Paid',
+          bankDetails: 'BML 7730000100201'
         },
       ],
       payments: [
@@ -270,9 +289,10 @@ describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)
           customerId: 'cust-x',
           customerName: 'Client X',
           amount: 50000,
-          date: '2026-08-11',
+          paymentDate: '2026-08-11',
           method: 'BML Transfer',
-          status: 'Completed',
+          referenceNumber: 'BML-TXN-104',
+          status: 'Verified',
         },
       ],
       expenses: [],

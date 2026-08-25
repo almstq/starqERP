@@ -33,11 +33,10 @@ export interface WorkflowStepRailProps {
 }
 
 export const WorkflowStepRail: React.FC<WorkflowStepRailProps> = ({ currentStatus, onAdvance }) => {
-  const { currentUser, roles } = useERP();
+  const { currentUser, roles, hasPermission } = useERP();
 
   const userRole = roles.find((r) => r.id === currentUser?.roleId);
-  const userPermissions = userRole?.permissions || [];
-  const isSuperAdmin = currentUser?.roleName === 'Super Admin' || userRole?.code === 'superadmin' || userRole?.code === 'owner';
+  const isSuperAdmin = currentUser?.roleName === 'Super Admin' || !!userRole?.isSystemAdmin;
 
   const currentStepIdx = CANONICAL_JOURNEY_STEPS.findIndex(
     (s) => s.name.toLowerCase().includes(currentStatus.toLowerCase()) ||
@@ -50,12 +49,12 @@ export const WorkflowStepRail: React.FC<WorkflowStepRailProps> = ({ currentStatu
   const nextStep = CANONICAL_JOURNEY_STEPS[safeIdx + 1];
 
   // Validate if active user holds any authorized seat from COMMAND_SEATS
-  const userHoldsSeat = isSuperAdmin || (userRole && (
-    (currentStep.requiredSeats.includes('counter') && (userPermissions.includes('jobs') || userPermissions.includes('all'))) ||
-    (currentStep.requiredSeats.includes('technician') && (userPermissions.includes('materials') || userRole.code === 'lead-tech' || userPermissions.includes('all'))) ||
-    (currentStep.requiredSeats.includes('qc_signer') && (userPermissions.includes('qc') || userPermissions.includes('all'))) ||
-    (currentStep.requiredSeats.includes('financial_controller') && (userPermissions.includes('finance') || userPermissions.includes('all')))
-  ));
+  const userHoldsSeat = isSuperAdmin || (
+    (currentStep.requiredSeats.includes('counter') && hasPermission('jobs', 'create')) ||
+    (currentStep.requiredSeats.includes('technician') && (hasPermission('inventory', 'view') || hasPermission('jobs', 'edit'))) ||
+    (currentStep.requiredSeats.includes('qc_signer') && (hasPermission('jobs', 'approve') || hasPermission('audit', 'view'))) ||
+    (currentStep.requiredSeats.includes('financial_controller') && (hasPermission('invoices', 'view') || hasPermission('payments', 'view')))
+  );
 
   const primaryRequiredSeat = currentStep.requiredSeats[0] || 'counter';
 

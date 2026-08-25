@@ -14,7 +14,9 @@ import {
   TrendingUp,
   Clock,
   Printer,
-  Sparkles
+  Sparkles,
+  ArrowRight,
+  FileText
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { Badge } from '../common/Badge';

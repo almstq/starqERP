@@ -14,12 +14,13 @@ export const CreateJobModal: React.FC = () => {
     setPrefilledCustomerId,
     setSelectedJobId,
     currentUser,
-    roles
+    roles,
+    hasPermission
   } = useERP();
 
   const userRole = roles.find((r) => r.id === currentUser?.roleId);
-  const isSuperAdmin = currentUser?.roleName === 'Super Admin' || userRole?.code === 'superadmin' || userRole?.code === 'owner';
-  const canCreateJob = isSuperAdmin || userRole?.permissions.includes('jobs') || userRole?.permissions.includes('all') || userRole?.code === 'sales' || userRole?.code === 'manager';
+  const isSuperAdmin = currentUser?.roleName === 'Super Admin' || !!userRole?.isSystemAdmin;
+  const canCreateJob = isSuperAdmin || hasPermission('jobs', 'create');
 
   const [customerId, setCustomerId] = useState('');
   const [serviceType, setServiceType] = useState<ServiceType>('Full Body Repaint');

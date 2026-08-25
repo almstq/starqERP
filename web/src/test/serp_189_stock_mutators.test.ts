@@ -4,7 +4,6 @@ import { InventoryItem, StockMovement } from '../types/erp';
 describe('SERP-189 Stock Mutator Crash Prevention Tests', () => {
   it('correctly handles initial stock register creation without undefined references', () => {
     const rawInput: Omit<InventoryItem, 'id' | 'stockStatus' | 'lastRestockedDate'> = {
-      tenantId: '30222026-0000-4000-8000-000000000001',
       sku: 'OIL-5W30-SYN',
       name: 'Full Synthetic Engine Oil 5W-30',
       category: 'Fluids & Lubricants',
@@ -13,7 +12,8 @@ describe('SERP-189 Stock Mutator Crash Prevention Tests', () => {
       unitCost: 180.00,
       sellingPrice: 260.00,
       unit: 'Liters',
-      location: 'Rack A-2',
+      locationInShop: 'Rack A-2',
+      supplierId: 'sup-1',
       supplierName: 'State Electric & Lubricants'
     };
 
@@ -49,7 +49,6 @@ describe('SERP-189 Stock Mutator Crash Prevention Tests', () => {
   it('adjusts stock safely for restock and deduction without allowing NaN or undefined states', () => {
     let currentItem: InventoryItem = {
       id: 'inv-item-101',
-      tenantId: '30222026-0000-4000-8000-000000000001',
       sku: 'FLT-OIL-01',
       name: 'Standard Oil Filter',
       category: 'Filters',
@@ -58,7 +57,9 @@ describe('SERP-189 Stock Mutator Crash Prevention Tests', () => {
       unitCost: 75.00,
       sellingPrice: 120.00,
       unit: 'Units',
-      location: 'Bin 4',
+      locationInShop: 'Shelf B-1',
+      supplierId: 'sup-1',
+      supplierName: 'Autofix Supplies',
       stockStatus: 'In Stock',
       lastRestockedDate: '2026-08-01'
     };

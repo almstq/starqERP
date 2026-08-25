@@ -5,6 +5,7 @@ import {
   Package, ShoppingCart, Truck, BarChart3, ShieldCheck, Settings as SettingsIcon,
   Search, Bell,
 } from 'lucide-react';
+import { useERP } from '../context/ERPContext';
 
 /**
  * The application shell.
@@ -43,10 +44,9 @@ const NAV = [
 
 export const AppShell: React.FC = () => {
   const navigate = useNavigate();
+  const { currentTenant } = useERP();
 
-  // Placeholder until the organisation record is wired (SERP-166). Deliberately
-  // NOT a customer name: no tenant brand ships in the product chrome.
-  const workspace = 'Starq Technologies';
+  const workspace = currentTenant?.name || 'Starq Technologies';
   const initials = workspace.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   return (
