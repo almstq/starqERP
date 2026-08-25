@@ -12,8 +12,14 @@ export const CreateJobModal: React.FC = () => {
     createJob,
     prefilledCustomerId,
     setPrefilledCustomerId,
-    setSelectedJobId
+    setSelectedJobId,
+    currentUser,
+    roles
   } = useERP();
+
+  const userRole = roles.find((r) => r.id === currentUser?.roleId);
+  const isSuperAdmin = currentUser?.roleName === 'Super Admin' || userRole?.code === 'superadmin' || userRole?.code === 'owner';
+  const canCreateJob = isSuperAdmin || userRole?.permissions.includes('jobs') || userRole?.permissions.includes('all') || userRole?.code === 'sales' || userRole?.code === 'manager';
 
   const [customerId, setCustomerId] = useState('');
   const [serviceType, setServiceType] = useState<ServiceType>('Full Body Repaint');
@@ -134,13 +140,21 @@ export const CreateJobModal: React.FC = () => {
           <button
             type="button"
             onClick={handleSubmit}
-            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs"
+            disabled={!canCreateJob}
+            className={`px-4 py-2 rounded-xl text-white text-xs font-semibold shadow-xs ${
+              canCreateJob ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-400 cursor-not-allowed'
+            }`}
           >
             Create & Assign to Bay
           </button>
         </>
       }
     >
+      {!canCreateJob && (
+        <div className="mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center gap-2 font-medium">
+          <span>⚠️ <strong>Bay Intake Locked:</strong> Required seat is <strong>counter</strong> (or Service Advisor / Managing Director). Switch acting-as seat to proceed.</span>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Customer & Service Type */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">

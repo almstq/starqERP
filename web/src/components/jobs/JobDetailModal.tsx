@@ -19,6 +19,7 @@ import {
 import { useERP } from '../../context/ERPContext';
 import { Badge } from '../common/Badge';
 import { JobStatus } from '../../types/erp';
+import { WorkflowStepRail } from './WorkflowStepRail';
 
 export const JobDetailModal: React.FC = () => {
   const {
@@ -202,6 +203,12 @@ export const JobDetailModal: React.FC = () => {
 
         {/* Scrollable Body */}
         <div className="px-6 py-5 overflow-y-auto flex-1 space-y-6 text-xs text-slate-700">
+          {/* 13-Step Workflow Journey Stepper (SERP-146) */}
+          <WorkflowStepRail
+            currentStatus={job.status}
+            onAdvance={(next) => updateJobStatus(job.id, next as JobStatus)}
+          />
+
           {/* Top 3-Stat KPI Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">

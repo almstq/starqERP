@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { JobStatus } from '../../types/erp';
+import { WorkflowStepRail } from './WorkflowStepRail';
 
 export const JobDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -201,6 +202,12 @@ export const JobDetailView: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* 13-Step Workflow Journey Rail with Seat Signpost (SERP-146) */}
+          <WorkflowStepRail
+            currentStatus={job.status}
+            onAdvance={(next) => updateJobStatus(job.id, next as JobStatus)}
+          />
 
           {/* Workflow Pipeline Progression */}
           <div className="erp-card p-5 space-y-4">
