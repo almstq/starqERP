@@ -1693,13 +1693,22 @@ export const INITIAL_WORKFLOW_STAGES: import('../types/erp').WorkflowStage[] = [
     tenantId: 'tenant-1',
     name: 'Check-in & Inspection',
     code: 'CHECK_IN',
-    description: 'Vehicle received at bay, photos logged, body damage checklist confirmed with client.',
+    description: 'Vehicle received at bay, photos logged, 8-point body damage & intake checklist confirmed with client.',
     color: 'blue',
     order: 1,
     allowedRoleIds: ['role-superadmin', 'role-manager', 'role-sales'],
     slaHours: 4,
     requiresChecklist: true,
-    checklistItems: ['Odometer & Fuel Level logged', 'Damage walkaround photos', 'Valuables removed form signed'],
+    checklistItems: [
+      '1. Vehicle registration & plate number match',
+      '2. Odometer reading & fuel level recorded',
+      '3. 360-degree walkaround damage photos captured',
+      '4. Customer personal belongings cleared',
+      '5. Existing dents, chips & panel scratches documented',
+      '6. Tyre condition & wheel rim check',
+      '7. Quoted repair scope & paint code verified',
+      '8. Customer intake authorization & consent signed'
+    ],
     isInitial: true
   },
   {
@@ -1731,13 +1740,20 @@ export const INITIAL_WORKFLOW_STAGES: import('../types/erp').WorkflowStage[] = [
     tenantId: 'tenant-1',
     name: 'Detailing, QC & Assembly',
     code: 'QC_DETAIL',
-    description: 'Denibbing, compound cut & polish, trim reassembly, electronics diagnostics, and final paint depth QC.',
+    description: 'Denibbing, compound cut & polish, trim reassembly, electronics diagnostics, and 6-point final QC sign-off.',
     color: 'cyan',
     order: 4,
     allowedRoleIds: ['role-superadmin', 'role-manager', 'role-lead-tech'],
     slaHours: 12,
     requiresChecklist: true,
-    checklistItems: ['Paint gloss reading check', 'Panel gap alignments verified', 'Interior vacuumed & sanitized']
+    checklistItems: [
+      '1. Paint film thickness & shade match verified',
+      '2. Panel gap alignment & trim reassembly confirmed',
+      '3. Clearcoat gloss, curing & orange-peel inspection passed',
+      '4. Electrical, lighting & dash diagnostics checked',
+      '5. Interior vacuumed, windows cleaned & vehicle sanitized',
+      '6. Final road test & QC inspector sign-off'
+    ]
   },
   {
     id: 'stage-5',

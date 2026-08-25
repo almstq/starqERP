@@ -238,6 +238,31 @@ export const JobDetailView: React.FC = () => {
                 );
               })}
             </div>
+
+            {/* Active Stage SOP Guidance & Checklist (SERP-153 / DEC-092) */}
+            {workflowStages[currentStageIndex] && (
+              <div className="mt-3 p-3.5 rounded-xl border space-y-2 text-xs" style={{ background: 'var(--muted)', borderColor: 'var(--border)' }}>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold">SOP Checklist: {workflowStages[currentStageIndex].name}</span>
+                  {workflowStages[currentStageIndex].slaHours && (
+                    <span className="text-[11px] font-mono erp-muted">
+                      Target SLA: {workflowStages[currentStageIndex].slaHours}h
+                    </span>
+                  )}
+                </div>
+                <p className="erp-muted">{workflowStages[currentStageIndex].description}</p>
+                {workflowStages[currentStageIndex].checklistItems && workflowStages[currentStageIndex].checklistItems!.length > 0 && (
+                  <div className="pt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {workflowStages[currentStageIndex].checklistItems!.map((item, idx) => (
+                      <label key={idx} className="flex items-center gap-2 text-[11px] p-1.5 rounded border cursor-pointer hover:opacity-90" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)' }}>
+                        <input type="checkbox" defaultChecked className="rounded w-3.5 h-3.5" />
+                        <span className="truncate">{item}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Materials Used in Job */}

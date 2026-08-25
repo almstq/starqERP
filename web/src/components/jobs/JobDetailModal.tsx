@@ -26,6 +26,7 @@ export const JobDetailModal: React.FC = () => {
     setSelectedJobId,
     jobs,
     inventory,
+    workflowStages,
     formatMVR,
     updateJobStatus,
     addMaterialToJob,
@@ -59,15 +60,15 @@ export const JobDetailModal: React.FC = () => {
     setSelectedJobId(null);
   };
 
-  const statusOptions: JobStatus[] = [
-    'Draft',
-    'Awaiting Approval',
-    'In Progress',
-    'Waiting for Material',
-    'Completed',
-    'Invoiced',
-    'Paid'
-  ];
+  const currentStageIndex = workflowStages.findIndex(
+    (s) => s.name.toLowerCase() === job.status.toLowerCase()
+  );
+  const currentStage = workflowStages[currentStageIndex];
+  const nextStage = workflowStages[currentStageIndex + 1];
+
+  const statusOptions = workflowStages.length > 0
+    ? workflowStages.map((s) => s.name)
+    : ['Check-in & Inspection', 'Surface Prep & Sanding', 'Spray Booth / Wrap Studio', 'Detailing, QC & Assembly', 'Ready for Customer Delivery', 'Tax Invoiced & Settled'];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
@@ -89,14 +90,13 @@ export const JobDetailModal: React.FC = () => {
               <span className="text-lg font-bold text-slate-900">{job.serviceType}</span>
               <Badge
                 variant={
-                  job.status === 'Completed'
+                  job.status === 'Completed' || job.status === 'Invoiced'
                     ? 'success'
                     : job.status === 'In Progress'
-                    ? 'info'
-                    : job.status === 'Waiting for Material'
-                    ? 'danger'
+                    ? 'blue'
                     : 'warning'
                 }
+                size="sm"
                 dot
               >
                 {job.status}
@@ -120,7 +120,7 @@ export const JobDetailModal: React.FC = () => {
         {/* Status Quick Bar */}
         <div className="px-6 py-3 bg-slate-50/60 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
-            <span className="text-slate-500 font-semibold">Change Workflow Status:</span>
+            <span className="text-slate-500 font-semibold">Workflow Stage:</span>
             <select
               value={job.status}
               onChange={(e) => updateJobStatus(job.id, e.target.value as JobStatus)}
@@ -132,16 +132,26 @@ export const JobDetailModal: React.FC = () => {
                 </option>
               ))}
             </select>
+
+            {nextStage && (
+              <button
+                onClick={() => updateJobStatus(job.id, nextStage.name as JobStatus)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors shadow-2xs"
+              >
+                <span>Advance to {nextStage.name}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
             {!job.linkedInvoiceId ? (
               <button
                 onClick={handleCreateInvoice}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-all shadow-xs"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-colors shadow-2xs"
               >
-                <Receipt className="w-3.5 h-3.5" />
-                <span>Generate Final Invoice</span>
+                <FileText className="w-3.5 h-3.5" />
+                <span>Generate Invoice</span>
               </button>
             ) : (
               <button
@@ -158,6 +168,37 @@ export const JobDetailModal: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Stage SOP Guidance & Checklist Banner (SERP-153 / DEC-092) */}
+        {currentStage && (
+          <div className="px-6 py-3.5 bg-blue-50/50 border-b border-blue-100 text-xs">
+            <div className="flex items-start gap-2.5">
+              <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <div className="space-y-1.5 flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-blue-900">SOP Stage Guidance: {currentStage.name}</span>
+                  {currentStage.slaHours && (
+                    <span className="text-[11px] font-mono text-blue-700 bg-blue-100/60 px-2 py-0.5 rounded">
+                      Target SLA: {currentStage.slaHours} hrs
+                    </span>
+                  )}
+                </div>
+                <p className="text-slate-600">{currentStage.description}</p>
+
+                {currentStage.checklistItems && currentStage.checklistItems.length > 0 && (
+                  <div className="pt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {currentStage.checklistItems.map((item, idx) => (
+                      <label key={idx} className="flex items-center gap-2 text-[11px] text-slate-700 bg-white/80 p-1.5 rounded border border-blue-100 cursor-pointer hover:bg-white">
+                        <input type="checkbox" defaultChecked className="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5" />
+                        <span className="truncate">{item}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Scrollable Body */}
         <div className="px-6 py-5 overflow-y-auto flex-1 space-y-6 text-xs text-slate-700">
