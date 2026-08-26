@@ -15,11 +15,11 @@
 | **Contract & Boundary Tests** | **175 / 175 PASS** | Deno automated test suite (`tests/contract/`) |
 | **Web Client Tests** | **121 / 121 PASS (32 Test Files)** | Vitest automated suite (`web/src/test/`) |
 | **PostgreSQL RLS Security** | **31 / 31 Public Tables Protected** | 27 RLS + 4 revoked public grants + 0 unprotected |
-| **Database Migration Lineage** | **22 Monotonic SQL Migrations (0001–0022)** | Linear dependency validated (`scripts/lint-migrations.mjs`) |
+| **Database Migration Lineage** | **22 Monotonic SQL Migrations (0001–0022)** | 19 applied base + 1 reviewer-gated (0011) + 2 forward unapplied (0021, 0022) |
 | **Live Database Baseline Backup** | **CLEARED & VERIFIED** | Restored into local PG 17 scratch DB (SERP-020) |
 | **Encrypted Offsite Backup** | **HARD GATE CLEARED** | Verified matching SHA256 (`CB9F5F...FB8D23`) on Drive E: (SERP-173) |
 | **Remote Repository & CI** | **CLEAN & PROTECTED** | Private repo `github.com/almstq/starqERP` (`main` ruleset enforced, PR-required, dual CI checks) |
-| **Last Reconciled** | **`main @ 34a22f6`** | Task #117 baseline · Canonical StarqNexus task board synchronization |
+| **Board Snapshot** | **117 / 264 (44.3%) — 2026-08-27** | Canonical StarqNexus task board synchronization · WIP = 0 |
 
 ---
 
