@@ -2,89 +2,38 @@
 /**
  * CHECK REALITY — assert the configured world matches the declared one.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * WHY THIS EXISTS
- * ─────────────────────────────────────────────────────────────────────────────
- * On 22 August 2026 the ERP shipped an Edge deploy that took nine attempts to make
- * work. Eighty-two tests were green through every single failure. Not one of them
- * was wrong — they simply could not see the problems, because every problem lived
- * in the join between the contract and the world:
- *
- *   · audit critical #5 required an `x-starq-client-kind` header that the only
- *     client did not send
- *   · migration 0011 made `quartermaster` the sole seat that may quote, and nobody
- *     in the allowlist held it
- *   · the seat filter demanded an entity token of "CI" while the allowlist said
- *     "club-ignition"
- *   · both OAuth client ids named a Google project that was not ours — and the
- *     Edge secret was seeded from the same bad source, so app and server agreed
- *     perfectly with each other and were both wrong
- *   · the deploy dropped `--no-verify-jwt`, a setting that existed only in the
- *     shell history of whoever last deployed
- *
- * A contract test proves the contract is coherent. It cannot prove the contract
- * describes the running system. These checks read the ACTUAL configured state —
- * the allowlist, the build defines, the client source, config.toml — and compare
- * it to what the code requires.
- *
- * The tests are still right to exist. This is the other half.
- *
- * Usage:
- *   node scripts/check-reality.mjs
- *
- * Exit codes: 0 all checks pass or skip, 1 at least one FAILED.
- *
- * Checks that depend on files outside the repository (the allowlist, the build
- * defines) SKIP rather than fail when those files are absent, so this is safe to
- * run in CI. A skip is reported loudly — it is not a pass.
+ * Exported check functions allow comprehensive mutation testing in tests/check_reality_mutation.test.mjs
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const STARQBOOKS = process.env.STARQBOOKS_PATH || path.resolve(ROOT, '..', 'starqBooks');
-const ALLOWLIST = 'D:/StarqTech/_secrets/starqBooks-allowlist.json';
-const DEFINES = 'D:/StarqTech/_secrets/starq-erp-r0-build-defines.json';
+const __filename = fileURLToPath(import.meta.url);
+const ROOT = path.join(path.dirname(__filename), '..');
+const DEFAULT_STARQBOOKS = process.env.STARQBOOKS_PATH || path.resolve(ROOT, '..', 'starqBooks');
+const DEFAULT_ALLOWLIST = 'D:/StarqTech/_secrets/starqBooks-allowlist.json';
+const DEFAULT_DEFINES = 'D:/StarqTech/_secrets/starq-erp-r0-build-defines.json';
 
-const results = [];
-const pass = (name, detail) => results.push({ state: 'PASS', name, detail });
-const fail = (name, detail) => results.push({ state: 'FAIL', name, detail });
-const skip = (name, detail) => results.push({ state: 'SKIP', name, detail });
-
-const read = (p) => fs.readFileSync(path.isAbsolute(p) ? p : path.join(ROOT, p), 'utf8');
-const readJson = (p) => JSON.parse(read(p));
-const exists = (p) => fs.existsSync(path.isAbsolute(p) ? p : path.join(ROOT, p));
-
-/** Pull an exported array of string literals out of the TS contract. */
-function contractList(src, name) {
-  const at = src.indexOf(`export const ${name}`);
-  if (at < 0) return null;
-  const open = src.indexOf('[', at);
-  const close = src.indexOf('] as const', open);
-  return [...src.slice(open, close).matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 1. Every seat a command can REQUIRE must be held by a real person.
-//    Would have caught SERP-136 before it reached a migration review.
-// ─────────────────────────────────────────────────────────────────────────────
-function checkSeatOccupancy() {
+export function checkSeatOccupancy(opts = {}) {
+  const root = opts.root || ROOT;
+  const allowlistPath = opts.allowlistPath || DEFAULT_ALLOWLIST;
   const NAME = 'Seat occupancy — every required seat is held by someone';
-  if (!exists(ALLOWLIST)) return skip(NAME, 'allowlist not present on this machine');
+  
+  if (!fs.existsSync(allowlistPath)) {
+    return { state: 'SKIP', name: NAME, detail: 'allowlist not present on this machine' };
+  }
 
-  const contract = read('contracts/commands.ts');
-  const people = readJson(ALLOWLIST).people ?? [];
+  const contractPath = path.join(root, 'contracts', 'commands.ts');
+  const contract = opts.contractContent || fs.readFileSync(contractPath, 'utf8');
+  const people = (opts.allowlistData || JSON.parse(fs.readFileSync(allowlistPath, 'utf8'))).people ?? [];
   const held = new Set(
     people.filter((p) => p.status !== 'disabled' && p.status !== 'test_not_loginable')
       .flatMap((p) => p.seats ?? []),
   );
 
-  // Seats the SQL matrix can demand, taken from the contract rather than retyped.
-  const block = contract.slice(
-    contract.indexOf('export const PURCHASE_STEP_SEATS'),
-    contract.indexOf('} as const', contract.indexOf('export const PURCHASE_STEP_SEATS')),
-  );
+  const at = contract.indexOf('export const PURCHASE_STEP_SEATS');
+  if (at < 0) return { state: 'FAIL', name: NAME, detail: 'could not parse PURCHASE_STEP_SEATS' };
+  const block = contract.slice(at, contract.indexOf('} as const', at));
   const required = new Map();
   for (const line of block.split('\n')) {
     const m = line.match(/^\s*(\w+):\s*\[(.*)\],?\s*$/);
@@ -92,38 +41,38 @@ function checkSeatOccupancy() {
     const seats = [...m[2].matchAll(/'([a-z_]+)'/g)].map((x) => x[1]);
     if (seats.length) required.set(m[1], seats);
   }
-  if (!required.size) return fail(NAME, 'could not parse PURCHASE_STEP_SEATS');
+  if (!required.size) return { state: 'FAIL', name: NAME, detail: 'could not parse PURCHASE_STEP_SEATS' };
 
   const orphans = [];
   for (const [step, seats] of required) {
     if (!seats.some((s) => held.has(s))) orphans.push(`${step} needs ${seats.join('|')}`);
   }
   if (orphans.length) {
-    return fail(NAME, `no one can perform: ${orphans.join('; ')} — applying the seat matrix would make these steps impossible`);
+    return { state: 'FAIL', name: NAME, detail: `no one can perform: ${orphans.join('; ')} — applying the seat matrix would make these steps impossible` };
   }
-  pass(NAME, `${required.size} purchase steps, all reachable by a real person`);
+  return { state: 'PASS', name: NAME, detail: `${required.size} purchase steps, all reachable by a real person` };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 2. The client must SEND every header the Edge REQUIRES.
-//    Would have caught SERP-132 — critical #5 needing a header nobody sent.
-// ─────────────────────────────────────────────────────────────────────────────
-function checkRequiredHeaders() {
+export function checkRequiredHeaders(opts = {}) {
+  const root = opts.root || ROOT;
+  const starqBooks = opts.starqBooks || DEFAULT_STARQBOOKS;
   const NAME = 'Required headers — the client sends what the Edge demands';
-  const clientPath = path.join(STARQBOOKS, 'starq-ops-app', 'lib', 'core', 'api', 'api_client.dart');
-  if (!fs.existsSync(clientPath)) return skip(NAME, `parked flutter client not found at ${clientPath}`);
-  const client = fs.readFileSync(clientPath, 'utf8');
-  const edge = read('supabase/functions/starq-api/index.ts');
+  
+  const clientPath = path.join(starqBooks, 'starq-ops-app', 'lib', 'core', 'api', 'api_client.dart');
+  if (!opts.clientContent && !fs.existsSync(clientPath)) {
+    return { state: 'SKIP', name: NAME, detail: `parked flutter client not found at ${clientPath}` };
+  }
+  const client = opts.clientContent || fs.readFileSync(clientPath, 'utf8');
+  const edgePath = path.join(root, 'supabase', 'functions', 'starq-api', 'index.ts');
+  const edge = opts.edgeContent || fs.readFileSync(edgePath, 'utf8');
 
   const problems = [];
-  // Headers the Edge reads off the request and treats as load-bearing.
   for (const header of ['x-starq-client-kind', 'x-idempotency-key', 'x-csrf-token']) {
     if (!edge.toLowerCase().includes(header)) continue;
     if (!client.toLowerCase().includes(header)) {
       problems.push(`${header} is read by the Edge and never sent by the client`);
     }
   }
-  // And CORS must actually allow them, or the browser strips them before arrival.
   const cors = edge.match(/access-control-allow-headers"[^"]*"([^"]+)"/i);
   if (cors) {
     for (const header of ['x-starq-client-kind', 'x-csrf-token', 'x-idempotency-key']) {
@@ -132,18 +81,21 @@ function checkRequiredHeaders() {
       }
     }
   }
-  problems.length ? fail(NAME, problems.join('; ')) : pass(NAME, 'client, Edge and CORS agree');
+  return problems.length 
+    ? { state: 'FAIL', name: NAME, detail: problems.join('; ') }
+    : { state: 'PASS', name: NAME, detail: 'client, Edge and CORS agree' };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 3. Build defines and the Edge must name the SAME Google project.
-//    Would have caught SERP-135 — where both sides agreed, on a foreign project.
-// ─────────────────────────────────────────────────────────────────────────────
-function checkOauthIdentity() {
+export function checkOauthIdentity(opts = {}) {
+  const definesPath = opts.definesPath || DEFAULT_DEFINES;
+  const envPath = opts.envPath || 'D:/StarqTech/_secrets/starqBooks.env';
   const NAME = 'OAuth identity — build defines and the portal env name one project';
-  if (!exists(DEFINES)) return skip(NAME, 'build defines not present on this machine');
+  
+  if (!opts.definesData && !fs.existsSync(definesPath)) {
+    return { state: 'SKIP', name: NAME, detail: 'build defines not present on this machine' };
+  }
 
-  const d = readJson(DEFINES);
+  const d = opts.definesData || JSON.parse(fs.readFileSync(definesPath, 'utf8'));
   const web = d.GOOGLE_SERVER_CLIENT_ID ?? '';
   const android = d.GOOGLE_ANDROID_CLIENT_ID ?? '';
   const problems = [];
@@ -153,11 +105,9 @@ function checkOauthIdentity() {
     else if (!v.endsWith('.apps.googleusercontent.com')) problems.push(`${k} is not a Google client id`);
   }
 
-  // The portal env is the independent witness — it was the only place holding the
-  // correct value on 22 Aug, which is how the foreign project was caught.
-  const envPath = 'D:/StarqTech/_secrets/starqBooks.env';
-  if (exists(envPath)) {
-    const m = read(envPath).match(/^STARQBOOKS_GOOGLE_CLIENT_ID\s*=\s*(.+)$/m);
+  if (opts.envContent || fs.existsSync(envPath)) {
+    const content = opts.envContent || fs.readFileSync(envPath, 'utf8');
+    const m = content.match(/^STARQBOOKS_GOOGLE_CLIENT_ID\s*=\s*(.+)$/m);
     const portalWeb = m ? m[1].trim().replace(/^["']|["']$/g, '') : '';
     if (portalWeb && web && portalWeb !== web) {
       problems.push('GOOGLE_SERVER_CLIENT_ID does not match STARQBOOKS_GOOGLE_CLIENT_ID in the portal env — one of them is wrong');
@@ -169,74 +119,66 @@ function checkOauthIdentity() {
       }
     }
   }
-  problems.length ? fail(NAME, problems.join('; ')) : pass(NAME, `one project, both clients (${web.split('-')[0]})`);
+  return problems.length 
+    ? { state: 'FAIL', name: NAME, detail: problems.join('; ') }
+    : { state: 'PASS', name: NAME, detail: `one project, both clients (${web.split('-')[0]})` };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 4. Gateway settings must be DECLARED, not remembered.
-//    Would have caught SERP-130 — the deploy that dropped --no-verify-jwt.
-// ─────────────────────────────────────────────────────────────────────────────
-function checkGatewayDeclared() {
+export function checkGatewayDeclared(opts = {}) {
+  const root = opts.root || ROOT;
+  const configPath = path.join(root, 'supabase', 'config.toml');
   const NAME = 'Gateway settings — verify_jwt is in config.toml, not in shell history';
-  if (!exists('supabase/config.toml')) {
-    return fail(NAME, 'supabase/config.toml is missing — the deploy will use platform defaults and the clients send no apikey');
+  
+  if (!opts.configContent && !fs.existsSync(configPath)) {
+    return { state: 'FAIL', name: NAME, detail: 'supabase/config.toml is missing — the deploy will use platform defaults and the clients send no apikey' };
   }
-  const toml = read('supabase/config.toml');
-  if (!/\[functions\.starq-api\]/.test(toml)) return fail(NAME, 'config.toml has no [functions.starq-api] section');
+  const toml = opts.configContent || fs.readFileSync(configPath, 'utf8');
+  if (!/\[functions\.starq-api\]/.test(toml)) {
+    return { state: 'FAIL', name: NAME, detail: 'config.toml has no [functions.starq-api] section' };
+  }
   if (!/verify_jwt\s*=\s*false/.test(toml)) {
-    return fail(NAME, 'verify_jwt is not pinned to false — the gateway will demand a bearer token the clients do not send');
+    return { state: 'FAIL', name: NAME, detail: 'verify_jwt is not pinned to false — the gateway will demand a bearer token the clients do not send' };
   }
-  pass(NAME, 'verify_jwt = false is declared and version-controlled');
+  return { state: 'PASS', name: NAME, detail: 'verify_jwt = false is declared and version-controlled' };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 5. The cookie must be usable by a cross-site client.
-//    Would have caught the SameSite=Strict session that evaporated on 23 Aug.
-// ─────────────────────────────────────────────────────────────────────────────
-function checkCookieScope() {
+export function checkCookieScope(opts = {}) {
+  const root = opts.root || ROOT;
+  const edgePath = path.join(root, 'supabase', 'functions', 'starq-api', 'index.ts');
   const NAME = 'Cookie scope — the web client is cross-site and must receive the cookie';
-  const edge = read('supabase/functions/starq-api/index.ts');
+  
+  const edge = opts.edgeContent || fs.readFileSync(edgePath, 'utf8');
   const m = edge.match(/SameSite=(\w+)/);
-  if (!m) return fail(NAME, 'no SameSite attribute found on the session cookie');
+  if (!m) return { state: 'FAIL', name: NAME, detail: 'no SameSite attribute found on the session cookie' };
   if (m[1] === 'Strict') {
-    return fail(NAME, 'SameSite=Strict — the web client is served from another site, so the cookie is set at login and never sent again');
+    return { state: 'FAIL', name: NAME, detail: 'SameSite=Strict — the web client is served from another site, so the cookie is set at login and never sent again' };
   }
   if (!/HttpOnly/.test(edge) || !/Secure/.test(edge)) {
-    return fail(NAME, `SameSite=${m[1]} but HttpOnly and/or Secure is missing`);
+    return { state: 'FAIL', name: NAME, detail: `SameSite=${m[1]} but HttpOnly and/or Secure is missing` };
   }
-  pass(NAME, `SameSite=${m[1]}, HttpOnly and Secure present`);
+  return { state: 'PASS', name: NAME, detail: `SameSite=${m[1]}, HttpOnly and Secure present` };
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 6. The PORTAL and the CONTRACT must agree on the seat vocabulary.
-//    Two live systems, two seat lists, and until 23 Aug nothing compared them.
-//
-//    Found by DP's cross-system audit, and only on the second pass — the first
-//    pass checked auth.py against ITSELF ("SEAT_EVENTS covers all 11 seats, 100%
-//    coverage") and reported clean. Internal consistency is not conformance.
-//    That is the same mistake that let a seat matrix requiring an unheld seat
-//    pass two independent reviews.
-//
-//    Written as a permanent check rather than left as a report, because a report
-//    is true on the day it is written and a check is true on the day it matters.
-// ─────────────────────────────────────────────────────────────────────────────
-function checkPortalContractDrift() {
+export function checkPortalContractDrift(opts = {}) {
+  const root = opts.root || ROOT;
+  const starqBooks = opts.starqBooks || DEFAULT_STARQBOOKS;
   const NAME = 'Portal vs contract — one seat vocabulary across both runtimes';
-  const authPath = path.join(STARQBOOKS, 'auth.py');
-  if (!fs.existsSync(authPath)) return skip(NAME, `auth.py not found at ${authPath}`);
+  
+  const authPath = path.join(starqBooks, 'auth.py');
+  if (!opts.authContent && !fs.existsSync(authPath)) {
+    return { state: 'SKIP', name: NAME, detail: `auth.py not found at ${authPath}` };
+  }
 
-  const py = fs.readFileSync(authPath, 'utf8');
-  const ts = read('contracts/commands.ts');
+  const py = opts.authContent || fs.readFileSync(authPath, 'utf8');
+  const contractPath = path.join(root, 'contracts', 'commands.ts');
+  const ts = opts.contractContent || fs.readFileSync(contractPath, 'utf8');
   const problems = [];
 
-  // -- the seat vocabulary itself --------------------------------------------
   const pySeatsBlock = py.match(/^SEATS\s*=\s*\{([\s\S]*?)^\}/m);
   const tsSeatsBlock = ts.match(/export const SEATS = \[([\s\S]*?)\] as const/);
   if (!pySeatsBlock || !tsSeatsBlock) {
     problems.push('could not locate one of the SEATS declarations');
   } else {
-    // Portal keys are the top-level dict keys only, not the nested label/short/binds.
     const portal = new Set(
       [...pySeatsBlock[1].matchAll(/^\s{4}["']([a-z_]+)["']\s*:/gm)].map((m) => m[1]),
     );
@@ -248,7 +190,6 @@ function checkPortalContractDrift() {
     if (missingFromContract.length) problems.push(`portal defines seat(s) the contract does not: ${missingFromContract.join(', ')}`);
   }
 
-  // -- the purchase step matrix ----------------------------------------------
   const pySteps = {};
   const pyStepBlock = py.match(/^SCM_STEP_SEATS\s*=\s*\{([\s\S]*?)^\}/m);
   if (pyStepBlock) {
@@ -281,22 +222,38 @@ function checkPortalContractDrift() {
     }
   }
 
-  problems.length
-    ? fail(NAME, problems.join('; '))
-    : pass(NAME, 'seat vocabulary and purchase step matrix agree across portal and contract');
+  return problems.length
+    ? { state: 'FAIL', name: NAME, detail: problems.join('; ') }
+    : { state: 'PASS', name: NAME, detail: 'seat vocabulary and purchase step matrix agree across portal and contract' };
 }
 
-for (const check of [checkSeatOccupancy, checkPortalContractDrift, checkRequiredHeaders, checkOauthIdentity, checkGatewayDeclared, checkCookieScope]) {
-  try { check(); } catch (e) { fail(check.name, `check threw: ${e.message}`); }
+export function runAllChecks(opts = {}) {
+  return [
+    checkSeatOccupancy(opts),
+    checkPortalContractDrift(opts),
+    checkRequiredHeaders(opts),
+    checkOauthIdentity(opts),
+    checkGatewayDeclared(opts),
+    checkCookieScope(opts),
+  ];
 }
 
-const width = Math.max(...results.map((r) => r.name.length));
-console.log('\nCHECK REALITY — configured state vs declared state\n');
-for (const r of results) {
-  console.log(`  ${r.state}  ${r.name.padEnd(width)}  ${r.detail}`);
+// Standalone CLI execution
+const isDirectRun = Boolean(
+  process.argv[1] &&
+  (path.resolve(process.argv[1]).toLowerCase() === path.resolve(__filename).toLowerCase() ||
+   process.argv[1].toLowerCase().endsWith('check-reality.mjs'))
+);
+if (isDirectRun) {
+  const results = runAllChecks();
+  const width = Math.max(...results.map((r) => r.name.length));
+  console.log('\nCHECK REALITY — configured state vs declared state\n');
+  for (const r of results) {
+    console.log(`  ${r.state.padEnd(4)}  ${r.name.padEnd(width)}  ${r.detail}`);
+  }
+  const failed = results.filter((r) => r.state === 'FAIL');
+  const skipped = results.filter((r) => r.state === 'SKIP');
+  console.log(`\n  ${results.length - failed.length - skipped.length} passed, ${failed.length} failed, ${skipped.length} skipped\n`);
+  if (skipped.length) console.log('  A SKIP is not a pass — it means this machine could not see the file.\n');
+  process.exit(failed.length ? 1 : 0);
 }
-const failed = results.filter((r) => r.state === 'FAIL');
-const skipped = results.filter((r) => r.state === 'SKIP');
-console.log(`\n  ${results.length - failed.length - skipped.length} passed, ${failed.length} failed, ${skipped.length} skipped\n`);
-if (skipped.length) console.log('  A SKIP is not a pass — it means this machine could not see the file.\n');
-process.exit(failed.length ? 1 : 0);
