@@ -108,6 +108,7 @@ import {
   SessionTokenRecord,
   validateStockMovementCommand,
   calculateInventoryValuationSummary,
+  validateCounterSaleCommand,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -2333,6 +2334,89 @@ Deno.test('SERP-005: calculateInventoryValuationSummary computes authoritative c
   assertEquals(val.lowStockItemsCount, 1);
   assertEquals(val.outOfStockItemsCount, 1);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-006: Stage 3 Counter Capability Inside ERP
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-006: validateCounterSaleCommand allows counter seat and reconciles retail total', () => {
+  const processed = new Set<string>();
+  const payload = {
+    idempotencyKey: 'idemp-pos-001',
+    tenantId: ORG,
+    customerName: 'Walk-in Counter Customer',
+    items: [
+      { itemId: 'item-1', name: 'Sandpaper Grit 800', sku: 'SKU-SND-800', quantity: 5, unitPrice: 20, total: 100 },
+      { itemId: 'item-2', name: 'Masking Tape 2in', sku: 'SKU-MSK-02', quantity: 2, unitPrice: 50, total: 100 },
+    ],
+    subtotal: 200,
+    gstRate: 8,
+    gstAmount: 16,
+    totalAmount: 216,
+    paymentMethod: 'Cash',
+    actorId: 'usr-counter-1',
+    actorSeat: 'counter' as SeatCode,
+  };
+
+  const res = validateCounterSaleCommand(payload, processed);
+  assertEquals(res.valid, true);
+  assertEquals(res.isIdempotentReplay, false);
+  assertEquals(res.invoiceSummary?.totalAmount, 216);
+  assertEquals(res.invoiceSummary?.status, 'Paid');
+});
+
+Deno.test('SERP-006: validateCounterSaleCommand returns idempotent replay on repeated submission', () => {
+  const processed = new Set<string>();
+  const payload = {
+    idempotencyKey: 'idemp-pos-replay-test',
+    tenantId: ORG,
+    customerName: 'Walk-in Counter Customer',
+    items: [
+      { itemId: 'item-1', name: 'Sandpaper Grit 800', sku: 'SKU-SND-800', quantity: 1, unitPrice: 20, total: 20 },
+    ],
+    subtotal: 20,
+    gstRate: 0,
+    gstAmount: 0,
+    totalAmount: 20,
+    paymentMethod: 'Cash',
+    actorId: 'usr-counter-1',
+    actorSeat: 'counter' as SeatCode,
+  };
+
+  // First call
+  const first = validateCounterSaleCommand(payload, processed);
+  assertEquals(first.valid, true);
+  assertEquals(first.isIdempotentReplay, false);
+
+  // Replay with exact same idempotencyKey
+  const second = validateCounterSaleCommand(payload, processed);
+  assertEquals(second.valid, true);
+  assertEquals(second.isIdempotentReplay, true);
+});
+
+Deno.test('SERP-006: validateCounterSaleCommand denies unauthorized seat (e.g. technician)', () => {
+  const processed = new Set<string>();
+  const payload = {
+    idempotencyKey: 'idemp-pos-unauth',
+    tenantId: ORG,
+    customerName: 'Walk-in Customer',
+    items: [
+      { itemId: 'item-1', name: 'Item', sku: 'SKU-1', quantity: 1, unitPrice: 50, total: 50 },
+    ],
+    subtotal: 50,
+    gstRate: 0,
+    gstAmount: 0,
+    totalAmount: 50,
+    paymentMethod: 'Cash',
+    actorId: 'usr-tech-1',
+    actorSeat: 'technician' as SeatCode, // Technician cannot execute counter POS sale
+  };
+
+  const res = validateCounterSaleCommand(payload, processed);
+  assertEquals(res.valid, false);
+  assertEquals(res.error, 'unauthorized_seat_for_counter_sale: technician');
+});
+
 
 
 

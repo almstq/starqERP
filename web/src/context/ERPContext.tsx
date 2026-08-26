@@ -173,6 +173,13 @@ export interface ERPContextType {
   createCustomer: (customerData: Omit<Customer, 'id' | 'createdAt' | 'activeJobsCount' | 'totalInvoiced' | 'outstandingBalance'>) => Customer;
   createInvoice: (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber'>) => Invoice;
   recordPayment: (paymentData: Omit<Payment, 'id' | 'paymentNumber'>) => Payment;
+  recordCounterSale: (saleData: {
+    items: Array<{ itemId: string; name: string; sku: string; quantity: number; unitPrice: number }>;
+    paymentMethod: PaymentMethod;
+    customerName?: string;
+    customerId?: string;
+    bankAccount?: string;
+  }) => { success: boolean; invoice?: Invoice; payment?: Payment; error?: string };
   addExpense: (expenseData: Omit<Expense, 'id' | 'expenseNumber'>) => Expense;
   receiveStock: (itemId: string, quantity: number, ref?: string, cost?: number) => void;
   addInventoryItem: (itemData: Omit<InventoryItem, 'id' | 'stockStatus' | 'lastRestockedDate'>) => InventoryItem;
@@ -1239,6 +1246,130 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return newPayment;
   };
 
+  const recordCounterSale = (saleData: {
+    items: Array<{ itemId: string; name: string; sku: string; quantity: number; unitPrice: number }>;
+    paymentMethod: PaymentMethod;
+    customerName?: string;
+    customerId?: string;
+    bankAccount?: string;
+  }): { success: boolean; invoice?: Invoice; payment?: Payment; error?: string } => {
+    // 1. Validate stock availability
+    for (const item of saleData.items) {
+      const stockItem = inventory.find((i) => i.id === item.itemId || i.sku === item.sku);
+      if (stockItem && stockItem.quantityOnHand < item.quantity) {
+        return {
+          success: false,
+          error: `Insufficient stock for ${item.name} (Available: ${stockItem.quantityOnHand}, Requested: ${item.quantity})`,
+        };
+      }
+    }
+
+    // 2. Compute subtotal, tax, total
+    const subtotal = saleData.items.reduce((acc, it) => acc + it.quantity * it.unitPrice, 0);
+    const gstRateDecimal = currentTenant.gstStatus === 'registered' ? (currentTenant.gstRate || 8) / 100 : 0;
+    const gstAmount = Math.round(subtotal * gstRateDecimal * 100) / 100;
+    const totalAmount = subtotal + gstAmount;
+
+    // 3. Deduct inventory & record stock movements
+    setInventory((prev) =>
+      prev.map((inv) => {
+        const sold = saleData.items.find((it) => it.itemId === inv.id || it.sku === inv.sku);
+        if (sold) {
+          const newQty = Math.max(0, inv.quantityOnHand - sold.quantity);
+          const newStatus = newQty === 0 ? 'Out of Stock' : newQty <= inv.reorderLevel ? 'Low Stock' : 'In Stock';
+          return { ...inv, quantityOnHand: newQty, stockStatus: newStatus };
+        }
+        return inv;
+      })
+    );
+
+    const nextInvNum = invoices.length + 90;
+    const invNumberStr = `INV-2026-POS-0${nextInvNum}`;
+
+    // Add stock movements
+    const newMovements: StockMovement[] = saleData.items.map((it) => ({
+      id: `mov-${Date.now()}-${it.sku}`,
+      tenantId: currentTenant.id,
+      itemId: it.itemId,
+      itemName: it.name,
+      type: 'Deducted (Job)',
+      quantity: it.quantity,
+      unit: 'pcs',
+      unitCost: it.unitPrice,
+      totalValue: -(it.quantity * it.unitPrice),
+      date: new Date().toISOString().split('T')[0],
+      reference: invNumberStr,
+      actorId: currentUser.id,
+      staffName: currentUser.name,
+      notes: 'Counter POS sale',
+    }));
+
+    setStockMovements((prev) => [...newMovements, ...prev]);
+
+    // 4. Create Paid Invoice
+    const newInvoice: Invoice = {
+      id: `inv-${Date.now()}`,
+      invoiceNumber: invNumberStr,
+      customerId: saleData.customerId || 'walk-in',
+      customerName: saleData.customerName || 'Walk-in Counter Customer',
+      customerPhone: '',
+      customerIsland: currentTenant.island,
+      date: new Date().toISOString().split('T')[0],
+      dueDate: new Date().toISOString().split('T')[0],
+      items: saleData.items.map((it, idx) => ({
+        id: `li-${Date.now()}-${idx}`,
+        description: `${it.name} (${it.sku})`,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        amount: it.quantity * it.unitPrice,
+        category: 'Material/Part',
+      })),
+      subtotal,
+      gstRate: gstRateDecimal,
+      gstAmount,
+      totalAmount,
+      amountPaid: totalAmount,
+      balanceDue: 0,
+      status: 'Paid',
+      notes: `Counter Sale (${saleData.paymentMethod}). Fully settled at counter.`,
+      bankDetails: saleData.bankAccount || currentTenant.bmlAccount,
+    };
+
+    setInvoices((prev) => [newInvoice, ...prev]);
+
+    // 5. Create Completed Payment
+    const newPayment: Payment = {
+      id: `pay-${Date.now()}`,
+      paymentNumber: `PAY-POS-${payments.length + 101}`,
+      invoiceId: newInvoice.id,
+      invoiceNumber: newInvoice.invoiceNumber,
+      customerId: newInvoice.customerId,
+      customerName: newInvoice.customerName,
+      amount: totalAmount,
+      paymentDate: new Date().toISOString().split('T')[0],
+      method: saleData.paymentMethod,
+      referenceNumber: `REC-${Date.now().toString().slice(-6)}`,
+      bankAccount: saleData.bankAccount || (saleData.paymentMethod === 'Cash' ? 'Cash Drawer' : currentTenant.bmlAccount),
+      status: 'Completed',
+      notes: 'Direct counter settlement',
+    };
+
+    setPayments((prev) => [newPayment, ...prev]);
+
+    logAuditEvent({
+      action: 'CREATED',
+      module: 'invoices',
+      entityType: 'Invoice',
+      entityId: newInvoice.id,
+      entityName: newInvoice.invoiceNumber,
+      summary: `Counter POS Sale ${newInvoice.invoiceNumber} completed for ${formatMVR(totalAmount)} via ${saleData.paymentMethod}. ${saleData.items.length} item(s) deducted from inventory.`,
+    });
+
+    telemetry.track('document_created_count', { documentType: 'counter_sale', count: 1 });
+
+    return { success: true, invoice: newInvoice, payment: newPayment };
+  };
+
   const addExpense = (expenseData: Omit<Expense, 'id' | 'expenseNumber'>): Expense => {
     const nextNum = expenses.length + 55;
     const newExpense: Expense = {
@@ -1574,6 +1705,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         createCustomer,
         createInvoice,
         recordPayment,
+        recordCounterSale,
         addExpense,
         receiveStock,
         addInventoryItem,

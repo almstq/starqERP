@@ -169,7 +169,7 @@ export const COMMANDS = [
   // Revision missing endpoints (SERP-167)
   'INVOICE', 'EXPENSE', 'CUSTOMER', 'TENANT_CONFIG', 'TENANT_ONBOARD',
   'WORKFLOW', 'MEMBER_INVITE', 'MEMBER_AUTHORIZE', 'MEMBER_SUSPEND',
-  'MEMBER_ROLE_UPDATE', 'ROLE',
+  'MEMBER_ROLE_UPDATE', 'ROLE', 'COUNTER_SALE',
 ] as const;
 export type CommandName = (typeof COMMANDS)[number];
 
@@ -208,6 +208,7 @@ export const COMMAND_SEATS: Readonly<Record<CommandName, readonly SeatCode[]>> =
   MEMBER_SUSPEND:    ['owner', 'director', 'managing_director'],
   MEMBER_ROLE_UPDATE:['owner', 'director', 'managing_director'],
   ROLE:              ['owner', 'director', 'managing_director'],
+  COUNTER_SALE:      ['counter', 'financial_controller', 'director', 'managing_director', 'owner'],
 } as const;
 
 /**
@@ -239,6 +240,7 @@ export const SQL_REQUIRED_SEAT: Readonly<Record<CommandName, SeatCode | null>> =
   MEMBER_SUSPEND: null,
   MEMBER_ROLE_UPDATE: null,
   ROLE: null,
+  COUNTER_SALE: null,
 } as const;
 
 export const SQL_PERMITTED_SEATS: Readonly<Record<CommandName, readonly SeatCode[]>> = {
@@ -266,6 +268,7 @@ export const SQL_PERMITTED_SEATS: Readonly<Record<CommandName, readonly SeatCode
   MEMBER_SUSPEND:    ['owner', 'director', 'managing_director'],
   MEMBER_ROLE_UPDATE:['owner', 'director', 'managing_director'],
   ROLE:              ['owner', 'director', 'managing_director'],
+  COUNTER_SALE:      ['counter', 'financial_controller', 'director', 'managing_director', 'owner'],
 } as const;
 
 /**
@@ -2726,6 +2729,127 @@ export function calculateInventoryValuationSummary(
     asOfDate,
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-006: Stage 3 Counter Capability Inside ERP
+// (Stage 3 Module / POS Integration / CORE-001 / CORE-002)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CounterSaleItemPayload {
+  readonly itemId: string;
+  readonly name: string;
+  readonly sku: string;
+  readonly quantity: number;
+  readonly unitPrice: number;
+  readonly total: number;
+}
+
+export interface CounterSaleCommandPayload {
+  readonly idempotencyKey: string;
+  readonly tenantId: string;
+  readonly customerId?: string;
+  readonly customerName: string;
+  readonly items: readonly CounterSaleItemPayload[];
+  readonly subtotal: number;
+  readonly gstRate: number;
+  readonly gstAmount: number;
+  readonly totalAmount: number;
+  readonly paymentMethod: 'Cash' | 'BML Transfer' | 'Card' | 'Cheque' | string;
+  readonly bankAccount?: string;
+  readonly actorId: string;
+  readonly actorSeat: SeatCode;
+}
+
+export function validateCounterSaleCommand(
+  payload: unknown,
+  processedKeys: Set<string> = new Set(),
+): { valid: boolean; error?: string; isIdempotentReplay?: boolean; invoiceSummary?: Record<string, unknown> } {
+  if (!payload || typeof payload !== 'object') {
+    return { valid: false, error: 'invalid_payload_object' };
+  }
+
+  const p = payload as Record<string, unknown>;
+
+  const idempotencyKey = String(p.idempotencyKey || '').trim();
+  if (!idempotencyKey) {
+    return { valid: false, error: 'idempotency_key_required' };
+  }
+
+  // Idempotency check: Replay returns previous result without double deduction/charge
+  if (processedKeys.has(idempotencyKey)) {
+    return {
+      valid: true,
+      isIdempotentReplay: true,
+      invoiceSummary: {
+        idempotencyKey,
+        status: 'already_processed',
+      },
+    };
+  }
+
+  const tenantId = String(p.tenantId || '').trim();
+  if (!tenantId) {
+    return { valid: false, error: 'tenant_id_required' };
+  }
+
+  const actorSeat = String(p.actorSeat || '') as SeatCode;
+  if (!COMMAND_SEATS.COUNTER_SALE.includes(actorSeat)) {
+    return { valid: false, error: `unauthorized_seat_for_counter_sale: ${actorSeat}` };
+  }
+
+  const items = (p.items || []) as CounterSaleItemPayload[];
+  if (!Array.isArray(items) || items.length === 0) {
+    return { valid: false, error: 'counter_sale_items_required' };
+  }
+
+  let calculatedSubtotal = 0;
+  for (const it of items) {
+    if (!it.itemId || !it.sku) {
+      return { valid: false, error: 'invalid_counter_sale_item' };
+    }
+    if (it.quantity <= 0) {
+      return { valid: false, error: 'item_quantity_must_be_positive' };
+    }
+    calculatedSubtotal += it.quantity * it.unitPrice;
+  }
+
+  const subtotal = Number(p.subtotal || 0);
+  if (Math.abs(subtotal - calculatedSubtotal) > 0.01) {
+    return { valid: false, error: 'subtotal_arithmetic_mismatch' };
+  }
+
+  const gstRate = typeof p.gstRate === 'number' ? p.gstRate : 0;
+  const expectedGst = Math.round((subtotal * gstRate) / 100 * 100) / 100;
+  const providedGst = Number(p.gstAmount || 0);
+
+  if (Math.abs(providedGst - expectedGst) > 0.05) {
+    return { valid: false, error: 'gst_arithmetic_mismatch' };
+  }
+
+  const totalAmount = Number(p.totalAmount || 0);
+  if (Math.abs(totalAmount - (subtotal + expectedGst)) > 0.05) {
+    return { valid: false, error: 'total_arithmetic_mismatch' };
+  }
+
+  processedKeys.add(idempotencyKey);
+
+  return {
+    valid: true,
+    isIdempotentReplay: false,
+    invoiceSummary: {
+      idempotencyKey,
+      tenantId,
+      customerName: String(p.customerName || 'Walk-in Counter Customer'),
+      totalItemsCount: items.length,
+      subtotal,
+      gstAmount: expectedGst,
+      totalAmount,
+      paymentMethod: p.paymentMethod || 'Cash',
+      status: 'Paid',
+    },
+  };
+}
+
 
 
 
