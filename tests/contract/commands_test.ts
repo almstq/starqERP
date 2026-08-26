@@ -3015,6 +3015,130 @@ Deno.test('SERP-036: evaluateSystemAlertSignals generates structured alerts for 
   assertEquals(types.includes('OUTBOX_DEAD_LETTER'), true);
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-033: Security Verification and Abuse-Resistance Suite
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-033 [ATTACK 1]: Cross-tenant command injection is denied fail-closed', () => {
+  const princ = principal('counter', ['counter'], ORG);
+  const envelope = {
+    contract: CONTRACT_VERSION,
+    command: 'CALL' as CommandName,
+    payload: { customerPhone: '7770000' },
+    csrf: 'test_csrf',
+  };
+
+  // Targeting a different organization must be refused with cross_tenant_denied
+  const decision = authorizeCommand(princ, envelope, { tenantOfTarget: OTHER_ORG });
+  assertEquals(decision.ok, false);
+  if (!decision.ok) {
+    assertEquals(decision.error, 'cross_tenant_denied');
+  }
+});
+
+Deno.test('SERP-033 [ATTACK 2]: Forged seat / privilege escalation fails closed', () => {
+  // Technician attempts to release a PAYMENT (requires payer seat)
+  const techPrinc = principal('technician', ['technician'], ORG);
+  const payEnvelope = {
+    contract: CONTRACT_VERSION,
+    command: 'PURCHASE' as CommandName,
+    step: 'pay' as ScmStep,
+    payload: { amount: 10000 },
+    csrf: 'test_csrf',
+  };
+
+  const decision = authorizeCommand(techPrinc, payEnvelope);
+  assertEquals(decision.ok, false);
+  if (!decision.ok) {
+    assertEquals(decision.error, 'seat_not_authorized');
+  }
+});
+
+Deno.test('SERP-033 [ATTACK 3]: Revoked seat cannot execute commands even if presented in stale session', () => {
+  // Principal holds 'payer' in cookie, but server boundary has 'payer' in revokedSeats
+  const princ = principal('payer', ['payer'], ORG);
+  const payEnvelope = {
+    contract: CONTRACT_VERSION,
+    command: 'PURCHASE' as CommandName,
+    step: 'pay' as ScmStep,
+    payload: { amount: 10000 },
+    csrf: 'test_csrf',
+  };
+
+  const decision = authorizeCommand(princ, payEnvelope, { revokedSeats: ['payer'] });
+  assertEquals(decision.ok, false);
+  if (!decision.ok) {
+    assertEquals(decision.error, 'seat_revoked');
+  }
+});
+
+Deno.test('SERP-033 [ATTACK 4]: Replayed request nonces and idempotency conflicts fail closed', () => {
+  const store = new Map<string, DurableIdempotencyEntry>();
+  const princ = principal('counter', ['counter'], ORG);
+
+  const req1 = {
+    version: 'v1',
+    requestId: 'req-adv-1',
+    idempotencyKey: 'idemp-replay-target',
+    command: 'CALL' as CommandName,
+    payload: { customerPhone: '7771111' },
+  };
+
+  // 1. Initial execution applied
+  const res1 = executeVersionedApiCommand({
+    request: req1,
+    principal: princ,
+    idempotencyStore: store,
+    handler: (p) => ({ ok: true, data: { status: 'created' } }),
+  });
+  assertEquals(res1.disposition, 'applied');
+
+  // 2. Exact replay returns cached outcome without re-executing
+  const resReplay = executeVersionedApiCommand({
+    request: req1,
+    principal: princ,
+    idempotencyStore: store,
+    handler: () => ({ ok: false, error: { code: 'validation_failed', message: 'Should not execute' } }),
+  });
+  assertEquals(resReplay.disposition, 'replayed');
+  assertEquals(resReplay.ok, true);
+
+  // 3. Same idempotency key with altered payload -> rejected as conflict
+  const reqTampered = {
+    ...req1,
+    payload: { customerPhone: '9999999' }, // Altered!
+  };
+  const resConflict = executeVersionedApiCommand({
+    request: reqTampered,
+    principal: princ,
+    idempotencyStore: store,
+    handler: () => ({ ok: true, data: {} }),
+  });
+  assertEquals(resConflict.ok, false);
+  assertEquals(resConflict.error?.code, 'idempotency_key_conflict');
+});
+
+Deno.test('SERP-033 [ATTACK 5]: Segregation of Duties bypass is strictly blocked in segregated capacity', () => {
+  const history = [
+    { step: 'quote' as ScmStep, personId: DIRECTOR_PAYER },
+  ];
+
+  // Self-awarding purchase without approved override in segregated capacity must be blocked
+  const res = evaluateSodPolicy({
+    organisationId: ORG,
+    actorPersonId: DIRECTOR_PAYER,
+    actingSeat: 'financial_controller',
+    targetStep: 'award',
+    history,
+    capacity: 'segregated',
+  });
+
+  assertEquals(res.allowed, false);
+  assertEquals(res.action, 'block');
+  assertEquals(res.auditRecord?.disposition, 'blocked_sod_violation');
+});
+
+
 
 
 
