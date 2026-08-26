@@ -27,6 +27,102 @@ export const CANONICAL_JOURNEY_STEPS: readonly JourneyStep[] = [
   { code: 'CLOSE', name: '13. Final Job Closure & Archival', requiredSeats: COMMAND_SEATS.CLOSE, roleLabel: 'Counter Staff' },
 ] as const;
 
+// Explicit canonical mapping from operational garage & legacy workflow statuses to canonical command step codes
+export const LEGACY_STATUS_MAP: Record<string, CommandName> = {
+  // Call & Booking
+  'call': 'CALL',
+  'inquiry': 'CALL',
+  'booking': 'BOOKING',
+  'booked': 'BOOKING',
+  'draft': 'BOOKING',
+
+  // Intake
+  'intake': 'INTAKE',
+  'check-in & inspection': 'INTAKE',
+  'check_in': 'INTAKE',
+  'check in': 'INTAKE',
+  'inspection': 'INTAKE',
+
+  // Estimate & Authorisation & Job Card
+  'estimate': 'ESTIMATE',
+  'estimation': 'ESTIMATE',
+  'awaiting approval': 'AUTHORISATION',
+  'authorisation': 'AUTHORISATION',
+  'authorization': 'AUTHORISATION',
+  'approved': 'JOB_CARD',
+  'job_card': 'JOB_CARD',
+  'job card': 'JOB_CARD',
+
+  // Parts & Work
+  'waiting for material': 'PARTS_PROCUREMENT',
+  'parts_procurement': 'PARTS_PROCUREMENT',
+  'procurement': 'PARTS_PROCUREMENT',
+  'in progress': 'WORK',
+  'work': 'WORK',
+  'in_progress': 'WORK',
+  'surface prep & sanding': 'WORK',
+  'surface_prep': 'WORK',
+  'spray booth / wrap studio': 'WORK',
+  'paint_booth': 'WORK',
+
+  // QC & Handover
+  'qc': 'QC',
+  'qc_detail': 'QC',
+  'detailing, qc & assembly': 'QC',
+  'quality control': 'QC',
+  'ready for customer delivery': 'HANDOVER',
+  'ready_delivery': 'HANDOVER',
+  'handover': 'HANDOVER',
+
+  // Invoicing, Payment & Settlement
+  'invoiced': 'INVOICE',
+  'invoice': 'INVOICE',
+  'completed': 'INVOICE',
+  'tax invoiced & settled': 'INVOICE_PAYMENT',
+  'invoiced_settled': 'INVOICE_PAYMENT',
+  'invoice_payment': 'INVOICE_PAYMENT',
+  'paid': 'INVOICE_PAYMENT',
+  'settled': 'INVOICE_PAYMENT',
+  'close': 'CLOSE',
+  'closed': 'CLOSE',
+  'archived': 'CLOSE',
+};
+
+export function resolveCanonicalStepIndex(currentStatus: string): number {
+  if (!currentStatus) return 0;
+  const normalized = currentStatus.trim().toLowerCase();
+
+  // 1. Direct match on command code
+  const directIdx = CANONICAL_JOURNEY_STEPS.findIndex(
+    (s) => s.code.toLowerCase() === normalized
+  );
+  if (directIdx >= 0) return directIdx;
+
+  // 2. Direct match on canonical full name or label
+  const nameIdx = CANONICAL_JOURNEY_STEPS.findIndex(
+    (s) => s.name.toLowerCase() === normalized ||
+           s.name.toLowerCase().replace(/^\d+\.\s*/, '') === normalized
+  );
+  if (nameIdx >= 0) return nameIdx;
+
+  // 3. Exact dictionary mapping
+  const mappedCode = LEGACY_STATUS_MAP[normalized];
+  if (mappedCode) {
+    const mappedIdx = CANONICAL_JOURNEY_STEPS.findIndex((s) => s.code === mappedCode);
+    if (mappedIdx >= 0) return mappedIdx;
+  }
+
+  // 4. Substring fallback match on dictionary keys
+  for (const [key, code] of Object.entries(LEGACY_STATUS_MAP)) {
+    if (normalized.includes(key)) {
+      const idx = CANONICAL_JOURNEY_STEPS.findIndex((s) => s.code === code);
+      if (idx >= 0) return idx;
+    }
+  }
+
+  return 0;
+}
+
 export interface WorkflowStepRailProps {
   currentStatus: string;
   onAdvance?: (stageName: string) => void;
@@ -38,13 +134,7 @@ export const WorkflowStepRail: React.FC<WorkflowStepRailProps> = ({ currentStatu
   const userRole = roles.find((r) => r.id === currentUser?.roleId);
   const isSuperAdmin = currentUser?.roleName === 'Super Admin' || !!userRole?.isSystemAdmin;
 
-  const currentStepIdx = CANONICAL_JOURNEY_STEPS.findIndex(
-    (s) => s.name.toLowerCase().includes(currentStatus.toLowerCase()) ||
-           s.code.toLowerCase() === currentStatus.toLowerCase() ||
-           currentStatus.toLowerCase().includes(s.code.toLowerCase())
-  );
-
-  const safeIdx = currentStepIdx >= 0 ? currentStepIdx : 0;
+  const safeIdx = resolveCanonicalStepIndex(currentStatus);
   const currentStep = CANONICAL_JOURNEY_STEPS[safeIdx];
   const nextStep = CANONICAL_JOURNEY_STEPS[safeIdx + 1];
 

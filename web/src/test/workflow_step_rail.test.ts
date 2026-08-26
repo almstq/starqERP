@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CANONICAL_JOURNEY_STEPS } from '../components/jobs/WorkflowStepRail';
+import { CANONICAL_JOURNEY_STEPS, resolveCanonicalStepIndex } from '../components/jobs/WorkflowStepRail';
 import { COMMAND_SEATS, CommandName } from '../../../contracts/commands';
 
 describe('SERP-146 & SERP-145 — 13-Step Workflow Journey Rail & Seat Signpost', () => {
@@ -71,4 +71,26 @@ describe('SERP-146 & SERP-145 — 13-Step Workflow Journey Rail & Seat Signpost'
     expect(checkCanCreateJob(false, { jobs: ['view', 'edit'] })).toBe(false);
     expect(checkCanCreateJob(false, {})).toBe(false);
   });
+
+  it('SERP-147: WorkflowStepRail maps representative legacy & operational statuses to correct steps', () => {
+    // Representative statuses should resolve to their appropriate canonical index and NOT collapse to 0
+    expect(resolveCanonicalStepIndex('Draft')).toBe(1); // BOOKING (Step 2)
+    expect(resolveCanonicalStepIndex('Check-in & Inspection')).toBe(2); // INTAKE (Step 3)
+    expect(resolveCanonicalStepIndex('Awaiting Approval')).toBe(4); // AUTHORISATION (Step 5)
+    expect(resolveCanonicalStepIndex('Waiting for Material')).toBe(6); // PARTS_PROCUREMENT (Step 7)
+    expect(resolveCanonicalStepIndex('In Progress')).toBe(7); // WORK (Step 8)
+    expect(resolveCanonicalStepIndex('Detailing, QC & Assembly')).toBe(8); // QC (Step 9)
+    expect(resolveCanonicalStepIndex('Ready for Customer Delivery')).toBe(9); // HANDOVER (Step 10)
+    expect(resolveCanonicalStepIndex('Completed')).toBe(10); // INVOICE (Step 11)
+    expect(resolveCanonicalStepIndex('Invoiced')).toBe(10); // INVOICE (Step 11)
+    expect(resolveCanonicalStepIndex('Tax Invoiced & Settled')).toBe(11); // INVOICE_PAYMENT (Step 12)
+    expect(resolveCanonicalStepIndex('Paid')).toBe(11); // INVOICE_PAYMENT (Step 12)
+    expect(resolveCanonicalStepIndex('Closed')).toBe(12); // CLOSE (Step 13)
+
+    // Direct command code matches
+    expect(resolveCanonicalStepIndex('CALL')).toBe(0);
+    expect(resolveCanonicalStepIndex('WORK')).toBe(7);
+    expect(resolveCanonicalStepIndex('QC')).toBe(8);
+  });
 });
+
