@@ -135,6 +135,8 @@ import {
   validateAccessibilityStandard,
   STARQ_ERP_CANONICAL_METADATA,
   validateProductIdentityMetadata,
+  CI_MANDATORY_GATES,
+  validateCiGateRegistry,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -3297,6 +3299,35 @@ Deno.test('SERP-032: validateProductIdentityMetadata rejects drifted branding or
   assertEquals(res.valid, false);
   assertEquals(res.errors.length, 4);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-263: Remote Git and CI Control Plane Contract
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-263: CI_MANDATORY_GATES covers all required governance, secret, migration, and build gates', () => {
+  const result = validateCiGateRegistry(CI_MANDATORY_GATES);
+  assertEquals(result.valid, true);
+  assertEquals(result.missingMandatoryGates.length, 0);
+
+  // Verify all mandatory gates have BLOCK_MERGE policy
+  const allBlocking = CI_MANDATORY_GATES.every((g) => g.failureImpact === 'BLOCK_MERGE' && g.isMandatory);
+  assertEquals(allBlocking, true);
+});
+
+Deno.test('SERP-263: validateCiGateRegistry detects missing mandatory gates (fail closed)', () => {
+  const incompleteGates = [
+    {
+      name: 'Secret & Credential Sweep',
+      command: 'node scripts/pre-push-secret-scan.mjs',
+      isMandatory: true,
+      failureImpact: 'BLOCK_MERGE' as const,
+    },
+  ];
+  const res = validateCiGateRegistry(incompleteGates);
+  assertEquals(res.valid, false);
+  assertEquals(res.missingMandatoryGates.length >= 5, true);
+});
+
 
 
 

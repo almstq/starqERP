@@ -1,0 +1,90 @@
+name: starqERP CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-and-contracts:
+    name: Backend, Contracts & Governance Gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'web/package-lock.json'
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Secret & Credential Sweep
+        run: node scripts/pre-push-secret-scan.mjs
+
+      - name: Migration Lineage & Compatibility Linter
+        run: node scripts/lint-migrations.mjs
+
+      - name: Migration 0021 Synthetic UUID Rehearsal
+        run: node tests/migration_0021_rehearsal.test.mjs
+
+      - name: Tenant Hardcoding Sweep
+        run: node tests/tenant_hardcoding_sweep.test.mjs
+
+      - name: Security Policy Tests
+        run: node tests/security_policy.test.mjs
+
+      - name: Support Policy Tests
+        run: node tests/support_policy.test.mjs
+
+      - name: Legal Terms Tests
+        run: node tests/legal_terms.test.mjs
+
+      - name: Reality Mutation Checks
+        run: node tests/check_reality_mutation.test.mjs
+
+      - name: Running System Audit Gate
+        run: node scripts/audit-running-system.mjs
+
+      - name: Deno Contract Test Suite (164 tests)
+        run: deno test --allow-read tests/contract/commands_test.ts
+
+  frontend:
+    name: Web Frontend Build & Test Suite
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'web/package-lock.json'
+
+      - name: Install dependencies (clean install)
+        run: npm ci
+
+      - name: TypeScript typecheck
+        run: npm run lint
+
+      - name: Vitest test suite (31 files, 119 tests)
+        run: npm test
+
+      - name: Vite production build
+        run: npm run build

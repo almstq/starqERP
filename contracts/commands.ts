@@ -4162,6 +4162,104 @@ export function validateProductIdentityMetadata(meta: unknown): {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-263: Remote Git and CI Control Plane Contract
+// (DEC-089 / Phase 6 / CORE-001 / CORE-002 / CI-001 / SEC-001)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CiGateDefinition {
+  readonly name: string;
+  readonly command: string;
+  readonly isMandatory: boolean;
+  readonly failureImpact: 'BLOCK_MERGE' | 'WARN_ONLY';
+}
+
+export const CI_MANDATORY_GATES: readonly CiGateDefinition[] = Object.freeze([
+  {
+    name: 'Secret & Credential Sweep',
+    command: 'node scripts/pre-push-secret-scan.mjs',
+    isMandatory: true,
+    failureImpact: 'BLOCK_MERGE',
+  },
+  {
+    name: 'Migration Lineage & Compatibility Linter',
+    command: 'node scripts/lint-migrations.mjs',
+    isMandatory: true,
+    failureImpact: 'BLOCK_MERGE',
+  },
+  {
+    name: 'Migration 0021 Synthetic UUID Rehearsal',
+    command: 'node tests/migration_0021_rehearsal.test.mjs',
+    isMandatory: true,
+    failureImpact: 'BLOCK_MERGE',
+  },
+  {
+    name: 'Tenant Hardcoding Sweep',
+    command: 'node tests/tenant_hardcoding_sweep.test.mjs',
+    isMandatory: true,
+    failureImpact: 'BLOCK_MERGE',
+  },
+  {
+    name: 'Security Policy Enforcement',
+    command: 'node tests/security_policy.test.mjs',
+    isMandatory: true,
+    failureImpact: 'BLOCK_MERGE',
+  },
+  {
+    name: 'Deno Contract Test Suite',
+    command: 'deno test --allow-read tests/contract/commands_test.ts',
+    isMandatory: true,
+    failureImpact: 'BLOCK_MERGE',
+  },
+  {
+    name: 'Web TypeScript Typecheck',
+    command: 'npm run lint',
+    isMandatory: true,
+    failureImpact: 'BLOCK_MERGE',
+  },
+  {
+    name: 'Web Vitest Suite',
+    command: 'npm test',
+    isMandatory: true,
+    failureImpact: 'BLOCK_MERGE',
+  },
+  {
+    name: 'Web Production Build',
+    command: 'npm run build',
+    isMandatory: true,
+    failureImpact: 'BLOCK_MERGE',
+  },
+]);
+
+export function validateCiGateRegistry(gates: readonly CiGateDefinition[]): {
+  valid: boolean;
+  missingMandatoryGates: string[];
+} {
+  const missing: string[] = [];
+  const requiredGateNames = [
+    'Secret & Credential Sweep',
+    'Migration Lineage & Compatibility Linter',
+    'Migration 0021 Synthetic UUID Rehearsal',
+    'Tenant Hardcoding Sweep',
+    'Deno Contract Test Suite',
+    'Web Vitest Suite',
+    'Web Production Build',
+  ];
+
+  for (const req of requiredGateNames) {
+    const found = gates.find((g) => g.name === req && g.isMandatory && g.failureImpact === 'BLOCK_MERGE');
+    if (!found) {
+      missing.push(req);
+    }
+  }
+
+  return {
+    valid: missing.length === 0,
+    missingMandatoryGates: missing,
+  };
+}
+
+
 
 
 
