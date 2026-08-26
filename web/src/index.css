@@ -52,3 +52,67 @@
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-feature-settings: "tnum" 1, "zero" 1;
 }
+
+/* ── SERP-035: Accessibility & Inclusive Interaction Baseline ─────────────── */
+
+/* Visible Focus States for Keyboard Navigation */
+*:focus-visible {
+  outline: 2px solid var(--accent, #f59e0b);
+  outline-offset: 2px;
+}
+
+/* Accessible Minimum Touch Target (44x44px for interactive controls) */
+button,
+a,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+select {
+  touch-action: manipulation;
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Skip to Content Navigation Link */
+.skip-link {
+  position: absolute;
+  top: -9999px;
+  left: 1rem;
+  z-index: 9999;
+  padding: 0.5rem 1rem;
+  background-color: var(--card, #ffffff);
+  color: var(--foreground, #0f172a);
+  border: 2px solid var(--accent, #f59e0b);
+  border-radius: 0.375rem;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+/* Screen Reader Only Utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+

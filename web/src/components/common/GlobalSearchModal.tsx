@@ -95,19 +95,28 @@ export const GlobalSearchModal: React.FC = () => {
       />
 
       {/* Search Dialog */}
-      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-10">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Global search"
+        className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-10"
+      >
         {/* Search Input */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-800">
-          <Search className="w-5 h-5 text-amber-400 shrink-0" />
+          <Search className="w-5 h-5 text-amber-400 shrink-0" aria-hidden="true" />
           <input
-            type="text"
+            type="search"
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search jobs, customers, vehicle plate #, invoice or inventory..."
+            aria-label="Search across work orders, customers, invoices, and inventory"
             className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
           />
-          <kbd className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-mono border border-slate-700">
+          <kbd className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-mono border border-slate-700" aria-label="Press Escape to close">
+            ESC
+          </kbd>
+        </div>
             ESC
           </kbd>
         </div>

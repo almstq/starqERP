@@ -4018,6 +4018,85 @@ export function validateSessionCookieLifecycle(params: {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-035: Accessibility and Inclusive Interaction Baseline
+// (M0 main base / CORE-001 / CORE-002 / A11Y-001 / WCAG-001)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ColorRgb {
+  readonly r: number;
+  readonly g: number;
+  readonly b: number;
+}
+
+export function getRelativeLuminance(color: ColorRgb): number {
+  const rs = color.r / 255;
+  const gs = color.g / 255;
+  const bs = color.b / 255;
+
+  const rLinear = rs <= 0.03928 ? rs / 12.92 : Math.pow((rs + 0.055) / 1.055, 2.4);
+  const gLinear = gs <= 0.03928 ? gs / 12.92 : Math.pow((gs + 0.055) / 1.055, 2.4);
+  const bLinear = bs <= 0.03928 ? bs / 12.92 : Math.pow((bs + 0.055) / 1.055, 2.4);
+
+  return 0.2126 * rLinear + 0.7152 * gLinear + 0.0722 * bLinear;
+}
+
+export function calculateContrastRatio(fg: ColorRgb, bg: ColorRgb): number {
+  const l1 = getRelativeLuminance(fg);
+  const l2 = getRelativeLuminance(bg);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+export interface AccessibilityAuditItem {
+  readonly elementId: string;
+  readonly role?: string;
+  readonly hasAriaLabel: boolean;
+  readonly hasKeyboardFocusRing: boolean;
+  readonly minTouchTargetPx: number; // >= 44
+  readonly fgColor: ColorRgb;
+  readonly bgColor: ColorRgb;
+  readonly isLargeText?: boolean;
+}
+
+export function validateAccessibilityStandard(item: AccessibilityAuditItem): {
+  compliant: boolean;
+  contrastRatio: number;
+  errors: string[];
+} {
+  const errors: string[] = [];
+
+  // 1. Contrast Check (WCAG AA: >= 4.5:1 normal text, >= 3.0:1 large text)
+  const ratio = calculateContrastRatio(item.fgColor, item.bgColor);
+  const minRatio = item.isLargeText ? 3.0 : 4.5;
+  if (ratio < minRatio) {
+    errors.push(`Contrast ratio ${ratio.toFixed(2)}:1 below required ${minRatio}:1`);
+  }
+
+  // 2. Touch target check (>= 44px)
+  if (item.minTouchTargetPx < 44) {
+    errors.push(`Touch target ${item.minTouchTargetPx}px below recommended minimum 44px`);
+  }
+
+  // 3. Accessible label check
+  if (!item.hasAriaLabel) {
+    errors.push(`Element ${item.elementId} missing accessible name or aria-label`);
+  }
+
+  // 4. Focus ring check
+  if (!item.hasKeyboardFocusRing) {
+    errors.push(`Element ${item.elementId} missing visible focus ring`);
+  }
+
+  return {
+    compliant: errors.length === 0,
+    contrastRatio: Number(ratio.toFixed(2)),
+    errors,
+  };
+}
+
+
 
 
 

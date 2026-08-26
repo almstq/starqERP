@@ -53,7 +53,12 @@ export const AppShell: React.FC = () => {
 
   return (
     <div className="erp-shell flex min-h-screen">
-      <aside className="erp-sidebar hidden shrink-0 flex-col md:flex">
+      {/* Accessible skip-link for keyboard navigation (SERP-035) */}
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+
+      <aside className="erp-sidebar hidden shrink-0 flex-col md:flex" aria-label="Sidebar">
         <div className="flex items-center gap-3 px-5 py-5">
           {/*
             L4 — the logomark. The q of starq reduced to a bowl and a descender.
@@ -96,14 +101,14 @@ export const AppShell: React.FC = () => {
           </div>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 px-3 pb-4">
+        <nav className="flex flex-1 flex-col gap-1 px-3 pb-4" aria-label="Main navigation">
           {NAV.map(({ to, label, Icon, end }) => (
             <NavLink key={to} to={to} end={end}
               className="erp-nav-item"
               style={({ isActive }) => (isActive ? undefined : undefined)}
               children={({ isActive }) => (
                 <span className="erp-nav-item contents" data-active={isActive}>
-                  <Icon size={17} strokeWidth={1.9} />
+                  <Icon size={17} strokeWidth={1.9} aria-hidden="true" />
                   <span>{label}</span>
                 </span>
               )}
@@ -123,29 +128,33 @@ export const AppShell: React.FC = () => {
         <header
           className="flex items-center gap-4 px-6 py-3"
           style={{ borderBottom: '1px solid var(--border)' }}
+          role="banner"
         >
           <div className="relative w-full max-w-md">
-            <Search size={15} className="erp-muted pointer-events-none absolute top-1/2 left-3 -translate-y-1/2" />
+            <Search size={15} className="erp-muted pointer-events-none absolute top-1/2 left-3 -translate-y-1/2" aria-hidden="true" />
             <input
               className="erp-input w-full pl-9"
               placeholder="Search customers, jobs, invoices…"
-              aria-label="Search"
+              aria-label="Search across customers, jobs, invoices"
+              type="search"
             />
           </div>
           <div className="ml-auto flex items-center gap-4">
-            <button className="erp-muted relative" aria-label="Notifications">
-              <Bell size={18} />
-              <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full"
-                    style={{ background: 'var(--accent)' }} />
+            <button type="button" className="erp-muted relative p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors" aria-label="Notifications">
+              <Bell size={18} aria-hidden="true" />
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full"
+                    style={{ background: 'var(--accent)' }} aria-hidden="true" />
             </button>
             <button
+              type="button"
               onClick={() => navigate('/settings')}
-              className="flex items-center gap-2 text-[13px] font-medium"
+              className="flex items-center gap-2 text-[13px] font-medium p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+              aria-label={`Active workspace: ${workspace}. Click to manage settings.`}
             >
               {/* Workspace switcher. The ONLY place a tenant name may appear,
                   and it is read from the active organisation, never hardcoded. */}
               <span className="flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-semibold"
-                    style={{ background: 'var(--sidebar-accent)', color: 'var(--foreground)' }}>
+                    style={{ background: 'var(--sidebar-accent)', color: 'var(--foreground)' }} aria-hidden="true">
                 {initials}
               </span>
               {workspace}
@@ -153,7 +162,7 @@ export const AppShell: React.FC = () => {
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 px-6 py-6 md:px-8 md:py-8">
+        <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 px-6 py-6 md:px-8 md:py-8 focus:outline-none">
           <Outlet />
         </main>
       </div>

@@ -131,6 +131,8 @@ import {
   formatSessionCookie,
   parseSessionCookie,
   validateSessionCookieLifecycle,
+  calculateContrastRatio,
+  validateAccessibilityStandard,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -3220,6 +3222,52 @@ Deno.test('SERP-027: validateSessionCookieLifecycle enforces 401 eviction (Max-A
   assertEquals(goodLogout.ok, true);
   assertEquals(goodLogout.setCookieHeader?.includes('Max-Age=0'), true);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-035: Accessibility and Inclusive Interaction Baseline
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-035: calculateContrastRatio correctly calculates WCAG 2.1 contrast ratios', () => {
+  // Black on White: ~21:1
+  const blackWhite = calculateContrastRatio({ r: 0, g: 0, b: 0 }, { r: 255, g: 255, b: 255 });
+  assertEquals(Math.round(blackWhite), 21);
+
+  // Dark slate (text) on white background: >= 7:1
+  const slateOnWhite = calculateContrastRatio({ r: 15, g: 23, b: 42 }, { r: 255, g: 255, b: 255 });
+  assertEquals(slateOnWhite >= 7.0, true);
+
+  // Low contrast grey on white: < 4.5:1
+  const lowContrast = calculateContrastRatio({ r: 200, g: 200, b: 200 }, { r: 255, g: 255, b: 255 });
+  assertEquals(lowContrast < 4.5, true);
+});
+
+Deno.test('SERP-035: validateAccessibilityStandard enforces WCAG AA contrast, touch target >= 44px, focus rings, and labels', () => {
+  const compliantItem = {
+    elementId: 'btn-submit-invoice',
+    role: 'button',
+    hasAriaLabel: true,
+    hasKeyboardFocusRing: true,
+    minTouchTargetPx: 48,
+    fgColor: { r: 15, g: 23, b: 42 },
+    bgColor: { r: 255, g: 255, b: 255 },
+  };
+  const resValid = validateAccessibilityStandard(compliantItem);
+  assertEquals(resValid.compliant, true);
+  assertEquals(resValid.errors.length, 0);
+
+  const nonCompliantItem = {
+    elementId: 'btn-tiny-icon',
+    hasAriaLabel: false, // Missing label
+    hasKeyboardFocusRing: false, // Missing ring
+    minTouchTargetPx: 24, // Too small (< 44px)
+    fgColor: { r: 200, g: 200, b: 200 },
+    bgColor: { r: 255, g: 255, b: 255 }, // Low contrast
+  };
+  const resInvalid = validateAccessibilityStandard(nonCompliantItem);
+  assertEquals(resInvalid.compliant, false);
+  assertEquals(resInvalid.errors.length, 4); // Catches all 4 violations
+});
+
 
 
 
