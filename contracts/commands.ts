@@ -964,6 +964,12 @@ export const ERROR_CODES = [
   'rate_limited',
   'statutory_reconciliation_required',
   'ai_copilot_disabled',
+  'tenant_not_found',
+  'insufficient_seat_authority',
+  'validation_failed',
+  'unauthorized',
+  'invalid_request_payload',
+  'internal_server_error',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
@@ -3051,6 +3057,194 @@ export function validateCustomerLifecycleTransition(params: {
 
   return { allowed: true };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-031: Versioned API, Error & Idempotency Contract
+// (M0 main base / CORE-001 / CORE-002 / API-001 / IDEMP-001)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const SUPPORTED_API_VERSIONS = ['0.1.0', 'v1'] as const;
+export type SupportedApiVersion = (typeof SUPPORTED_API_VERSIONS)[number];
+
+export interface ApiRequestEnvelope<T = Record<string, unknown>> {
+  readonly version: string;
+  readonly requestId: string;
+  readonly idempotencyKey: string;
+  readonly command: CommandName;
+  readonly step?: ScmStep;
+  readonly payload: T;
+  readonly clientTimestamp?: string;
+}
+
+export interface ApiResponseEnvelope<T = unknown> {
+  readonly version: string;
+  readonly requestId: string;
+  readonly idempotencyKey?: string;
+  readonly ok: boolean;
+  readonly disposition: 'applied' | 'replayed' | 'rejected';
+  readonly data?: T;
+  readonly error?: {
+    readonly code: ErrorCode;
+    readonly message: string;
+    readonly details?: unknown;
+  };
+  readonly serverTimestamp: string;
+}
+
+export interface DurableIdempotencyEntry {
+  readonly idempotencyKey: string;
+  readonly requestHash: string;
+  readonly command: CommandName;
+  readonly response: ApiResponseEnvelope;
+  readonly createdAt: number; // epoch ms
+}
+
+export function computeRequestHash(command: CommandName, step: ScmStep | undefined, payload: unknown): string {
+  const canonicalStr = JSON.stringify({ command, step: step || null, payload: payload || {} });
+  let hash = 0;
+  for (let i = 0; i < canonicalStr.length; i++) {
+    const char = canonicalStr.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0;
+  }
+  return `hash_${Math.abs(hash).toString(16).padStart(8, '0')}`;
+}
+
+export function executeVersionedApiCommand<TReq = Record<string, unknown>, TRes = unknown>(params: {
+  request: ApiRequestEnvelope<TReq>;
+  principal: Principal;
+  idempotencyStore: Map<string, DurableIdempotencyEntry>;
+  handler: (payload: TReq, principal: Principal) => { ok: boolean; data?: TRes; error?: { code: ErrorCode; message: string } };
+  nowMs?: number;
+}): ApiResponseEnvelope<TRes> {
+  const { request, principal, idempotencyStore, handler, nowMs } = params;
+  const now = new Date(nowMs || Date.now()).toISOString();
+
+  // 1. API Version check
+  if (!SUPPORTED_API_VERSIONS.includes(request.version as SupportedApiVersion)) {
+    return {
+      version: request.version,
+      requestId: request.requestId,
+      idempotencyKey: request.idempotencyKey,
+      ok: false,
+      disposition: 'rejected',
+      error: {
+        code: 'contract_version_unsupported',
+        message: `API version '${request.version}' is unsupported. Supported: ${SUPPORTED_API_VERSIONS.join(', ')}`,
+      },
+      serverTimestamp: now,
+    };
+  }
+
+  // 2. Idempotency Key presence check
+  const idempKey = String(request.idempotencyKey || '').trim();
+  if (!idempKey) {
+    return {
+      version: request.version,
+      requestId: request.requestId,
+      ok: false,
+      disposition: 'rejected',
+      error: {
+        code: 'idempotency_key_required',
+        message: 'A durable idempotency key is required for stateful API commands',
+      },
+      serverTimestamp: now,
+    };
+  }
+
+  // 3. Idempotency Replay & Conflict check
+  const requestHash = computeRequestHash(request.command, request.step, request.payload);
+  const existing = idempotencyStore.get(idempKey);
+  if (existing) {
+    if (existing.requestHash === requestHash) {
+      // Exact same key + same hash -> Replay cached response without re-executing
+      return {
+        ...existing.response,
+        disposition: 'replayed',
+        serverTimestamp: now,
+      } as ApiResponseEnvelope<TRes>;
+    } else {
+      // Same key + differing payload/hash -> Conflict error
+      return {
+        version: request.version,
+        requestId: request.requestId,
+        idempotencyKey: idempKey,
+        ok: false,
+        disposition: 'rejected',
+        error: {
+          code: 'idempotency_key_conflict',
+          message: `Idempotency key '${idempKey}' was already used with different request parameters`,
+        },
+        serverTimestamp: now,
+      };
+    }
+  }
+
+  // 4. Server-Side Seat & Tenancy Authorization check
+  const authDecision = authorizeCommand(principal, {
+    contract: CONTRACT_VERSION,
+    command: request.command,
+    step: request.step,
+    payload: (request.payload || {}) as Record<string, unknown>,
+    csrf: 'server_verified',
+  });
+
+  if (!authDecision.ok) {
+    const errorResponse: ApiResponseEnvelope<TRes> = {
+      version: request.version,
+      requestId: request.requestId,
+      idempotencyKey: idempKey,
+      ok: false,
+      disposition: 'rejected',
+      error: {
+        code: authDecision.error,
+        message: `Command execution denied by server authority: ${authDecision.error}`,
+      },
+      serverTimestamp: now,
+    };
+    return errorResponse;
+  }
+
+  // 5. Execute Command Handler
+  const handlerResult = handler(request.payload, principal);
+  if (!handlerResult.ok) {
+    const failureResponse: ApiResponseEnvelope<TRes> = {
+      version: request.version,
+      requestId: request.requestId,
+      idempotencyKey: idempKey,
+      ok: false,
+      disposition: 'rejected',
+      error: handlerResult.error || {
+        code: 'validation_failed',
+        message: 'Command execution failed during business validation',
+      },
+      serverTimestamp: now,
+    };
+    return failureResponse;
+  }
+
+  // 6. Record successful execution in durable idempotency store
+  const successResponse: ApiResponseEnvelope<TRes> = {
+    version: request.version,
+    requestId: request.requestId,
+    idempotencyKey: idempKey,
+    ok: true,
+    disposition: 'applied',
+    data: handlerResult.data,
+    serverTimestamp: now,
+  };
+
+  idempotencyStore.set(idempKey, {
+    idempotencyKey: idempKey,
+    requestHash,
+    command: request.command,
+    response: successResponse,
+    createdAt: nowMs || Date.now(),
+  });
+
+  return successResponse;
+}
+
 
 
 

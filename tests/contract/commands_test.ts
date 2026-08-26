@@ -113,6 +113,8 @@ import {
   generateTaxWorkingPaperSummary,
   validateCustomerConsentUpdate,
   validateCustomerLifecycleTransition,
+  executeVersionedApiCommand,
+  DurableIdempotencyEntry,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -2570,6 +2572,139 @@ Deno.test('SERP-008: validateCustomerLifecycleTransition allows legal progressio
   });
   assertEquals(t4.allowed, true);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-031: Versioned API, Error & Idempotency Contract
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-031: executeVersionedApiCommand executes valid v1 command and caches outcome', () => {
+  const store = new Map<string, DurableIdempotencyEntry>();
+  const princ = principal('counter');
+
+  const req = {
+    version: 'v1',
+    requestId: 'req-001',
+    idempotencyKey: 'idemp-pos-888',
+    command: 'CALL' as CommandName,
+    payload: { customerPhone: '7771234', notes: 'Initial intake call' },
+  };
+
+  const res = executeVersionedApiCommand({
+    request: req,
+    principal: princ,
+    idempotencyStore: store,
+    handler: (p) => ({ ok: true, data: { jobId: 'JOB-NEW-01', phone: p.customerPhone } }),
+  });
+
+  assertEquals(res.ok, true);
+  assertEquals(res.disposition, 'applied');
+  assertEquals(res.data?.jobId, 'JOB-NEW-01');
+  assertEquals(store.has('idemp-pos-888'), true);
+});
+
+Deno.test('SERP-031: executeVersionedApiCommand replays cached outcome on exact same idempotency key + request hash', () => {
+  const store = new Map<string, DurableIdempotencyEntry>();
+  const princ = principal('counter');
+
+  const req = {
+    version: 'v1',
+    requestId: 'req-002',
+    idempotencyKey: 'idemp-replay-key',
+    command: 'CALL' as CommandName,
+    payload: { customerPhone: '7771234' },
+  };
+
+  let executionCount = 0;
+  const handler = () => {
+    executionCount++;
+    return { ok: true, data: { executedTimes: executionCount } };
+  };
+
+  // First execution
+  const first = executeVersionedApiCommand({
+    request: req,
+    principal: princ,
+    idempotencyStore: store,
+    handler,
+  });
+  assertEquals(first.disposition, 'applied');
+  assertEquals(executionCount, 1);
+
+  // Replay exact same request
+  const replay = executeVersionedApiCommand({
+    request: req,
+    principal: princ,
+    idempotencyStore: store,
+    handler,
+  });
+  assertEquals(replay.disposition, 'replayed');
+  assertEquals(executionCount, 1); // Handler NOT invoked a second time!
+});
+
+Deno.test('SERP-031: executeVersionedApiCommand rejects key conflict when payload differs on same key', () => {
+  const store = new Map<string, DurableIdempotencyEntry>();
+  const princ = principal('counter');
+
+  const req1 = {
+    version: 'v1',
+    requestId: 'req-003',
+    idempotencyKey: 'idemp-conflict-key',
+    command: 'CALL' as CommandName,
+    payload: { customerPhone: '7771111' },
+  };
+
+  const req2 = {
+    version: 'v1',
+    requestId: 'req-004',
+    idempotencyKey: 'idemp-conflict-key', // Same key!
+    command: 'CALL' as CommandName,
+    payload: { customerPhone: '9992222' }, // Differing payload!
+  };
+
+  // First succeeds
+  executeVersionedApiCommand({
+    request: req1,
+    principal: princ,
+    idempotencyStore: store,
+    handler: () => ({ ok: true, data: {} }),
+  });
+
+  // Second fails with idempotency_key_conflict
+  const conflict = executeVersionedApiCommand({
+    request: req2,
+    principal: princ,
+    idempotencyStore: store,
+    handler: () => ({ ok: true, data: {} }),
+  });
+
+  assertEquals(conflict.ok, false);
+  assertEquals(conflict.disposition, 'rejected');
+  assertEquals(conflict.error?.code, 'idempotency_key_conflict');
+});
+
+Deno.test('SERP-031: executeVersionedApiCommand rejects unsupported envelope versions (fail closed)', () => {
+  const store = new Map<string, DurableIdempotencyEntry>();
+  const princ = principal('counter');
+
+  const req = {
+    version: 'v99.0.0-unsupported',
+    requestId: 'req-bad-ver',
+    idempotencyKey: 'idemp-ver-1',
+    command: 'CALL' as CommandName,
+    payload: {},
+  };
+
+  const res = executeVersionedApiCommand({
+    request: req,
+    principal: princ,
+    idempotencyStore: store,
+    handler: () => ({ ok: true, data: {} }),
+  });
+
+  assertEquals(res.ok, false);
+  assertEquals(res.error?.code, 'contract_version_unsupported');
+});
+
 
 
 
