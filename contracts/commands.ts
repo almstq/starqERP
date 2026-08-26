@@ -3665,6 +3665,185 @@ export function executeTransactionalMutationWithOutbox<TRes = unknown>(params: {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-036: Observability, Rate-Limit and Alerting Baseline
+// (M0 main base / CORE-001 / CORE-002 / OBS-001 / RATE-001)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface RateLimitBucket {
+  readonly key: string;
+  readonly timestamps: number[];
+}
+
+export function evaluateRateLimit(params: {
+  key: string;
+  maxRequests: number;
+  windowMs: number;
+  store: Map<string, number[]>;
+  nowMs?: number;
+}): { allowed: boolean; remaining: number; retryAfterSeconds?: number } {
+  const { key, maxRequests, windowMs, store, nowMs } = params;
+  const now = nowMs || Date.now();
+  const windowStart = now - windowMs;
+
+  const existingTimestamps = store.get(key) || [];
+  const validTimestamps = existingTimestamps.filter((ts) => ts > windowStart);
+
+  if (validTimestamps.length >= maxRequests) {
+    const oldest = validTimestamps[0];
+    const retryAfterSeconds = Math.max(1, Math.ceil((oldest + windowMs - now) / 1000));
+    return {
+      allowed: false,
+      remaining: 0,
+      retryAfterSeconds,
+    };
+  }
+
+  validTimestamps.push(now);
+  store.set(key, validTimestamps);
+
+  return {
+    allowed: true,
+    remaining: maxRequests - validTimestamps.length,
+  };
+}
+
+export interface StructuredLogEntry {
+  readonly requestId: string;
+  readonly correlationId: string;
+  readonly timestamp: string;
+  readonly level: 'INFO' | 'WARN' | 'ERROR' | 'SECURITY';
+  readonly action: string;
+  readonly tenantId?: string;
+  readonly actorPersonId?: string;
+  readonly actingSeat?: SeatCode;
+  readonly durationMs?: number;
+  readonly sanitizedMetadata?: Record<string, unknown>;
+  readonly error?: {
+    readonly code: ErrorCode | string;
+    readonly message: string;
+  };
+}
+
+export function sanitizeLogMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  const SENSITIVE_KEYS = [
+    'password',
+    'secret',
+    'token',
+    'apikey',
+    'authorization',
+    'cookie',
+    'credit_card',
+    'pan',
+    'cvv',
+    'bml_account',
+    'bank_account',
+    'tin',
+    'customer_phone',
+    'phone',
+    'email',
+  ];
+
+  const sanitized: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(metadata)) {
+    const lowerKey = key.toLowerCase();
+    if (SENSITIVE_KEYS.some((s) => lowerKey.includes(s))) {
+      sanitized[key] = '[REDACTED_SENSITIVE_PAYLOAD]';
+    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+      sanitized[key] = sanitizeLogMetadata(value as Record<string, unknown>);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+
+  return sanitized;
+}
+
+export type AlertSeverity = 'SEV1_CRITICAL' | 'SEV2_HIGH' | 'SEV3_MEDIUM' | 'SEV4_LOW';
+
+export interface AlertSignal {
+  readonly alertId: string;
+  readonly alertType: 'AUTH_BRUTE_FORCE' | 'CROSS_TENANT_ATTACK' | 'OUTBOX_DEAD_LETTER' | 'SOD_OVERRIDE_SURGE';
+  readonly severity: AlertSeverity;
+  readonly message: string;
+  readonly tenantId?: string;
+  readonly triggerCount: number;
+  readonly threshold: number;
+  readonly triggeredAt: string;
+}
+
+export function evaluateSystemAlertSignals(metrics: {
+  tenantId?: string;
+  failedAuthAttemptsInWindow: number;
+  crossTenantAttemptsInWindow: number;
+  outboxDeadLetterCount: number;
+  sodOverridesInWindow: number;
+  nowIso?: string;
+}): AlertSignal[] {
+  const alerts: AlertSignal[] = [];
+  const now = metrics.nowIso || new Date().toISOString();
+
+  // 1. Auth Brute Force Alert (Threshold >= 5)
+  if (metrics.failedAuthAttemptsInWindow >= 5) {
+    alerts.push({
+      alertId: `alert_auth_${Date.now()}`,
+      alertType: 'AUTH_BRUTE_FORCE',
+      severity: 'SEV2_HIGH',
+      message: `Detected ${metrics.failedAuthAttemptsInWindow} failed auth attempts within evaluation window`,
+      tenantId: metrics.tenantId,
+      triggerCount: metrics.failedAuthAttemptsInWindow,
+      threshold: 5,
+      triggeredAt: now,
+    });
+  }
+
+  // 2. Cross-Tenant Attempt Alert (Threshold >= 1)
+  if (metrics.crossTenantAttemptsInWindow >= 1) {
+    alerts.push({
+      alertId: `alert_tenant_${Date.now()}`,
+      alertType: 'CROSS_TENANT_ATTACK',
+      severity: 'SEV1_CRITICAL',
+      message: `Detected ${metrics.crossTenantAttemptsInWindow} cross-tenant denial events`,
+      tenantId: metrics.tenantId,
+      triggerCount: metrics.crossTenantAttemptsInWindow,
+      threshold: 1,
+      triggeredAt: now,
+    });
+  }
+
+  // 3. Outbox Dead Letter Alert (Threshold >= 1)
+  if (metrics.outboxDeadLetterCount >= 1) {
+    alerts.push({
+      alertId: `alert_outbox_${Date.now()}`,
+      alertType: 'OUTBOX_DEAD_LETTER',
+      severity: 'SEV2_HIGH',
+      message: `Detected ${metrics.outboxDeadLetterCount} outbox events in dead_letter state`,
+      tenantId: metrics.tenantId,
+      triggerCount: metrics.outboxDeadLetterCount,
+      threshold: 1,
+      triggeredAt: now,
+    });
+  }
+
+  // 4. SoD Override Surge (Threshold >= 3)
+  if (metrics.sodOverridesInWindow >= 3) {
+    alerts.push({
+      alertId: `alert_sod_${Date.now()}`,
+      alertType: 'SOD_OVERRIDE_SURGE',
+      severity: 'SEV3_MEDIUM',
+      message: `Detected ${metrics.sodOverridesInWindow} SoD overrides recorded in evaluation window`,
+      tenantId: metrics.tenantId,
+      triggerCount: metrics.sodOverridesInWindow,
+      threshold: 3,
+      triggeredAt: now,
+    });
+  }
+
+  return alerts;
+}
+
+
 
 
 

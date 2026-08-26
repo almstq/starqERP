@@ -123,6 +123,9 @@ import {
   validateOutboxEvent,
   executeTransactionalMutationWithOutbox,
   type TransactionalOutboxRecord,
+  evaluateRateLimit,
+  sanitizeLogMetadata,
+  evaluateSystemAlertSignals,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -2945,6 +2948,73 @@ Deno.test('SERP-034: executeTransactionalMutationWithOutbox fails closed and wri
   assertEquals(res.error, 'insufficient_inventory_balance');
   assertEquals(outboxStore.length, 0); // No half-applied outbox event!
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-036: Observability, Rate-Limit and Alerting Baseline
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-036: evaluateRateLimit enforces sliding window and fails closed when limit exceeded', () => {
+  const store = new Map<string, number[]>();
+  const key = 'rate_client_192_168_1_1';
+  const now = 1000000;
+
+  // 3 allowed within 60s
+  const r1 = evaluateRateLimit({ key, maxRequests: 3, windowMs: 60000, store, nowMs: now });
+  assertEquals(r1.allowed, true);
+  assertEquals(r1.remaining, 2);
+
+  const r2 = evaluateRateLimit({ key, maxRequests: 3, windowMs: 60000, store, nowMs: now + 1000 });
+  assertEquals(r2.allowed, true);
+  assertEquals(r2.remaining, 1);
+
+  const r3 = evaluateRateLimit({ key, maxRequests: 3, windowMs: 60000, store, nowMs: now + 2000 });
+  assertEquals(r3.allowed, true);
+  assertEquals(r3.remaining, 0);
+
+  // 4th request exceeds rate limit -> fail closed
+  const r4 = evaluateRateLimit({ key, maxRequests: 3, windowMs: 60000, store, nowMs: now + 3000 });
+  assertEquals(r4.allowed, false);
+  assertEquals(r4.remaining, 0);
+  assertEquals(typeof r4.retryAfterSeconds, 'number');
+});
+
+Deno.test('SERP-036: sanitizeLogMetadata scrubs passwords, tokens, customer phone, and account numbers', () => {
+  const rawMetadata = {
+    action: 'LOGIN_ATTEMPT',
+    username: 'admin@starq.com',
+    password: 'SuperSecretPassword123!',
+    token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',
+    customer_phone: '7771234',
+    bml_account: '7730000998811',
+    valid_flag: true,
+  };
+
+  const sanitized = sanitizeLogMetadata(rawMetadata);
+  assertEquals(sanitized.action, 'LOGIN_ATTEMPT');
+  assertEquals(sanitized.password, '[REDACTED_SENSITIVE_PAYLOAD]');
+  assertEquals(sanitized.token, '[REDACTED_SENSITIVE_PAYLOAD]');
+  assertEquals(sanitized.customer_phone, '[REDACTED_SENSITIVE_PAYLOAD]');
+  assertEquals(sanitized.bml_account, '[REDACTED_SENSITIVE_PAYLOAD]');
+  assertEquals(sanitized.valid_flag, true);
+});
+
+Deno.test('SERP-036: evaluateSystemAlertSignals generates structured alerts for brute force, cross tenant, and dead letter events', () => {
+  const signals = evaluateSystemAlertSignals({
+    tenantId: ORG,
+    failedAuthAttemptsInWindow: 6, // Triggers AUTH_BRUTE_FORCE
+    crossTenantAttemptsInWindow: 1, // Triggers CROSS_TENANT_ATTACK
+    outboxDeadLetterCount: 2, // Triggers OUTBOX_DEAD_LETTER
+    sodOverridesInWindow: 1,
+    nowIso: '2026-08-26T15:00:00Z',
+  });
+
+  assertEquals(signals.length, 3);
+  const types = signals.map((s) => s.alertType);
+  assertEquals(types.includes('AUTH_BRUTE_FORCE'), true);
+  assertEquals(types.includes('CROSS_TENANT_ATTACK'), true);
+  assertEquals(types.includes('OUTBOX_DEAD_LETTER'), true);
+});
+
 
 
 
