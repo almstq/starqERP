@@ -24,18 +24,26 @@ export interface Vehicle {
   type: 'Car' | 'Motorcycle' | 'Speedboat/Jetski' | 'Van/Truck';
 }
 
+export type CustomerLifecycleStage = 'Lead' | 'Active' | 'VIP' | 'Inactive' | 'Blocked';
+
 export interface Customer {
   id: string;
+  tenantId?: string;
   name: string;
   phone: string;
   email: string;
   type: CustomerType;
+  lifecycleStage?: CustomerLifecycleStage;
+  consentGiven?: boolean;
+  consentTimestamp?: string;
+  consentChannel?: 'Phone' | 'Email' | 'In-Person' | 'Web';
   island: string;
   vehicles: Vehicle[];
   activeJobsCount: number;
   totalInvoiced: number;
   outstandingBalance: number;
   lastPaymentDate?: string;
+  tags?: string[];
   notes: string;
   createdAt: string;
 }

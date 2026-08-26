@@ -111,6 +111,8 @@ import {
   validateCounterSaleCommand,
   validateCommercialDocumentProvenance,
   generateTaxWorkingPaperSummary,
+  validateCustomerConsentUpdate,
+  validateCustomerLifecycleTransition,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -2504,6 +2506,71 @@ Deno.test('SERP-007: generateTaxWorkingPaperSummary strictly zeroes GST claims f
   assertEquals(summary.netGstPayable, 0);
   assertEquals(summary.isReviewable, true);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-008: Stage 5 CRM & Customer Lifecycle Module
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-008: validateCustomerConsentUpdate validates tenant, channel, and updater', () => {
+  const validConsent = {
+    tenantId: ORG,
+    customerId: 'cust-101',
+    consentGiven: true,
+    consentChannel: 'Phone',
+    consentTimestamp: '2026-08-26T14:30:00Z',
+    updatedBy: 'usr-admin-1',
+  };
+  const res1 = validateCustomerConsentUpdate(validConsent);
+  assertEquals(res1.valid, true);
+
+  const invalidChannel = {
+    tenantId: ORG,
+    customerId: 'cust-101',
+    consentGiven: true,
+    consentChannel: 'Telepathy', // Invalid channel
+    consentTimestamp: '2026-08-26T14:30:00Z',
+    updatedBy: 'usr-admin-1',
+  };
+  const res2 = validateCustomerConsentUpdate(invalidChannel);
+  assertEquals(res2.valid, false);
+  assertEquals(res2.error, 'invalid_consent_channel: Telepathy');
+});
+
+Deno.test('SERP-008: validateCustomerLifecycleTransition allows legal progression and blocks unprivileged unblocking', () => {
+  // Lead -> Active (allowed)
+  const t1 = validateCustomerLifecycleTransition({
+    currentStage: 'Lead',
+    targetStage: 'Active',
+    actorSeat: 'counter',
+  });
+  assertEquals(t1.allowed, true);
+
+  // Active -> VIP (allowed)
+  const t2 = validateCustomerLifecycleTransition({
+    currentStage: 'Active',
+    targetStage: 'VIP',
+    actorSeat: 'counter',
+  });
+  assertEquals(t2.allowed, true);
+
+  // Blocked -> Active (denied for counter/technician)
+  const t3 = validateCustomerLifecycleTransition({
+    currentStage: 'Blocked',
+    targetStage: 'Active',
+    actorSeat: 'counter',
+  });
+  assertEquals(t3.allowed, false);
+  assertEquals(t3.error, 'unblocking_customer_requires_privileged_seat');
+
+  // Blocked -> Active (allowed for director/owner)
+  const t4 = validateCustomerLifecycleTransition({
+    currentStage: 'Blocked',
+    targetStage: 'Active',
+    actorSeat: 'director',
+  });
+  assertEquals(t4.allowed, true);
+});
+
 
 
 

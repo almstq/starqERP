@@ -2974,6 +2974,85 @@ export function generateTaxWorkingPaperSummary(params: {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-008: Stage 5 CRM & Customer Lifecycle Module
+// (Stage 5 Module / CRM / CORE-001 / CORE-002)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CustomerConsentRecord {
+  readonly tenantId: string;
+  readonly customerId: string;
+  readonly consentGiven: boolean;
+  readonly consentChannel: 'Phone' | 'Email' | 'In-Person' | 'Web' | string;
+  readonly consentTimestamp: string;
+  readonly updatedBy: string;
+  readonly notes?: string;
+}
+
+export function validateCustomerConsentUpdate(
+  payload: unknown,
+): { valid: boolean; error?: string } {
+  if (!payload || typeof payload !== 'object') {
+    return { valid: false, error: 'invalid_consent_payload' };
+  }
+
+  const p = payload as Record<string, unknown>;
+  const tenantId = String(p.tenantId || '').trim();
+  if (!tenantId) return { valid: false, error: 'tenant_id_required' };
+
+  const customerId = String(p.customerId || '').trim();
+  if (!customerId) return { valid: false, error: 'customer_id_required' };
+
+  const updatedBy = String(p.updatedBy || '').trim();
+  if (!updatedBy) return { valid: false, error: 'updated_by_required' };
+
+  const validChannels = ['Phone', 'Email', 'In-Person', 'Web'];
+  const channel = String(p.consentChannel || '');
+  if (!validChannels.includes(channel)) {
+    return { valid: false, error: `invalid_consent_channel: ${channel}` };
+  }
+
+  return { valid: true };
+}
+
+export type CustomerLifecycleStage = 'Lead' | 'Active' | 'VIP' | 'Inactive' | 'Blocked';
+
+export function validateCustomerLifecycleTransition(params: {
+  currentStage: CustomerLifecycleStage;
+  targetStage: CustomerLifecycleStage;
+  actorSeat: SeatCode;
+}): { allowed: boolean; error?: string } {
+  const { currentStage, targetStage, actorSeat } = params;
+
+  if (currentStage === targetStage) {
+    return { allowed: true };
+  }
+
+  // Blocked unblocking requires privileged role
+  if (currentStage === 'Blocked') {
+    const privilegedSeats: SeatCode[] = ['owner', 'director', 'managing_director', 'financial_controller'];
+    if (!privilegedSeats.includes(actorSeat)) {
+      return { allowed: false, error: 'unblocking_customer_requires_privileged_seat' };
+    }
+  }
+
+  const validTransitions: Record<CustomerLifecycleStage, CustomerLifecycleStage[]> = {
+    Lead: ['Active', 'Inactive', 'Blocked'],
+    Active: ['VIP', 'Inactive', 'Blocked'],
+    VIP: ['Active', 'Inactive', 'Blocked'],
+    Inactive: ['Active', 'Blocked'],
+    Blocked: ['Active', 'Inactive'],
+  };
+
+  const allowedTargets = validTransitions[currentStage] || [];
+  if (!allowedTargets.includes(targetStage)) {
+    return { allowed: false, error: `illegal_lifecycle_transition: ${currentStage} -> ${targetStage}` };
+  }
+
+  return { allowed: true };
+}
+
+
 
 
 
