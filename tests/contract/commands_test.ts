@@ -133,6 +133,8 @@ import {
   validateSessionCookieLifecycle,
   calculateContrastRatio,
   validateAccessibilityStandard,
+  STARQ_ERP_CANONICAL_METADATA,
+  validateProductIdentityMetadata,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -3267,6 +3269,35 @@ Deno.test('SERP-035: validateAccessibilityStandard enforces WCAG AA contrast, to
   assertEquals(resInvalid.compliant, false);
   assertEquals(resInvalid.errors.length, 4); // Catches all 4 violations
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-032: STARQ ERP Product Metadata and Branding Contract
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-032: STARQ_ERP_CANONICAL_METADATA strictly enforces starqERP and starqAI canonical naming', () => {
+  const result = validateProductIdentityMetadata(STARQ_ERP_CANONICAL_METADATA);
+  assertEquals(result.valid, true);
+  assertEquals(result.errors.length, 0);
+
+  assertEquals(STARQ_ERP_CANONICAL_METADATA.productName, 'starqERP');
+  assertEquals(STARQ_ERP_CANONICAL_METADATA.embeddedAiName, 'starqAI');
+  assertEquals(STARQ_ERP_CANONICAL_METADATA.companyName, 'Starq Technologies Pvt Ltd');
+  assertEquals(STARQ_ERP_CANONICAL_METADATA.baseCurrency, 'MVR');
+});
+
+Deno.test('SERP-032: validateProductIdentityMetadata rejects drifted branding or invalid AI naming', () => {
+  const drifted = {
+    productName: 'starqBooks', // Stale legacy name
+    embeddedAiName: 'Starq AI', // Drifted AI name (must be starqAI)
+    companyName: 'Starq Tech',
+    baseCurrency: 'USD',
+    version: '0.1.0',
+  };
+  const res = validateProductIdentityMetadata(drifted);
+  assertEquals(res.valid, false);
+  assertEquals(res.errors.length, 4);
+});
+
 
 
 

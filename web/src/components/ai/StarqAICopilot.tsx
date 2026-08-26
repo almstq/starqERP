@@ -39,7 +39,7 @@ export const StarqAICopilot: React.FC = () => {
   >([
     {
       sender: 'ai',
-      text: 'Salaam! I am Starq AI, your Maldives business copilot for Ignition Ink. I monitor your garage cash flow, job profitability, MIRA GST deadlines, and spray booth inventory in real-time. How can I assist you today?'
+      text: 'Salaam! I am starqAI, your embedded Maldives business copilot. I monitor your cash flow, job profitability, MIRA GST deadlines, and inventory in real-time. How can I assist you today?'
     }
   ]);
   const [isTyping, setIsTyping] = useState(false);
@@ -113,28 +113,35 @@ export const StarqAICopilot: React.FC = () => {
       />
 
       {/* Drawer Panel */}
-      <div className="relative w-full max-w-lg bg-white border-l border-slate-200 shadow-2xl flex flex-col h-full z-10 animate-in slide-in-from-right duration-300">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="starqAI Copilot"
+        className="relative w-full max-w-lg bg-white border-l border-slate-200 shadow-2xl flex flex-col h-full z-10 animate-in slide-in-from-right duration-300"
+      >
         {/* Drawer Header */}
         <div className="p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs">
-              <Sparkles className="w-5 h-5" />
+              <Sparkles className="w-5 h-5" aria-hidden="true" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-900">Starq AI Copilot</h2>
+                <h2 className="text-base font-bold text-slate-900">starqAI Copilot</h2>
                 <Badge variant="info" size="sm">
                   Active
                 </Badge>
               </div>
-              <p className="text-xs text-slate-500">Intelligent ERP Assistant for Ignition Ink</p>
+              <p className="text-xs text-slate-500">Embedded ERP Assistant (starqAI)</p>
             </div>
           </div>
           <button
+            type="button"
             onClick={() => setIsAICopilotOpen(false)}
+            aria-label="Close starqAI Copilot"
             className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 

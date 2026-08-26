@@ -4096,6 +4096,73 @@ export function validateAccessibilityStandard(item: AccessibilityAuditItem): {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-032: STARQ ERP Product Metadata and Branding Contract
+// (M0 main base / CORE-001 / CORE-002 / META-001 / BRAND-001)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ProductIdentityMetadata {
+  readonly productName: 'starqERP';
+  readonly embeddedAiName: 'starqAI';
+  readonly companyName: 'Starq Technologies Pvt Ltd';
+  readonly version: string;
+  readonly releaseTrack: string;
+  readonly baseCurrency: 'MVR';
+  readonly contactEmail: string;
+  readonly legalJurisdiction: string;
+  readonly tagline: string;
+}
+
+export const STARQ_ERP_CANONICAL_METADATA: ProductIdentityMetadata = {
+  productName: 'starqERP',
+  embeddedAiName: 'starqAI',
+  companyName: 'Starq Technologies Pvt Ltd',
+  version: '0.2.0',
+  releaseTrack: 'R1 - M0 main base',
+  baseCurrency: 'MVR',
+  contactEmail: 'ops@starq.mv',
+  legalJurisdiction: 'Republic of Maldives',
+  tagline: 'Multi-tenant ERP & Commercial Operating System',
+};
+
+export function validateProductIdentityMetadata(meta: unknown): {
+  valid: boolean;
+  errors: string[];
+} {
+  const errors: string[] = [];
+  if (!meta || typeof meta !== 'object') {
+    return { valid: false, errors: ['Metadata must be an object'] };
+  }
+
+  const m = meta as Record<string, unknown>;
+
+  if (m.productName !== 'starqERP') {
+    errors.push(`Invalid product name "${m.productName}". Must be exactly "starqERP".`);
+  }
+
+  if (m.embeddedAiName !== 'starqAI') {
+    errors.push(`Invalid embedded AI name "${m.embeddedAiName}". Must be exactly "starqAI".`);
+  }
+
+  if (m.companyName !== 'Starq Technologies Pvt Ltd') {
+    errors.push(`Invalid company name "${m.companyName}". Must be "Starq Technologies Pvt Ltd".`);
+  }
+
+  if (m.baseCurrency !== 'MVR') {
+    errors.push(`Invalid base currency "${m.baseCurrency}". Must be "MVR".`);
+  }
+
+  if (!m.version || typeof m.version !== 'string') {
+    errors.push('Version string is required.');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
+
 
 
 
