@@ -126,6 +126,8 @@ import {
   evaluateRateLimit,
   sanitizeLogMetadata,
   evaluateSystemAlertSignals,
+  CANONICAL_MIGRATION_LINEAGE,
+  validateMigrationLineage,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -3137,6 +3139,40 @@ Deno.test('SERP-033 [ATTACK 5]: Segregation of Duties bypass is strictly blocked
   assertEquals(res.action, 'block');
   assertEquals(res.auditRecord?.disposition, 'blocked_sod_violation');
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-038: Ordered Migration, Rollback and Compatibility Discipline
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-038: CANONICAL_MIGRATION_LINEAGE contains exactly 22 migrations in strict monotonic order', () => {
+  const result = validateMigrationLineage(CANONICAL_MIGRATION_LINEAGE);
+  assertEquals(result.valid, true);
+  assertEquals(result.errors.length, 0);
+  assertEquals(CANONICAL_MIGRATION_LINEAGE.length, 22);
+
+  // Verify 0011 is reviewer gated
+  const m0011 = CANONICAL_MIGRATION_LINEAGE.find((m) => m.version === '202608220011');
+  assertEquals(m0011?.status, 'REVIEWER_GATED');
+  assertEquals(m0011?.requiresReviewerApproval, true);
+
+  // Verify 0021 and 0022 are forward unapplied
+  const m0021 = CANONICAL_MIGRATION_LINEAGE.find((m) => m.version === '202608260021');
+  assertEquals(m0021?.status, 'UNAPPLIED_FORWARD_ONLY');
+
+  const m0022 = CANONICAL_MIGRATION_LINEAGE.find((m) => m.version === '202608260022');
+  assertEquals(m0022?.status, 'UNAPPLIED_FORWARD_ONLY');
+});
+
+Deno.test('SERP-038: validateMigrationLineage rejects out-of-order and non-conforming filenames', () => {
+  const badLineage = [
+    { version: '202608250002', filename: '202608250002_second.sql', status: 'APPLIED' as const, description: '' },
+    { version: '202608250001', filename: '202608250001_first.sql', status: 'APPLIED' as const, description: '' },
+  ];
+  const res = validateMigrationLineage(badLineage);
+  assertEquals(res.valid, false);
+  assertEquals(res.errors.length > 0, true);
+});
+
 
 
 

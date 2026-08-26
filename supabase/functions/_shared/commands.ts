@@ -3854,6 +3854,79 @@ export function evaluateSystemAlertSignals(metrics: {
   return alerts;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-038: Ordered Migration, Rollback and Compatibility Discipline
+// (M0 main base / CORE-001 / CORE-002 / MIG-001 / COMPAT-001)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type MigrationStatus = 'APPLIED' | 'REVIEWER_GATED' | 'UNAPPLIED_FORWARD_ONLY';
+
+export interface MigrationLineageRecord {
+  readonly version: string;
+  readonly filename: string;
+  readonly status: MigrationStatus;
+  readonly description: string;
+  readonly isIrreversible?: boolean;
+  readonly requiresReviewerApproval?: boolean;
+}
+
+export const CANONICAL_MIGRATION_LINEAGE: readonly MigrationLineageRecord[] = [
+  { version: '202608200001', filename: '202608200001_core_foundation.sql', status: 'APPLIED', description: 'Core foundation (organisations, memberships, seats, idempotency, audit)' },
+  { version: '202608200002', filename: '202608200002_garage_inventory.sql', status: 'APPLIED', description: 'Garage and inventory operational tables' },
+  { version: '202608200003', filename: '202608200003_commercial_accounting.sql', status: 'APPLIED', description: 'Commercial accounting and journal entries' },
+  { version: '202608200004', filename: '202608200004_pilot_security.sql', status: 'APPLIED', description: 'Pilot security and RLS isolation policies' },
+  { version: '202608200005', filename: '202608200005_garage_api.sql', status: 'APPLIED', description: 'Garage API commands' },
+  { version: '202608200006', filename: '202608200006_garage_api_search_path.sql', status: 'APPLIED', description: 'Search path hardening for garage API' },
+  { version: '202608200007', filename: '202608200007_garage_api_self_test.sql', status: 'APPLIED', description: 'Garage API self test functions' },
+  { version: '202608200008', filename: '202608200008_session_authority.sql', status: 'APPLIED', description: 'Session authority and token functions' },
+  { version: '202608210009', filename: '202608210009_seat_vocabulary.sql', status: 'APPLIED', description: 'Seat vocabulary expansion' },
+  { version: '202608210010', filename: '202608210010_purchase_seat_matrix.sql', status: 'APPLIED', description: 'Purchase seat matrix seeds' },
+  { version: '202608220011', filename: '202608220011_wire_purchase_seat_matrix.sql', status: 'REVIEWER_GATED', requiresReviewerApproval: true, description: 'Wire purchase seat matrix (Gated by 3rd-person reviewer)' },
+  { version: '202608250012', filename: '202608250012_settlement_allocations.sql', status: 'APPLIED', description: 'Settlement allocations and payment linkages' },
+  { version: '202608250013', filename: '202608250013_workflow_stages.sql', status: 'APPLIED', description: 'Workflow stages and transitions' },
+  { version: '202608250014', filename: '202608250014_idempotency_replay.sql', status: 'APPLIED', description: 'Idempotency replay persistence table' },
+  { version: '202608250015', filename: '202608250015_roles_as_data.sql', status: 'APPLIED', description: 'Roles as data matrix and seat bindings' },
+  { version: '202608250016', filename: '202608250016_sod_exceptions.sql', status: 'APPLIED', description: 'SoD tracked exceptions and capacity derivation' },
+  { version: '202608250017', filename: '202608250017_tax_regimes_and_periods.sql', status: 'APPLIED', description: 'Tax regimes and statutory GST periods' },
+  { version: '202608250018', filename: '202608250018_bank_accounts_entities.sql', status: 'APPLIED', description: 'Bank accounts and entity mapping' },
+  { version: '202608250019', filename: '202608250019_job_customer_vehicle_phone.sql', status: 'APPLIED', description: 'Job customer vehicle phone linkages' },
+  { version: '202608250020', filename: '202608250020_revision_missing_endpoints.sql', status: 'APPLIED', description: 'Command handler endpoints for statutory mutations' },
+  { version: '202608260021', filename: '202608260021_synthetic_tenant_uuid_transition.sql', status: 'UNAPPLIED_FORWARD_ONLY', description: 'Synthetic tenant UUID transition migration' },
+  { version: '202608260022', filename: '202608260022_transactional_outbox_and_audit.sql', status: 'UNAPPLIED_FORWARD_ONLY', description: 'Transactional outbox and immutable audit foundation' },
+];
+
+export function validateMigrationLineage(lineage: readonly MigrationLineageRecord[]): {
+  valid: boolean;
+  errors: string[];
+} {
+  const errors: string[] = [];
+  let previousVersion = 0n;
+
+  for (const m of lineage) {
+    const match = m.filename.match(/^(\d{12})_(.+)\.sql$/);
+    if (!match) {
+      errors.push(`Invalid filename format: ${m.filename}`);
+      continue;
+    }
+
+    const versionNum = BigInt(match[1]);
+    if (versionNum <= previousVersion) {
+      errors.push(`Out of order or duplicate migration version: ${m.filename} (${versionNum} <= ${previousVersion})`);
+    }
+    previousVersion = versionNum;
+
+    if (m.status === 'REVIEWER_GATED' && !m.requiresReviewerApproval) {
+      errors.push(`Reviewer gated migration missing explicit approval requirement flag: ${m.filename}`);
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
+
 
 
 
