@@ -109,6 +109,8 @@ import {
   validateStockMovementCommand,
   calculateInventoryValuationSummary,
   validateCounterSaleCommand,
+  validateCommercialDocumentProvenance,
+  generateTaxWorkingPaperSummary,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -2416,6 +2418,93 @@ Deno.test('SERP-006: validateCounterSaleCommand denies unauthorized seat (e.g. t
   assertEquals(res.valid, false);
   assertEquals(res.error, 'unauthorized_seat_for_counter_sale: technician');
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-007: Stage 4 Commercial & Purchasing Module / Tax Working Papers
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-007: validateCommercialDocumentProvenance validates provenance with tenant, creator, and approval status', () => {
+  const validDoc = {
+    tenantId: ORG,
+    documentType: 'PurchaseOrder',
+    documentNumber: 'PO-2026-001',
+    createdBy: 'usr-admin-1',
+    approvedBy: 'usr-owner-1',
+    approvalStatus: 'Approved',
+    createdAt: '2026-08-26T12:00:00Z',
+  };
+
+  const res1 = validateCommercialDocumentProvenance(validDoc);
+  assertEquals(res1.valid, true);
+
+  const missingCreator = {
+    tenantId: ORG,
+    documentType: 'PurchaseOrder',
+    documentNumber: 'PO-2026-001',
+    createdBy: '',
+    approvalStatus: 'Draft',
+    createdAt: '2026-08-26T12:00:00Z',
+  };
+  const res2 = validateCommercialDocumentProvenance(missingCreator);
+  assertEquals(res2.valid, false);
+  assertEquals(res2.error, 'created_by_required');
+});
+
+Deno.test('SERP-007: generateTaxWorkingPaperSummary computes reviewable Output vs Input GST for registered tenant', () => {
+  const sales = [
+    { documentId: 'inv-1', documentNumber: 'INV-001', documentType: 'Invoice' as const, date: '2026-08-10', taxableAmount: 10000, gstRate: 8, gstAmount: 800 },
+    { documentId: 'pos-1', documentNumber: 'POS-001', documentType: 'CounterSale' as const, date: '2026-08-11', taxableAmount: 2000, gstRate: 8, gstAmount: 160 },
+  ];
+
+  const purchases = [
+    { documentId: 'po-1', documentNumber: 'PO-001', documentType: 'PurchaseOrder' as const, date: '2026-08-05', taxableAmount: 5000, gstRate: 8, gstAmount: 400 },
+    { documentId: 'exp-1', documentNumber: 'EXP-001', documentType: 'Expense' as const, date: '2026-08-08', taxableAmount: 1000, gstRate: 8, gstAmount: 80 },
+  ];
+
+  const summary = generateTaxWorkingPaperSummary({
+    tenantId: ORG,
+    taxPeriod: '2026-08',
+    isGstRegistered: true,
+    tinNumber: '1068940GST001',
+    salesDocuments: sales,
+    purchaseDocuments: purchases,
+  });
+
+  assertEquals(summary.gstRegistrationStatus, 'registered');
+  assertEquals(summary.totalTaxableSales, 12000);
+  assertEquals(summary.totalOutputGst, 960);
+  assertEquals(summary.totalTaxablePurchases, 6000);
+  assertEquals(summary.totalInputGst, 480);
+  assertEquals(summary.netGstPayable, 480); // 960 - 480
+  assertEquals(summary.isReviewable, true);
+  assertEquals(summary.status, 'Draft');
+});
+
+Deno.test('SERP-007: generateTaxWorkingPaperSummary strictly zeroes GST claims for non-registered tenant (DEC-073 §10)', () => {
+  const sales = [
+    { documentId: 'inv-1', documentNumber: 'INV-001', documentType: 'Invoice' as const, date: '2026-08-10', taxableAmount: 5000, gstRate: 0, gstAmount: 0 },
+  ];
+  const purchases = [
+    { documentId: 'po-1', documentNumber: 'PO-001', documentType: 'PurchaseOrder' as const, date: '2026-08-05', taxableAmount: 2000, gstRate: 0, gstAmount: 0 },
+  ];
+
+  const summary = generateTaxWorkingPaperSummary({
+    tenantId: ORG,
+    taxPeriod: '2026-08',
+    isGstRegistered: false, // Non-registered
+    salesDocuments: sales,
+    purchaseDocuments: purchases,
+  });
+
+  assertEquals(summary.gstRegistrationStatus, 'not_registered');
+  assertEquals(summary.totalTaxableSales, 5000);
+  assertEquals(summary.totalOutputGst, 0);
+  assertEquals(summary.totalTaxablePurchases, 2000);
+  assertEquals(summary.totalInputGst, 0);
+  assertEquals(summary.netGstPayable, 0);
+  assertEquals(summary.isReviewable, true);
+});
+
 
 
 

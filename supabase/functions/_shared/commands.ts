@@ -2850,6 +2850,142 @@ export function validateCounterSaleCommand(
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-007: Stage 4 Commercial & Purchasing Module / Tax Working Papers
+// (Stage 4 Module / DEC-073 §10 / SERP-164 / CORE-001 / CORE-002)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CommercialDocumentProvenanceRecord {
+  readonly tenantId: string;
+  readonly documentType: 'Quote' | 'Invoice' | 'PurchaseOrder' | 'Expense' | 'CreditNote' | string;
+  readonly documentNumber: string;
+  readonly createdBy: string;
+  readonly approvedBy?: string;
+  readonly approvalStatus: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected';
+  readonly createdAt: string;
+  readonly auditLogId?: string;
+}
+
+export function validateCommercialDocumentProvenance(
+  payload: unknown,
+): { valid: boolean; error?: string } {
+  if (!payload || typeof payload !== 'object') {
+    return { valid: false, error: 'invalid_provenance_payload' };
+  }
+
+  const p = payload as Record<string, unknown>;
+  const tenantId = String(p.tenantId || '').trim();
+  if (!tenantId) return { valid: false, error: 'tenant_id_required' };
+
+  const documentNumber = String(p.documentNumber || '').trim();
+  if (!documentNumber) return { valid: false, error: 'document_number_required' };
+
+  const createdBy = String(p.createdBy || '').trim();
+  if (!createdBy) return { valid: false, error: 'created_by_required' };
+
+  const validStatuses = ['Draft', 'Pending Approval', 'Approved', 'Rejected'];
+  const status = String(p.approvalStatus || 'Draft');
+  if (!validStatuses.includes(status)) {
+    return { valid: false, error: `invalid_approval_status: ${status}` };
+  }
+
+  return { valid: true };
+}
+
+export interface TaxWorkingPaperSourceDocument {
+  readonly documentId: string;
+  readonly documentNumber: string;
+  readonly documentType: 'Invoice' | 'CounterSale' | 'PurchaseOrder' | 'Expense';
+  readonly date: string;
+  readonly taxableAmount: number;
+  readonly gstRate: number;
+  readonly gstAmount: number;
+}
+
+export interface TaxWorkingPaperSummary {
+  readonly tenantId: string;
+  readonly taxPeriod: string;
+  readonly gstRegistrationStatus: 'registered' | 'not_registered' | 'pending';
+  readonly tinNumber?: string;
+  readonly applicableGstRate: number;
+  readonly totalTaxableSales: number;
+  readonly totalOutputGst: number;
+  readonly totalTaxablePurchases: number;
+  readonly totalInputGst: number;
+  readonly netGstPayable: number;
+  readonly salesDocumentCount: number;
+  readonly purchaseDocumentCount: number;
+  readonly isReviewable: boolean;
+  readonly reviewedBy?: string;
+  readonly reviewedAt?: string;
+  readonly status: 'Draft' | 'Reviewed' | 'Filed';
+}
+
+/**
+ * Computes configured statutory tax working paper summary for pre-filing review.
+ * Respects statutory non-GST registered status (0% rate, zero output/input tax claims).
+ */
+export function generateTaxWorkingPaperSummary(params: {
+  tenantId: string;
+  taxPeriod: string;
+  isGstRegistered: boolean;
+  tinNumber?: string;
+  standardGstRate?: number;
+  salesDocuments: readonly TaxWorkingPaperSourceDocument[];
+  purchaseDocuments: readonly TaxWorkingPaperSourceDocument[];
+}): TaxWorkingPaperSummary {
+  const {
+    tenantId,
+    taxPeriod,
+    isGstRegistered,
+    tinNumber,
+    standardGstRate = 8,
+    salesDocuments,
+    purchaseDocuments,
+  } = params;
+
+  let totalTaxableSales = 0;
+  let totalOutputGst = 0;
+
+  for (const doc of salesDocuments) {
+    totalTaxableSales += Math.max(0, doc.taxableAmount || 0);
+    if (isGstRegistered) {
+      totalOutputGst += Math.max(0, doc.gstAmount || 0);
+    }
+  }
+
+  let totalTaxablePurchases = 0;
+  let totalInputGst = 0;
+
+  for (const doc of purchaseDocuments) {
+    totalTaxablePurchases += Math.max(0, doc.taxableAmount || 0);
+    if (isGstRegistered) {
+      totalInputGst += Math.max(0, doc.gstAmount || 0);
+    }
+  }
+
+  const effectiveRate = isGstRegistered ? standardGstRate / 100 : 0;
+  const netGstPayable = isGstRegistered ? Math.round((totalOutputGst - totalInputGst) * 100) / 100 : 0;
+
+  return {
+    tenantId,
+    taxPeriod,
+    gstRegistrationStatus: isGstRegistered ? 'registered' : 'not_registered',
+    tinNumber: tinNumber || undefined,
+    applicableGstRate: effectiveRate,
+    totalTaxableSales: Math.round(totalTaxableSales * 100) / 100,
+    totalOutputGst: Math.round(totalOutputGst * 100) / 100,
+    totalTaxablePurchases: Math.round(totalTaxablePurchases * 100) / 100,
+    totalInputGst: Math.round(totalInputGst * 100) / 100,
+    netGstPayable,
+    salesDocumentCount: salesDocuments.length,
+    purchaseDocumentCount: purchaseDocuments.length,
+    isReviewable: true,
+    status: 'Draft',
+  };
+}
+
+
 
 
 

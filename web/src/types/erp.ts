@@ -297,6 +297,36 @@ export interface PurchaseOrder {
   notes?: string;
 }
 
+export interface CommercialDocumentProvenance {
+  tenantId: string;
+  documentType: 'Quote' | 'Invoice' | 'PurchaseOrder' | 'Expense' | 'CreditNote';
+  documentNumber: string;
+  createdBy: string;
+  approvedBy?: string;
+  approvalStatus: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected';
+  createdAt: string;
+  auditLogId?: string;
+}
+
+export interface TaxWorkingPaperSummary {
+  tenantId: string;
+  taxPeriod: string; // e.g. "2026-Q3" or "2026-08"
+  gstRegistrationStatus: 'registered' | 'not_registered' | 'pending';
+  tinNumber?: string;
+  applicableGstRate: number; // e.g. 0.08 or 0
+  totalTaxableSales: number;
+  totalOutputGst: number;
+  totalTaxablePurchases: number;
+  totalInputGst: number;
+  netGstPayable: number;
+  salesDocumentCount: number;
+  purchaseDocumentCount: number;
+  isReviewable: boolean;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  status: 'Draft' | 'Reviewed' | 'Filed';
+}
+
 export interface NeedsAttentionAlert {
   id: string;
   type: 'overdue_invoice' | 'low_stock' | 'supplier_due' | 'job_waiting' | 'payment_unreconciled' | 'pending_user_approval';
