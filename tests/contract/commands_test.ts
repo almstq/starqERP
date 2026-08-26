@@ -98,6 +98,9 @@ import {
   anonymizeTenantForAnalytics,
   validateReleaseCandidateManifest,
   computeManifestSignature,
+  CANONICAL_LEGAL_TENANTS,
+  validateOutletTenantBinding,
+  validateModuleAccess,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -2063,6 +2066,62 @@ Deno.test('SERP-025: validateReleaseCandidateManifest rejects signature mismatch
   assertEquals(res.valid, false);
   assertEquals(res.error, 'manifest_signature_mismatch');
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-002: Dual-Tenant Organisation, Outlet & Module Spine Contract
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-002: CANONICAL_LEGAL_TENANTS defines Starq Tech and Club Ignition as equal primary ledger tenants', () => {
+  assertEquals(CANONICAL_LEGAL_TENANTS.length, 2);
+  assertEquals(CANONICAL_LEGAL_TENANTS[0].slug, 'starq-tech');
+  assertEquals(CANONICAL_LEGAL_TENANTS[0].isPrimaryLedgerTenant, true);
+  assertEquals(CANONICAL_LEGAL_TENANTS[1].slug, 'club-ignition');
+  assertEquals(CANONICAL_LEGAL_TENANTS[1].isPrimaryLedgerTenant, true);
+});
+
+Deno.test('SERP-002: validateOutletTenantBinding binds outlets strictly to parent tenant (no detached ledger tenants)', () => {
+  const validOutlet = {
+    id: 'out-1',
+    tenantId: ORG,
+    name: 'Starq Dynamics',
+    code: 'DYN',
+    tradingBrand: 'Starq Dynamics Engineering',
+    island: "Male'",
+    isPrimary: true,
+  };
+
+  const res1 = validateOutletTenantBinding(ORG, validOutlet);
+  assertEquals(res1.valid, true);
+
+  // Attempt cross-tenant binding
+  const res2 = validateOutletTenantBinding(OTHER_ORG, validOutlet);
+  assertEquals(res2.valid, false);
+  assertEquals(res2.error, 'cross_tenant_outlet_binding_forbidden');
+});
+
+Deno.test('SERP-002: validateModuleAccess enforces module entitlements per tenant', () => {
+  const entitlement = {
+    tenantId: ORG,
+    modules: ['jobs', 'invoices', 'inventory'],
+    maxOutlets: 5,
+    maxUsers: 20,
+  };
+
+  // Permitted module
+  const res1 = validateModuleAccess(ORG, 'jobs', entitlement);
+  assertEquals(res1.allowed, true);
+
+  // Unentitled module
+  const res2 = validateModuleAccess(ORG, 'clinic_diagnostics', entitlement);
+  assertEquals(res2.allowed, false);
+  assertEquals(res2.error, 'module_not_entitled: clinic_diagnostics');
+
+  // Cross-tenant entitlement mismatch
+  const res3 = validateModuleAccess(OTHER_ORG, 'jobs', entitlement);
+  assertEquals(res3.allowed, false);
+  assertEquals(res3.error, 'cross_tenant_entitlement_mismatch');
+});
+
 
 
 

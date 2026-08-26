@@ -2358,6 +2358,89 @@ export function validateReleaseCandidateManifest(
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-002: Dual-Tenant Organisation, Outlet & Module Spine Contract
+// (R1 — Organisation spine / CORE-001 / CORE-002 / AUD-001 / SEC-001)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface OutletRecord {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly name: string;
+  readonly code: string;
+  readonly tradingBrand: string;
+  readonly island: string;
+  readonly isPrimary?: boolean;
+}
+
+export interface ModuleEntitlementRecord {
+  readonly tenantId: string;
+  readonly modules: readonly string[];
+  readonly maxOutlets: number;
+  readonly maxUsers: number;
+}
+
+export const CANONICAL_LEGAL_TENANTS = [
+  {
+    id: '20000000-0000-4000-8000-000000000001',
+    slug: 'starq-tech',
+    legalName: 'Starq Technologies LLP',
+    industry: 'Software & Engineering Services',
+    isPrimaryLedgerTenant: true,
+  },
+  {
+    id: '20000000-0000-4000-8000-000000000002',
+    slug: 'club-ignition',
+    legalName: 'Club Ignition Garage Private Limited',
+    industry: 'Automotive & Body Repair',
+    isPrimaryLedgerTenant: true,
+  },
+] as const;
+
+/**
+ * Validates that an outlet strictly binds to its parent legal tenant.
+ * Trading brands (Starq Dynamics, Ignition Ink) must never act as detached ledger tenants.
+ */
+export function validateOutletTenantBinding(
+  tenantId: string,
+  outlet: OutletRecord,
+): { valid: boolean; error?: string } {
+  if (!tenantId) {
+    return { valid: false, error: 'tenant_id_required' };
+  }
+  if (!outlet || !outlet.tenantId) {
+    return { valid: false, error: 'invalid_outlet_record' };
+  }
+  if (outlet.tenantId !== tenantId) {
+    return { valid: false, error: 'cross_tenant_outlet_binding_forbidden' };
+  }
+  if (!outlet.code || !outlet.tradingBrand) {
+    return { valid: false, error: 'incomplete_outlet_brand_identity' };
+  }
+  return { valid: true };
+}
+
+/**
+ * Validates that a requested module action is explicitly permitted by the tenant's module entitlement.
+ */
+export function validateModuleAccess(
+  tenantId: string,
+  requestedModule: string,
+  entitlement: ModuleEntitlementRecord,
+): { allowed: boolean; error?: string } {
+  if (!tenantId || !requestedModule) {
+    return { allowed: false, error: 'invalid_module_access_parameters' };
+  }
+  if (entitlement.tenantId !== tenantId) {
+    return { allowed: false, error: 'cross_tenant_entitlement_mismatch' };
+  }
+  if (!entitlement.modules.includes(requestedModule)) {
+    return { allowed: false, error: `module_not_entitled: ${requestedModule}` };
+  }
+  return { allowed: true };
+}
+
+
 
 
 

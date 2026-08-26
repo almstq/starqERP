@@ -357,7 +357,29 @@ export interface OrganisationTenant {
   logoIcon?: string;
   themeColor: string;
   createdAt: string;
+  outlets?: Outlet[];
+  enabledModules?: PermissionModule[];
 }
+
+export interface Outlet {
+  id: string;
+  tenantId: string;
+  name: string;
+  code: string;
+  tradingBrand: string;
+  island: string;
+  address?: string;
+  phone?: string;
+  isPrimary?: boolean;
+}
+
+export interface ModuleEntitlement {
+  tenantId: string;
+  modules: PermissionModule[];
+  maxOutlets: number;
+  maxUsers: number;
+}
+
 
 // Configurable Workflow Stages
 export interface WorkflowStage {
