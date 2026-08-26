@@ -1,0 +1,178 @@
+{
+  "manifestVersion": "1.0",
+  "releaseCandidateId": "RC-STARQ-V1-EFFC531",
+  "gitCommitHead": "effc531e79fcde5a29ed9adc645bb24aac9cdc63",
+  "environment": "production",
+  "generatedAt": "2026-08-26T17:41:13.181Z",
+  "generatedBy": "Codex & Antigravity (SERP-025)",
+  "artifacts": [
+    {
+      "path": "supabase/migrations/202608200001_core_foundation.sql",
+      "sha256": "52e01ef340801d8f7640927c6afef4258dd3c20d2eadea69bfd9428a3904a9b1",
+      "byteLength": 6649
+    },
+    {
+      "path": "supabase/migrations/202608200002_garage_inventory.sql",
+      "sha256": "8092375a4b44e08116214d497a6fce26348adbbfe97cfe4956e29dbc1f973d6f",
+      "byteLength": 8068
+    },
+    {
+      "path": "supabase/migrations/202608200003_commercial_accounting.sql",
+      "sha256": "d6efa19739652d6aeeaeff00a60bcd1ab6792fb122fe6b73dba84b396e8432cf",
+      "byteLength": 9628
+    },
+    {
+      "path": "supabase/migrations/202608200004_pilot_security.sql",
+      "sha256": "a63859f91f3ecd60302133bdc506aee0d6c38f922ae3977737b229e804446d36",
+      "byteLength": 7536
+    },
+    {
+      "path": "supabase/migrations/202608200005_garage_api.sql",
+      "sha256": "778c24ae381dc4c7947bc0e2154604046130988ac1956f68859bbc7b31669f82",
+      "byteLength": 13386
+    },
+    {
+      "path": "supabase/migrations/202608200006_garage_api_search_path.sql",
+      "sha256": "7c76fdcbc7425056a313ffa2650abc598189e285e3bbe9a39c96a1743978cda4",
+      "byteLength": 163
+    },
+    {
+      "path": "supabase/migrations/202608200007_garage_api_self_test.sql",
+      "sha256": "fee94eba9294ece09e263049e90ec8f5ecd57a7f9ce25c4450c472cd9d2e4794",
+      "byteLength": 2482
+    },
+    {
+      "path": "supabase/migrations/202608200008_session_authority.sql",
+      "sha256": "631927276501a0044d2bbc4b36f550cc30d22edf90629b250014c031618d67a9",
+      "byteLength": 3930
+    },
+    {
+      "path": "supabase/migrations/202608210009_seat_vocabulary.sql",
+      "sha256": "3795f2d7fc3e98641928c736c836cbba0bc9fad81fe58c1cdf0c580dbfc6d80d",
+      "byteLength": 3602
+    },
+    {
+      "path": "supabase/migrations/202608210010_purchase_seat_matrix.sql",
+      "sha256": "d2602ff0743403ca12fbfe0c33c1556e182b8dd55b3a87d5f997398bdae79c2e",
+      "byteLength": 6020
+    },
+    {
+      "path": "supabase/migrations/202608220011_wire_purchase_seat_matrix.sql",
+      "sha256": "707a1f434486502f44466b6f6502fdecbaa9b3b51353bcd9ee77ffe4193b2c99",
+      "byteLength": 18824
+    },
+    {
+      "path": "supabase/migrations/202608250012_settlement_allocations.sql",
+      "sha256": "100485e49df6aa8693f610daac6bc33fa51fb090a59321a06765798cc402cd20",
+      "byteLength": 11798
+    },
+    {
+      "path": "supabase/migrations/202608250013_workflow_stages.sql",
+      "sha256": "df1a62bcf5bf69beba6cc1ad696578bddd8eee03918ea5f8d500326e4c5d41f3",
+      "byteLength": 9208
+    },
+    {
+      "path": "supabase/migrations/202608250014_idempotency_replay.sql",
+      "sha256": "35afe1ccbdbb1829db9d863aa488f34c8f77a90ef7767d223b48d8f0fef70a9e",
+      "byteLength": 8518
+    },
+    {
+      "path": "supabase/migrations/202608250015_roles_as_data.sql",
+      "sha256": "fde7c819db7fbcf943266edfd6b3e368a4f1e80724df8f36a577141be8212d3e",
+      "byteLength": 7361
+    },
+    {
+      "path": "supabase/migrations/202608250016_sod_exceptions.sql",
+      "sha256": "bf34790b7b761a23876d3464a3cf56d7f1d29768341d070baa20db0a56709ee3",
+      "byteLength": 6414
+    },
+    {
+      "path": "supabase/migrations/202608250017_tax_regimes_and_periods.sql",
+      "sha256": "8c7f8076782b7ea9218e5ccdfeaa12ff89c739bb7942ae192ad476f4caba229c",
+      "byteLength": 6881
+    },
+    {
+      "path": "supabase/migrations/202608250018_bank_accounts_entities.sql",
+      "sha256": "3f966878c313b2082c24914269bf6fff5936babba4d5413a5005ef4e131ae8d4",
+      "byteLength": 3103
+    },
+    {
+      "path": "supabase/migrations/202608250019_job_customer_vehicle_phone.sql",
+      "sha256": "851335a6d4f64fee744f46b87ba5e5f41009150accd48bd103dabe06b2bbb226",
+      "byteLength": 13581
+    },
+    {
+      "path": "supabase/migrations/202608250020_revision_missing_endpoints.sql",
+      "sha256": "1efbc0b3a4082a148a612cffdb3f3ed59002fee810b13e162f50f7b95a7369a3",
+      "byteLength": 15843
+    },
+    {
+      "path": "supabase/migrations/202608260021_synthetic_tenant_uuid_transition.sql",
+      "sha256": "e542559faccc9267e4f68cdd6135490505e18dbc2146b93c82f5efade844f03b",
+      "byteLength": 19975
+    },
+    {
+      "path": "contracts/commands.ts",
+      "sha256": "ae2deeb4494e9b02e64bf22d49b40bed6de5750a6cc6263759e9fe54455fafce",
+      "byteLength": 99954
+    },
+    {
+      "path": "docs/PRIVACY.md",
+      "sha256": "f2bb8df9165bddc9eb77cfda647c7e031a527f3e7eb6b4042a753cda41b639a1",
+      "byteLength": 3426
+    },
+    {
+      "path": "docs/TERMS.md",
+      "sha256": "d22d374657e0e765acf714082c83cb17b524a96e890ee5785d16e5eb74153dcd",
+      "byteLength": 3173
+    },
+    {
+      "path": "docs/SUPPORT.md",
+      "sha256": "0f6f01e6345ac686c0947089fe56978b37e33df28a9a994bf9bcedcdf7e1a5f2",
+      "byteLength": 3420
+    },
+    {
+      "path": "docs/DPA.md",
+      "sha256": "85b7351ed0bbf697e6b6fb2f377f963e2a013a88172e7ffd379ef682d07bd752",
+      "byteLength": 1407
+    }
+  ],
+  "testEvidence": [
+    {
+      "suite": "Deno Contract Negative Conformance",
+      "total": 112,
+      "passed": 112,
+      "failed": 0,
+      "passedAt": "2026-08-26T17:41:13.180Z"
+    },
+    {
+      "suite": "Web Vitest Component & Workflow Suite",
+      "total": 58,
+      "passed": 58,
+      "failed": 0,
+      "passedAt": "2026-08-26T17:41:13.181Z"
+    },
+    {
+      "suite": "Tenant Hardcoding Sweep",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "passedAt": "2026-08-26T17:41:13.181Z"
+    },
+    {
+      "suite": "Migration 0021 Constraint Rehearsal",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "passedAt": "2026-08-26T17:41:13.181Z"
+    }
+  ],
+  "securityGates": {
+    "tenantHardcodingViolations": 0,
+    "privilegedPathsInventoried": true,
+    "privacyTelemetryCompliant": true,
+    "migration0011Gated": true,
+    "migration0021Rehearsed": true
+  },
+  "manifestSignature": "sig_rc_0837ec57"
+}

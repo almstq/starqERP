@@ -96,6 +96,8 @@ import {
   DISALLOWED_SENSITIVE_KEYS,
   validateAnalyticsEvent,
   anonymizeTenantForAnalytics,
+  validateReleaseCandidateManifest,
+  computeManifestSignature,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -1972,6 +1974,96 @@ Deno.test('SERP-280: validateAnalyticsEvent rejects email, phone, or currency pa
   assertEquals(res.valid, false);
   assertEquals(res.error, 'sensitive_pattern_detected_in_property_value: module');
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-025: Release Candidate & Evidence Manifest Contract
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-025: validateReleaseCandidateManifest passes valid manifest binding commit, artifacts, and test evidence', async () => {
+  const manifestRaw = await Deno.readTextFile(
+    new URL('../../docs/specs/RELEASE_CANDIDATE_MANIFEST_V1.json', import.meta.url),
+  );
+  const manifest = JSON.parse(manifestRaw);
+  const res = validateReleaseCandidateManifest(manifest);
+  assertEquals(res.valid, true);
+  assertEquals(res.manifest?.manifestVersion, '1.0');
+});
+
+Deno.test('SERP-025: validateReleaseCandidateManifest rejects manifest with failed test suite', () => {
+  const validData = {
+    manifestVersion: '1.0',
+    releaseCandidateId: 'RC-TEST-001',
+    gitCommitHead: 'effc531e79fcde5a29ed9adc645bb24aac9cdc63',
+    environment: 'production',
+    artifacts: [{ path: 'contracts/commands.ts', sha256: 'a'.repeat(64), byteLength: 100 }],
+    testEvidence: [
+      { suite: 'Suite A', total: 10, passed: 9, failed: 1, passedAt: '2026-08-26T00:00:00Z' },
+    ],
+    securityGates: {
+      tenantHardcodingViolations: 0,
+      privilegedPathsInventoried: true,
+      privacyTelemetryCompliant: true,
+      migration0011Gated: true,
+      migration0021Rehearsed: true,
+    },
+    manifestSignature: 'sig_rc_test',
+  };
+
+  const res = validateReleaseCandidateManifest(validData);
+  assertEquals(res.valid, false);
+  assertEquals(res.error, 'failed_test_suite_detected: Suite A');
+});
+
+Deno.test('SERP-025: validateReleaseCandidateManifest rejects tenant hardcoding violations', () => {
+  const badData = {
+    manifestVersion: '1.0',
+    releaseCandidateId: 'RC-TEST-002',
+    gitCommitHead: 'effc531e79fcde5a29ed9adc645bb24aac9cdc63',
+    environment: 'production',
+    artifacts: [{ path: 'contracts/commands.ts', sha256: 'a'.repeat(64), byteLength: 100 }],
+    testEvidence: [
+      { suite: 'Suite A', total: 10, passed: 10, failed: 0, passedAt: '2026-08-26T00:00:00Z' },
+    ],
+    securityGates: {
+      tenantHardcodingViolations: 2, // violation detected!
+      privilegedPathsInventoried: true,
+      privacyTelemetryCompliant: true,
+      migration0011Gated: true,
+      migration0021Rehearsed: true,
+    },
+    manifestSignature: 'sig_rc_test',
+  };
+
+  const res = validateReleaseCandidateManifest(badData);
+  assertEquals(res.valid, false);
+  assertEquals(res.error, 'tenant_hardcoding_violations_detected');
+});
+
+Deno.test('SERP-025: validateReleaseCandidateManifest rejects signature mismatch / tampering', () => {
+  const tamperedData = {
+    manifestVersion: '1.0',
+    releaseCandidateId: 'RC-TEST-003',
+    gitCommitHead: 'effc531e79fcde5a29ed9adc645bb24aac9cdc63',
+    environment: 'production',
+    artifacts: [{ path: 'contracts/commands.ts', sha256: 'a'.repeat(64), byteLength: 100 }],
+    testEvidence: [
+      { suite: 'Suite A', total: 10, passed: 10, failed: 0, passedAt: '2026-08-26T00:00:00Z' },
+    ],
+    securityGates: {
+      tenantHardcodingViolations: 0,
+      privilegedPathsInventoried: true,
+      privacyTelemetryCompliant: true,
+      migration0011Gated: true,
+      migration0021Rehearsed: true,
+    },
+    manifestSignature: 'sig_rc_corrupted_signature',
+  };
+
+  const res = validateReleaseCandidateManifest(tamperedData);
+  assertEquals(res.valid, false);
+  assertEquals(res.error, 'manifest_signature_mismatch');
+});
+
 
 
 
