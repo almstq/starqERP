@@ -90,7 +90,7 @@ export interface ERPContextType {
   addWorkflowStage: (stage: Omit<WorkflowStage, 'id' | 'tenantId' | 'order'>) => WorkflowStage;
   updateWorkflowStage: (stageId: string, stageData: Partial<WorkflowStage>) => void;
   deleteWorkflowStage: (stageId: string) => void;
-  resetWorkflowToPreset: (presetType: 'automotive' | 'clinic' | 'marine') => void;
+  resetWorkflowToPreset: (presetType: 'automotive' | 'clinic' | 'marine', targetTenantId?: string) => void;
 
   // Activity / Audit Logs (The Owner's Evidence)
   auditLogs: AuditLogEntry[];
@@ -372,14 +372,28 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setTenants((prev) => [...prev, newTenant]);
     setCurrentTenantId(newTenant.id);
 
-    // Apply industry workflow preset
+    // Apply industry workflow preset directly to the new tenant id
     if (newTenant.industry === 'Medical Clinic & Diagnostics') {
-      resetWorkflowToPreset('clinic');
+      resetWorkflowToPreset('clinic', newTenant.id);
     } else if (newTenant.industry === 'Marine & Boatyard') {
-      resetWorkflowToPreset('marine');
+      resetWorkflowToPreset('marine', newTenant.id);
     } else {
-      resetWorkflowToPreset('automotive');
+      resetWorkflowToPreset('automotive', newTenant.id);
     }
+
+    // Ensure founder/creator is active with owner/admin privileges and not locked out of new tenant (SERP-163)
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === currentUserId
+          ? {
+              ...u,
+              status: 'Active',
+              roleId: 'role-super-admin',
+              roleName: 'Owner & Super Administrator',
+            }
+          : u
+      )
+    );
 
     logAuditEvent({
       action: 'ORG_CONFIG_SAVED',
@@ -387,7 +401,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       entityType: 'OrganisationTenant',
       entityId: newTenant.id,
       entityName: newTenant.name,
-      summary: `Completed initial organization onboarding for ${newTenant.name}. TIN: ${newTenant.tinNumber}.`
+      summary: `Completed initial organization onboarding for ${newTenant.name}. TIN: ${newTenant.tinNumber || 'not_registered'}.`
     });
 
     return newTenant;
@@ -654,26 +668,27 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   };
 
-  const resetWorkflowToPreset = (presetType: 'automotive' | 'clinic' | 'marine') => {
+  const resetWorkflowToPreset = (presetType: 'automotive' | 'clinic' | 'marine', targetTenantId?: string) => {
+    const orgId = targetTenantId || currentTenant.id;
     let preset: WorkflowStage[] = [];
     if (presetType === 'clinic') {
       preset = CLINIC_WORKFLOW_PRESET.map((p, idx) => ({
         ...p,
         id: `stage-clinic-${idx + 1}`,
-        tenantId: currentTenant.id,
+        tenantId: orgId,
         order: idx + 1
       }));
     } else if (presetType === 'marine') {
       preset = BOATYARD_WORKFLOW_PRESET.map((p, idx) => ({
         ...p,
         id: `stage-marine-${idx + 1}`,
-        tenantId: currentTenant.id,
+        tenantId: orgId,
         order: idx + 1
       }));
     } else {
       preset = INITIAL_WORKFLOW_STAGES.map((p, idx) => ({
         ...p,
-        tenantId: currentTenant.id,
+        tenantId: orgId,
         order: idx + 1
       }));
     }
@@ -923,7 +938,10 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       balanceDue: job.quotedAmount - job.depositPaid,
       status: job.depositPaid >= job.quotedAmount ? 'Paid' : job.depositPaid > 0 ? 'Partially Paid' : 'Sent',
       notes: `Generated from Work Order ${job.jobId}. Advance deposit credited: ${formatMVR(job.depositPaid)}.`,
-      bankDetails: `${currentTenant.bmlAccount} • TIN: ${currentTenant.tinNumber}`
+      bankDetails: [
+        currentTenant.bmlAccount,
+        currentTenant.tinNumber ? `TIN: ${currentTenant.tinNumber}` : null
+      ].filter(Boolean).join(' • ') || 'Settlement via official banking transfer'
     };
 
     setInvoices((prev) => [newInvoice, ...prev]);

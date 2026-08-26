@@ -426,13 +426,30 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
   if (personWrite.error) throw new Error("identity_write_failed");
   const personUuid = personWrite.data.id as string;
 
-  const primaryEntity = (entry.entities ?? ["CI"])[0] ?? "CI";
-  const orgLookup = await db.from("organisations").select("id")
-    .ilike("legal_name", `%${primaryEntity === "CI" ? "Club Ignition" : primaryEntity}%`)
-    .eq("status", "active")
-    .limit(1)
-    .maybeSingle();
-  const orgId = orgLookup.data?.id ?? "30222026-0000-4000-8000-000000000001";
+  const declaredEntities = entry.entities ?? [];
+  let orgId: string | null = null;
+  if (declaredEntities.length > 0) {
+    const targetEntity = declaredEntities[0];
+    const orgLookup = await db.from("organisations").select("id")
+      .or(`slug.eq.${targetEntity},legal_name.ilike.%${targetEntity}%`)
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
+    if (orgLookup.data?.id) {
+      orgId = orgLookup.data.id as string;
+    }
+  }
+  if (!orgId) {
+    const defaultOrg = await db.from("organisations").select("id")
+      .eq("status", "active")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (defaultOrg.data?.id) {
+      orgId = defaultOrg.data.id as string;
+    }
+  }
+  if (!orgId) throw new Error("organisation_not_found");
 
   const membershipWrite = await db.from("memberships").upsert({
     organisation_id: orgId,
@@ -656,7 +673,7 @@ Deno.serve(async (req: Request) => {
     const code = error instanceof Error ? error.message : "internal_error";
     const publicCode = new Set([
       "payload_too_large", "invalid_json_object", "invalid_google_token",
-      "identity_claims_rejected", "not_allowlisted_for_club_ignition",
+      "identity_claims_rejected", "not_allowlisted", "organisation_not_found",
       "no_active_seat", "identity_binding_conflict",
     ]).has(code) ? code : "request_failed";
     /**

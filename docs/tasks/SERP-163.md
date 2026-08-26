@@ -32,7 +32,7 @@ Resolved Amendment A8 by decoupling administrative/UI module roles from the immu
   8. `receiver` (Goods receipt, inventory intake, warehouse checks)
   9. `payer` (Treasury, supplier payment disbursements, settlement)
   10. `auditor` (Read-only compliance, audit log inspection, statutory reporting)
-- Seeded default roles for **Club Ignition** (`30222026-0000-4000-8000-000000000001`) and **Starq Technologies** (`29552026-0000-4000-8000-000000000001`).
+- Seeded default roles for **Club Ignition** (`20000000-0000-4000-8000-000000000001`) and **Starq Technologies** (`10000000-0000-4000-8000-000000000001`).
 - Enforced Row-Level Security on `roles` and `role_permissions`.
 
 ### 2. Invariant & Contract ([`contracts/commands.ts`](file:///d:/StarqTech/starqERP/contracts/commands.ts))

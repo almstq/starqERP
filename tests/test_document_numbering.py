@@ -126,8 +126,8 @@ class InMemoryDocumentSequenceStore:
 class TestDocumentNumberingConcurrencyAndRetry(unittest.TestCase):
     def setUp(self):
         self.store = InMemoryDocumentSequenceStore()
-        self.org_a = "30222026-0000-4000-8000-000000000001"  # Club Ignition
-        self.org_b = "29552026-0000-4000-8000-000000000001"  # Starq Technologies
+        self.org_a = "20000000-0000-4000-8000-000000000001"  # Club Ignition
+        self.org_b = "10000000-0000-4000-8000-000000000001"  # Starq Technologies
 
         self.store.seed_sequence(self.org_a, "garage_job", "CI-JOB-", padding=4, start_val=1)
         self.store.seed_sequence(self.org_b, "garage_job", "ST-JOB-", padding=4, start_val=1)

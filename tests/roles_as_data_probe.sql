@@ -13,8 +13,8 @@ create temp table probe_results (
 
 do $$
 declare
-  ci_org uuid := '30222026-0000-4000-8000-000000000001';
-  st_org uuid := '29552026-0000-4000-8000-000000000001';
+  ci_org uuid := '20000000-0000-4000-8000-000000000001';
+  st_org uuid := '10000000-0000-4000-8000-000000000001';
   ci_role_count integer;
   st_role_count integer;
   test_person uuid;

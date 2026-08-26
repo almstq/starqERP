@@ -14,13 +14,13 @@ begin
     values (test_person, '__cloud_self_test__', '__cloud_self_test__', 'Cloud self test', 'active');
 
     insert into public.memberships (id, organisation_id, person_id, status)
-    values (test_membership, '30222026-0000-4000-8000-000000000001', test_person, 'active');
+    values (test_membership, '20000000-0000-4000-8000-000000000001', test_person, 'active');
 
     insert into public.membership_seats (membership_id, seat_code)
     values (test_membership, 'counter');
 
     first_result := public.api_garage_command(
-      '30222026-0000-4000-8000-000000000001',
+      '20000000-0000-4000-8000-000000000001',
       test_person,
       'counter',
       test_key,
@@ -41,7 +41,7 @@ begin
     end if;
 
     replay_result := public.api_garage_command(
-      '30222026-0000-4000-8000-000000000001',
+      '20000000-0000-4000-8000-000000000001',
       test_person,
       'counter',
       test_key,

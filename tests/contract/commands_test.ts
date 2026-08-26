@@ -88,8 +88,8 @@ import {
   validateAICopilotProxyRequest,
 } from '../../contracts/commands.ts';
 
-const ORG = '30222026-0000-4000-8000-000000000001';
-const OTHER_ORG = '29552026-0000-4000-8000-000000000001';
+const ORG = '20000000-0000-4000-8000-000000000001';
+const OTHER_ORG = '10000000-0000-4000-8000-000000000001';
 const DIRECTOR_PAYER = 'aaaaaaaa-0000-4000-8000-000000000001';
 const MD_RECEIVER = 'bbbbbbbb-0000-4000-8000-000000000002';
 
@@ -1148,10 +1148,10 @@ Deno.test('SERP-164: calculateLineTax computes exclusive, inclusive, zero-rated,
 
   const notRegisteredOrg: TaxRegistrationRecord = {
     id: '00000000-0000-4000-8000-000000000200',
-    organisationId: '29552026-0000-4000-8000-000000000001',
+    organisationId: '10000000-0000-4000-8000-000000000001',
     taxType: 'gst_general',
     registrationStatus: 'not_registered',
-    tin: '1186669',
+    tin: '1000001',
     effectiveFrom: '2026-08-01',
     createdAt: '2026-08-25T00:00:00Z',
   };

@@ -299,12 +299,13 @@ export const SettingsView: React.FC = () => {
 
               <div className="sm:col-span-2">
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Bank of Maldives (BML) Transfer Settlement Account
+                  Primary Settlement Bank Account
                 </label>
                 <input
                   type="text"
                   value={bmlAccount}
                   onChange={(e) => setBmlAccount(e.target.value)}
+                  placeholder="e.g. 7730000189201 (BML MVR) or 9901004829101 (MIB)"
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 font-mono font-bold"
                 />
               </div>

@@ -32,17 +32,17 @@ insert into public.bank_accounts (
   organisation_id, institution_code, institution_name, account_name, account_type,
   account_identifier_mask, currency, gl_account_code, is_default
 ) values
-  ('30222026-0000-4000-8000-000000000001', 'CASH', 'Cash on Hand', 'Workshop Cash Drawer', 'cash_drawer', 'CASH-DRAWER-01', 'MVR', '1010', false),
-  ('30222026-0000-4000-8000-000000000001', 'CASH', 'Petty Cash', 'H. Kiev Petty Cash Box', 'petty_cash', 'PETTY-CASH-01', 'MVR', '1020', false),
-  ('30222026-0000-4000-8000-000000000001', 'BML',  'Bank of Maldives', 'Primary Operating MVR', 'operating', 'BML-MVR-PENDING', 'MVR', '1030', true);
+  ('20000000-0000-4000-8000-000000000001', 'CASH', 'Cash on Hand', 'Workshop Cash Drawer', 'cash_drawer', 'CASH-DRAWER-01', 'MVR', '1010', false),
+  ('20000000-0000-4000-8000-000000000001', 'CASH', 'Petty Cash', 'H. Kiev Petty Cash Box', 'petty_cash', 'PETTY-CASH-01', 'MVR', '1020', false),
+  ('20000000-0000-4000-8000-000000000001', 'BML',  'Bank of Maldives', 'Primary Operating MVR', 'operating', 'BML-MVR-PENDING', 'MVR', '1030', true);
 
 -- 3. Seed Initial Account Placeholders for Starq Technologies
 insert into public.bank_accounts (
   organisation_id, institution_code, institution_name, account_name, account_type,
   account_identifier_mask, currency, gl_account_code, is_default
 ) values
-  ('29552026-0000-4000-8000-000000000001', 'CASH', 'Cash on Hand', 'HQ Cash on Hand', 'cash_drawer', 'CASH-DRAWER-01', 'MVR', '1010', false),
-  ('29552026-0000-4000-8000-000000000001', 'BML',  'Bank of Maldives', 'Primary Operating MVR', 'operating', 'BML-MVR-PENDING', 'MVR', '1030', true);
+  ('10000000-0000-4000-8000-000000000001', 'CASH', 'Cash on Hand', 'HQ Cash on Hand', 'cash_drawer', 'CASH-DRAWER-01', 'MVR', '1010', false),
+  ('10000000-0000-4000-8000-000000000001', 'BML',  'Bank of Maldives', 'Primary Operating MVR', 'operating', 'BML-MVR-PENDING', 'MVR', '1030', true);
 
 -- 4. Row-Level Security
 alter table public.bank_accounts enable row level security;

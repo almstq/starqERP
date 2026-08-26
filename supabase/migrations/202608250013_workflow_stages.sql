@@ -92,12 +92,12 @@ $$;
 -- 4. Seed Standard Automotive Repair Workflow for Club Ignition
 do $$
 declare
-  ci_org uuid := '30222026-0000-4000-8000-000000000001';
+  ci_org uuid := '20000000-0000-4000-8000-000000000001';
   tmpl_id uuid;
 begin
   insert into public.workflow_templates (id, organisation_id, workflow_code, name, description)
   values (
-    '30222026-0000-4000-8000-000000000801',
+    '20000000-0000-4000-8000-000000000801',
     ci_org,
     'garage_job',
     'Automotive Repair & Refinishing Standard Workflow',
@@ -144,12 +144,12 @@ end $$;
 -- 5. Seed Standard SCM Procurement Workflow for Starq Technologies
 do $$
 declare
-  st_org uuid := '29552026-0000-4000-8000-000000000001';
+  st_org uuid := '10000000-0000-4000-8000-000000000001';
   tmpl_id uuid;
 begin
   insert into public.workflow_templates (id, organisation_id, workflow_code, name, description)
   values (
-    '29552026-0000-4000-8000-000000000802',
+    '10000000-0000-4000-8000-000000000802',
     st_org,
     'procurement',
     'SCM Six-Step Procurement Workflow',

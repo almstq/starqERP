@@ -21,8 +21,8 @@ Resolved SERP-164 and unlocked SERP-122 green conformance by transitioning tax c
   - Seeded **Maldives General Sector GST (GGST)**: 6% (`0.0600`) before 2023, 8% (`0.0800`) from 1 Jan 2023 onward.
   - Seeded **Maldives Tourism Sector GST (TGST)**: 12% (`0.1200`) before 2023, 16% (`0.1600`) from 1 Jan 2023 to 30 June 2025, 17% (`0.1700`) from 1 July 2025 onward.
 - Created `public.tax_registrations` table:
-  - Seeded **Club Ignition (`30222026-0000-4000-8000-000000000001`)**: Registered for `gst_general` (TIN `1186844`).
-  - Seeded **Starq Technologies (`29552026-0000-4000-8000-000000000001`)**: `not_registered` for `gst_general` (TIN `1186669`).
+  - Seeded **Club Ignition (`20000000-0000-4000-8000-000000000001`)**: Registered for `gst_general` (TIN `2000001`).
+  - Seeded **Starq Technologies (`10000000-0000-4000-8000-000000000001`)**: `not_registered` for `gst_general` (TIN `1000001`).
 - Created dynamic line tax evaluator `app_private.calculate_line_tax(target_org, target_tax_type, supply_date, tax_mode, line_amount)`:
   - Strictly prevents GST charging (`is_taxable = false`, `tax_amount = 0.00`) when the organisation is `not_registered`.
   - Dynamically resolves historical vs current rates by time of supply.

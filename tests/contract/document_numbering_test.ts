@@ -93,8 +93,8 @@ class DocumentSequenceEngine {
   }
 }
 
-const ORG_CI = '30222026-0000-4000-8000-000000000001';
-const ORG_ST = '29552026-0000-4000-8000-000000000001';
+const ORG_CI = '20000000-0000-4000-8000-000000000001';
+const ORG_ST = '10000000-0000-4000-8000-000000000001';
 
 Deno.test('SERP-176: Document sequences produce consecutive padded identifiers', () => {
   const engine = new DocumentSequenceEngine();

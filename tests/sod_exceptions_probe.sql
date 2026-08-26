@@ -13,7 +13,7 @@ create temp table probe_results (
 
 do $$
 declare
-  ci_org uuid := '30222026-0000-4000-8000-000000000001';
+  ci_org uuid := '20000000-0000-4000-8000-000000000001';
   p1 uuid;
   p2 uuid;
   m1 uuid;

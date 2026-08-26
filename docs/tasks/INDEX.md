@@ -4,6 +4,7 @@ This directory contains individual technical completion reports for all closed t
 
 | Task ID | Phase | Priority | Title | Commit | Date |
 | :--- | :--- | :---: | :--- | :---: | :---: |
+| [**SERP-275**](./SERP-275.md) | Phase 7 | **P0** | Eliminate One-Client Hardcoding (Multi-Tenant Generalization) | pending | 2026-08-26 |
 | [**SERP-122**](./SERP-122.md) | Phase 4 | **P0** | Date-Effective Tax Rates (Time of Supply Resolution) | [`697e748`](https://github.com/almstq/starqBooks/commit/697e748) | 2026-08-25 |
 | [**SERP-144**](./SERP-144.md) | Phase 2 | **P1** | Customer, Vehicle & Phone Persistence on Job Card | [`74b0435`](https://github.com/almstq/starqERP/commit/74b0435) | 2026-08-25 |
 | [**SERP-143**](./SERP-143.md) | Phase 2 | **P0** | Fix Approvals Command Contract Alignment (DEC-054 / DEC-072) | [`1c266e9`](https://github.com/almstq/starqERP/commit/1c266e9) | 2026-08-25 |

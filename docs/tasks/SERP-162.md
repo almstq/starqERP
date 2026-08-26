@@ -18,8 +18,8 @@ Resolved Audit Critical #6 by eliminating hardcoded workflow stage strings and t
 
 ### 1. Schema & Migration ([`202608250013_workflow_stages.sql`](file:///d:/StarqTech/starqERP/supabase/migrations/202608250013_workflow_stages.sql))
 - Created `public.workflow_templates` and `public.workflow_stages` with composite organisation foreign keys.
-- **Seeded Club Ignition (`30222026-0000-4000-8000-000000000001`)**: 12 automotive repair stages (`call`, `booked`, `intake`, `estimated`, `authorised`, `job_card`, `parts`, `work`, `qc`, `handover`, `invoice_payment`, `closed`).
-- **Seeded Starq Technologies (`29552026-0000-4000-8000-000000000001`)**: 6 SCM procurement stages (`need`, `quote`, `award`, `receive`, `match`, `pay`).
+- **Seeded Club Ignition (`20000000-0000-4000-8000-000000000001`)**: 12 automotive repair stages (`call`, `booked`, `intake`, `estimated`, `authorised`, `job_card`, `parts`, `work`, `qc`, `handover`, `invoice_payment`, `closed`).
+- **Seeded Starq Technologies (`10000000-0000-4000-8000-000000000001`)**: 6 SCM procurement stages (`need`, `quote`, `award`, `receive`, `match`, `pay`).
 - Implemented `app_private.validate_workflow_transition(target_org, target_workflow, current_state, event_name)`.
 - Applied RLS isolation policies ensuring tenants can only read/manage their own workflow stages.
 

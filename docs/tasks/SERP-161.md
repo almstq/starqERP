@@ -16,7 +16,7 @@ Removed hardcoded CLUB_IGNITION_ID UUID constant from Edge Function API and esta
 ---
 
 ### 2. Problem Statement
-`supabase/functions/starq-api/index.ts` contained a hardcoded constant `CLUB_IGNITION_ID = '30222026-0000-4000-8000-000000000001'` and checked `session.organisation_id !== CLUB_IGNITION_ID`, hardcoding the entire Edge gateway to a single tenant and preventing multi-tenant operation.
+`supabase/functions/starq-api/index.ts` contained a hardcoded constant `CLUB_IGNITION_ID` and checked `session.organisation_id !== CLUB_IGNITION_ID`, hardcoding the entire Edge gateway to a single tenant and preventing multi-tenant operation.
 
 ---
 

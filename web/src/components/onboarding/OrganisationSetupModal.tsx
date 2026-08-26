@@ -83,13 +83,13 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
       gstRate,
       financialYearStart,
       financialYearEnd,
-      phone: phone || '+960 778-0000',
-      email: email || `admin@${slug}.mv`,
-      address: address || `Industrial Zone, ${island}, Maldives`,
+      phone: phone.trim() !== '+960' ? phone : '',
+      email,
+      address,
       island: island || "Male'",
       atoll: atoll || 'Kaafu Atoll',
-      bmlAccount: bmlAccount ? `${bmlAccount} (BML)` : '7730000998811 (BML MVR Main)',
-      mibAccount: mibAccount ? `${mibAccount} (MIB)` : undefined,
+      bmlAccount: bmlAccount ? (bmlAccount.includes('(') ? bmlAccount : `${bmlAccount} (BML)`) : '',
+      mibAccount: mibAccount ? (mibAccount.includes('(') ? mibAccount : `${mibAccount} (MIB)`) : undefined,
       themeColor: industry === 'Medical Clinic & Diagnostics' ? '#059669' : industry === 'Marine & Boatyard' ? '#0284c7' : '#2563eb'
     });
 

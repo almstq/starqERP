@@ -11,15 +11,15 @@ begin;
 -- identical. Real registry codes belong to tenant onboarding or an untracked local seed, never here.
 insert into public.organisations (id, slug, legal_name, registry_code)
 values
-  ('29552026-0000-4000-8000-000000000001', 'starq', 'Starq Technologies Pvt Ltd', null),
-  ('30222026-0000-4000-8000-000000000001', 'club-ignition', 'Club Ignition Pvt Ltd', null)
+  ('10000000-0000-4000-8000-000000000001', 'starq', 'Starq Technologies Pvt Ltd', null),
+  ('20000000-0000-4000-8000-000000000001', 'club-ignition', 'Club Ignition Pvt Ltd', null)
 on conflict (id) do nothing;
 
 insert into public.business_names (id, organisation_id, registry_code, name, activity_code)
 values
-  ('29552026-0000-4000-8000-000000000002', '29552026-0000-4000-8000-000000000001', null, 'Starq Dynamics', '8211'),
-  ('29552026-0000-4000-8000-000000000003', '29552026-0000-4000-8000-000000000001', null, 'Hoadhaa Network', null),
-  ('30222026-0000-4000-8000-000000000002', '30222026-0000-4000-8000-000000000001', null, 'Ignition Ink', '4520')
+  ('10000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', null, 'Starq Dynamics', '8211'),
+  ('10000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001', null, 'Hoadhaa Network', null),
+  ('20000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', null, 'Ignition Ink', '4520')
 on conflict (id) do nothing;
 
 insert into public.seats (code, label, description)
@@ -47,7 +47,7 @@ create table public.document_sequences (
 );
 
 insert into public.document_sequences (organisation_id, sequence_type, prefix, padding)
-values ('30222026-0000-4000-8000-000000000001', 'garage_job', 'CI-JOB-', 4)
+values ('20000000-0000-4000-8000-000000000001', 'garage_job', 'CI-JOB-', 4)
 on conflict (organisation_id, sequence_type) do nothing;
 
 create or replace function app_private.allocate_document_no(target_org uuid, target_type text)

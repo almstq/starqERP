@@ -49,13 +49,13 @@ begin
             'Session authority test', 'active');
 
     insert into public.memberships (id, organisation_id, person_id, status)
-    values (test_membership, '30222026-0000-4000-8000-000000000001', test_person, 'active');
+    values (test_membership, '20000000-0000-4000-8000-000000000001', test_person, 'active');
 
     insert into public.membership_seats (membership_id, seat_code)
     values (test_membership, 'counter');
 
     authority := public.api_session_authority(
-      '30222026-0000-4000-8000-000000000001', test_person, 'counter'
+      '20000000-0000-4000-8000-000000000001', test_person, 'counter'
     );
     if coalesce((authority->>'active')::boolean, false) is not true
        or not (authority->'seats' ? 'counter') then
@@ -63,7 +63,7 @@ begin
     end if;
 
     authority := public.api_session_authority(
-      '29552026-0000-4000-8000-000000000001', test_person, 'counter'
+      '10000000-0000-4000-8000-000000000001', test_person, 'counter'
     );
     if coalesce((authority->>'active')::boolean, false) is true then
       raise exception 'session_authority_cross_tenant_failed';
@@ -73,7 +73,7 @@ begin
        set revoked_at = now()
      where membership_id = test_membership and seat_code = 'counter';
     authority := public.api_session_authority(
-      '30222026-0000-4000-8000-000000000001', test_person, 'counter'
+      '20000000-0000-4000-8000-000000000001', test_person, 'counter'
     );
     if coalesce((authority->>'active')::boolean, false) is true then
       raise exception 'session_authority_revoked_seat_failed';
@@ -84,7 +84,7 @@ begin
      where membership_id = test_membership and seat_code = 'counter';
     update public.memberships set status = 'suspended' where id = test_membership;
     authority := public.api_session_authority(
-      '30222026-0000-4000-8000-000000000001', test_person, 'counter'
+      '20000000-0000-4000-8000-000000000001', test_person, 'counter'
     );
     if coalesce((authority->>'active')::boolean, false) is true then
       raise exception 'session_authority_suspended_membership_failed';
