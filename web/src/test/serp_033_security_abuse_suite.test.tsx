@@ -99,18 +99,23 @@ describe('SERP-033: Security Verification & Abuse-Resistance Suite', () => {
   });
 
   it('VEC-4: Session expiration & idle timeout - fails closed on stale sessions', () => {
-    const expiredSession = {
-      sessionId: 'sess_1',
+    const expiredSession: SessionTokenRecord = {
+      token: 'tok_expired_1',
+      userId: PERSON_1,
       tenantId: ORG_A,
-      personId: PERSON_1,
-      heldSeats: ['counter' as const],
-      tokenHash: 'hash',
-      createdAt: Date.now() - 9 * 60 * 60 * 1000, // 9 hours old (TTL = 8h)
-      lastAccessedAt: Date.now() - 4 * 60 * 60 * 1000,
-      revoked: false,
+      roleId: 'counter',
+      seat: 'counter',
+      issuedAt: 100000,
+      expiresAt: 200000, // expired relative to now (300000)
+      lastAccessedAt: 100000,
+      isRevoked: false,
+      mfaVerified: false,
+    };
+    const store: Record<string, SessionTokenRecord> = {
+      tok_expired_1: expiredSession,
     };
 
-    const check = validateSecureSession(expiredSession);
+    const check = validateSecureSession('tok_expired_1', store, 300000);
     expect(check.valid).toBe(false);
     expect(check.error).toBe('session_expired_absolute');
   });
