@@ -14,6 +14,7 @@ import {
   MapPin
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
+import { GstRegistrationStatus } from '../../types/erp';
 import { Badge } from '../common/Badge';
 import { RolesPermissionsTab } from './RolesPermissionsTab';
 import { UsersManagementTab } from './UsersManagementTab';
@@ -30,6 +31,7 @@ export const SettingsView: React.FC = () => {
   const [name, setName] = useState(currentTenant.name);
   const [legalName, setLegalName] = useState(currentTenant.legalName);
   const [tinNumber, setTinNumber] = useState(currentTenant.tinNumber);
+  const [gstStatus, setGstStatus] = useState<GstRegistrationStatus>(currentTenant.gstStatus || 'not_registered');
   const [gstRate, setGstRate] = useState(currentTenant.gstRate || 8);
   const [bmlAccount, setBmlAccount] = useState(currentTenant.bmlAccount || '');
   const [address, setAddress] = useState(currentTenant.address);
@@ -37,12 +39,27 @@ export const SettingsView: React.FC = () => {
   const [email, setEmail] = useState(currentTenant.email);
   const [island, setIsland] = useState(currentTenant.island);
 
+  // Synchronize local form state if currentTenant changes
+  React.useEffect(() => {
+    setName(currentTenant.name);
+    setLegalName(currentTenant.legalName);
+    setTinNumber(currentTenant.tinNumber);
+    setGstStatus(currentTenant.gstStatus || 'not_registered');
+    setGstRate(currentTenant.gstRate || 8);
+    setBmlAccount(currentTenant.bmlAccount || '');
+    setAddress(currentTenant.address);
+    setPhone(currentTenant.phone);
+    setEmail(currentTenant.email);
+    setIsland(currentTenant.island);
+  }, [currentTenant]);
+
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     updateTenant({
       name,
       legalName,
       tinNumber,
+      gstStatus,
       gstRate,
       bmlAccount,
       address,
@@ -234,12 +251,30 @@ export const SettingsView: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  MIRA GST Statutory Registration Status
+                </label>
+                <select
+                  value={gstStatus}
+                  onChange={(e) => setGstStatus(e.target.value as GstRegistrationStatus)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 font-bold"
+                >
+                  <option value="not_registered">Not Registered with MIRA (0% statutory filing / exempt)</option>
+                  <option value="registered">Registered with MIRA (Statutory GST filing enabled)</option>
+                </select>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  TIN entry alone does not automatically make the business registered; explicit registration status controls the MIRA GST statutory schedule and Reports view.
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   MIRA GST TIN Registration Number
                 </label>
                 <input
                   type="text"
                   value={tinNumber}
                   onChange={(e) => setTinNumber(e.target.value)}
+                  placeholder="e.g. 1004829GST001"
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 font-mono font-bold focus:outline-none focus:border-blue-500"
                 />
               </div>
