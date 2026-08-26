@@ -35,7 +35,7 @@
   "required_pull_request_reviews": {
     "dismiss_stale_reviews": true,
     "require_code_owner_reviews": false,
-    "required_approving_review_count": 1
+    "required_approving_review_count": 0
   },
   "enforce_admins": { "enabled": true },
   "allow_force_pushes": { "enabled": false },
@@ -47,7 +47,7 @@
 
 | Rule | State |
 |---|---|
-| Require PR before merge | ✅ **Enabled** (1 approval required) |
+| Require PR before merge | ✅ **Enabled** (0 mandatory approvals for solo-founder repo) |
 | Stale review dismissal | ✅ **Enabled** |
 | Required status check: Backend, Contracts & Governance Gates | ✅ **Enabled** |
 | Required status check: Web Frontend Build & Test Suite | ✅ **Enabled** |
