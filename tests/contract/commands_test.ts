@@ -128,6 +128,9 @@ import {
   evaluateSystemAlertSignals,
   CANONICAL_MIGRATION_LINEAGE,
   validateMigrationLineage,
+  formatSessionCookie,
+  parseSessionCookie,
+  validateSessionCookieLifecycle,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -3172,6 +3175,52 @@ Deno.test('SERP-038: validateMigrationLineage rejects out-of-order and non-confo
   assertEquals(res.valid, false);
   assertEquals(res.errors.length > 0, true);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-027: Native Secure-Session Persistence Verification
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-027: formatSessionCookie and parseSessionCookie handle sb_ops lifecycle with Secure, HttpOnly, and SameSite=None', () => {
+  const token = 'header.payload.signature_abc123';
+  const cookieStr = formatSessionCookie(token, { maxAge: 28800 });
+
+  assertEquals(cookieStr.includes('sb_ops=header.payload.signature_abc123'), true);
+  assertEquals(cookieStr.includes('HttpOnly'), true);
+  assertEquals(cookieStr.includes('Secure'), true);
+  assertEquals(cookieStr.includes('SameSite=None'), true);
+  assertEquals(cookieStr.includes('Max-Age=28800'), true);
+
+  // Parse roundtrip
+  const parsed = parseSessionCookie(`other=123; ${cookieStr}; test=xyz`);
+  assertEquals(parsed, token);
+});
+
+Deno.test('SERP-027: validateSessionCookieLifecycle enforces 401 eviction (Max-Age=0) and CSRF-gated logout clearing', () => {
+  // 1. 401 eviction
+  const evict = validateSessionCookieLifecycle({ action: 'unauthenticated_401' });
+  assertEquals(evict.ok, true);
+  assertEquals(evict.setCookieHeader?.includes('Max-Age=0'), true);
+  assertEquals(evict.setCookieHeader?.includes('sb_ops='), true);
+
+  // 2. Logout with CSRF mismatch -> rejected
+  const badLogout = validateSessionCookieLifecycle({
+    action: 'logout',
+    csrfToken: 'wrong_token',
+    sessionCsrf: 'expected_token',
+  });
+  assertEquals(badLogout.ok, false);
+  assertEquals(badLogout.error, 'csrf_mismatch');
+
+  // 3. Logout with valid CSRF -> evicts cookie cleanly
+  const goodLogout = validateSessionCookieLifecycle({
+    action: 'logout',
+    csrfToken: 'valid_csrf_token',
+    sessionCsrf: 'valid_csrf_token',
+  });
+  assertEquals(goodLogout.ok, true);
+  assertEquals(goodLogout.setCookieHeader?.includes('Max-Age=0'), true);
+});
+
 
 
 

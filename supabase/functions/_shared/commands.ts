@@ -3926,6 +3926,110 @@ export function validateMigrationLineage(lineage: readonly MigrationLineageRecor
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-027: Native Secure-Session Persistence Verification
+// (M0 main base / CORE-001 / CORE-002 / SESS-001 / COOKIE-001)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface SessionCookieOptions {
+  readonly cookieName?: string;
+  readonly maxAge?: number;
+  readonly sameSite?: 'Strict' | 'Lax' | 'None';
+  readonly secure?: boolean;
+  readonly httpOnly?: boolean;
+  readonly path?: string;
+}
+
+export function formatSessionCookie(
+  value: string,
+  options: SessionCookieOptions = {},
+): string {
+  const cookieName = options.cookieName || 'sb_ops';
+  const maxAge = options.maxAge ?? 28800; // 8 hours default
+  const sameSite = options.sameSite || 'None';
+  const path = options.path || '/';
+  const httpOnly = options.httpOnly !== false;
+  const secure = options.secure !== false;
+
+  const parts = [`${cookieName}=${value}`, `Path=${path}`, `Max-Age=${maxAge}`];
+  if (httpOnly) parts.push('HttpOnly');
+  if (secure) parts.push('Secure');
+  if (sameSite) parts.push(`SameSite=${sameSite}`);
+
+  return parts.join('; ');
+}
+
+export function parseSessionCookie(
+  cookieHeader: string | null | undefined,
+  cookieName = 'sb_ops',
+): string | null {
+  if (!cookieHeader || typeof cookieHeader !== 'string') return null;
+
+  const parts = cookieHeader.split(';').map((p) => p.trim());
+  const match = parts.find((p) => p.startsWith(`${cookieName}=`));
+  if (!match) return null;
+
+  const val = match.slice(cookieName.length + 1).trim();
+  return val.length > 0 ? val : null;
+}
+
+export function validateSessionCookieLifecycle(params: {
+  action: 'login' | 'reload' | 'unauthenticated_401' | 'logout';
+  sessionToken?: string;
+  cookieHeader?: string;
+  csrfToken?: string;
+  sessionCsrf?: string;
+}): {
+  ok: boolean;
+  setCookieHeader?: string;
+  extractedToken?: string;
+  error?: string;
+} {
+  const { action, sessionToken, cookieHeader, csrfToken, sessionCsrf } = params;
+
+  switch (action) {
+    case 'login': {
+      if (!sessionToken || sessionToken.trim().length === 0) {
+        return { ok: false, error: 'session_token_required_for_login' };
+      }
+      return {
+        ok: true,
+        setCookieHeader: formatSessionCookie(sessionToken, { maxAge: 28800 }),
+      };
+    }
+    case 'reload': {
+      const token = parseSessionCookie(cookieHeader);
+      if (!token) {
+        return { ok: false, error: 'no_session_cookie_found' };
+      }
+      return {
+        ok: true,
+        extractedToken: token,
+      };
+    }
+    case 'unauthenticated_401': {
+      // 401 must clear the cookie immediately with Max-Age=0
+      return {
+        ok: true,
+        setCookieHeader: formatSessionCookie('', { maxAge: 0 }),
+      };
+    }
+    case 'logout': {
+      // Logout must validate CSRF before clearing cookie
+      if (!csrfToken || !sessionCsrf || csrfToken !== sessionCsrf) {
+        return { ok: false, error: 'csrf_mismatch' };
+      }
+      return {
+        ok: true,
+        setCookieHeader: formatSessionCookie('', { maxAge: 0 }),
+      };
+    }
+    default:
+      return { ok: false, error: 'unknown_session_action' };
+  }
+}
+
+
 
 
 
