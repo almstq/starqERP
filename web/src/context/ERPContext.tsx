@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useMemo, useEffect, ReactNode } from 'react';
+import { useTheme } from './ThemeContext';
 import {
   NavigationTab,
   Customer,
@@ -204,15 +205,8 @@ const ERPContext = createContext<ERPContextType | undefined>(undefined);
 
 export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [activeTab, setActiveTab] = useState<NavigationTab>('dashboard');
-  // LIGHT IS THE DEFAULT AND ALWAYS WILL BE. Founder decision, 24 Aug 2026.
-  // Both sets in theme.css are now designed — this is not a fallback, it is the
-  // product's theme. Dark stays a first-class option and is never removed.
-  //
-  // Note what is deliberately ABSENT: nothing reads prefers-color-scheme. Light
-  // is the default always, not "unless the operating system disagrees". An owner
-  // opening this in daylight gets light because that is right for the product,
-  // not because of a setting they have never seen.
-  const [theme, setThemeState] = useState<'light' | 'dark'>('light');
+  const { resolvedTheme, setThemeMode } = useTheme();
+  const theme = resolvedTheme;
 
   // Multi-tenant state
   const [tenants, setTenants] = useState<OrganisationTenant[]>(INITIAL_TENANTS);
@@ -276,30 +270,18 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const isPendingApproval = currentUser.status === 'Pending Approval';
 
-  // Apply dark mode class to html document
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-  }, [theme]);
-
   useEffect(() => {
     telemetry.setTenantId(currentTenantId);
   }, [currentTenantId]);
 
   const toggleTheme = () => {
-    setThemeState((prev) => {
-      const next = prev === 'light' ? 'dark' : 'light';
-      telemetry.track('theme_toggled', { theme: next });
-      return next;
-    });
+    const next = theme === 'light' ? 'dark' : 'light';
+    setThemeMode(next);
+    telemetry.track('theme_toggled', { theme: next });
   };
 
   const setTheme = (newTheme: 'light' | 'dark') => {
-    setThemeState(newTheme);
+    setThemeMode(newTheme);
     telemetry.track('theme_toggled', { theme: newTheme });
   };
 

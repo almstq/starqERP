@@ -4,12 +4,6 @@ import {
   ArrowLeft,
   Wrench,
   Car,
-  Calendar,
-  DollarSign,
-  User,
-  Clock,
-  CheckCircle2,
-  AlertTriangle,
   FileText,
   Plus,
   ArrowRight,
@@ -18,12 +12,28 @@ import {
   Layers,
   ChevronRight,
   Phone,
-  ShieldCheck,
-  Printer
+  Printer,
+  CheckCircle2,
+  User,
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { JobStatus } from '../../types/erp';
 import { WorkflowStepRail } from './WorkflowStepRail';
+import {
+  Button,
+  Input,
+  Select,
+  Surface,
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  Badge,
+  ActionGroup,
+  type BadgeVariant,
+} from '../ui';
 
 export const JobDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,7 +46,7 @@ export const JobDetailView: React.FC = () => {
     inventory,
     workflowStages,
     customers,
-    generateJobInvoice
+    generateJobInvoice,
   } = useERP();
 
   const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false);
@@ -47,19 +57,20 @@ export const JobDetailView: React.FC = () => {
 
   if (!job) {
     return (
-      <div className="space-y-6">
-        <button onClick={() => navigate('/jobs')} className="erp-btn-quiet flex items-center gap-2">
-          <ArrowLeft size={16} />
+      <div className="space-y-6 w-full min-w-0">
+        <Button variant="text" size="sm" onClick={() => navigate('/jobs')} icon={<ArrowLeft size={16} />}>
           <span>Back to Jobs</span>
-        </button>
-        <div className="erp-card p-12 text-center">
-          <Wrench size={40} className="erp-muted mx-auto mb-3" />
-          <h2 className="erp-h1 text-xl">Work Order Not Found</h2>
-          <p className="erp-muted mt-2 text-sm">No job record matching ID "{id}" was found.</p>
-          <button onClick={() => navigate('/jobs')} className="erp-btn-primary mt-6">
+        </Button>
+        <Surface variant="elevated" padding="lg" className="text-center py-16">
+          <Wrench size={40} className="mx-auto mb-3" style={{ color: 'var(--md-sys-color-on-surface-variant)' }} />
+          <h2 className="text-lg font-semibold text-[var(--md-sys-color-on-surface)]">Work Order Not Found</h2>
+          <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1.5">
+            No job record matching ID "{id}" was found.
+          </p>
+          <Button variant="filled" size="md" onClick={() => navigate('/jobs')} className="mt-6">
             View All Jobs
-          </button>
-        </div>
+          </Button>
+        </Surface>
       </div>
     );
   }
@@ -83,145 +94,187 @@ export const JobDetailView: React.FC = () => {
     navigate('/invoices');
   };
 
+  const getStatusBadgeVariant = (status: string): BadgeVariant => {
+    const lower = status.toLowerCase();
+    if (lower.includes('ready') || lower.includes('complete') || lower.includes('invoiced')) return 'positive';
+    if (lower.includes('progress') || lower.includes('diag') || lower.includes('parts')) return 'warning';
+    if (lower.includes('void') || lower.includes('cancel')) return 'destructive';
+    return 'info';
+  };
+
   return (
-    <div className="space-y-6 pb-12">
-      {/* Top Header & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <button
+    <div className="space-y-4 sm:space-y-6 pb-12 w-full min-w-0">
+      {/* Top Header & Navigation Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 min-w-0">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <Button
+            variant="tonal"
+            size="xs"
             onClick={() => navigate('/jobs')}
-            className="erp-btn-quiet p-2 rounded-xl flex items-center justify-center"
-            title="Back to Jobs"
+            aria-label="Back to Jobs"
+            className="h-8 w-8 sm:h-9 sm:w-9 p-0 shrink-0"
           >
             <ArrowLeft size={16} />
-          </button>
-          <div>
-            <div className="flex items-center gap-2.5">
-              <h1 className="erp-h1 text-2xl">{job.jobId}</h1>
-              <span className={`erp-pill ${
-                job.priority === 'Urgent' ? 'erp-pill-danger' : 'erp-pill-neutral'
-              }`}>
-                {job.priority} Priority
-              </span>
-              <span className="erp-pill erp-pill-info">{job.status}</span>
+          </Button>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold mono-num tracking-tight text-[var(--md-sys-color-on-surface)] truncate">
+                {job.jobId}
+              </h1>
+              <Badge variant={job.priority === 'Urgent' ? 'destructive' : 'neutral'} size="sm">
+                {job.priority}
+              </Badge>
+              <Badge variant={getStatusBadgeVariant(job.status)} size="sm">
+                {job.status}
+              </Badge>
             </div>
-            <p className="erp-muted mt-0.5 text-xs">
-              {job.serviceType} • Bay: {job.bayNumber || 'Main Bay'} • Created {job.startDate}
+            <p className="text-xs mt-0.5 text-[var(--md-sys-color-on-surface-variant)] truncate">
+              {job.serviceType} • Bay: {job.bayNumber || 'Main Bay'}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <ActionGroup align="right" className="shrink-0">
           {nextStage && (
-            <button
+            <Button
+              variant="filled"
+              size="sm"
               onClick={() => updateJobStatus(job.id, nextStage.name as JobStatus)}
-              className="erp-btn-primary flex items-center gap-1.5"
+              icon={<ArrowRight size={14} />}
             >
               <span>Move to {nextStage.name}</span>
-              <ArrowRight size={14} />
-            </button>
+            </Button>
           )}
           {!job.linkedInvoiceId && (
-            <button
+            <Button
+              variant="tonal"
+              size="sm"
               onClick={handleCreateInvoice}
-              className="erp-btn-quiet flex items-center gap-1.5"
+              icon={<FileText size={14} />}
             >
-              <FileText size={14} />
-              <span>Generate Invoice</span>
-            </button>
+              <span>Invoice</span>
+            </Button>
           )}
-          <button
+          <Button
+            variant="text"
+            size="sm"
             onClick={() => window.print()}
-            className="erp-btn-quiet p-2"
-            title="Print Job Sheet"
+            aria-label="Print Job Sheet"
+            className="h-8 w-8 sm:h-9 sm:w-9 p-0"
           >
             <Printer size={16} />
-          </button>
-        </div>
+          </Button>
+        </ActionGroup>
       </div>
 
-      {/* Main Grid: Reference Screen (Job Details Left, Profitability & Payments Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {/* Main Grid: Job Details Left, Profitability & Payments Right */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start w-full min-w-0">
         {/* Left Column (7 cols): Job Details, Asset, Materials */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="lg:col-span-7 space-y-4 sm:space-y-5 min-w-0">
           {/* Customer & Vehicle Info */}
-          <div className="erp-card p-5 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--border)' }}>
-              <div className="flex items-center gap-2">
-                <Car size={18} style={{ color: 'var(--accent)' }} />
-                <h2 className="text-sm font-bold uppercase tracking-wider">Customer & Vehicle Details</h2>
+          <Surface variant="filled" level={1} padding="md" className="space-y-4">
+            <div
+              className="flex items-center justify-between pb-3 min-w-0"
+              style={{ borderBottom: '1px solid var(--md-sys-color-outline-variant)' }}
+            >
+              <div className="flex items-center gap-2 min-w-0 truncate">
+                <Car size={17} style={{ color: 'var(--md-sys-color-primary)' }} className="shrink-0" />
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface)] truncate">
+                  Customer & Vehicle Details
+                </h2>
               </div>
               {customer && (
                 <Link
                   to={`/customers/${customer.id}`}
-                  className="text-xs font-semibold hover:underline flex items-center gap-1"
-                  style={{ color: 'var(--accent)' }}
+                  className="text-xs font-semibold flex items-center gap-0.5 hover:underline shrink-0"
+                  style={{ color: 'var(--md-sys-color-primary)' }}
                 >
-                  <span>Customer Profile</span>
+                  <span>Profile</span>
                   <ChevronRight size={12} />
                 </Link>
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="space-y-1">
-                <span className="erp-muted block text-[11px]">Customer Name</span>
-                <span className="font-semibold text-sm block">{job.customerName}</span>
-                <span className="erp-muted flex items-center gap-1 mt-0.5">
-                  <Phone size={12} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 text-xs min-w-0">
+              <div className="space-y-1 min-w-0">
+                <span className="block text-[11px] font-medium" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                  Customer Name
+                </span>
+                <span className="font-semibold text-sm block text-[var(--md-sys-color-on-surface)] truncate">{job.customerName}</span>
+                <span className="flex items-center gap-1 mt-0.5 text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">
+                  <Phone size={12} className="shrink-0" />
                   <span>{job.customerPhone}</span>
                 </span>
               </div>
 
               {job.vehicle && (
-                <div className="space-y-1">
-                  <span className="erp-muted block text-[11px]">Vehicle / Vessel Asset</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-sm" style={{ color: 'var(--accent)' }}>
+                <div className="space-y-1 min-w-0">
+                  <span className="block text-[11px] font-medium" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                    Vehicle / Vessel Asset
+                  </span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="mono-num font-bold text-sm truncate" style={{ color: 'var(--md-sys-color-primary)' }}>
                       {job.vehicle.plateNumber}
                     </span>
-                    <span className="font-semibold">
+                    <span className="font-medium text-[var(--md-sys-color-on-surface)] truncate">
                       {job.vehicle.make} {job.vehicle.model}
                     </span>
                   </div>
-                  <span className="erp-muted block text-[11px]">
-                    Color: {job.vehicle.color} {job.vehicle.year ? `• Year: ${job.vehicle.year}` : ''}
+                  <span className="block text-[11px] text-[var(--md-sys-color-on-surface-variant)] truncate">
+                    Color: {job.vehicle.color} {job.vehicle.year ? `• ${job.vehicle.year}` : ''}
                   </span>
                 </div>
               )}
             </div>
 
-            <div className="pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
-              <span className="erp-muted block text-[11px]">Requested Scope of Work</span>
-              <p className="mt-1 text-xs leading-relaxed">{job.requestedWork}</p>
+            <div className="pt-3 min-w-0" style={{ borderTop: '1px solid var(--md-sys-color-outline-variant)' }}>
+              <span className="block text-[11px] font-medium" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                Requested Scope of Work
+              </span>
+              <p className="mt-1 text-xs leading-relaxed text-[var(--md-sys-color-on-surface)]">{job.requestedWork}</p>
               {job.specialInstructions && (
-                <div className="mt-2 p-2.5 rounded-lg text-xs" style={{ background: 'var(--muted)' }}>
-                  <span className="font-semibold block text-[11px]">Special Instructions:</span>
-                  <span className="erp-muted">{job.specialInstructions}</span>
+                <div
+                  className="mt-2.5 p-3 rounded-[var(--md-sys-shape-corner-small)] text-xs min-w-0"
+                  style={{
+                    backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                    border: '1px solid var(--md-sys-color-outline-variant)',
+                  }}
+                >
+                  <span className="font-semibold block text-[11px] text-[var(--md-sys-color-on-surface)]">
+                    Special Instructions:
+                  </span>
+                  <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>{job.specialInstructions}</span>
                 </div>
               )}
             </div>
+          </Surface>
+
+          {/* 13-Step Workflow Journey Rail with Seat Signpost */}
+          <div className="w-full min-w-0 overflow-x-auto">
+            <WorkflowStepRail
+              currentStatus={job.status}
+              onAdvance={(next) => updateJobStatus(job.id, next as JobStatus)}
+            />
           </div>
 
-          {/* 13-Step Workflow Journey Rail with Seat Signpost (SERP-146) */}
-          <WorkflowStepRail
-            currentStatus={job.status}
-            onAdvance={(next) => updateJobStatus(job.id, next as JobStatus)}
-          />
-
-          {/* Workflow Pipeline Progression */}
-          <div className="erp-card p-5 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--border)' }}>
-              <div className="flex items-center gap-2">
-                <Layers size={18} style={{ color: 'var(--accent)' }} />
-                <h2 className="text-sm font-bold uppercase tracking-wider">Pipeline Stage Progression</h2>
+          {/* Pipeline Stage Progression Grid */}
+          <Surface variant="filled" level={1} padding="md" className="space-y-4">
+            <div
+              className="flex items-center justify-between pb-3 min-w-0"
+              style={{ borderBottom: '1px solid var(--md-sys-color-outline-variant)' }}
+            >
+              <div className="flex items-center gap-2 min-w-0 truncate">
+                <Layers size={17} style={{ color: 'var(--md-sys-color-primary)' }} className="shrink-0" />
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface)] truncate">
+                  Pipeline Stage Progression
+                </h2>
               </div>
-              <span className="text-xs erp-muted">
-                Stage {currentStageIndex + 1} of {workflowStages.length}
+              <span className="text-xs shrink-0" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                {currentStageIndex + 1} of {workflowStages.length}
               </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 min-w-0">
               {workflowStages.map((stage, idx) => {
                 const isCurrent = stage.name.toLowerCase() === job.status.toLowerCase();
                 const isPast = currentStageIndex > idx;
@@ -229,254 +282,281 @@ export const JobDetailView: React.FC = () => {
                   <button
                     key={stage.id}
                     onClick={() => updateJobStatus(job.id, stage.name as JobStatus)}
-                    className="p-2.5 rounded-xl text-left border transition-all"
+                    className="p-2.5 rounded-[var(--md-sys-shape-corner-small)] text-left transition-all cursor-pointer min-w-0"
                     style={{
-                      background: isCurrent ? 'var(--sidebar-accent)' : 'transparent',
-                      borderColor: isCurrent ? 'var(--accent)' : 'var(--border)',
+                      backgroundColor: isCurrent
+                        ? 'var(--md-sys-color-secondary-container)'
+                        : 'var(--md-sys-color-surface-container-low)',
+                      border: isCurrent
+                        ? '1px solid var(--md-sys-color-primary)'
+                        : '1px solid var(--md-sys-color-outline-variant)',
+                      color: isCurrent
+                        ? 'var(--md-sys-color-on-secondary-container)'
+                        : 'var(--md-sys-color-on-surface)',
                     }}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-[10px] erp-muted">{stage.code}</span>
+                    <div className="flex items-center justify-between min-w-0">
+                      <span className="mono-num text-[10px]" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                        {stage.code}
+                      </span>
                       {isPast && <CheckCircle2 size={12} style={{ color: 'var(--positive)' }} />}
-                      {isCurrent && <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--accent)' }} />}
+                      {isCurrent && (
+                        <span
+                          className="h-1.5 w-1.5 rounded-full"
+                          style={{ backgroundColor: 'var(--md-sys-color-primary)' }}
+                        />
+                      )}
                     </div>
-                    <div className="font-semibold text-xs mt-1 truncate">{stage.name}</div>
+                    <div className="font-semibold text-xs mt-1 truncate">
+                      {stage.name}
+                    </div>
                   </button>
                 );
               })}
             </div>
-
-            {/* Active Stage SOP Guidance & Checklist (SERP-153 / DEC-092) */}
-            {workflowStages[currentStageIndex] && (
-              <div className="mt-3 p-3.5 rounded-xl border space-y-2 text-xs" style={{ background: 'var(--muted)', borderColor: 'var(--border)' }}>
-                <div className="flex items-center justify-between">
-                  <span className="font-bold">SOP Checklist: {workflowStages[currentStageIndex].name}</span>
-                  {workflowStages[currentStageIndex].slaHours && (
-                    <span className="text-[11px] font-mono erp-muted">
-                      Target SLA: {workflowStages[currentStageIndex].slaHours}h
-                    </span>
-                  )}
-                </div>
-                <p className="erp-muted">{workflowStages[currentStageIndex].description}</p>
-                {workflowStages[currentStageIndex].checklistItems && workflowStages[currentStageIndex].checklistItems!.length > 0 && (
-                  <div className="pt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                    {workflowStages[currentStageIndex].checklistItems!.map((item, idx) => (
-                      <label key={idx} className="flex items-center gap-2 text-[11px] p-1.5 rounded border cursor-pointer hover:opacity-90" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)' }}>
-                        <input type="checkbox" defaultChecked className="rounded w-3.5 h-3.5" />
-                        <span className="truncate">{item}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          </Surface>
 
           {/* Materials Used in Job */}
-          <div className="erp-card p-5 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--border)' }}>
-              <div className="flex items-center gap-2">
-                <Package size={18} style={{ color: 'var(--accent)' }} />
-                <h2 className="text-sm font-bold uppercase tracking-wider">Materials & Consumables Used</h2>
+          <Surface variant="filled" level={1} padding="md" className="space-y-4">
+            <div
+              className="flex items-center justify-between pb-3 min-w-0"
+              style={{ borderBottom: '1px solid var(--md-sys-color-outline-variant)' }}
+            >
+              <div className="flex items-center gap-2 min-w-0 truncate">
+                <Package size={17} style={{ color: 'var(--md-sys-color-primary)' }} className="shrink-0" />
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface)] truncate">
+                  Materials Used
+                </h2>
               </div>
-              <button
+              <Button
+                variant="tonal"
+                size="xs"
                 onClick={() => setIsAddMaterialOpen(!isAddMaterialOpen)}
-                className="erp-btn-quiet text-xs py-1 px-2.5 flex items-center gap-1"
+                icon={<Plus size={12} />}
               >
-                <Plus size={12} />
-                <span>Add Material</span>
-              </button>
+                <span>Add Item</span>
+              </Button>
             </div>
 
             {isAddMaterialOpen && (
-              <form onSubmit={handleAddMaterial} className="p-3.5 rounded-xl border space-y-3" style={{ background: 'var(--muted)', borderColor: 'var(--border)' }}>
-                <div className="text-xs font-bold">Log Material Usage (Deducts Physical Stock)</div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                  <div className="sm:col-span-2">
-                    <label className="erp-muted block mb-1">Select Inventory Item</label>
-                    <select
+              <form
+                onSubmit={handleAddMaterial}
+                className="p-3.5 rounded-[var(--md-sys-shape-corner-small)] space-y-3 min-w-0"
+                style={{
+                  backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                  border: '1px solid var(--md-sys-color-outline-variant)',
+                }}
+              >
+                <div className="text-xs font-semibold text-[var(--md-sys-color-on-surface)]">
+                  Log Material Usage
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs min-w-0">
+                  <div className="sm:col-span-2 min-w-0">
+                    <Select
+                      label="Item"
                       value={selectedInventoryId}
                       onChange={(e) => setSelectedInventoryId(e.target.value)}
-                      className="erp-input w-full"
                     >
                       {inventory.map((inv) => (
                         <option key={inv.id} value={inv.id}>
-                          {inv.name} ({inv.quantityOnHand} {inv.unit} in stock)
+                          {inv.name} ({inv.quantityOnHand} in stock)
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                   <div>
-                    <label className="erp-muted block mb-1">Quantity</label>
-                    <input
+                    <Input
+                      label="Qty"
                       type="number"
                       min="1"
                       value={materialQty}
                       onChange={(e) => setMaterialQty(Number(e.target.value))}
-                      className="erp-input w-full"
                     />
                   </div>
                 </div>
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsAddMaterialOpen(false)}
-                    className="erp-btn-quiet text-xs py-1"
-                  >
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button variant="text" size="xs" onClick={() => setIsAddMaterialOpen(false)}>
                     Cancel
-                  </button>
-                  <button type="submit" className="erp-btn-primary text-xs py-1">
-                    Confirm & Deduct
-                  </button>
+                  </Button>
+                  <Button variant="filled" size="xs" type="submit">
+                    Confirm
+                  </Button>
                 </div>
               </form>
             )}
 
-            <div className="overflow-x-auto">
-              <table className="erp-table">
-                <thead>
-                  <tr>
-                    <th>Item Description</th>
-                    <th className="text-center">Qty</th>
-                    <th className="text-right">Unit Cost</th>
-                    <th className="text-right">Total Cost</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {job.materialsUsed.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="text-center erp-muted py-6">
-                        No materials logged to this work order yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    job.materialsUsed.map((m) => (
-                      <tr key={m.id}>
-                        <td className="font-semibold">{m.itemName}</td>
-                        <td className="text-center font-mono">{m.quantity} {m.unit}</td>
-                        <td className="text-right font-mono">{formatMVR(m.unitCost)}</td>
-                        <td className="text-right font-mono font-bold">{formatMVR(m.totalCost)}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex items-center justify-between pt-2 border-t text-xs" style={{ borderColor: 'var(--border)' }}>
-              <span className="erp-muted">Total Material Cost:</span>
-              <span className="font-mono font-bold text-sm erp-money-out">{formatMVR(job.actualMaterialCost)}</span>
-            </div>
-          </div>
+            <Table>
+              <TableHeader>
+                <tr>
+                  <TableHead>Item</TableHead>
+                  <TableHead alignRight>Qty</TableHead>
+                  <TableHead alignRight className="hidden sm:table-cell">Unit Cost</TableHead>
+                  <TableHead alignRight>Total</TableHead>
+                </tr>
+              </TableHeader>
+              <TableBody>
+                {job.materialsUsed.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-6" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                      No materials logged yet.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  job.materialsUsed.map((m) => (
+                    <TableRow key={m.id}>
+                      <TableCell className="font-semibold text-[var(--md-sys-color-on-surface)]">{m.itemName}</TableCell>
+                      <TableCell isNumeric>
+                        {m.quantity} {m.unit}
+                      </TableCell>
+                      <TableCell isNumeric className="hidden sm:table-cell">{formatMVR(m.unitCost)}</TableCell>
+                      <TableCell isNumeric className="font-bold text-[var(--md-sys-color-on-surface)]">
+                        {formatMVR(m.totalCost)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Surface>
         </div>
 
-        {/* Right Column (5 cols): Payment, Profitability & Linked Invoice */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Job Profitability Card */}
-          <div className="erp-card p-5 space-y-4">
-            <div className="flex items-center gap-2 border-b pb-3" style={{ borderColor: 'var(--border)' }}>
-              <TrendingUp size={18} style={{ color: 'var(--positive)' }} />
-              <h2 className="text-sm font-bold uppercase tracking-wider">Job Financials & Margin</h2>
+        {/* Right Column (5 cols): Financials, Staff & Commercial Invoices */}
+        <div className="lg:col-span-5 space-y-4 sm:space-y-5 min-w-0">
+          {/* Job Profitability & Financials */}
+          <Surface variant="filled" level={1} padding="md" className="space-y-4 min-w-0">
+            <div
+              className="flex items-center gap-2 pb-3 min-w-0"
+              style={{ borderBottom: '1px solid var(--md-sys-color-outline-variant)' }}
+            >
+              <TrendingUp size={17} style={{ color: 'var(--positive)' }} className="shrink-0" />
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface)] truncate">
+                Job Financials & Margin
+              </h2>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="erp-muted">Quoted Price:</span>
-                <span className="font-mono font-bold text-sm">{formatMVR(job.quotedAmount)}</span>
+            <div className="space-y-2.5 text-xs min-w-0">
+              <div className="flex items-center justify-between min-w-0">
+                <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Quoted Price:</span>
+                <span className="mono-num font-bold text-sm text-[var(--md-sys-color-on-surface)]">
+                  {formatMVR(job.quotedAmount)}
+                </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="erp-muted">Deposit Paid:</span>
-                <span className="font-mono font-semibold erp-money-in">{formatMVR(job.depositPaid)}</span>
+              <div className="flex items-center justify-between min-w-0">
+                <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Deposit Paid:</span>
+                <span className="mono-num font-semibold" style={{ color: 'var(--positive)' }}>
+                  {formatMVR(job.depositPaid)}
+                </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="erp-muted">Balance Due:</span>
-                <span className={`font-mono font-bold ${job.balanceDue > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+              <div className="flex items-center justify-between min-w-0">
+                <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Balance Due:</span>
+                <span
+                  className="mono-num font-bold"
+                  style={{ color: job.balanceDue > 0 ? 'var(--warning)' : 'var(--positive)' }}
+                >
                   {formatMVR(job.balanceDue)}
                 </span>
               </div>
 
-              <div className="my-2 border-t" style={{ borderColor: 'var(--border)' }} />
+              <div className="my-2" style={{ borderTop: '1px solid var(--md-sys-color-outline-variant)' }} />
 
-              <div className="flex items-center justify-between">
-                <span className="erp-muted">Actual Materials:</span>
-                <span className="font-mono erp-money-out">- {formatMVR(job.actualMaterialCost)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="erp-muted">Estimated Labor:</span>
-                <span className="font-mono erp-money-out">- {formatMVR(job.laborCostEstimate)}</span>
-              </div>
-
-              <div className="p-3.5 rounded-xl border mt-2 flex items-center justify-between" style={{ background: 'var(--muted)', borderColor: 'var(--border)' }}>
-                <div>
-                  <span className="erp-muted block text-[10px] uppercase font-bold">Estimated Net Profit</span>
-                  <span className="font-mono font-bold text-base erp-money-in">
+              <div className="p-3.5 rounded-[var(--md-sys-shape-corner-small)] flex items-center justify-between min-w-0"
+                style={{
+                  backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                  border: '1px solid var(--md-sys-color-outline-variant)',
+                }}
+              >
+                <div className="min-w-0">
+                  <span className="block text-[10px] uppercase font-semibold text-[var(--md-sys-color-on-surface-variant)]">
+                    Est. Profit
+                  </span>
+                  <span className="mono-num font-bold text-sm sm:text-base" style={{ color: 'var(--positive)' }}>
                     {formatMVR(job.actualProfit)}
                   </span>
                 </div>
-                <div className="text-right">
-                  <span className="erp-muted block text-[10px] uppercase font-bold">Margin</span>
-                  <span className="font-mono font-extrabold text-sm" style={{ color: 'var(--positive)' }}>
+                <div className="text-right shrink-0">
+                  <span className="block text-[10px] uppercase font-semibold text-[var(--md-sys-color-on-surface-variant)]">
+                    Target Margin
+                  </span>
+                  <span className="mono-num font-bold text-xs sm:text-sm" style={{ color: 'var(--positive)' }}>
                     {job.targetMarginPercentage}%
                   </span>
                 </div>
               </div>
             </div>
-          </div>
+          </Surface>
 
-          {/* Assigned Technicians */}
-          <div className="erp-card p-5 space-y-3">
-            <div className="flex items-center gap-2 border-b pb-3" style={{ borderColor: 'var(--border)' }}>
-              <User size={18} style={{ color: 'var(--accent)' }} />
-              <h2 className="text-sm font-bold uppercase tracking-wider">Assigned Staff</h2>
+          {/* Assigned Staff */}
+          <Surface variant="filled" level={1} padding="md" className="space-y-3 min-w-0">
+            <div
+              className="flex items-center gap-2 pb-3 min-w-0"
+              style={{ borderBottom: '1px solid var(--md-sys-color-outline-variant)' }}
+            >
+              <User size={17} style={{ color: 'var(--md-sys-color-primary)' }} className="shrink-0" />
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface)] truncate">
+                Assigned Staff
+              </h2>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0">
               {job.assignedStaff.map((staff) => (
-                <div key={staff.id} className="flex items-center justify-between text-xs p-2 rounded-lg" style={{ background: 'var(--muted)' }}>
-                  <span className="font-semibold">{staff.name}</span>
-                  <span className="erp-pill erp-pill-neutral text-[11px]">{staff.role}</span>
+                <div
+                  key={staff.id}
+                  className="flex items-center justify-between text-xs p-2.5 rounded-[var(--md-sys-shape-corner-small)] min-w-0"
+                  style={{
+                    backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                    border: '1px solid var(--md-sys-color-outline-variant)',
+                  }}
+                >
+                  <span className="font-semibold text-[var(--md-sys-color-on-surface)] truncate">{staff.name}</span>
+                  <Badge variant="neutral" size="sm">
+                    {staff.role}
+                  </Badge>
                 </div>
               ))}
             </div>
-          </div>
+          </Surface>
 
-          {/* Linked Commercial Invoice */}
-          <div className="erp-card p-5 space-y-3">
-            <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--border)' }}>
-              <div className="flex items-center gap-2">
-                <FileText size={18} style={{ color: 'var(--accent)' }} />
-                <h2 className="text-sm font-bold uppercase tracking-wider">Commercial Document</h2>
+          {/* Commercial Document */}
+          <Surface variant="filled" level={1} padding="md" className="space-y-3 min-w-0">
+            <div
+              className="flex items-center justify-between pb-3 min-w-0"
+              style={{ borderBottom: '1px solid var(--md-sys-color-outline-variant)' }}
+            >
+              <div className="flex items-center gap-2 min-w-0 truncate">
+                <FileText size={17} style={{ color: 'var(--md-sys-color-primary)' }} className="shrink-0" />
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface)] truncate">
+                  Commercial Document
+                </h2>
               </div>
             </div>
 
             {job.linkedInvoiceId ? (
-              <div className="space-y-2 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="erp-muted">Linked Invoice:</span>
+              <div className="space-y-2 text-xs min-w-0">
+                <div className="flex items-center justify-between min-w-0">
+                  <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Invoice:</span>
                   <Link
                     to={`/invoices/${job.linkedInvoiceId}`}
-                    className="font-mono font-bold hover:underline"
-                    style={{ color: 'var(--accent)' }}
+                    className="mono-num font-bold hover:underline"
+                    style={{ color: 'var(--md-sys-color-primary)' }}
                   >
                     {job.linkedInvoiceId} →
                   </Link>
                 </div>
-                <p className="erp-muted text-[11px]">
-                  Commercial document generated. Payments applied to this invoice reflect in customer balance.
-                </p>
               </div>
             ) : (
-              <div className="text-xs space-y-2">
-                <p className="erp-muted">No tax invoice generated for this job yet.</p>
-                <button
+              <div className="text-xs space-y-2.5 min-w-0">
+                <p style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>No invoice generated yet.</p>
+                <Button
+                  variant="filled"
+                  size="sm"
                   onClick={handleCreateInvoice}
-                  className="erp-btn-primary w-full text-xs py-2 flex items-center justify-center gap-1.5"
+                  icon={<FileText size={14} />}
+                  className="w-full"
                 >
-                  <FileText size={14} />
-                  <span>Generate Invoice for MVR {job.quotedAmount.toLocaleString()}</span>
-                </button>
+                  <span>Generate Invoice</span>
+                </Button>
               </div>
             )}
-          </div>
+          </Surface>
         </div>
       </div>
     </div>

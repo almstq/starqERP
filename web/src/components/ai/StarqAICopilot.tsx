@@ -245,18 +245,29 @@ export const StarqAICopilot: React.FC = () => {
         </div>
 
         {/* Input Bar */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-2">
+        <div className="p-4 flex gap-2" style={{ borderTop: '1px solid var(--border-subtle)', backgroundColor: 'var(--surface-2)' }}>
           <input
             type="text"
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-            placeholder="Ask Starq AI (e.g. 'Show margin on Prado repaint')..."
-            className="flex-1 px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500"
+            placeholder="Ask starqAI (e.g. 'Show margin on Prado repaint')..."
+            style={{
+              backgroundColor: 'var(--surface-inset)',
+              color: 'var(--text-primary)',
+              borderColor: 'var(--border-strong)',
+              borderRadius: 'var(--radius-md)',
+            }}
+            className="flex-1 px-3.5 py-2 text-xs border outline-none focus:border-[var(--border-focus)]"
           />
           <button
             onClick={() => handleSendMessage()}
-            className="px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors shrink-0 shadow-xs"
+            style={{
+              backgroundColor: 'var(--accent-primary)',
+              color: 'var(--text-inverse)',
+              borderRadius: 'var(--radius-md)',
+            }}
+            className="px-3.5 py-2 font-semibold transition-colors shrink-0 cursor-pointer flex items-center justify-center"
           >
             <Send className="w-4 h-4" />
           </button>

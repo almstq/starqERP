@@ -1,67 +1,90 @@
-@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 @import "./theme.css";
 
 @layer base {
+  html,
   body {
-    background-color: var(--background);
-    color: var(--foreground);
+    background-color: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
     font-family: var(--font-sans);
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    width: 100%;
+    min-height: 100dvh;
+    margin: 0;
+    padding: 0;
+    /* Defensive clipping boundary only; never relied upon to mask uncontained overflow */
+    overflow-x: clip;
   }
 
-  html.dark body,
-  .dark {
-    background-color: var(--background);
-    color: var(--foreground);
-    color-scheme: dark;
+  * {
+    box-sizing: border-box;
+    min-width: 0;
+  }
+
+  /* Safe content wrapping by default */
+  h1, h2, h3, h4, h5, h6, p, span, a, button, input, select, textarea {
+    overflow-wrap: anywhere;
   }
 }
 
-/* Custom scrollbar for ERP tables & panels */
+/* Container Query Wrappers (SERP Adaptive Engine) */
+.cq-card {
+  container-type: inline-size;
+  container-name: card;
+  width: 100%;
+  min-width: 0;
+}
+
+.cq-panel {
+  container-type: inline-size;
+  container-name: panel;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Fluid scrollable container for wide regional data like tables & kanban boards */
+.erp-scroll-region {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* Custom low-contrast scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(241, 245, 249, 0.8);
-}
-
-.dark ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.8);
+  background: var(--md-sys-color-surface-container-lowest);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.5);
-  border-radius: 9999px;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: rgba(71, 85, 105, 0.6);
+  background: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.8);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.8);
+  background: var(--md-sys-color-outline);
 }
 
 .mono-num {
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono);
   font-feature-settings: "tnum" 1, "zero" 1;
 }
 
-/* ── SERP-035: Accessibility & Inclusive Interaction Baseline ─────────────── */
+/* ── Accessibility Baseline (SERP-035) ─────────────────────────────────────── */
 
-/* Visible Focus States for Keyboard Navigation */
 *:focus-visible {
-  outline: 2px solid var(--accent, #f59e0b);
+  outline: 2px solid var(--md-sys-color-primary);
   outline-offset: 2px;
 }
 
-/* Accessible Minimum Touch Target (44x44px for interactive controls) */
 button,
 a,
 input[type="button"],
@@ -71,7 +94,6 @@ select {
   touch-action: manipulation;
 }
 
-/* Reduced Motion Support */
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
@@ -83,36 +105,20 @@ select {
   }
 }
 
-/* Skip to Content Navigation Link */
 .skip-link {
   position: absolute;
   top: -9999px;
   left: 1rem;
   z-index: 9999;
   padding: 0.5rem 1rem;
-  background-color: var(--card, #ffffff);
-  color: var(--foreground, #0f172a);
-  border: 2px solid var(--accent, #f59e0b);
-  border-radius: 0.375rem;
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-primary);
+  border-radius: var(--md-sys-shape-corner-small);
   font-weight: 600;
   text-decoration: none;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
 .skip-link:focus {
   top: 1rem;
 }
-
-/* Screen Reader Only Utility */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
-}
-

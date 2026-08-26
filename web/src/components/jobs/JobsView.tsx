@@ -4,25 +4,27 @@ import {
   Wrench,
   Search,
   Plus,
-  Filter,
   LayoutGrid,
   List,
-  Car,
-  Clock,
-  CheckCircle2,
-  AlertTriangle,
   ChevronRight,
-  Package,
-  DollarSign,
-  TrendingUp,
-  Receipt,
-  GitBranch,
-  ShieldAlert,
-  ArrowRight
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { CreateJobModal } from './CreateJobModal';
-import { JobOrder, JobStatus, WorkflowStage } from '../../types/erp';
+import {
+  Button,
+  Input,
+  Select,
+  Surface,
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  Badge,
+  ActionGroup,
+  type BadgeVariant,
+} from '../ui';
 
 export const JobsView: React.FC = () => {
   const navigate = useNavigate();
@@ -30,11 +32,8 @@ export const JobsView: React.FC = () => {
     jobs,
     setIsCreateJobOpen,
     formatMVR,
-    updateJobStatus,
     activeJobsCount,
     workflowStages,
-    currentTenant,
-    hasPermission
   } = useERP();
 
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
@@ -58,75 +57,97 @@ export const JobsView: React.FC = () => {
 
   const services = ['All', ...new Set(jobs.map((j) => j.serviceType))];
 
+  const getStatusBadgeVariant = (status: string): BadgeVariant => {
+    const lower = status.toLowerCase();
+    if (lower.includes('draft')) return 'info';
+    if (lower.includes('ready') || lower.includes('complete') || lower.includes('invoiced')) return 'positive';
+    if (lower.includes('progress') || lower.includes('diag') || lower.includes('parts')) return 'warning';
+    if (lower.includes('void') || lower.includes('cancel')) return 'destructive';
+    return 'neutral';
+  };
+
   return (
-    <div className="space-y-6 pb-12">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="erp-h1 text-2xl">Work Orders & Floor Pipeline</h1>
-            <span className="erp-pill erp-pill-info text-xs">
-              {activeJobsCount} Active Orders
-            </span>
+    <div className="space-y-4 sm:space-y-6 pb-12 w-full min-w-0">
+      {/* View Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 min-w-0">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[var(--md-sys-color-on-surface)] truncate">
+              Work Orders & Floor Pipeline
+            </h1>
+            <Badge variant="accent" size="sm">
+              {activeJobsCount} Active
+            </Badge>
           </div>
-          <p className="erp-muted mt-0.5 text-xs">
-            Dynamic pipeline stages ({workflowStages.length} phases), bay assignments, and material tracking
+          <p className="mt-0.5 text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">
+            Dynamic pipeline stages ({workflowStages.length} phases), bay allocations & material tracking
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <ActionGroup align="right" className="shrink-0">
           {/* View Toggle */}
-          <div className="erp-card p-1 flex items-center gap-1">
-            <button
+          <div
+            className="flex items-center p-0.5 sm:p-1 rounded-[var(--md-sys-shape-corner-full)]"
+            style={{
+              backgroundColor: 'var(--md-sys-color-surface-container-high)',
+              border: '1px solid var(--md-sys-color-outline-variant)',
+            }}
+          >
+            <Button
+              variant={viewMode === 'kanban' ? 'tonal' : 'text'}
+              size="xs"
               onClick={() => setViewMode('kanban')}
-              className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
-                viewMode === 'kanban' ? 'erp-btn-primary' : 'erp-muted hover:text-white'
-              }`}
+              icon={<LayoutGrid size={14} />}
             >
-              <LayoutGrid size={14} />
-              <span className="hidden sm:inline">Kanban</span>
-            </button>
-            <button
+              <span>Kanban</span>
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'tonal' : 'text'}
+              size="xs"
               onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
-                viewMode === 'list' ? 'erp-btn-primary' : 'erp-muted hover:text-white'
-              }`}
+              icon={<List size={14} />}
             >
-              <List size={14} />
-              <span className="hidden sm:inline">Table</span>
-            </button>
+              <span>Table</span>
+            </Button>
           </div>
 
-          <button
+          <Button
+            variant="filled"
+            size="sm"
             onClick={() => setIsCreateJobOpen(true)}
-            className="erp-btn-primary flex items-center gap-2"
+            icon={<Plus size={15} />}
           >
-            <Plus size={16} />
-            <span>New Work Order</span>
-          </button>
-        </div>
+            <span>New Job</span>
+          </Button>
+        </ActionGroup>
       </div>
 
-      {/* Toolbar & Filters */}
-      <div className="erp-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search size={15} className="erp-muted absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
+      {/* Filter Surface */}
+      <Surface variant="filled" level={1} padding="sm" className="flex flex-col md:flex-row md:items-center justify-between gap-3 min-w-0">
+        <div className="flex-1 w-full md:max-w-md min-w-0">
+          <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by job ID, customer, plate #, model..."
-            className="erp-input w-full pl-9 text-xs"
+            placeholder="Search by job ID, customer, plate, model…"
+            icon={<Search size={14} />}
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <div className="flex items-center gap-1.5">
-            <span className="erp-muted">Service:</span>
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[11px] font-medium shrink-0" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+              Service:
+            </span>
             <select
               value={serviceFilter}
               onChange={(e) => setServiceFilter(e.target.value)}
-              className="erp-input py-1 text-xs"
+              style={{
+                backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                color: 'var(--md-sys-color-on-surface)',
+                borderColor: 'var(--md-sys-color-outline-variant)',
+                borderRadius: 'var(--md-sys-shape-corner-small)',
+              }}
+              className="h-8 sm:h-9 px-2.5 text-xs border outline-none cursor-pointer max-w-[140px] truncate"
             >
               {services.map((s) => (
                 <option key={s} value={s}>{s}</option>
@@ -134,12 +155,20 @@ export const JobsView: React.FC = () => {
             </select>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <span className="erp-muted">Status:</span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[11px] font-medium shrink-0" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+              Stage:
+            </span>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="erp-input py-1 text-xs"
+              style={{
+                backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                color: 'var(--md-sys-color-on-surface)',
+                borderColor: 'var(--md-sys-color-outline-variant)',
+                borderRadius: 'var(--md-sys-shape-corner-small)',
+              }}
+              className="h-8 sm:h-9 px-2.5 text-xs border outline-none cursor-pointer max-w-[140px] truncate"
             >
               <option value="All">All Stages</option>
               {workflowStages.map((stg) => (
@@ -148,73 +177,113 @@ export const JobsView: React.FC = () => {
             </select>
           </div>
         </div>
-      </div>
+      </Surface>
 
-      {/* Kanban View */}
+      {/* Kanban View Mode */}
       {viewMode === 'kanban' && (
-        <div className="erp-scroll-x pb-4">
-          <div className="flex gap-4 min-w-[1000px]">
+        <div className="erp-scroll-region pb-4">
+          <div className="flex gap-3 sm:gap-4 min-w-max">
             {workflowStages.map((stage) => {
               const stageJobs = filteredJobs.filter(
-                (j) => j.status.toLowerCase() === stage.name.toLowerCase() || j.status.toLowerCase() === stage.code.toLowerCase()
+                (j) =>
+                  j.status.toLowerCase() === stage.name.toLowerCase() ||
+                  j.status.toLowerCase() === stage.code.toLowerCase()
               );
 
               return (
                 <div
                   key={stage.id}
-                  className="w-72 shrink-0 erp-card p-3 flex flex-col max-h-[75vh]"
+                  className="w-68 sm:w-72 shrink-0 flex flex-col max-h-[75vh] p-3 sm:p-3.5 rounded-[var(--md-sys-shape-corner-large)] min-w-0"
+                  style={{
+                    backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                    border: '1px solid var(--md-sys-color-outline-variant)',
+                  }}
                 >
-                  {/* Stage Header */}
-                  <div className="flex items-center justify-between pb-2 border-b mb-3" style={{ borderColor: 'var(--border)' }}>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold" style={{ color: 'var(--accent)' }}>
+                  {/* Stage Column Header */}
+                  <div
+                    className="flex items-center justify-between pb-2.5 mb-2.5 min-w-0"
+                    style={{ borderBottom: '1px solid var(--md-sys-color-outline-variant)' }}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0 truncate">
+                      <span
+                        className="mono-num text-[11px] font-bold px-1.5 py-0.5 rounded-[var(--md-sys-shape-corner-extra-small)] shrink-0"
+                        style={{
+                          backgroundColor: 'var(--md-sys-color-primary-container)',
+                          color: 'var(--md-sys-color-on-primary-container)',
+                        }}
+                      >
                         {stage.code}
                       </span>
-                      <span className="text-xs font-bold truncate">{stage.name}</span>
+                      <span className="text-xs font-semibold truncate text-[var(--md-sys-color-on-surface)]">
+                        {stage.name}
+                      </span>
                     </div>
-                    <span className="erp-pill erp-pill-neutral text-[10px]">{stageJobs.length}</span>
+                    <Badge variant="neutral" size="sm">
+                      {stageJobs.length}
+                    </Badge>
                   </div>
 
-                  {/* Stage Card List */}
-                  <div className="space-y-3 overflow-y-auto flex-1 pr-1">
+                  {/* Stage Cards Container */}
+                  <div className="space-y-2.5 overflow-y-auto flex-1 pr-1 min-w-0">
                     {stageJobs.length === 0 ? (
-                      <div className="p-4 text-center erp-muted text-xs border border-dashed rounded-xl" style={{ borderColor: 'var(--border)' }}>
-                        No jobs in stage
+                      <div
+                        className="p-4 text-center text-xs rounded-[var(--md-sys-shape-corner-medium)]"
+                        style={{
+                          border: '1px dashed var(--md-sys-color-outline-variant)',
+                          color: 'var(--md-sys-color-on-surface-variant)',
+                        }}
+                      >
+                        No jobs
                       </div>
                     ) : (
                       stageJobs.map((job) => (
                         <div
                           key={job.id}
                           onClick={() => navigate(`/jobs/${job.id}`)}
-                          className="p-3.5 rounded-xl border space-y-2 cursor-pointer transition-all hover:border-[var(--accent)]"
-                          style={{ background: 'var(--muted)', borderColor: 'var(--border)' }}
+                          style={{
+                            backgroundColor: 'var(--md-sys-color-surface-container-lowest)',
+                            border: '1px solid var(--md-sys-color-outline-variant)',
+                            borderRadius: 'var(--md-sys-shape-corner-medium)',
+                          }}
+                          className="p-3 space-y-2 cursor-pointer transition-all hover:border-[var(--md-sys-color-primary)] hover:shadow-xs min-w-0"
                         >
-                          <div className="flex items-center justify-between">
-                            <span className="font-mono font-bold text-xs" style={{ color: 'var(--accent)' }}>
+                          <div className="flex items-center justify-between gap-1.5 min-w-0">
+                            <span className="mono-num font-bold text-xs truncate" style={{ color: 'var(--md-sys-color-primary)' }}>
                               {job.jobId}
                             </span>
-                            <span className={`erp-pill ${
-                              job.priority === 'Urgent' ? 'erp-pill-danger' : 'erp-pill-neutral'
-                            } text-[10px]`}>
+                            <Badge
+                              variant={job.priority === 'Urgent' ? 'destructive' : 'neutral'}
+                              size="sm"
+                            >
                               {job.priority}
-                            </span>
+                            </Badge>
                           </div>
 
-                          <div>
-                            <div className="font-bold text-xs">{job.customerName}</div>
-                            <div className="text-[11px] font-mono erp-muted">
+                          <div className="min-w-0">
+                            <div className="font-semibold text-xs text-[var(--md-sys-color-on-surface)] truncate">
+                              {job.customerName}
+                            </div>
+                            <div className="text-[11px] mono-num truncate" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
                               {job.vehicle?.plateNumber} • {job.vehicle?.model}
                             </div>
                           </div>
 
-                          <div className="text-[11px] erp-muted truncate">
+                          <div className="text-[11px] truncate" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
                             {job.serviceType}
                           </div>
 
-                          <div className="pt-2 border-t flex items-center justify-between text-xs" style={{ borderColor: 'var(--border)' }}>
-                            <span className="font-mono font-bold">{formatMVR(job.quotedAmount)}</span>
-                            <span className="text-[11px] hover:underline flex items-center gap-0.5" style={{ color: 'var(--accent)' }}>
-                              <span>Details</span>
+                          <div
+                            className="pt-2 flex items-center justify-between text-xs min-w-0"
+                            style={{ borderTop: '1px solid var(--md-sys-color-outline-variant)' }}
+                          >
+                            <span className="mono-num font-bold text-[var(--md-sys-color-on-surface)] truncate">
+                              {formatMVR(job.quotedAmount)}
+                            </span>
+                            <span
+                              className="text-[11px] font-semibold flex items-center gap-0.5 hover:underline shrink-0"
+                              style={{ color: 'var(--md-sys-color-primary)' }}
+                            >
+                              <span>Inspect</span>
                               <ChevronRight size={12} />
                             </span>
                           </div>
@@ -229,61 +298,73 @@ export const JobsView: React.FC = () => {
         </div>
       )}
 
-      {/* Table View */}
+      {/* Table View Mode */}
       {viewMode === 'list' && (
-        <div className="erp-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="erp-table">
-              <thead>
-                <tr>
-                  <th>Job ID</th>
-                  <th>Customer & Vehicle</th>
-                  <th>Service Type</th>
-                  <th>Bay</th>
-                  <th className="text-right">Quoted Amount</th>
-                  <th className="text-right">Est. Margin</th>
-                  <th className="text-center">Status</th>
-                  <th className="text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredJobs.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center erp-muted py-8">
-                      No work orders matching search criteria.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredJobs.map((job) => (
-                    <tr
-                      key={job.id}
-                      data-clickable="true"
-                      onClick={() => navigate(`/jobs/${job.id}`)}
-                    >
-                      <td className="font-mono font-bold" style={{ color: 'var(--accent)' }}>{job.jobId}</td>
-                      <td>
-                        <div className="font-bold text-xs">{job.customerName}</div>
-                        <div className="text-[11px] erp-muted font-mono">{job.vehicle?.plateNumber} ({job.vehicle?.model})</div>
-                      </td>
-                      <td className="text-xs">{job.serviceType}</td>
-                      <td className="text-xs erp-muted">{job.bayNumber || 'Main Bay'}</td>
-                      <td className="text-right font-mono font-bold">{formatMVR(job.quotedAmount)}</td>
-                      <td className="text-right font-mono erp-money-in">{job.targetMarginPercentage}%</td>
-                      <td className="text-center">
-                        <span className="erp-pill erp-pill-info text-[11px]">{job.status}</span>
-                      </td>
-                      <td className="text-right">
-                        <span className="text-xs font-semibold hover:underline" style={{ color: 'var(--accent)' }}>
-                          Inspect →
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <Table>
+          <TableHeader>
+            <tr>
+              <TableHead>Job ID</TableHead>
+              <TableHead>Customer & Vehicle</TableHead>
+              <TableHead className="hidden sm:table-cell">Service</TableHead>
+              <TableHead className="hidden md:table-cell">Bay</TableHead>
+              <TableHead alignRight>Amount</TableHead>
+              <TableHead alignRight className="hidden sm:table-cell">Margin</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead alignRight>Action</TableHead>
+            </tr>
+          </TableHeader>
+          <TableBody>
+            {filteredJobs.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                  No work orders matching search criteria.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredJobs.map((job) => (
+                <TableRow
+                  key={job.id}
+                  onClick={() => navigate(`/jobs/${job.id}`)}
+                  className="cursor-pointer"
+                >
+                  <TableCell className="font-bold" style={{ color: 'var(--md-sys-color-primary)' }}>
+                    <span className="mono-num">{job.jobId}</span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-semibold text-[var(--md-sys-color-on-surface)] truncate max-w-[160px] sm:max-w-none">
+                      {job.customerName}
+                    </div>
+                    <div className="text-[11px] mono-num truncate" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                      {job.vehicle?.plateNumber} ({job.vehicle?.model})
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                    {job.serviceType}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                    {job.bayNumber || 'Main Bay'}
+                  </TableCell>
+                  <TableCell isNumeric className="font-bold text-[var(--md-sys-color-on-surface)]">
+                    {formatMVR(job.quotedAmount)}
+                  </TableCell>
+                  <TableCell isNumeric style={{ color: 'var(--positive)' }} className="hidden sm:table-cell">
+                    {job.targetMarginPercentage}%
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusBadgeVariant(job.status)} size="sm">
+                      {job.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell alignRight>
+                    <span className="text-xs font-semibold hover:underline" style={{ color: 'var(--md-sys-color-primary)' }}>
+                      Inspect →
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       )}
 
       <CreateJobModal />

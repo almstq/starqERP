@@ -17,6 +17,21 @@ import {
 import { useERP } from '../../context/ERPContext';
 import { CreateInvoiceModal } from './CreateInvoiceModal';
 import { RecordPaymentModal } from '../payments/RecordPaymentModal';
+import {
+  Button,
+  Input,
+  Surface,
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  Badge,
+  ActionGroup,
+  ResponsiveGrid,
+  type BadgeVariant,
+} from '../ui';
 
 export const InvoicesView: React.FC = () => {
   const navigate = useNavigate();
@@ -45,74 +60,103 @@ export const InvoicesView: React.FC = () => {
   const totalInvoicedSum = invoices.reduce((s, i) => s + i.totalAmount, 0);
   const totalPaidSum = invoices.reduce((sum, i) => sum + i.amountPaid, 0);
 
+  const getStatusBadgeVariant = (status: string): BadgeVariant => {
+    switch (status) {
+      case 'Paid': return 'positive';
+      case 'Overdue': return 'destructive';
+      case 'Partially Paid': return 'warning';
+      default: return 'neutral';
+    }
+  };
+
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-4 sm:space-y-6 pb-12 w-full min-w-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="erp-h1 text-2xl">Commercial Invoices</h1>
-            <span className="erp-pill erp-pill-neutral text-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 min-w-0">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] truncate">
+              Commercial Invoices
+            </h1>
+            <Badge variant="neutral" size="sm">
               {invoices.length} Invoices
-            </span>
+            </Badge>
           </div>
-          <p className="erp-muted mt-0.5 text-xs">
-            Track customer billings, payment settlements, and outstanding balances
+          <p className="mt-0.5 text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">
+            Track customer billings, payment settlements, and balances
           </p>
         </div>
 
-        <button
-          onClick={() => setIsCreateInvoiceOpen(true)}
-          className="erp-btn-primary flex items-center gap-2 self-start sm:self-auto"
-        >
-          <Plus size={16} />
-          <span>New Invoice</span>
-        </button>
+        <ActionGroup align="right" className="shrink-0">
+          <Button
+            variant="filled"
+            size="sm"
+            onClick={() => setIsCreateInvoiceOpen(true)}
+            icon={<Plus size={15} />}
+          >
+            <span>New Invoice</span>
+          </Button>
+        </ActionGroup>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="erp-card p-4">
-          <span className="erp-muted block text-xs font-semibold">Total Invoiced (MTD)</span>
-          <div className="erp-figure text-2xl font-bold mt-1">
+      <ResponsiveGrid columns="auto" minItemWidth="200px" gap="sm">
+        <Surface variant="filled" level={1} padding="sm" container className="space-y-1 min-w-0">
+          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+            Total Invoiced (MTD)
+          </span>
+          <div className="text-base sm:text-lg font-bold mono-num text-[var(--md-sys-color-on-surface)] truncate">
             {formatMVR(totalInvoicedSum, false)}
           </div>
-        </div>
+        </Surface>
 
-        <div className="erp-card p-4">
-          <span className="erp-muted block text-xs font-semibold">Outstanding Receivables</span>
-          <div className={`erp-figure text-2xl font-bold mt-1 ${totalOutstandingInvoices > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+        <Surface variant="filled" level={1} padding="sm" container className="space-y-1 min-w-0">
+          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+            Outstanding Receivables
+          </span>
+          <div
+            className="text-base sm:text-lg font-bold mono-num truncate"
+            style={{ color: totalOutstandingInvoices > 0 ? 'var(--md-sys-color-error)' : 'var(--positive)' }}
+          >
             {formatMVR(totalOutstandingInvoices, false)}
           </div>
-        </div>
+        </Surface>
 
-        <div className="erp-card p-4">
-          <span className="erp-muted block text-xs font-semibold">Settled Collections</span>
-          <div className="erp-figure text-2xl font-bold erp-money-in mt-1">
+        <Surface variant="filled" level={1} padding="sm" container className="space-y-1 min-w-0">
+          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+            Settled Collections
+          </span>
+          <div className="text-base sm:text-lg font-bold mono-num truncate" style={{ color: 'var(--positive)' }}>
             {formatMVR(totalPaidSum, false)}
           </div>
-        </div>
-      </div>
+        </Surface>
+      </ResponsiveGrid>
 
       {/* Toolbar & Search */}
-      <div className="erp-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search size={15} className="erp-muted absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
+      <Surface variant="filled" level={1} padding="sm" className="flex flex-col md:flex-row md:items-center justify-between gap-3 min-w-0">
+        <div className="relative flex-1 w-full md:max-w-md min-w-0">
+          <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by invoice #, customer name, job ID..."
-            className="erp-input w-full pl-9 text-xs"
+            placeholder="Search by invoice #, customer name, job ID…"
+            icon={<Search size={14} />}
           />
         </div>
 
-        <div className="flex items-center gap-2 text-xs">
-          <span className="erp-muted">Status:</span>
+        <div className="flex items-center gap-2 text-xs shrink-0 min-w-0">
+          <span className="text-[11px] font-medium shrink-0" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+            Status:
+          </span>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="erp-input py-1 text-xs"
+            style={{
+              backgroundColor: 'var(--md-sys-color-surface-container-high)',
+              color: 'var(--md-sys-color-on-surface)',
+              borderColor: 'var(--md-sys-color-outline-variant)',
+              borderRadius: 'var(--md-sys-shape-corner-small)',
+            }}
+            className="h-8 sm:h-9 px-2.5 text-xs border outline-none cursor-pointer"
           >
             <option value="All">All Invoices</option>
             <option value="Paid">Paid</option>
@@ -121,84 +165,80 @@ export const InvoicesView: React.FC = () => {
             <option value="Overdue">Overdue</option>
           </select>
         </div>
-      </div>
+      </Surface>
 
-      {/* Invoices Table */}
-      <div className="erp-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="erp-table">
-            <thead>
-              <tr>
-                <th>Invoice #</th>
-                <th>Customer & Job</th>
-                <th>Issue Date</th>
-                <th>Due Date</th>
-                <th className="text-right">Total Amount</th>
-                <th className="text-right">Amount Paid</th>
-                <th className="text-right">Balance Due</th>
-                <th className="text-center">Status</th>
-                <th className="text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredInvoices.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="text-center erp-muted py-8">
-                    No commercial invoices matching filter criteria.
-                  </td>
-                </tr>
-              ) : (
-                filteredInvoices.map((inv) => (
-                  <tr
-                    key={inv.id}
-                    data-clickable="true"
-                    onClick={() => navigate(`/invoices/${inv.id}`)}
-                  >
-                    <td>
-                      <div className="font-mono font-bold" style={{ color: 'var(--accent)' }}>
-                        {inv.invoiceNumber}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="font-bold text-xs">{inv.customerName}</div>
-                      {inv.linkedJobNumber && (
-                        <div className="text-[11px] font-mono erp-muted">Job: {inv.linkedJobNumber}</div>
-                      )}
-                    </td>
-                    <td className="text-xs">{inv.date}</td>
-                    <td className="text-xs erp-muted">{inv.dueDate}</td>
-                    <td className="text-right font-mono font-bold">{formatMVR(inv.totalAmount)}</td>
-                    <td className="text-right font-mono erp-money-in">{formatMVR(inv.amountPaid)}</td>
-                    <td className="text-right font-mono font-bold">
-                      {inv.balanceDue > 0 ? (
-                        <span className="text-rose-400">{formatMVR(inv.balanceDue)}</span>
-                      ) : (
-                        <span className="text-emerald-400">0.00</span>
-                      )}
-                    </td>
-                    <td className="text-center">
-                      <span className={`erp-pill ${
-                        inv.status === 'Paid'
-                          ? 'erp-pill-positive'
-                          : inv.status === 'Overdue'
-                          ? 'erp-pill-danger'
-                          : 'erp-pill-warning'
-                      } text-[11px]`}>
-                        {inv.status}
-                      </span>
-                    </td>
-                    <td className="text-right">
-                      <span className="text-xs font-semibold hover:underline" style={{ color: 'var(--accent)' }}>
-                        Inspect →
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Invoices Table in Contained Scroll Region */}
+      <Table>
+        <TableHeader>
+          <tr>
+            <TableHead>Invoice #</TableHead>
+            <TableHead>Customer & Job</TableHead>
+            <TableHead className="hidden sm:table-cell">Date</TableHead>
+            <TableHead className="hidden md:table-cell">Due Date</TableHead>
+            <TableHead alignRight>Total</TableHead>
+            <TableHead alignRight className="hidden sm:table-cell">Paid</TableHead>
+            <TableHead alignRight>Balance Due</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead alignRight>Action</TableHead>
+          </tr>
+        </TableHeader>
+        <TableBody>
+          {filteredInvoices.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={9} className="text-center py-8" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                No commercial invoices matching filter criteria.
+              </TableCell>
+            </TableRow>
+          ) : (
+            filteredInvoices.map((inv) => (
+              <TableRow
+                key={inv.id}
+                onClick={() => navigate(`/invoices/${inv.id}`)}
+                className="cursor-pointer"
+              >
+                <TableCell className="font-bold" style={{ color: 'var(--md-sys-color-primary)' }}>
+                  <span className="mono-num">{inv.invoiceNumber}</span>
+                </TableCell>
+                <TableCell>
+                  <div className="font-semibold text-xs text-[var(--md-sys-color-on-surface)] truncate max-w-[140px] sm:max-w-none">{inv.customerName}</div>
+                  {inv.linkedJobNumber && (
+                    <div className="text-[11px] mono-num truncate" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Job: {inv.linkedJobNumber}</div>
+                  )}
+                </TableCell>
+                <TableCell className="hidden sm:table-cell text-xs" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                  {inv.date}
+                </TableCell>
+                <TableCell className="hidden md:table-cell text-xs" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                  {inv.dueDate}
+                </TableCell>
+                <TableCell isNumeric className="font-bold text-[var(--md-sys-color-on-surface)]">
+                  {formatMVR(inv.totalAmount)}
+                </TableCell>
+                <TableCell isNumeric className="hidden sm:table-cell" style={{ color: 'var(--positive)' }}>
+                  {formatMVR(inv.amountPaid)}
+                </TableCell>
+                <TableCell isNumeric className="font-bold">
+                  {inv.balanceDue > 0 ? (
+                    <span style={{ color: 'var(--md-sys-color-error)' }}>{formatMVR(inv.balanceDue)}</span>
+                  ) : (
+                    <span style={{ color: 'var(--positive)' }}>0.00</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={getStatusBadgeVariant(inv.status)} size="sm">
+                    {inv.status}
+                  </Badge>
+                </TableCell>
+                <TableCell alignRight>
+                  <span className="text-xs font-semibold hover:underline" style={{ color: 'var(--md-sys-color-primary)' }}>
+                    Inspect →
+                  </span>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
 
       <CreateInvoiceModal />
       <RecordPaymentModal />

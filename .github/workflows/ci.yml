@@ -57,6 +57,12 @@ jobs:
       - name: Running System Audit Gate
         run: node scripts/audit-running-system.mjs
 
+      - name: UI System Consistency & Design Token Gate
+        run: node tests/ui_system_consistency.test.mjs
+
+      - name: UI Adaptive Layout & Responsive Architecture Gate
+        run: node tests/ui_responsive_system.test.mjs
+
       - name: Deno Contract Test Suite (164 tests)
         run: deno test --allow-read tests/contract/commands_test.ts
 
