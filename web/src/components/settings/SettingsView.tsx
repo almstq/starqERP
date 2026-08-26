@@ -11,7 +11,8 @@ import {
   Globe,
   Plus,
   Sparkles,
-  MapPin
+  MapPin,
+  LifeBuoy
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { GstRegistrationStatus } from '../../types/erp';
@@ -19,8 +20,9 @@ import { Badge } from '../common/Badge';
 import { RolesPermissionsTab } from './RolesPermissionsTab';
 import { UsersManagementTab } from './UsersManagementTab';
 import { WorkflowsConfigTab } from './WorkflowsConfigTab';
+import { SupportTab } from './SupportTab';
 
-type SettingsSubTab = 'profile' | 'roles' | 'users' | 'workflows';
+type SettingsSubTab = 'profile' | 'roles' | 'users' | 'workflows' | 'support';
 
 export const SettingsView: React.FC = () => {
   const { currentTenant, updateTenant, setIsSetupModalOpen } = useERP();
@@ -104,7 +106,8 @@ export const SettingsView: React.FC = () => {
           { id: 'profile', label: 'Company Profile & Tax', icon: Building2 },
           { id: 'roles', label: 'Roles & Permissions', icon: ShieldCheck },
           { id: 'users', label: 'Users & Authorizations', icon: Users },
-          { id: 'workflows', label: 'Configurable Workflows', icon: GitBranch }
+          { id: 'workflows', label: 'Configurable Workflows', icon: GitBranch },
+          { id: 'support', label: 'Support & Escalation', icon: LifeBuoy }
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeSubTab === tab.id;
@@ -325,6 +328,8 @@ export const SettingsView: React.FC = () => {
       {activeSubTab === 'users' && <UsersManagementTab />}
 
       {activeSubTab === 'workflows' && <WorkflowsConfigTab />}
+      
+      {activeSubTab === 'support' && <SupportTab />}
     </div>
   );
 };
