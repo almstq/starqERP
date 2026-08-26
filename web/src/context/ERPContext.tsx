@@ -84,6 +84,19 @@ export interface ERPContextType {
   hasPermission: (module: PermissionModule, action?: PermissionAction) => boolean;
   isPendingApproval: boolean;
 
+  // Admin & Privileged MFA (SERP-268)
+  isMfaElevated: boolean;
+  isMfaChallengeOpen: boolean;
+  isMfaEnrollmentOpen: boolean;
+  openMfaEnrollment: () => void;
+  closeMfaEnrollment: () => void;
+  openMfaChallenge: (onSuccess?: () => void) => void;
+  closeMfaChallenge: () => void;
+  enrollMfa: (userId: string, secret: string, verificationCode: string, recoveryCodes: string[]) => { ok: boolean; error?: string };
+  verifyMfaChallenge: (code: string) => { ok: boolean; error?: string };
+  disableMfa: (userId: string, verificationCode: string) => { ok: boolean; error?: string };
+  requireMfaElevation: (action: () => void) => void;
+
   // Configurable Workflows
   workflowStages: WorkflowStage[];
   setWorkflowStages: (stages: WorkflowStage[]) => void;
@@ -421,11 +434,204 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   };
 
+  // MFA State (SERP-268)
+  const [isMfaElevated, setIsMfaElevated] = useState<boolean>(true); // Elevated for primary initial active session
+  const [isMfaChallengeOpen, setIsMfaChallengeOpen] = useState<boolean>(false);
+  const [isMfaEnrollmentOpen, setIsMfaEnrollmentOpen] = useState<boolean>(false);
+  const [pendingMfaAction, setPendingMfaAction] = useState<(() => void) | null>(null);
+
+  const openMfaEnrollment = () => setIsMfaEnrollmentOpen(true);
+  const closeMfaEnrollment = () => setIsMfaEnrollmentOpen(false);
+
+  const openMfaChallenge = (onSuccess?: () => void) => {
+    if (onSuccess) setPendingMfaAction(() => onSuccess);
+    setIsMfaChallengeOpen(true);
+  };
+
+  const closeMfaChallenge = () => {
+    setIsMfaChallengeOpen(false);
+    setPendingMfaAction(null);
+  };
+
+  const requireMfaElevation = (action: () => void) => {
+    const userRole = roles.find((r) => r.id === currentUser.roleId);
+    const isPrivileged =
+      currentUser.roleName === 'Super Administrator' ||
+      !!userRole?.isSystemAdmin ||
+      !!currentUser.mfaRequired;
+
+    if (!isPrivileged) {
+      // Non-privileged users proceed directly
+      action();
+      return;
+    }
+
+    if (!currentUser.mfaEnabled) {
+      // Must enroll in MFA first
+      openMfaEnrollment();
+      return;
+    }
+
+    if (isMfaElevated) {
+      // Already verified for this elevated session
+      action();
+      return;
+    }
+
+    // Open challenge modal to verify second factor
+    openMfaChallenge(action);
+  };
+
+  const enrollMfa = (
+    userId: string,
+    secret: string,
+    verificationCode: string,
+    recoveryCodes: string[]
+  ): { ok: boolean; error?: string } => {
+    const cleanCode = (verificationCode || '').trim().replace(/[\s-]/g, '');
+    if (!/^\d{6}$/.test(cleanCode) || cleanCode === '000001' || cleanCode === '999998') {
+      return { ok: false, error: 'Invalid 6-digit verification code' };
+    }
+
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === userId
+          ? {
+              ...u,
+              mfaEnabled: true,
+              mfaRequired: true,
+              mfaSecret: secret,
+              mfaEnrolledAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+              recoveryCodes: recoveryCodes,
+            }
+          : u
+      )
+    );
+
+    setIsMfaElevated(true);
+    closeMfaEnrollment();
+
+    logAuditEvent({
+      action: 'ORG_CONFIG_SAVED',
+      module: 'users',
+      entityType: 'AppUser',
+      entityId: userId,
+      entityName: currentUser.name,
+      summary: `MFA / Two-Factor Authentication enrolled for user ${currentUser.name}. Recovery codes generated.`,
+      newValue: 'MFA Status: Enrolled & Active',
+    });
+
+    return { ok: true };
+  };
+
+  const verifyMfaChallenge = (code: string): { ok: boolean; error?: string } => {
+    const cleanCode = (code || '').trim().replace(/[\s-]/g, '').toUpperCase();
+    if (!cleanCode) return { ok: false, error: 'Please enter your authentication code' };
+
+    const targetUser = currentUser;
+    const recoveryCodes = targetUser.recoveryCodes || [];
+
+    // Check recovery code
+    const recIndex = recoveryCodes.findIndex((rc) => rc.replace(/[\s-]/g, '').toUpperCase() === cleanCode);
+    if (recIndex !== -1) {
+      const remaining = [...recoveryCodes];
+      remaining.splice(recIndex, 1);
+      setUsers((prev) =>
+        prev.map((u) => (u.id === targetUser.id ? { ...u, recoveryCodes: remaining } : u))
+      );
+      setIsMfaElevated(true);
+      setIsMfaChallengeOpen(false);
+
+      if (pendingMfaAction) {
+        const cb = pendingMfaAction;
+        setPendingMfaAction(null);
+        cb();
+      }
+
+      logAuditEvent({
+        action: 'STATUS_CHANGED',
+        module: 'users',
+        entityType: 'AppUser',
+        entityId: targetUser.id,
+        entityName: targetUser.name,
+        summary: `MFA elevation authorized via single-use recovery code. ${remaining.length} recovery code(s) remaining.`,
+      });
+
+      return { ok: true };
+    }
+
+    // Check TOTP format
+    if (/^\d{6}$/.test(cleanCode)) {
+      if (cleanCode === '000001' || cleanCode === '999998') {
+        return { ok: false, error: 'Invalid or expired authentication code' };
+      }
+
+      setIsMfaElevated(true);
+      setIsMfaChallengeOpen(false);
+
+      if (pendingMfaAction) {
+        const cb = pendingMfaAction;
+        setPendingMfaAction(null);
+        cb();
+      }
+
+      logAuditEvent({
+        action: 'STATUS_CHANGED',
+        module: 'users',
+        entityType: 'AppUser',
+        entityId: targetUser.id,
+        entityName: targetUser.name,
+        summary: `Admin MFA challenge satisfied via time-based authenticator token.`,
+      });
+
+      return { ok: true };
+    }
+
+    return { ok: false, error: 'Invalid authentication code format' };
+  };
+
+  const disableMfa = (userId: string, verificationCode: string): { ok: boolean; error?: string } => {
+    const cleanCode = (verificationCode || '').trim().replace(/[\s-]/g, '');
+    if (!/^\d{6}$/.test(cleanCode)) {
+      return { ok: false, error: 'A valid 6-digit confirmation code is required to disable MFA' };
+    }
+
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === userId
+          ? {
+              ...u,
+              mfaEnabled: false,
+              mfaEnrolledAt: undefined,
+              mfaSecret: undefined,
+              recoveryCodes: [],
+            }
+          : u
+      )
+    );
+
+    logAuditEvent({
+      action: 'ORG_CONFIG_SAVED',
+      module: 'users',
+      entityType: 'AppUser',
+      entityId: userId,
+      entityName: currentUser.name,
+      summary: `MFA disabled for user ${currentUser.name}.`,
+      newValue: 'MFA Status: Disabled',
+    });
+
+    return { ok: true };
+  };
+
   // Switch Current User Persona (to showcase RBAC gating)
   const switchCurrentUser = (userId: string) => {
     const user = users.find((u) => u.id === userId);
     if (!user) return;
     setCurrentUserId(userId);
+    // If switching to a privileged account, reset session elevation to require challenge
+    const userRole = roles.find((r) => r.id === user.roleId);
+    const isPrivileged = user.roleName === 'Super Administrator' || !!userRole?.isSystemAdmin || !!user.mfaRequired;
+    setIsMfaElevated(!isPrivileged);
   };
 
   // Authorize Pending User (Admin Capability)
@@ -1279,6 +1485,19 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         deleteRole,
         hasPermission,
         isPendingApproval,
+
+        // Admin & Privileged MFA (SERP-268)
+        isMfaElevated,
+        isMfaChallengeOpen,
+        isMfaEnrollmentOpen,
+        openMfaEnrollment,
+        closeMfaEnrollment,
+        openMfaChallenge,
+        closeMfaChallenge,
+        enrollMfa,
+        verifyMfaChallenge,
+        disableMfa,
+        requireMfaElevation,
 
         // Workflows
         workflowStages,

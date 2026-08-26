@@ -433,6 +433,11 @@ export interface AppUser {
   authorizedAt?: string;
   lastActiveAt: string;
   jobTitle?: string;
+  mfaEnabled?: boolean;
+  mfaRequired?: boolean;
+  mfaEnrolledAt?: string;
+  mfaSecret?: string;
+  recoveryCodes?: string[];
 }
 
 // Activity / Audit Log Entry (The Owner's Evidence)

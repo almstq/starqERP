@@ -86,6 +86,10 @@ import {
   validateExpenseCommandPayload,
   validateCustomerCommandPayload,
   validateAICopilotProxyRequest,
+  isPrivilegedRole,
+  requiresMfaForAction,
+  validateMfaChallenge,
+  PRIVILEGED_ACTIONS,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -1780,6 +1784,74 @@ Deno.test('SERP-275: migration 0021 safely handles append-only triggers during t
   assert(migration0021.includes('enable trigger sod_exceptions_append_only'));
   assert(migration0021.includes('delete from public.organisations where id in (old_st, old_ci)'));
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-268: Admin & Privileged Multi-Factor Authentication (MFA) Boundary
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-268: isPrivilegedRole recognizes administrator and system admin roles', () => {
+  assertEquals(isPrivilegedRole('superadmin'), true);
+  assertEquals(isPrivilegedRole('role-superadmin'), true);
+  assertEquals(isPrivilegedRole('owner'), true);
+  assertEquals(isPrivilegedRole('director'), true);
+  assertEquals(isPrivilegedRole('managing_director'), true);
+  assertEquals(isPrivilegedRole('technician', true), true); // system admin flag
+  assertEquals(isPrivilegedRole('technician', false), false);
+  assertEquals(isPrivilegedRole('counter', false), false);
+});
+
+Deno.test('SERP-268: requiresMfaForAction enforces MFA on privileged operational actions', () => {
+  for (const act of PRIVILEGED_ACTIONS) {
+    assertEquals(requiresMfaForAction(act, 'technician'), true);
+  }
+  assertEquals(requiresMfaForAction('CREATE_JOB', 'superadmin'), true); // admin persona
+  assertEquals(requiresMfaForAction('CREATE_JOB', 'technician'), false);
+});
+
+Deno.test('SERP-268: validateMfaChallenge enforces 2FA requirement on un-elevated privileged session', () => {
+  const res = validateMfaChallenge({
+    code: '',
+    isPrivileged: true,
+    sessionMfaVerified: false,
+  });
+  assertEquals(res.valid, false);
+  assertEquals(res.error, 'mfa_required');
+});
+
+Deno.test('SERP-268: validateMfaChallenge accepts valid 6-digit TOTP token', () => {
+  const res = validateMfaChallenge({
+    code: '123456',
+    isPrivileged: true,
+    sessionMfaVerified: false,
+  });
+  assertEquals(res.valid, true);
+  assertEquals(res.isRecoveryCodeUsed, false);
+});
+
+Deno.test('SERP-268: validateMfaChallenge consumes single-use emergency recovery code', () => {
+  const initialCodes = ['REC1-9921', 'REC2-4412', 'REC3-8871'];
+  const res = validateMfaChallenge({
+    code: 'REC1-9921',
+    recoveryCodes: initialCodes,
+    isPrivileged: true,
+    sessionMfaVerified: false,
+  });
+  assertEquals(res.valid, true);
+  assertEquals(res.isRecoveryCodeUsed, true);
+  assertEquals(res.remainingRecoveryCodes?.length, 2);
+  assert(!res.remainingRecoveryCodes?.includes('REC1-9921'));
+});
+
+Deno.test('SERP-268: validateMfaChallenge rejects invalid/expired token codes', () => {
+  const res = validateMfaChallenge({
+    code: '000001',
+    isPrivileged: true,
+    sessionMfaVerified: false,
+  });
+  assertEquals(res.valid, false);
+  assertEquals(res.error, 'invalid_mfa_code');
+});
+
 
 
 

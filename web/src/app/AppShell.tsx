@@ -6,6 +6,8 @@ import {
   Search, Bell,
 } from 'lucide-react';
 import { useERP } from '../context/ERPContext';
+import { MfaSetupModal } from '../components/auth/MfaSetupModal';
+import { MfaChallengeModal } from '../components/auth/MfaChallengeModal';
 
 /**
  * The application shell.
@@ -155,6 +157,10 @@ export const AppShell: React.FC = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Security & Authentication Modals (SERP-268) */}
+      <MfaSetupModal />
+      <MfaChallengeModal />
     </div>
   );
 };

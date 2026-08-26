@@ -1579,7 +1579,12 @@ export const INITIAL_USERS: import('../types/erp').AppUser[] = [
     authorizedBy: 'System Bootstrapper',
     authorizedAt: '2023-01-15 09:00',
     lastActiveAt: 'Just now',
-    jobTitle: 'Managing Director & Founder'
+    jobTitle: 'Managing Director & Founder',
+    mfaEnabled: true,
+    mfaRequired: true,
+    mfaEnrolledAt: '2026-08-01 10:00',
+    mfaSecret: 'JBSWY3DPEHPK3PXP',
+    recoveryCodes: ['REC1-9921', 'REC2-4412', 'REC3-8871', 'REC4-3319', 'REC5-7762', 'REC6-1184', 'REC7-5509', 'REC8-2234']
   },
   {
     id: 'user-2',
@@ -1594,7 +1599,9 @@ export const INITIAL_USERS: import('../types/erp').AppUser[] = [
     authorizedBy: 'Ali Musthaq',
     authorizedAt: '2023-03-01 11:00',
     lastActiveAt: '12 mins ago',
-    jobTitle: 'Senior Chief Accountant'
+    jobTitle: 'Senior Chief Accountant',
+    mfaEnabled: false,
+    mfaRequired: false
   },
   {
     id: 'user-3',
