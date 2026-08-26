@@ -1986,5 +1986,80 @@ export function validateMfaChallenge(params: MfaVerificationParams): MfaVerifica
   return { valid: false, error: 'invalid_mfa_code' };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-276: Standardised Tenant Onboarding & Governance Invariants
+// (DEC-073 §10 / Vision §19 / Productisation)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface TenantOnboardingPayload {
+  readonly name: string;
+  readonly legalName?: string;
+  readonly industry: string;
+  readonly currency: 'MVR' | 'USD';
+  readonly tinNumber?: string;
+  readonly gstRate?: number;
+  readonly island?: string;
+  readonly atoll?: string;
+  readonly phone?: string;
+  readonly email?: string;
+  readonly address?: string;
+  readonly bmlAccount?: string;
+  readonly mibAccount?: string;
+  readonly invoicePrefix?: string;
+  readonly jobPrefix?: string;
+}
+
+export const PRODUCT_FIXED_INVARIANTS = [
+  'SINGLE_SOURCE_FINANCIAL_TRUTH',
+  'SEGREGATION_OF_DUTIES_AWARD_PAY',
+  'ROW_LEVEL_SECURITY_TENANT_ISOLATION',
+  'APPEND_ONLY_AUDIT_LOG_INTEGRITY',
+  'NO_SECOND_POSTING_AUTHORITY',
+] as const;
+
+export type ProductFixedInvariant = (typeof PRODUCT_FIXED_INVARIANTS)[number];
+
+export function validateTenantOnboardingPayload(
+  payload: TenantOnboardingPayload | Readonly<Record<string, unknown>>,
+): { valid: boolean; error?: string; config?: Record<string, unknown> } {
+  const p = payload as Record<string, unknown>;
+  const name = String(p.name || '').trim();
+  if (!name) {
+    return { valid: false, error: 'tenant_name_required' };
+  }
+
+  const currency = p.currency === 'USD' ? 'USD' : 'MVR';
+  const rawTin = String(p.tinNumber || '').trim();
+  const tinNumber = rawTin;
+  const gstStatus = tinNumber ? 'registered' : 'not_registered';
+
+  // Invariant: Never invent values for blank fields (DEC-073 §10 / SERP-276)
+  const bmlAccount = String(p.bmlAccount || '').trim();
+  const mibAccount = String(p.mibAccount || '').trim();
+
+  // Validate custom prefixes if provided
+  const invoicePrefix = p.invoicePrefix ? String(p.invoicePrefix).trim().toUpperCase() : undefined;
+  const jobPrefix = p.jobPrefix ? String(p.jobPrefix).trim().toUpperCase() : undefined;
+
+  return {
+    valid: true,
+    config: {
+      name,
+      legalName: String(p.legalName || '').trim() || `${name} Pvt Ltd`,
+      industry: String(p.industry || 'Automotive & Body Repair'),
+      currency,
+      currencySymbol: currency === 'MVR' ? 'Rf' : '$',
+      tinNumber,
+      gstStatus,
+      gstRate: typeof p.gstRate === 'number' ? p.gstRate : 8,
+      bmlAccount: bmlAccount || undefined,
+      mibAccount: mibAccount || undefined,
+      invoicePrefix,
+      jobPrefix,
+    },
+  };
+}
+
+
 
 

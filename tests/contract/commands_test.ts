@@ -90,6 +90,8 @@ import {
   requiresMfaForAction,
   validateMfaChallenge,
   PRIVILEGED_ACTIONS,
+  validateTenantOnboardingPayload,
+  PRODUCT_FIXED_INVARIANTS,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -1851,6 +1853,61 @@ Deno.test('SERP-268: validateMfaChallenge rejects invalid/expired token codes', 
   assertEquals(res.valid, false);
   assertEquals(res.error, 'invalid_mfa_code');
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-276: Standardised Tenant Onboarding Wizard & Governance Invariants
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-276: validateTenantOnboardingPayload requires non-empty organization name', () => {
+  const res = validateTenantOnboardingPayload({
+    name: '',
+    industry: 'Automotive & Body Repair',
+    currency: 'MVR',
+  });
+  assertEquals(res.valid, false);
+  assertEquals(res.error, 'tenant_name_required');
+});
+
+Deno.test('SERP-276: validateTenantOnboardingPayload never invents TIN when blank', () => {
+  const res = validateTenantOnboardingPayload({
+    name: 'Thilafushi Marine Slipway',
+    industry: 'Marine & Boatyard',
+    currency: 'MVR',
+    tinNumber: '', // left blank
+    bmlAccount: '',
+  });
+  assertEquals(res.valid, true);
+  assertEquals(res.config?.tinNumber, '');
+  assertEquals(res.config?.gstStatus, 'not_registered');
+  assertEquals(res.config?.bmlAccount, undefined);
+});
+
+Deno.test('SERP-276: validateTenantOnboardingPayload preserves valid TIN and custom prefixes', () => {
+  const res = validateTenantOnboardingPayload({
+    name: 'Apex Clinic Maldives',
+    industry: 'Medical Clinic & Diagnostics',
+    currency: 'USD',
+    tinNumber: '1099882GST501',
+    bmlAccount: '7730000189201',
+    jobPrefix: 'APEX-MED-',
+    invoicePrefix: 'APEX-INV-',
+  });
+  assertEquals(res.valid, true);
+  assertEquals(res.config?.tinNumber, '1099882GST501');
+  assertEquals(res.config?.gstStatus, 'registered');
+  assertEquals(res.config?.jobPrefix, 'APEX-MED-');
+  assertEquals(res.config?.invoicePrefix, 'APEX-INV-');
+});
+
+Deno.test('SERP-276: PRODUCT_FIXED_INVARIANTS explicitly locks 5 statutory & security guarantees', () => {
+  assertEquals(PRODUCT_FIXED_INVARIANTS.length, 5);
+  assert(PRODUCT_FIXED_INVARIANTS.includes('SINGLE_SOURCE_FINANCIAL_TRUTH'));
+  assert(PRODUCT_FIXED_INVARIANTS.includes('SEGREGATION_OF_DUTIES_AWARD_PAY'));
+  assert(PRODUCT_FIXED_INVARIANTS.includes('ROW_LEVEL_SECURITY_TENANT_ISOLATION'));
+  assert(PRODUCT_FIXED_INVARIANTS.includes('APPEND_ONLY_AUDIT_LOG_INTEGRITY'));
+  assert(PRODUCT_FIXED_INVARIANTS.includes('NO_SECOND_POSTING_AUTHORITY'));
+});
+
 
 
 
