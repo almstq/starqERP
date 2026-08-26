@@ -18,6 +18,7 @@ export default defineConfig(() => {
     test: {
       globals: true,
       environment: 'jsdom',
+      pool: 'threads',
       setupFiles: [path.resolve(rootDir, 'src/test/setup.ts')],
       watch: false,
     },

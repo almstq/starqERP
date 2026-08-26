@@ -3201,6 +3201,7 @@ export function executeVersionedApiCommand<TReq = Record<string, unknown>, TRes 
   });
 
   if (!authDecision.ok) {
+    const authError = (authDecision as { readonly ok: false; readonly error: ErrorCode }).error;
     const errorResponse: ApiResponseEnvelope<TRes> = {
       version: request.version,
       requestId: request.requestId,
@@ -3208,8 +3209,8 @@ export function executeVersionedApiCommand<TReq = Record<string, unknown>, TRes 
       ok: false,
       disposition: 'rejected',
       error: {
-        code: authDecision.error,
-        message: `Command execution denied by server authority: ${authDecision.error}`,
+        code: authError,
+        message: `Command execution denied by server authority: ${authError}`,
       },
       serverTimestamp: now,
     };

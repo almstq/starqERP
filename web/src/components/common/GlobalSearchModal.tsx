@@ -117,9 +117,6 @@ export const GlobalSearchModal: React.FC = () => {
             ESC
           </kbd>
         </div>
-            ESC
-          </kbd>
-        </div>
 
         {/* Results Container */}
         <div className="max-h-[60vh] overflow-y-auto p-4 space-y-4 text-xs">

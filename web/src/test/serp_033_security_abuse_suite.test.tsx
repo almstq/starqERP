@@ -9,8 +9,13 @@ import {
   CONTRACT_VERSION,
   Principal,
   ScmStep,
-  CommandName,
+  SessionTokenRecord,
 } from '../../../contracts/commands';
+
+// Helper: narrow a Decision to its error code when ok === false
+function decisionError(d: { ok: boolean; error?: unknown }): string {
+  return d.error as string;
+}
 
 describe('SERP-033: Security Verification & Abuse-Resistance Suite', () => {
   const ORG_A = '20000000-0000-4000-8000-000000000001';
@@ -46,7 +51,7 @@ describe('SERP-033: Security Verification & Abuse-Resistance Suite', () => {
     );
     expect(authCheck.ok).toBe(false);
     if (!authCheck.ok) {
-      expect(authCheck.error).toBe('cross_tenant_denied');
+      expect(decisionError(authCheck)).toBe('cross_tenant_denied');
     }
   });
 
@@ -68,7 +73,7 @@ describe('SERP-033: Security Verification & Abuse-Resistance Suite', () => {
     });
     expect(decision.ok).toBe(false);
     if (!decision.ok) {
-      expect(decision.error).toBe('seat_not_authorized');
+      expect(decisionError(decision)).toBe('seat_not_authorized');
     }
   });
 
@@ -94,12 +99,13 @@ describe('SERP-033: Security Verification & Abuse-Resistance Suite', () => {
     );
     expect(decision.ok).toBe(false);
     if (!decision.ok) {
-      expect(decision.error).toBe('seat_revoked');
+      expect(decisionError(decision)).toBe('seat_revoked');
     }
   });
 
   it('VEC-4: Session expiration & idle timeout - fails closed on stale sessions', () => {
     const expiredSession: SessionTokenRecord = {
+      sessionId: 'ses_expired_1',
       token: 'tok_expired_1',
       userId: PERSON_1,
       tenantId: ORG_A,

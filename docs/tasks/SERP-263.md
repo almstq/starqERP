@@ -10,74 +10,93 @@
 
 ---
 
-## 1. Remote & Repository State Verified
+## 1. Remote & Repository State — Verified via GitHub API
 
-1. **Repository Privacy & Identity (Verified via `gh repo view`):**
-   * Owner: `almstq`
-   * Repository: `starqERP`
-   * Privacy Status: **PRIVATE** (`isPrivate: true`)
-   * Default Branch: **`main`**
-   * Remote Origin: `https://github.com/almstq/starqERP.git`
-2. **Secret & Credential Scan ([`scripts/pre-push-secret-scan.mjs`](file:///d:/StarqTech/starqERP/scripts/pre-push-secret-scan.mjs)):**
-   * Automated scan executed across all 324 tracked files checking for private keys, AWS/Stripe/OpenAI keys, Supabase service-role payloads, and plain database connection credentials.
-   * **Result:** `PASS (0 secret violations detected)`.
-3. **Continuous Integration Workflow ([`.github/workflows/ci.yml`](file:///d:/StarqTech/starqERP/.github/workflows/ci.yml)):**
-   * Triggered on `push` and `pull_request` against `main`.
-   * Enforces all ERP governance gates automatically.
+### 1.1 Repository Identity & Privacy
+- **Owner:** `almstq`
+- **Repository:** `starqERP`
+- **Privacy Status:** `isPrivate: true` ✅ **PRIVATE**
+- **Default Branch:** `main` ✅
+- **Remote Origin:** `https://github.com/almstq/starqERP.git` ✅
+- **Authenticated Account:** `almstq` (GitHub CLI) — `admin: true` ✅
 
----
+### 1.2 Branch Protection — Verified Live Response from GitHub API
 
-## 2. CI Gate Classification: Mandatory vs Informational
+```json
+{
+  "url": "https://api.github.com/repos/almstq/starqERP/branches/main/protection",
+  "required_status_checks": {
+    "strict": true,
+    "contexts": [
+      "Backend, Contracts & Governance Gates",
+      "Web Frontend Build & Test Suite"
+    ]
+  },
+  "required_pull_request_reviews": {
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": false,
+    "required_approving_review_count": 1
+  },
+  "enforce_admins": { "enabled": true },
+  "allow_force_pushes": { "enabled": false },
+  "allow_deletions": { "enabled": false }
+}
+```
 
-The mandatory merge-blocking gates registered in [`contracts/commands.ts`](file:///d:/StarqTech/starqERP/contracts/commands.ts) are:
+### 1.3 Branch Protection Summary
 
-| Gate Name | Command | Impact |
-|---|---|---|
-| **Secret & Credential Sweep** | `node scripts/pre-push-secret-scan.mjs` | **BLOCK_MERGE** |
-| **Migration Lineage & Compatibility Linter** | `node scripts/lint-migrations.mjs` | **BLOCK_MERGE** |
-| **Migration 0021 Synthetic UUID Rehearsal** | `node tests/migration_0021_rehearsal.test.mjs` | **BLOCK_MERGE** |
-| **Tenant Hardcoding Sweep** | `node tests/tenant_hardcoding_sweep.test.mjs` | **BLOCK_MERGE** |
-| **Security Policy Enforcement** | `node tests/security_policy.test.mjs` | **BLOCK_MERGE** |
-| **Deno Contract Test Suite** | `deno test --allow-read tests/contract/commands_test.ts` | **BLOCK_MERGE** |
-| **Web TypeScript Typecheck** | `npm run lint` | **BLOCK_MERGE** |
-| **Web Vitest Suite** | `npm test` | **BLOCK_MERGE** |
-| **Web Production Build** | `npm run build` | **BLOCK_MERGE** |
-
----
-
-## 3. Remote Branch Protection Truth Confirmation
-
-* **Current Remote State:** `gh api repos/almstq/starqERP/branches/main/protection` returned `404` (no branch protection rule currently applied on GitHub).
-* **Action Required by Repo Admin:** To fully enforce PR requirements on GitHub remote, configure under **GitHub Settings $\rightarrow$ Branches**:
-  1. Branch pattern: `main`
-  2. Require a pull request before merging (require at least 1 approval).
-  3. Require status checks to pass before merging (`backend-and-contracts`, `frontend`).
-  4. Do not allow force pushes or deletions.
-
----
-
-## 4. Automated Test Evidence
-
-* **Web Vitest Suite (`web/src/test/serp_263_ci_governance.test.tsx`):**
-  * `✓ verifies CI_MANDATORY_GATES registers all required governance, secret, migration, and build gates`
-  * `✓ fails closed when mandatory merge-blocking gates are missing`
-  * Total web suite: `32 test files passed | 121 tests passed`.
-* **Deno Contract Suite (`tests/contract/commands_test.ts`):**
-  * Added 2 contract tests covering CI mandatory gate registry and fail-closed validation.
-  * Total: `166 passed | 0 failed`.
-* **Pre-push Secret Sweep:** `PASS (0 violations across 324 files)`.
-* **Migration Linter & 0021 Rehearsal:** `PASS`.
-* **Tenant Hardcoding Sweep:** `PASS (0 violations)`.
-* **Vite Production Build:** Clean build with 0 errors.
+| Rule | State |
+|---|---|
+| Require PR before merge | ✅ **Enabled** (1 approval required) |
+| Stale review dismissal | ✅ **Enabled** |
+| Required status check: Backend, Contracts & Governance Gates | ✅ **Enabled** |
+| Required status check: Web Frontend Build & Test Suite | ✅ **Enabled** |
+| Branch must be up to date before merge (`strict: true`) | ✅ **Enabled** |
+| Enforce for admins | ✅ **Enabled** (`enforce_admins: true`) |
+| Force push blocked | ✅ **Enabled** (`allow_force_pushes: false`) |
+| Deletion blocked | ✅ **Enabled** (`allow_deletions: false`) |
 
 ---
 
-## 5. Files Created & Modified
+## 2. CI Workflow Files & Control Plane
 
-- `.github/workflows/ci.yml` (New): GitHub Actions CI workflow covering backend, contracts, and frontend gates.
-- `scripts/pre-push-secret-scan.mjs` (New): Automated secret and credential scanner.
-- `contracts/commands.ts` (Modified): Added `CI_MANDATORY_GATES` and `validateCiGateRegistry`.
-- `supabase/functions/_shared/commands.ts` (Modified): Synced from contracts.
-- `web/src/test/serp_263_ci_governance.test.tsx` (New): Vitest suite.
-- `tests/contract/commands_test.ts` (Modified): 2 Deno contract tests.
-- `docs/tasks/SERP-263.md` (New): Task report.
+### 2.1 Continuous Integration Workflow
+- `.github/workflows/ci.yml`: Runs on `push` and `pull_request` against `main` with two parallel blocking jobs:
+  - `Backend, Contracts & Governance Gates`: Secret Sweep, Migration Linter, Rehearsal, Hardcoding Sweep, Security/Support/Legal policies, Deno Contract Suite.
+  - `Web Frontend Build & Test Suite`: `npm ci`, `npm run lint` (tsc), `npm test` (Vitest), `npm run build` (Vite).
+
+### 2.2 Automated Secret Sweep
+- `scripts/pre-push-secret-scan.mjs`: Scanned all 324 tracked files. **Result: 0 violations.**
+
+---
+
+## 3. Test Evidence (Executed Locally)
+
+- **Web Vitest:** `32 test files passed | 121 tests passed`
+- **Deno Contract Suite:** `166 passed | 0 failed`
+- **Pre-push Secret Sweep:** `PASS (0 violations across 324 files)`
+- **Migration Linter & 0021 Rehearsal:** `PASS`
+- **Tenant Hardcoding Sweep:** `PASS (0 violations)`
+- **Vite Production Build:** Clean build with 0 errors.
+
+---
+
+## 4. Commit
+- `a46e27d` — `feat(ci): implement remote Git and CI control plane workflow (SERP-263)`
+
+---
+
+## 5. DEC-089 Compliance Summary
+
+| Item | Status |
+|---|---|
+| Repo is PRIVATE | ✅ Verified via `gh repo view` |
+| `main` is protected | ✅ Verified via live API response |
+| Direct push to `main` refused (force-push disabled, PR required) | ✅ Confirmed via protection payload |
+| CI runs on every PR | ✅ `.github/workflows/ci.yml` |
+| CI includes secret sweep (Tier-1 credential sweep) | ✅ `scripts/pre-push-secret-scan.mjs` |
+| CI includes Deno contract suite | ✅ |
+| CI includes TypeScript typecheck (`tsc --noEmit`) | ✅ |
+| Required status checks are registered on `main` | ✅ Both jobs named in GitHub protection response |
+| Admins also gated by protection (`enforce_admins: true`) | ✅ |
+| Force push & deletion blocked | ✅ |

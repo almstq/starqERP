@@ -19,7 +19,8 @@ export function checkSeatOccupancy(opts = {}) {
   const allowlistPath = opts.allowlistPath || DEFAULT_ALLOWLIST;
   const NAME = 'Seat occupancy — every required seat is held by someone';
   
-  if (!fs.existsSync(allowlistPath)) {
+  // If allowlistData is directly injected (e.g. mutation tests), skip filesystem check
+  if (!opts.allowlistData && !fs.existsSync(allowlistPath)) {
     return { state: 'SKIP', name: NAME, detail: 'allowlist not present on this machine' };
   }
 

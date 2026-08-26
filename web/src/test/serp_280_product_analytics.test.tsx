@@ -46,7 +46,6 @@ describe('SERP-280: Privacy-Preserving Product Analytics (Nothing Sensitive)', (
     // Attempt 1: customer_name leakage
     const res1 = telemetry.track('document_created_count', {
       documentType: 'job',
-      // @ts-expect-error test sensitive field injection
       customer_name: 'Ahmed Waheed',
     });
     expect(res1.ok).toBe(false);
@@ -55,7 +54,6 @@ describe('SERP-280: Privacy-Preserving Product Analytics (Nothing Sensitive)', (
     // Attempt 2: financial amount leakage
     const res2 = telemetry.track('document_created_count', {
       documentType: 'invoice',
-      // @ts-expect-error test sensitive field injection
       amount: 14500,
     });
     expect(res2.ok).toBe(false);
@@ -64,7 +62,6 @@ describe('SERP-280: Privacy-Preserving Product Analytics (Nothing Sensitive)', (
     // Attempt 3: phone number leakage
     const res3 = telemetry.track('error_occurred', {
       errorCode: 'API_ERROR',
-      // @ts-expect-error test sensitive field injection
       phone: '+960 778-9900',
     });
     expect(res3.ok).toBe(false);
@@ -73,7 +70,6 @@ describe('SERP-280: Privacy-Preserving Product Analytics (Nothing Sensitive)', (
     // Attempt 4: AI prompt leakage
     const res4 = telemetry.track('error_occurred', {
       errorCode: 'AI_TIMEOUT',
-      // @ts-expect-error test sensitive field injection
       prompt: 'Summarize financial statements for VIP client',
     });
     expect(res4.ok).toBe(false);

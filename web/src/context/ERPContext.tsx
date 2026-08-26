@@ -20,7 +20,8 @@ import {
   WorkflowStage,
   AuditLogEntry,
   PermissionModule,
-  PermissionAction
+  PermissionAction,
+  PaymentMethod
 } from '../types/erp';
 import {
   INITIAL_CUSTOMERS,
@@ -1350,7 +1351,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       method: saleData.paymentMethod,
       referenceNumber: `REC-${Date.now().toString().slice(-6)}`,
       bankAccount: saleData.bankAccount || (saleData.paymentMethod === 'Cash' ? 'Cash Drawer' : currentTenant.bmlAccount),
-      status: 'Completed',
+      status: 'Verified',
       notes: 'Direct counter settlement',
     };
 
