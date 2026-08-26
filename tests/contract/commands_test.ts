@@ -58,6 +58,7 @@ import {
   validateRoleActionVisibility,
   ROLE_PRECEDENCE_INVARIANT,
   evaluateSoDCapacityAndAction,
+  type ScmStep,
   type MembershipRecord,
   type RolePermissionRecord,
   type SegregationCapacity,
@@ -117,6 +118,8 @@ import {
   DurableIdempotencyEntry,
   validatePostgresTenantScoping,
   validateOrganisationConstraintIntegrity,
+  evaluateRoleVisibility,
+  evaluateSodPolicy,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -2757,6 +2760,111 @@ Deno.test('SERP-029: validateOrganisationConstraintIntegrity enforces slug forma
   assertEquals(invalidSlug.valid, false);
   assertEquals(invalidSlug.error, 'invalid_organisation_slug_format');
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-030: Role, Seat and Separation-of-Duties Policy Engine
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-030: evaluateRoleVisibility gates what user sees per role', () => {
+  const ownerVis = evaluateRoleVisibility('owner');
+  assertEquals(ownerVis.canViewReports, true);
+  assertEquals(ownerVis.canViewAuditLogs, true);
+
+  const techVis = evaluateRoleVisibility('technician');
+  assertEquals(techVis.canViewReports, false);
+  assertEquals(techVis.canViewCommercialDocuments, false);
+  assertEquals(techVis.canViewInventoryStock, true);
+});
+
+Deno.test('SERP-030: evaluateSodPolicy supports clean multi-person execution and solo capacity compensation', () => {
+  const history = [
+    { step: 'quote' as ScmStep, personId: DIRECTOR_PAYER },
+  ];
+
+  // Different person taking 'award' -> allowed cleanly
+  const resClean = evaluateSodPolicy({
+    organisationId: ORG,
+    actorPersonId: MD_RECEIVER,
+    actingSeat: 'financial_controller',
+    targetStep: 'award',
+    history,
+    capacity: 'segregated',
+  });
+  assertEquals(resClean.allowed, true);
+  assertEquals(resClean.action, 'allow');
+
+  // Same person taking 'award' in SOLO capacity -> allowed with compensating exception record
+  const resSolo = evaluateSodPolicy({
+    organisationId: ORG,
+    actorPersonId: DIRECTOR_PAYER,
+    actingSeat: 'financial_controller',
+    targetStep: 'award',
+    history,
+    capacity: 'solo',
+  });
+  assertEquals(resSolo.allowed, true);
+  assertEquals(resSolo.action, 'record_exception');
+  assertEquals(resSolo.auditRecord?.disposition, 'exception_recorded');
+});
+
+Deno.test('SERP-030: evaluateSodPolicy blocks SoD conflicts in segregated capacity unless valid unexpired override is present', () => {
+  const history = [
+    { step: 'quote' as ScmStep, personId: DIRECTOR_PAYER },
+  ];
+
+  // Same person in segregated capacity with NO override -> blocked
+  const resBlocked = evaluateSodPolicy({
+    organisationId: ORG,
+    actorPersonId: DIRECTOR_PAYER,
+    actingSeat: 'financial_controller',
+    targetStep: 'award',
+    history,
+    capacity: 'segregated',
+  });
+  assertEquals(resBlocked.allowed, false);
+  assertEquals(resBlocked.action, 'block');
+
+  // Same person with valid unexpired override (reason >= 12 chars) -> allowed with exception recorded
+  const resOverride = evaluateSodPolicy({
+    organisationId: ORG,
+    actorPersonId: DIRECTOR_PAYER,
+    actingSeat: 'financial_controller',
+    targetStep: 'award',
+    history,
+    capacity: 'segregated',
+    override: {
+      overrideId: 'ovr-001',
+      approvedByPersonId: MD_RECEIVER,
+      reason: 'Urgent weekend emergency breakdown repair authorization',
+      grantedAt: '2026-08-26T10:00:00Z',
+      expiresAt: '2026-08-26T23:59:59Z',
+    },
+    nowIso: '2026-08-26T12:00:00Z',
+  });
+  assertEquals(resOverride.allowed, true);
+  assertEquals(resOverride.action, 'record_exception');
+
+  // Same person with EXPIRED override -> blocked
+  const resExpired = evaluateSodPolicy({
+    organisationId: ORG,
+    actorPersonId: DIRECTOR_PAYER,
+    actingSeat: 'financial_controller',
+    targetStep: 'award',
+    history,
+    capacity: 'segregated',
+    override: {
+      overrideId: 'ovr-001',
+      approvedByPersonId: MD_RECEIVER,
+      reason: 'Urgent weekend emergency breakdown repair authorization',
+      grantedAt: '2026-08-20T10:00:00Z',
+      expiresAt: '2026-08-21T23:59:59Z',
+    },
+    nowIso: '2026-08-26T12:00:00Z',
+  });
+  assertEquals(resExpired.allowed, false);
+  assertEquals(resExpired.error, 'sod_override_expired');
+});
+
 
 
 

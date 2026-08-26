@@ -3318,6 +3318,249 @@ export function validateOrganisationConstraintIntegrity(params: {
   return { valid: true };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-030: Role, Seat and Separation-of-Duties Policy Engine
+// (M0 main base / CORE-001 / CORE-002 / RBAC-001 / SOD-001)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type AppRole =
+  | 'owner'
+  | 'administrator'
+  | 'general_manager'
+  | 'accountant'
+  | 'workshop_manager'
+  | 'technician'
+  | 'counter'
+  | 'viewer';
+
+export interface RoleVisibilityMatrix {
+  readonly role: AppRole;
+  readonly canViewReports: boolean;
+  readonly canViewAccountingLedger: boolean;
+  readonly canViewCommercialDocuments: boolean;
+  readonly canViewInventoryStock: boolean;
+  readonly canViewAuditLogs: boolean;
+  readonly canViewSettings: boolean;
+}
+
+export function evaluateRoleVisibility(role: AppRole): RoleVisibilityMatrix {
+  switch (role) {
+    case 'owner':
+    case 'administrator':
+    case 'general_manager':
+      return {
+        role,
+        canViewReports: true,
+        canViewAccountingLedger: true,
+        canViewCommercialDocuments: true,
+        canViewInventoryStock: true,
+        canViewAuditLogs: true,
+        canViewSettings: true,
+      };
+    case 'accountant':
+      return {
+        role,
+        canViewReports: true,
+        canViewAccountingLedger: true,
+        canViewCommercialDocuments: true,
+        canViewInventoryStock: true,
+        canViewAuditLogs: false,
+        canViewSettings: false,
+      };
+    case 'workshop_manager':
+      return {
+        role,
+        canViewReports: false,
+        canViewAccountingLedger: false,
+        canViewCommercialDocuments: true,
+        canViewInventoryStock: true,
+        canViewAuditLogs: false,
+        canViewSettings: false,
+      };
+    case 'counter':
+      return {
+        role,
+        canViewReports: false,
+        canViewAccountingLedger: false,
+        canViewCommercialDocuments: true,
+        canViewInventoryStock: true,
+        canViewAuditLogs: false,
+        canViewSettings: false,
+      };
+    case 'technician':
+      return {
+        role,
+        canViewReports: false,
+        canViewAccountingLedger: false,
+        canViewCommercialDocuments: false,
+        canViewInventoryStock: true,
+        canViewAuditLogs: false,
+        canViewSettings: false,
+      };
+    case 'viewer':
+    default:
+      return {
+        role: 'viewer',
+        canViewReports: false,
+        canViewAccountingLedger: false,
+        canViewCommercialDocuments: false,
+        canViewInventoryStock: true,
+        canViewAuditLogs: false,
+        canViewSettings: false,
+      };
+  }
+}
+
+export interface TemporarySodOverride {
+  readonly overrideId: string;
+  readonly approvedByPersonId: string;
+  readonly reason: string;
+  readonly grantedAt: string;
+  readonly expiresAt: string;
+}
+
+export interface SodPolicyEvaluationContext {
+  readonly organisationId: string;
+  readonly actorPersonId: string;
+  readonly actingSeat: SeatCode;
+  readonly targetStep: ScmStep;
+  readonly history: readonly PurchaseStepRecord[];
+  readonly capacity: SegregationCapacity;
+  readonly override?: TemporarySodOverride;
+  readonly nowIso?: string;
+}
+
+export interface SodPolicyEvaluationResult {
+  readonly allowed: boolean;
+  readonly action: 'allow' | 'record_exception' | 'block';
+  readonly error?: string;
+  readonly auditRecord?: {
+    readonly organisationId: string;
+    readonly actorPersonId: string;
+    readonly actingSeat: SeatCode;
+    readonly targetStep: ScmStep;
+    readonly capacity: SegregationCapacity;
+    readonly disposition: 'allowed_cleanly' | 'exception_recorded' | 'blocked_sod_violation';
+    readonly overrideReason?: string;
+    readonly timestamp: string;
+  };
+}
+
+export function evaluateSodPolicy(context: SodPolicyEvaluationContext): SodPolicyEvaluationResult {
+  const { organisationId, actorPersonId, actingSeat, targetStep, history, capacity, override, nowIso } = context;
+  const now = nowIso || new Date().toISOString();
+
+  // 1. Check if step creates a SoD violation against history
+  const violationPair = sodViolation(history, targetStep, actorPersonId);
+
+  // Case A: No SoD violation (different person or first step)
+  if (!violationPair) {
+    return {
+      allowed: true,
+      action: 'allow',
+      auditRecord: {
+        organisationId,
+        actorPersonId,
+        actingSeat,
+        targetStep,
+        capacity,
+        disposition: 'allowed_cleanly',
+        timestamp: now,
+      },
+    };
+  }
+
+  // Case B: Violation detected in SOLO capacity (solo founder / small team)
+  if (capacity === 'solo') {
+    return {
+      allowed: true,
+      action: 'record_exception',
+      auditRecord: {
+        organisationId,
+        actorPersonId,
+        actingSeat,
+        targetStep,
+        capacity,
+        disposition: 'exception_recorded',
+        overrideReason: 'solo_capacity_compensating_control',
+        timestamp: now,
+      },
+    };
+  }
+
+  // Case C: Violation detected in SEGREGATED capacity -> Check temporary approved override
+  if (override) {
+    // Validate override reason length (min 12 chars per founder standard)
+    if (!override.reason || override.reason.trim().length < SOD_REASON_MIN_LENGTH) {
+      return {
+        allowed: false,
+        action: 'block',
+        error: 'sod_override_reason_insufficient',
+        auditRecord: {
+          organisationId,
+          actorPersonId,
+          actingSeat,
+          targetStep,
+          capacity,
+          disposition: 'blocked_sod_violation',
+          timestamp: now,
+        },
+      };
+    }
+
+    // Check expiry
+    if (new Date(override.expiresAt).getTime() < new Date(now).getTime()) {
+      return {
+        allowed: false,
+        action: 'block',
+        error: 'sod_override_expired',
+        auditRecord: {
+          organisationId,
+          actorPersonId,
+          actingSeat,
+          targetStep,
+          capacity,
+          disposition: 'blocked_sod_violation',
+          timestamp: now,
+        },
+      };
+    }
+
+    // Valid active override
+    return {
+      allowed: true,
+      action: 'record_exception',
+      auditRecord: {
+        organisationId,
+        actorPersonId,
+        actingSeat,
+        targetStep,
+        capacity,
+        disposition: 'exception_recorded',
+        overrideReason: override.reason,
+        timestamp: now,
+      },
+    };
+  }
+
+  // Case D: Segregated capacity with no valid override -> strictly block
+  return {
+    allowed: false,
+    action: 'block',
+    error: `sod_violation: pair [${violationPair[0]}, ${violationPair[1]}] conflict for person ${actorPersonId}`,
+    auditRecord: {
+      organisationId,
+      actorPersonId,
+      actingSeat,
+      targetStep,
+      capacity,
+      disposition: 'blocked_sod_violation',
+      timestamp: now,
+    },
+  };
+}
+
+
 
 
 

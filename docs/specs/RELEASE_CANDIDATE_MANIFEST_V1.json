@@ -1,9 +1,9 @@
 {
   "manifestVersion": "1.0",
-  "releaseCandidateId": "RC-STARQ-V1-4457405",
-  "gitCommitHead": "44574058dc17a0be34043f1b411b867e7984599c",
+  "releaseCandidateId": "RC-STARQ-V1-1CF9673",
+  "gitCommitHead": "1cf9673f04a2886577f7c033de63b865aaad77e2",
   "environment": "production",
-  "generatedAt": "2026-08-26T18:39:58.554Z",
+  "generatedAt": "2026-08-26T18:47:37.944Z",
   "generatedBy": "Codex & Antigravity (SERP-025)",
   "artifacts": [
     {
@@ -113,8 +113,8 @@
     },
     {
       "path": "contracts/commands.ts",
-      "sha256": "2cb1690b902c30bbbb2a5e514e14f4088c0203135519a9f9ef55811a119b7148",
-      "byteLength": 134346
+      "sha256": "e35a51a9e932b2ebd71e2a7f14e1f22eaca4e28d1a29ebe976b9fc2441e77841",
+      "byteLength": 141638
     },
     {
       "path": "docs/PRIVACY.md",
@@ -143,28 +143,28 @@
       "total": 112,
       "passed": 112,
       "failed": 0,
-      "passedAt": "2026-08-26T18:39:58.553Z"
+      "passedAt": "2026-08-26T18:47:37.943Z"
     },
     {
       "suite": "Web Vitest Component & Workflow Suite",
       "total": 58,
       "passed": 58,
       "failed": 0,
-      "passedAt": "2026-08-26T18:39:58.554Z"
+      "passedAt": "2026-08-26T18:47:37.944Z"
     },
     {
       "suite": "Tenant Hardcoding Sweep",
       "total": 1,
       "passed": 1,
       "failed": 0,
-      "passedAt": "2026-08-26T18:39:58.554Z"
+      "passedAt": "2026-08-26T18:47:37.944Z"
     },
     {
       "suite": "Migration 0021 Constraint Rehearsal",
       "total": 1,
       "passed": 1,
       "failed": 0,
-      "passedAt": "2026-08-26T18:39:58.554Z"
+      "passedAt": "2026-08-26T18:47:37.944Z"
     }
   ],
   "securityGates": {
@@ -174,5 +174,5 @@
     "migration0011Gated": true,
     "migration0021Rehearsed": true
   },
-  "manifestSignature": "sig_rc_7c2236b2"
+  "manifestSignature": "sig_rc_7428ac61"
 }

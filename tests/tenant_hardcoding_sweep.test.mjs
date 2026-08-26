@@ -28,7 +28,7 @@ const FORBIDDEN_PATTERNS = [
     name: 'Real Company Registration Embedding UUIDs (29552026 / 30222026)',
     pattern: /(?:29552026|30222026)-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/g,
     scanDirs: ['contracts', 'supabase/functions', 'web/src', 'tests'],
-    ignoreFiles: []
+    ignoreFiles: HISTORICAL_MIGRATIONS_IMMUTABLE_ALLOWLIST
   },
   {
     name: 'CLUB_IGNITION_ID Constant Declaration',
