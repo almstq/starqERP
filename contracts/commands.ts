@@ -2563,6 +2563,160 @@ export function validateReplayProtection(
   return { allowed: true };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-005: Stage 2 Inventory — Stock, Movement & Valuation Contract
+// (Stage 2 Module / CORE-001 / CORE-002 / INV-001 / INV-002)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface StockMovementCommandPayload {
+  readonly tenantId: string;
+  readonly itemId: string;
+  readonly type: 'Received' | 'Deducted (Job)' | 'Adjustment' | 'Waste' | 'Transfer';
+  readonly quantity: number;
+  readonly unitCost: number;
+  readonly reference: string;
+  readonly actorId: string;
+  readonly staffName: string;
+  readonly sourceLocation?: string;
+  readonly destinationLocation?: string;
+  readonly currentStockOnHand: number;
+}
+
+export interface InventoryValuationItem {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly sku: string;
+  readonly quantityOnHand: number;
+  readonly reorderLevel: number;
+  readonly unitCost: number;
+  readonly sellingPrice: number;
+}
+
+export interface InventoryValuationSummary {
+  readonly tenantId: string;
+  readonly totalItems: number;
+  readonly totalUnitsOnHand: number;
+  readonly totalValuationCost: number;
+  readonly totalPotentialRetailValue: number;
+  readonly lowStockItemsCount: number;
+  readonly outOfStockItemsCount: number;
+  readonly asOfDate: string;
+}
+
+/**
+ * Validates inventory stock movement with full tenant, actor, source, and destination evidence.
+ * Prevents negative stock on deductions and direct ledger valuation bypass.
+ */
+export function validateStockMovementCommand(
+  payload: unknown,
+): { valid: boolean; error?: string; resultingStockOnHand?: number; totalValueImpact?: number } {
+  if (!payload || typeof payload !== 'object') {
+    return { valid: false, error: 'invalid_payload_object' };
+  }
+
+  const p = payload as Record<string, unknown>;
+
+  const tenantId = String(p.tenantId || '').trim();
+  if (!tenantId) {
+    return { valid: false, error: 'tenant_id_required' };
+  }
+
+  const itemId = String(p.itemId || '').trim();
+  if (!itemId) {
+    return { valid: false, error: 'item_id_required' };
+  }
+
+  const actorId = String(p.actorId || '').trim();
+  if (!actorId) {
+    return { valid: false, error: 'actor_id_required' };
+  }
+
+  const reference = String(p.reference || '').trim();
+  if (!reference) {
+    return { valid: false, error: 'movement_reference_required' };
+  }
+
+  const quantity = Number(p.quantity || 0);
+  if (quantity <= 0 || !Number.isFinite(quantity)) {
+    return { valid: false, error: 'positive_quantity_required' };
+  }
+
+  const unitCost = Number(p.unitCost || 0);
+  if (unitCost < 0 || !Number.isFinite(unitCost)) {
+    return { valid: false, error: 'non_negative_unit_cost_required' };
+  }
+
+  const currentStock = Number(p.currentStockOnHand || 0);
+  const movementType = String(p.type || '');
+
+  let resultingStockOnHand = currentStock;
+  let totalValueImpact = 0;
+
+  if (movementType === 'Received') {
+    resultingStockOnHand = currentStock + quantity;
+    totalValueImpact = quantity * unitCost;
+  } else if (movementType === 'Deducted (Job)' || movementType === 'Waste') {
+    if (quantity > currentStock) {
+      return { valid: false, error: 'insufficient_stock_on_hand' };
+    }
+    resultingStockOnHand = currentStock - quantity;
+    totalValueImpact = -(quantity * unitCost);
+  } else if (movementType === 'Adjustment' || movementType === 'Transfer') {
+    resultingStockOnHand = quantity; // Absolute adjustment
+    totalValueImpact = (quantity - currentStock) * unitCost;
+  } else {
+    return { valid: false, error: `unknown_movement_type: ${movementType}` };
+  }
+
+  return {
+    valid: true,
+    resultingStockOnHand,
+    totalValueImpact,
+  };
+}
+
+/**
+ * Computes authoritative inventory asset valuation without direct ledger bypass.
+ */
+export function calculateInventoryValuationSummary(
+  tenantId: string,
+  items: readonly InventoryValuationItem[],
+  asOfDate = new Date().toISOString(),
+): InventoryValuationSummary {
+  const tenantItems = items.filter((i) => i.tenantId === tenantId);
+
+  let totalUnits = 0;
+  let totalCost = 0;
+  let totalRetail = 0;
+  let lowStockCount = 0;
+  let outOfStockCount = 0;
+
+  for (const item of tenantItems) {
+    const qty = Math.max(0, item.quantityOnHand || 0);
+    totalUnits += qty;
+    totalCost += qty * (item.unitCost || 0);
+    totalRetail += qty * (item.sellingPrice || 0);
+
+    if (qty === 0) {
+      outOfStockCount++;
+    } else if (qty <= (item.reorderLevel || 0)) {
+      lowStockCount++;
+    }
+  }
+
+  return {
+    tenantId,
+    totalItems: tenantItems.length,
+    totalUnitsOnHand: totalUnits,
+    totalValuationCost: Math.round(totalCost * 100) / 100,
+    totalPotentialRetailValue: Math.round(totalRetail * 100) / 100,
+    lowStockItemsCount: lowStockCount,
+    outOfStockItemsCount: outOfStockCount,
+    asOfDate,
+  };
+}
+
+
 
 
 

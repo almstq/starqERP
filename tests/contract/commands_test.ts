@@ -106,6 +106,8 @@ import {
   revokeSession,
   validateReplayProtection,
   SessionTokenRecord,
+  validateStockMovementCommand,
+  calculateInventoryValuationSummary,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -2220,6 +2222,118 @@ Deno.test('SERP-026: validateReplayProtection detects and refuses repeated reque
   assertEquals(res2.allowed, false);
   assertEquals(res2.error, 'replay_attack_detected');
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-005: Stage 2 Inventory — Stock, Movement & Valuation Contract
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-005: validateStockMovementCommand accepts valid Received stock movement', () => {
+  const payload = {
+    tenantId: ORG,
+    itemId: 'item-paint-01',
+    type: 'Received',
+    quantity: 10,
+    unitCost: 450,
+    reference: 'PO-2026-088',
+    actorId: 'usr-admin-1',
+    staffName: 'Ali Musthaq',
+    currentStockOnHand: 15,
+  };
+
+  const res = validateStockMovementCommand(payload);
+  assertEquals(res.valid, true);
+  assertEquals(res.resultingStockOnHand, 25);
+  assertEquals(res.totalValueImpact, 4500);
+});
+
+Deno.test('SERP-005: validateStockMovementCommand refuses deductions exceeding current stock (no phantom negative stock)', () => {
+  const payload = {
+    tenantId: ORG,
+    itemId: 'item-paint-01',
+    type: 'Deducted (Job)',
+    quantity: 20,
+    unitCost: 450,
+    reference: 'JOB-2026-104',
+    actorId: 'usr-tech-1',
+    staffName: 'Ahsan Lead Painter',
+    currentStockOnHand: 5, // Only 5 available!
+  };
+
+  const res = validateStockMovementCommand(payload);
+  assertEquals(res.valid, false);
+  assertEquals(res.error, 'insufficient_stock_on_hand');
+});
+
+Deno.test('SERP-005: validateStockMovementCommand enforces tenant, actor, and reference evidence', () => {
+  const missingActor = {
+    tenantId: ORG,
+    itemId: 'item-paint-01',
+    type: 'Received',
+    quantity: 5,
+    unitCost: 450,
+    reference: 'PO-101',
+    actorId: '', // missing actor
+    staffName: '',
+    currentStockOnHand: 10,
+  };
+
+  const res = validateStockMovementCommand(missingActor);
+  assertEquals(res.valid, false);
+  assertEquals(res.error, 'actor_id_required');
+});
+
+Deno.test('SERP-005: calculateInventoryValuationSummary computes authoritative cost and retail valuation without ledger bypass', () => {
+  const items = [
+    {
+      id: 'it-1',
+      tenantId: ORG,
+      sku: 'SKU-PNT-01',
+      quantityOnHand: 10,
+      reorderLevel: 5,
+      unitCost: 300,
+      sellingPrice: 550,
+    },
+    {
+      id: 'it-2',
+      tenantId: ORG,
+      sku: 'SKU-CLR-02',
+      quantityOnHand: 2, // Low stock (<= 4)
+      reorderLevel: 4,
+      unitCost: 500,
+      sellingPrice: 850,
+    },
+    {
+      id: 'it-3',
+      tenantId: ORG,
+      sku: 'SKU-WRP-03',
+      quantityOnHand: 0, // Out of stock
+      reorderLevel: 3,
+      unitCost: 1200,
+      sellingPrice: 2200,
+    },
+    {
+      id: 'it-other',
+      tenantId: OTHER_ORG, // Other tenant (must be isolated)
+      sku: 'SKU-OTHER-99',
+      quantityOnHand: 100,
+      reorderLevel: 10,
+      unitCost: 9999,
+      sellingPrice: 99999,
+    },
+  ];
+
+  const val = calculateInventoryValuationSummary(ORG, items);
+  assertEquals(val.tenantId, ORG);
+  assertEquals(val.totalItems, 3);
+  assertEquals(val.totalUnitsOnHand, 12);
+  // Total cost: (10 * 300) + (2 * 500) + (0 * 1200) = 3000 + 1000 = 4000
+  assertEquals(val.totalValuationCost, 4000);
+  // Total retail: (10 * 550) + (2 * 850) + 0 = 5500 + 1700 = 7200
+  assertEquals(val.totalPotentialRetailValue, 7200);
+  assertEquals(val.lowStockItemsCount, 1);
+  assertEquals(val.outOfStockItemsCount, 1);
+});
+
 
 
 

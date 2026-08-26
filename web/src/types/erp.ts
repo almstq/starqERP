@@ -226,15 +226,32 @@ export interface InventoryItem {
 
 export interface StockMovement {
   id: string;
+  tenantId?: string;
   itemId: string;
   itemName: string;
-  type: 'Received' | 'Deducted (Job)' | 'Adjustment' | 'Waste';
+  type: 'Received' | 'Deducted (Job)' | 'Adjustment' | 'Waste' | 'Transfer';
   quantity: number;
   unit: string;
+  unitCost?: number;
+  totalValue?: number;
   date: string;
   reference: string;
+  actorId?: string;
   staffName: string;
+  sourceLocation?: string;
+  destinationLocation?: string;
   notes?: string;
+}
+
+export interface InventoryValuationSummary {
+  tenantId: string;
+  totalItems: number;
+  totalUnitsOnHand: number;
+  totalValuationCost: number;
+  totalPotentialRetailValue: number;
+  lowStockItemsCount: number;
+  outOfStockItemsCount: number;
+  asOfDate: string;
 }
 
 export interface Supplier {
