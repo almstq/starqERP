@@ -115,6 +115,8 @@ import {
   validateCustomerLifecycleTransition,
   executeVersionedApiCommand,
   DurableIdempotencyEntry,
+  validatePostgresTenantScoping,
+  validateOrganisationConstraintIntegrity,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -2704,6 +2706,58 @@ Deno.test('SERP-031: executeVersionedApiCommand rejects unsupported envelope ver
   assertEquals(res.ok, false);
   assertEquals(res.error?.code, 'contract_version_unsupported');
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-029: Tenant-Scoped PostgreSQL Foundation Contract
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-029: validatePostgresTenantScoping permits same-tenant queries and strictly denies cross-tenant access', () => {
+  // Same tenant allowed
+  const res1 = validatePostgresTenantScoping({
+    actingOrganisationId: ORG,
+    actingSeat: 'counter',
+    targetOrganisationId: ORG,
+  });
+  assertEquals(res1.allowed, true);
+
+  // Cross tenant denied
+  const res2 = validatePostgresTenantScoping({
+    actingOrganisationId: ORG,
+    actingSeat: 'counter',
+    targetOrganisationId: OTHER_ORG,
+  });
+  assertEquals(res2.allowed, false);
+  assertEquals(res2.error, 'cross_tenant_denied');
+
+  // Superuser bypass attempt denied
+  const res3 = validatePostgresTenantScoping({
+    actingOrganisationId: ORG,
+    actingSeat: 'owner',
+    isSystemSuperuser: true,
+  });
+  assertEquals(res3.allowed, false);
+  assertEquals(res3.error, 'unauthorized_superuser_bypass');
+});
+
+Deno.test('SERP-029: validateOrganisationConstraintIntegrity enforces slug formatting, legal name and status constraints', () => {
+  const valid = validateOrganisationConstraintIntegrity({
+    slug: 'club-ignition',
+    legalName: 'Club Ignition Pvt Ltd',
+    baseCurrency: 'MVR',
+    status: 'active',
+  });
+  assertEquals(valid.valid, true);
+
+  const invalidSlug = validateOrganisationConstraintIntegrity({
+    slug: '-bad_slug!',
+    legalName: 'Test Org',
+    baseCurrency: 'MVR',
+    status: 'active',
+  });
+  assertEquals(invalidSlug.valid, false);
+  assertEquals(invalidSlug.error, 'invalid_organisation_slug_format');
+});
+
 
 
 

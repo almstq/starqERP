@@ -3256,6 +3256,69 @@ export function executeVersionedApiCommand<TReq = Record<string, unknown>, TRes 
   return successResponse;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-029: Tenant-Scoped PostgreSQL Foundation Contract
+// (M0 main base / CORE-001 / CORE-002 / DB-001 / TENANT-001)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PostgresQueryContext {
+  readonly actingOrganisationId: string;
+  readonly actingSeat: SeatCode;
+  readonly targetOrganisationId?: string;
+  readonly isSystemSuperuser?: boolean;
+}
+
+export function validatePostgresTenantScoping(context: PostgresQueryContext): {
+  allowed: boolean;
+  error?: 'tenant_not_resolved' | 'cross_tenant_denied' | 'unauthorized_superuser_bypass';
+} {
+  const { actingOrganisationId, targetOrganisationId, isSystemSuperuser } = context;
+
+  if (!actingOrganisationId || typeof actingOrganisationId !== 'string') {
+    return { allowed: false, error: 'tenant_not_resolved' };
+  }
+
+  if (isSystemSuperuser) {
+    // Superuser bypass is strictly rejected in application multi-tenant queries (DEC-058 / SERP-172)
+    return { allowed: false, error: 'unauthorized_superuser_bypass' };
+  }
+
+  if (targetOrganisationId && targetOrganisationId !== actingOrganisationId) {
+    return { allowed: false, error: 'cross_tenant_denied' };
+  }
+
+  return { allowed: true };
+}
+
+export function validateOrganisationConstraintIntegrity(params: {
+  slug: string;
+  legalName: string;
+  baseCurrency: string;
+  status: string;
+}): { valid: boolean; error?: string } {
+  const { slug, legalName, baseCurrency, status } = params;
+
+  if (!slug || !slug.match(/^[a-z0-9][a-z0-9-]{1,62}$/)) {
+    return { valid: false, error: 'invalid_organisation_slug_format' };
+  }
+
+  if (!legalName || legalName.trim().length === 0) {
+    return { valid: false, error: 'legal_name_required' };
+  }
+
+  if (!baseCurrency || baseCurrency.length !== 3) {
+    return { valid: false, error: 'invalid_currency_code_iso4217' };
+  }
+
+  const validStatuses = ['active', 'suspended', 'closed'];
+  if (!validStatuses.includes(status)) {
+    return { valid: false, error: `invalid_organisation_status: ${status}` };
+  }
+
+  return { valid: true };
+}
+
+
 
 
 
