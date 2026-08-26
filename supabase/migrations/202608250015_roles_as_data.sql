@@ -142,8 +142,8 @@ end;
 $$;
 
 -- 6. Seed default roles for Club Ignition and Starq Technologies
-select app_private.seed_default_organisation_roles('20000000-0000-4000-8000-000000000001');
-select app_private.seed_default_organisation_roles('10000000-0000-4000-8000-000000000001');
+select app_private.seed_default_organisation_roles('30222026-0000-4000-8000-000000000001');
+select app_private.seed_default_organisation_roles('29552026-0000-4000-8000-000000000001');
 
 -- 7. Enable Row Level Security on roles and role_permissions
 alter table public.roles enable row level security;

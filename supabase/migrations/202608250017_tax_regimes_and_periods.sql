@@ -47,18 +47,18 @@ values
   ('gst_tourism', 0.1700, '2025-07-01', null,         'Maldives TGST 17% (Current from 1 July 2025)');
 
 -- 4. Seed Tenant Initial Registrations
--- Club Ignition: Registered for GGST (Synthetic TIN 2000001)
+-- Club Ignition: Registered for GGST (TIN 1186844)
 insert into public.tax_registrations (organisation_id, tax_type, registration_status, tin, effective_from)
 values
-  ('20000000-0000-4000-8000-000000000001', 'gst_general', 'registered', '2000001', '2026-08-01'),
-  ('20000000-0000-4000-8000-000000000001', 'income_tax',  'registered', '2000001', '2026-08-01')
+  ('30222026-0000-4000-8000-000000000001', 'gst_general', 'registered', '1186844', '2026-08-01'),
+  ('30222026-0000-4000-8000-000000000001', 'income_tax',  'registered', '1186844', '2026-08-01')
 on conflict (organisation_id, tax_type, effective_from) do nothing;
 
--- Starq Technologies: Not Registered for GST (Synthetic TIN 1000001, CIT Active)
+-- Starq Technologies: Not Registered for GST (TIN 1186669, CIT Active)
 insert into public.tax_registrations (organisation_id, tax_type, registration_status, tin, effective_from)
 values
-  ('10000000-0000-4000-8000-000000000001', 'gst_general', 'not_registered', '1000001', '2026-08-01'),
-  ('10000000-0000-4000-8000-000000000001', 'income_tax',  'registered',     '1000001', '2026-08-01')
+  ('29552026-0000-4000-8000-000000000001', 'gst_general', 'not_registered', '1186669', '2026-08-01'),
+  ('29552026-0000-4000-8000-000000000001', 'income_tax',  'registered',     '1186669', '2026-08-01')
 on conflict (organisation_id, tax_type, effective_from) do nothing;
 
 -- 5. Calculation Function: Dynamic Time-of-Supply Line Tax Evaluator
