@@ -120,6 +120,9 @@ import {
   validateOrganisationConstraintIntegrity,
   evaluateRoleVisibility,
   evaluateSodPolicy,
+  validateOutboxEvent,
+  executeTransactionalMutationWithOutbox,
+  type TransactionalOutboxRecord,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -2864,6 +2867,85 @@ Deno.test('SERP-030: evaluateSodPolicy blocks SoD conflicts in segregated capaci
   assertEquals(resExpired.allowed, false);
   assertEquals(resExpired.error, 'sod_override_expired');
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-034: Append-Only Audit, Outbox and Exception Foundation
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-034: validateOutboxEvent enforces organisation_id, aggregate metadata, and status allowlist', () => {
+  const validEvent = {
+    organisationId: ORG,
+    eventType: 'PAYMENT_RELEASED',
+    aggregateType: 'payment',
+    aggregateId: 'PAY-2026-001',
+    payload: { amount: 5000, currency: 'MVR' },
+    status: 'pending',
+  };
+  const res1 = validateOutboxEvent(validEvent);
+  assertEquals(res1.valid, true);
+
+  const missingOrg = {
+    eventType: 'PAYMENT_RELEASED',
+    aggregateType: 'payment',
+    aggregateId: 'PAY-2026-001',
+    payload: {},
+  };
+  const res2 = validateOutboxEvent(missingOrg);
+  assertEquals(res2.valid, false);
+  assertEquals(res2.error, 'organisation_id_required');
+});
+
+Deno.test('SERP-034: executeTransactionalMutationWithOutbox commits business mutation and outbox event together', () => {
+  const outboxStore: TransactionalOutboxRecord[] = [];
+  let businessState = 0;
+
+  const res = executeTransactionalMutationWithOutbox({
+    organisationId: ORG,
+    businessMutation: () => {
+      businessState += 100;
+      return { ok: true, result: { newTotal: businessState } };
+    },
+    outboxEvent: {
+      eventType: 'STOCK_DEDUCTED',
+      aggregateType: 'inventory',
+      aggregateId: 'SKU-001',
+      payload: { quantity: 5 },
+      actorPersonId: DIRECTOR_PAYER,
+      actingSeat: 'counter',
+    },
+    outboxStore,
+    nowIso: '2026-08-26T14:00:00Z',
+  });
+
+  assertEquals(res.ok, true);
+  assertEquals(businessState, 100);
+  assertEquals(outboxStore.length, 1);
+  assertEquals(outboxStore[0].eventType, 'STOCK_DEDUCTED');
+  assertEquals(outboxStore[0].status, 'pending');
+});
+
+Deno.test('SERP-034: executeTransactionalMutationWithOutbox fails closed and writes NO outbox record on business failure', () => {
+  const outboxStore: TransactionalOutboxRecord[] = [];
+
+  const res = executeTransactionalMutationWithOutbox({
+    organisationId: ORG,
+    businessMutation: () => {
+      return { ok: false, error: 'insufficient_inventory_balance' };
+    },
+    outboxEvent: {
+      eventType: 'STOCK_DEDUCTED',
+      aggregateType: 'inventory',
+      aggregateId: 'SKU-002',
+      payload: { quantity: 999 },
+    },
+    outboxStore,
+  });
+
+  assertEquals(res.ok, false);
+  assertEquals(res.error, 'insufficient_inventory_balance');
+  assertEquals(outboxStore.length, 0); // No half-applied outbox event!
+});
+
 
 
 

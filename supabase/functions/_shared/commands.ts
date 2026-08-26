@@ -3560,6 +3560,123 @@ export function evaluateSodPolicy(context: SodPolicyEvaluationContext): SodPolic
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-034: Append-Only Audit, Outbox and Exception Foundation
+// (M0 main base / CORE-001 / CORE-002 / AUDIT-001 / OUTBOX-001)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type OutboxEventStatus = 'pending' | 'published' | 'failed' | 'dead_letter';
+
+export interface TransactionalOutboxRecord {
+  readonly id: string;
+  readonly organisationId: string;
+  readonly eventType: string;
+  readonly aggregateType: string;
+  readonly aggregateId: string;
+  readonly payload: Readonly<Record<string, unknown>>;
+  readonly headers?: Readonly<Record<string, unknown>>;
+  readonly actorPersonId?: string;
+  readonly actingSeat?: SeatCode;
+  readonly status: OutboxEventStatus;
+  readonly retryCount: number;
+  readonly lastError?: string;
+  readonly createdAt: string;
+  readonly publishedAt?: string;
+}
+
+export function validateOutboxEvent(
+  record: unknown,
+): { valid: boolean; error?: string } {
+  if (!record || typeof record !== 'object') {
+    return { valid: false, error: 'invalid_outbox_payload' };
+  }
+
+  const r = record as Record<string, unknown>;
+  const orgId = String(r.organisationId || '').trim();
+  if (!orgId) return { valid: false, error: 'organisation_id_required' };
+
+  const eventType = String(r.eventType || '').trim();
+  if (!eventType) return { valid: false, error: 'event_type_required' };
+
+  const aggregateType = String(r.aggregateType || '').trim();
+  if (!aggregateType) return { valid: false, error: 'aggregate_type_required' };
+
+  const aggregateId = String(r.aggregateId || '').trim();
+  if (!aggregateId) return { valid: false, error: 'aggregate_id_required' };
+
+  if (!r.payload || typeof r.payload !== 'object') {
+    return { valid: false, error: 'payload_object_required' };
+  }
+
+  const validStatuses: OutboxEventStatus[] = ['pending', 'published', 'failed', 'dead_letter'];
+  const status = String(r.status || 'pending') as OutboxEventStatus;
+  if (!validStatuses.includes(status)) {
+    return { valid: false, error: `invalid_outbox_status: ${status}` };
+  }
+
+  return { valid: true };
+}
+
+export function executeTransactionalMutationWithOutbox<TRes = unknown>(params: {
+  organisationId: string;
+  businessMutation: () => { ok: boolean; result?: TRes; error?: string };
+  outboxEvent: {
+    eventType: string;
+    aggregateType: string;
+    aggregateId: string;
+    payload: Record<string, unknown>;
+    actorPersonId?: string;
+    actingSeat?: SeatCode;
+  };
+  outboxStore: TransactionalOutboxRecord[];
+  nowIso?: string;
+}): { ok: boolean; result?: TRes; outboxId?: string; error?: string } {
+  const { organisationId, businessMutation, outboxEvent, outboxStore, nowIso } = params;
+  const now = nowIso || new Date().toISOString();
+
+  // Validate outbox event structure first
+  const eventValidation = validateOutboxEvent({
+    organisationId,
+    ...outboxEvent,
+    status: 'pending',
+  });
+  if (!eventValidation.valid) {
+    return { ok: false, error: eventValidation.error };
+  }
+
+  // Execute business mutation
+  const mutationOutcome = businessMutation();
+  if (!mutationOutcome.ok) {
+    // Failure in business logic -> Fail closed, NO outbox record written (prevents partial state)
+    return { ok: false, error: mutationOutcome.error || 'business_mutation_failed' };
+  }
+
+  // Atomically append outbox record
+  const outboxId = `outbox_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  const outboxRecord: TransactionalOutboxRecord = {
+    id: outboxId,
+    organisationId,
+    eventType: outboxEvent.eventType,
+    aggregateType: outboxEvent.aggregateType,
+    aggregateId: outboxEvent.aggregateId,
+    payload: outboxEvent.payload,
+    actorPersonId: outboxEvent.actorPersonId,
+    actingSeat: outboxEvent.actingSeat,
+    status: 'pending',
+    retryCount: 0,
+    createdAt: now,
+  };
+
+  outboxStore.push(outboxRecord);
+
+  return {
+    ok: true,
+    result: mutationOutcome.result,
+    outboxId,
+  };
+}
+
+
 
 
 

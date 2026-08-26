@@ -1,9 +1,9 @@
 {
   "manifestVersion": "1.0",
-  "releaseCandidateId": "RC-STARQ-V1-1CF9673",
-  "gitCommitHead": "1cf9673f04a2886577f7c033de63b865aaad77e2",
+  "releaseCandidateId": "RC-STARQ-V1-9EA181E",
+  "gitCommitHead": "9ea181eebdbb25741861c5c08153cd1541982f1a",
   "environment": "production",
-  "generatedAt": "2026-08-26T18:47:37.944Z",
+  "generatedAt": "2026-08-26T18:54:15.047Z",
   "generatedBy": "Codex & Antigravity (SERP-025)",
   "artifacts": [
     {
@@ -112,9 +112,14 @@
       "byteLength": 19975
     },
     {
+      "path": "supabase/migrations/202608260022_transactional_outbox_and_audit.sql",
+      "sha256": "c2d050c263c3e16482dbbd85800774d05c0b85c862ad883de17ee26e380d51fe",
+      "byteLength": 3647
+    },
+    {
       "path": "contracts/commands.ts",
-      "sha256": "e35a51a9e932b2ebd71e2a7f14e1f22eaca4e28d1a29ebe976b9fc2441e77841",
-      "byteLength": 141638
+      "sha256": "799978b4a037616669fba8faf2aae57fc663e3e198957e2cb17d4ea07f176f35",
+      "byteLength": 146057
     },
     {
       "path": "docs/PRIVACY.md",
@@ -143,28 +148,28 @@
       "total": 112,
       "passed": 112,
       "failed": 0,
-      "passedAt": "2026-08-26T18:47:37.943Z"
+      "passedAt": "2026-08-26T18:54:15.045Z"
     },
     {
       "suite": "Web Vitest Component & Workflow Suite",
       "total": 58,
       "passed": 58,
       "failed": 0,
-      "passedAt": "2026-08-26T18:47:37.944Z"
+      "passedAt": "2026-08-26T18:54:15.046Z"
     },
     {
       "suite": "Tenant Hardcoding Sweep",
       "total": 1,
       "passed": 1,
       "failed": 0,
-      "passedAt": "2026-08-26T18:47:37.944Z"
+      "passedAt": "2026-08-26T18:54:15.046Z"
     },
     {
       "suite": "Migration 0021 Constraint Rehearsal",
       "total": 1,
       "passed": 1,
       "failed": 0,
-      "passedAt": "2026-08-26T18:47:37.944Z"
+      "passedAt": "2026-08-26T18:54:15.046Z"
     }
   ],
   "securityGates": {
@@ -174,5 +179,5 @@
     "migration0011Gated": true,
     "migration0021Rehearsed": true
   },
-  "manifestSignature": "sig_rc_7428ac61"
+  "manifestSignature": "sig_rc_514987c7"
 }
