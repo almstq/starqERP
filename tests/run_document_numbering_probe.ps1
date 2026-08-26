@@ -99,6 +99,10 @@ try {
     --username postgres --dbname postgres --set ON_ERROR_STOP=1 `
     --file '/workspace/tests/job_customer_vehicle_phone_probe.sql' | Out-Host
 
+  Invoke-DockerChecked exec $containerName psql `
+    --username postgres --dbname postgres --set ON_ERROR_STOP=1 `
+    --file '/workspace/tests/migration_0021_rehearsal_probe.sql' | Out-Host
+
   if ($SimulateNaiveSequence) {
     & python (Join-Path $repoRoot 'tests/test_document_numbering_real_concurrency.py') --port $port --simulate-naive
     if ($LASTEXITCODE -ne 0) {

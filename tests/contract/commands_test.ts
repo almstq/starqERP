@@ -1749,5 +1749,38 @@ Deno.test('SERP-168: AI copilot proxy allows same-tenant prompt when feature fla
   assertEquals(decision.ok, true);
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-275: Forward-Only Synthetic-ID Transition Migration (0021)
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-275: migration 0021 safely disambiguates slug uniqueness before synthetic row insertion', async () => {
+  const migration0021 = await readMigration('202608260021_synthetic_tenant_uuid_transition.sql');
+  const slugDisambigIdx = migration0021.indexOf("slug = slug || '-legacy-transition'");
+  const insertSyntheticIdx = migration0021.indexOf("insert into public.organisations");
+  assert(slugDisambigIdx !== -1, 'Migration 0021 must disambiguate legacy slug');
+  assert(insertSyntheticIdx !== -1, 'Migration 0021 must insert synthetic organisation rows');
+  assert(slugDisambigIdx < insertSyntheticIdx, 'Slug disambiguation must precede synthetic row insertion');
+});
+
+Deno.test('SERP-275: migration 0021 safely bounds composite FKs on workflow_stages and role_permissions', async () => {
+  const migration0021 = await readMigration('202608260021_synthetic_tenant_uuid_transition.sql');
+  assert(migration0021.includes('alter table public.workflow_stages drop constraint if exists workflow_stages_organisation_id_workflow_template_id_fkey'));
+  assert(migration0021.includes('alter table public.workflow_stages add constraint workflow_stages_organisation_id_workflow_template_id_fkey'));
+  assert(migration0021.includes('alter table public.role_permissions drop constraint if exists role_permissions_organisation_id_role_id_fkey'));
+  assert(migration0021.includes('alter table public.role_permissions add constraint role_permissions_organisation_id_role_id_fkey'));
+});
+
+Deno.test('SERP-275: migration 0021 safely handles append-only triggers during transition', async () => {
+  const migration0021 = await readMigration('202608260021_synthetic_tenant_uuid_transition.sql');
+  assert(migration0021.includes('disable trigger audit_events_append_only'));
+  assert(migration0021.includes('enable trigger audit_events_append_only'));
+  assert(migration0021.includes('disable trigger security_events_append_only'));
+  assert(migration0021.includes('enable trigger security_events_append_only'));
+  assert(migration0021.includes('disable trigger sod_exceptions_append_only'));
+  assert(migration0021.includes('enable trigger sod_exceptions_append_only'));
+  assert(migration0021.includes('delete from public.organisations where id in (old_st, old_ci)'));
+});
+
+
 
 
