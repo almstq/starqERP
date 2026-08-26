@@ -2071,6 +2071,138 @@ export function validateTenantOnboardingPayload(
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-280: Privacy-Preserving Product Analytics Specification
+// (DEC-073 / DEC-083 / Vision §19 / Productisation)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const PERMITTED_ANALYTICS_EVENTS = [
+  'screen_viewed',
+  'modal_opened',
+  'tab_switched',
+  'theme_toggled',
+  'workflow_step_advanced',
+  'document_created_count',
+  'search_executed',
+  'error_occurred',
+  'mfa_challenge_prompted',
+  'mfa_challenge_completed',
+] as const;
+
+export type PermittedAnalyticsEvent = (typeof PERMITTED_ANALYTICS_EVENTS)[number];
+
+export const DISALLOWED_SENSITIVE_KEYS = [
+  'customer_name',
+  'name',
+  'customer',
+  'email',
+  'phone',
+  'plate_number',
+  'plateNumber',
+  'vehicle_reg',
+  'vehicleReg',
+  'tin',
+  'tinNumber',
+  'bml_account',
+  'bmlAccount',
+  'mibAccount',
+  'account_number',
+  'amount',
+  'subtotal',
+  'total',
+  'price',
+  'unitPrice',
+  'prompt',
+  'search_query',
+  'query',
+  'notes',
+  'details',
+  'description',
+  'address',
+  'password',
+  'secret',
+  'token',
+  'csrf',
+  'recoveryCodes',
+  'rawError',
+  'stack',
+  'payload',
+] as const;
+
+export interface AnalyticsEventPayload {
+  readonly event: PermittedAnalyticsEvent;
+  readonly anonymizedTenantId: string;
+  readonly properties?: Readonly<Record<string, string | number | boolean>>;
+  readonly timestamp?: string;
+}
+
+export function anonymizeTenantForAnalytics(tenantId: string, salt = 'starq_erp_telemetry_salt_v1'): string {
+  if (!tenantId) return 'anonymous';
+  // Deterministic source-side anonymization (prefix with anon_ and truncated hash representation)
+  let hash = 0;
+  const input = `${tenantId}:${salt}`;
+  for (let i = 0; i < input.length; i++) {
+    const char = input.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0; // Convert to 32bit integer
+  }
+  const hex = Math.abs(hash).toString(16).padStart(8, '0');
+  return `anon_tenant_${hex}`;
+}
+
+export function validateAnalyticsEvent(
+  rawEvent: unknown,
+): { valid: boolean; error?: string; event?: AnalyticsEventPayload } {
+  if (!rawEvent || typeof rawEvent !== 'object') {
+    return { valid: false, error: 'invalid_event_structure' };
+  }
+
+  const e = rawEvent as Record<string, unknown>;
+  const eventName = String(e.event || '') as PermittedAnalyticsEvent;
+
+  // 1. Assert event is in explicit allowlist (fail closed)
+  if (!PERMITTED_ANALYTICS_EVENTS.includes(eventName)) {
+    return { valid: false, error: 'unpermitted_analytics_event' };
+  }
+
+  const anonymizedTenantId = String(e.anonymizedTenantId || '');
+  if (!anonymizedTenantId || !anonymizedTenantId.startsWith('anon_')) {
+    return { valid: false, error: 'raw_tenant_id_unmasked' };
+  }
+
+  const properties = (e.properties || {}) as Record<string, unknown>;
+
+  // 2. Reject any payload carrying disallowed sensitive keys or excessive free text
+  for (const key of Object.keys(properties)) {
+    const lowerKey = key.toLowerCase();
+    if (DISALLOWED_SENSITIVE_KEYS.some((bad) => lowerKey === bad.toLowerCase() || lowerKey.includes(bad.toLowerCase()))) {
+      return { valid: false, error: `disallowed_sensitive_field_detected: ${key}` };
+    }
+
+    const val = properties[key];
+    if (typeof val === 'string') {
+      if (val.length > 64) {
+        return { valid: false, error: `excessive_string_length_in_property: ${key}` };
+      }
+      // Inspect string contents for email or phone-like signatures
+      if (/@/.test(val) || /\+960\s?\d{3}/.test(val) || /MVR|\$|Rf\s?\d+/.test(val)) {
+        return { valid: false, error: `sensitive_pattern_detected_in_property_value: ${key}` };
+      }
+    }
+  }
+
+  return {
+    valid: true,
+    event: {
+      event: eventName,
+      anonymizedTenantId,
+      properties: properties as Record<string, string | number | boolean>,
+      timestamp: String(e.timestamp || new Date().toISOString()),
+    },
+  };
+}
+
+
 
 
 

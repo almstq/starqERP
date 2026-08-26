@@ -41,8 +41,26 @@ No customer financial or transactional data is sold, monetized, or transferred t
 
 ---
 
+---
+
 ## 5. Security & Isolation Transparency
 
 Starq enforces multi-tenant isolation through application-level tenancy verification and composite database foreign keys. Formal Row-Level Security isolation test evidence is maintained in the project vault (`SERP-172`/`SERP-124`).
 
+---
+
+## 6. Product Telemetry & Usage Analytics (SERP-280)
+
+Starq collects minimal, privacy-preserving operational signals solely to measure feature utilization, screen navigation, and performance timings:
+
+* **Strictly Permitted Signals**:
+  * Event Names (`screen_viewed`, `modal_opened`, `tab_switched`, `theme_toggled`, `workflow_step_advanced`, `document_created_count`, `search_executed`, `error_occurred`, `mfa_challenge_prompted`, `mfa_challenge_completed`).
+  * Aggregated counts and latency timings (e.g. `count: 1`, `durationMs: 42`).
+  * Source-anonymized tenant hashes (`anon_tenant_<hex>`).
+* **Strictly Prohibited & Disallowed (Fail-Closed Enforcement)**:
+  * **Zero Commercial Data**: Customer names, emails, phone numbers, vehicle registrations/plates.
+  * **Zero Financial Values**: Invoice amounts, line item prices, totals, subtotals, bank account numbers, MIRA TINs.
+  * **Zero Free Text**: Notes, descriptions, search query text, AI prompts/completions, or raw error stack traces.
+
 For vulnerability disclosures or privacy concerns, contact: `security@starq.mv`.
+

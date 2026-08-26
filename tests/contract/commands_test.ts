@@ -92,6 +92,10 @@ import {
   PRIVILEGED_ACTIONS,
   validateTenantOnboardingPayload,
   PRODUCT_FIXED_INVARIANTS,
+  PERMITTED_ANALYTICS_EVENTS,
+  DISALLOWED_SENSITIVE_KEYS,
+  validateAnalyticsEvent,
+  anonymizeTenantForAnalytics,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -1907,6 +1911,68 @@ Deno.test('SERP-276: PRODUCT_FIXED_INVARIANTS explicitly locks 5 statutory & sec
   assert(PRODUCT_FIXED_INVARIANTS.includes('APPEND_ONLY_AUDIT_LOG_INTEGRITY'));
   assert(PRODUCT_FIXED_INVARIANTS.includes('NO_SECOND_POSTING_AUTHORITY'));
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-280: Privacy-Preserving Product Analytics Specification
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-280: anonymizeTenantForAnalytics hashes tenant ID deterministically with anon_ prefix', () => {
+  const anon = anonymizeTenantForAnalytics(ORG);
+  assert(anon.startsWith('anon_tenant_'));
+  assert(!anon.includes(ORG));
+  assertEquals(anonymizeTenantForAnalytics(ORG), anon);
+});
+
+Deno.test('SERP-280: validateAnalyticsEvent accepts valid operational events with non-sensitive properties', () => {
+  const res = validateAnalyticsEvent({
+    event: 'screen_viewed',
+    anonymizedTenantId: 'anon_tenant_12345678',
+    properties: { route: '/jobs' },
+  });
+  assertEquals(res.valid, true);
+  assertEquals(res.event?.event, 'screen_viewed');
+});
+
+Deno.test('SERP-280: validateAnalyticsEvent refuses unpermitted event names (fail closed)', () => {
+  const res = validateAnalyticsEvent({
+    event: 'invoiced_client_details',
+    anonymizedTenantId: 'anon_tenant_12345678',
+  });
+  assertEquals(res.valid, false);
+  assertEquals(res.error, 'unpermitted_analytics_event');
+});
+
+Deno.test('SERP-280: validateAnalyticsEvent refuses unmasked raw tenant IDs', () => {
+  const res = validateAnalyticsEvent({
+    event: 'screen_viewed',
+    anonymizedTenantId: ORG, // unmasked raw UUID
+  });
+  assertEquals(res.valid, false);
+  assertEquals(res.error, 'raw_tenant_id_unmasked');
+});
+
+Deno.test('SERP-280: validateAnalyticsEvent strictly rejects disallowed sensitive fields (commercial/PII)', () => {
+  for (const badKey of ['customer_name', 'amount', 'phone', 'tinNumber', 'prompt', 'notes', 'bmlAccount']) {
+    const res = validateAnalyticsEvent({
+      event: 'document_created_count',
+      anonymizedTenantId: 'anon_tenant_12345678',
+      properties: { [badKey]: 'sensitive_value' },
+    });
+    assertEquals(res.valid, false);
+    assert(res.error?.includes('disallowed_sensitive_field_detected'));
+  }
+});
+
+Deno.test('SERP-280: validateAnalyticsEvent rejects email, phone, or currency patterns in property values', () => {
+  const res = validateAnalyticsEvent({
+    event: 'error_occurred',
+    anonymizedTenantId: 'anon_tenant_12345678',
+    properties: { module: 'Failed email to admin@client.mv' },
+  });
+  assertEquals(res.valid, false);
+  assertEquals(res.error, 'sensitive_pattern_detected_in_property_value: module');
+});
+
 
 
 

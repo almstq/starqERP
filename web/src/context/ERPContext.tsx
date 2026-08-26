@@ -43,6 +43,7 @@ import {
   CLINIC_WORKFLOW_PRESET,
   BOATYARD_WORKFLOW_PRESET
 } from '../data/mockData';
+import { telemetry } from '../services/telemetry';
 
 export interface ERPContextType {
   activeTab: NavigationTab;
@@ -277,12 +278,21 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [theme]);
 
+  useEffect(() => {
+    telemetry.setTenantId(currentTenantId);
+  }, [currentTenantId]);
+
   const toggleTheme = () => {
-    setThemeState((prev) => (prev === 'light' ? 'dark' : 'light'));
+    setThemeState((prev) => {
+      const next = prev === 'light' ? 'dark' : 'light';
+      telemetry.track('theme_toggled', { theme: next });
+      return next;
+    });
   };
 
   const setTheme = (newTheme: 'light' | 'dark') => {
     setThemeState(newTheme);
+    telemetry.track('theme_toggled', { theme: newTheme });
   };
 
   // RBAC Permission Check
@@ -1068,6 +1078,9 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       summary: `Booked work order ${newJob.jobId} for ${newJob.customerName} (${newJob.serviceType}, Quoted: ${formatMVR(newJob.quotedAmount)}).`
     });
 
+    // Privacy-preserving telemetry signal (counts only, zero customer names/amounts)
+    telemetry.track('document_created_count', { documentType: 'job', count: 1 });
+
     return newJob;
   };
 
@@ -1103,6 +1116,9 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       entityName: newInvoice.invoiceNumber,
       summary: `Issued tax invoice ${newInvoice.invoiceNumber} to ${newInvoice.customerName} for ${formatMVR(newInvoice.totalAmount)} (GST: ${formatMVR(newInvoice.gstAmount)}).`
     });
+
+    // Privacy-preserving telemetry signal (counts only, zero customer names/amounts)
+    telemetry.track('document_created_count', { documentType: 'invoice', count: 1 });
 
     return newInvoice;
   };
