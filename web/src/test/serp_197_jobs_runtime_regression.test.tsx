@@ -65,4 +65,30 @@ describe('SERP-197 / SERP-145: Jobs Runtime & CreateJobModal Permission Contract
     expect(submitBtn).toBeDefined();
     expect((submitBtn as HTMLButtonElement).disabled).toBe(false);
   });
+
+  it('SERP-151: displays administrator role assignment guidance and removes misleading self-switch instructions', () => {
+    // Non-admin harness testing WorkflowStepRail for an intake step where technician is logged in
+    const NonAdminHarness: React.FC = () => {
+      const { switchCurrentUser } = useERP();
+      React.useEffect(() => {
+        // Switch to user-8 (Apprentice with no jobs.create permission)
+        switchCurrentUser('user-8');
+      }, [switchCurrentUser]);
+
+      return <WorkflowStepRail currentStatus="Vehicle Intake & Inspection" />;
+    };
+
+    render(
+      <MemoryRouter>
+        <ERPProvider>
+          <NonAdminHarness />
+        </ERPProvider>
+      </MemoryRouter>
+    );
+
+    // Verify the lock banner shows administrator guidance instead of self-switch instructions
+    expect(screen.getByText(/Ask an administrator to assign the required role/i)).toBeDefined();
+    expect(screen.queryByText(/Switch acting-as seat/i)).toBeNull();
+  });
 });
+

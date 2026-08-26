@@ -84,8 +84,10 @@ export const WorkflowStepRail: React.FC<WorkflowStepRailProps> = ({ currentStatu
             </div>
           ) : (
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
-              <Lock className="w-3.5 h-3.5 text-amber-600" />
-              <span>Seat Required: <strong className="font-bold">{primaryRequiredSeat}</strong> ({currentStep.roleLabel})</span>
+              <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span>
+                Seat Required: <strong className="font-bold">{primaryRequiredSeat}</strong> ({currentStep.roleLabel}) — <span className="font-normal text-amber-900">Ask an administrator to assign the required role in Settings &gt; Users</span>
+              </span>
             </div>
           )}
 
