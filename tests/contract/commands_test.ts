@@ -101,6 +101,11 @@ import {
   CANONICAL_LEGAL_TENANTS,
   validateOutletTenantBinding,
   validateModuleAccess,
+  createSecureSessionRecord,
+  validateSecureSession,
+  revokeSession,
+  validateReplayProtection,
+  SessionTokenRecord,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -2121,6 +2126,101 @@ Deno.test('SERP-002: validateModuleAccess enforces module entitlements per tenan
   assertEquals(res3.allowed, false);
   assertEquals(res3.error, 'cross_tenant_entitlement_mismatch');
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-026: Server Identity & Secure Session Boundary Contract
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-026: validateSecureSession successfully validates active session and updates access timestamp', () => {
+  const store: Record<string, SessionTokenRecord> = {};
+  const record = createSecureSessionRecord({
+    userId: 'usr-1',
+    tenantId: ORG,
+    roleId: 'role-admin',
+    seat: 'counter',
+    ttlSeconds: 3600,
+    nowMs: 1000000,
+  });
+  store[record.token] = record;
+
+  const res = validateSecureSession(record.token, store, 1005000);
+  assertEquals(res.valid, true);
+  assertEquals(res.session?.userId, 'usr-1');
+  assertEquals(res.session?.tenantId, ORG);
+  assertEquals(res.session?.seat, 'counter');
+  assertEquals(res.session?.lastAccessedAt, 1005000);
+});
+
+Deno.test('SERP-026: validateSecureSession fails closed on expired session (absolute TTL)', () => {
+  const store: Record<string, SessionTokenRecord> = {};
+  const record = createSecureSessionRecord({
+    userId: 'usr-1',
+    tenantId: ORG,
+    roleId: 'role-admin',
+    seat: 'counter',
+    ttlSeconds: 3600, // 1 hour
+    nowMs: 1000000,
+  });
+  store[record.token] = record;
+
+  // Check at 1 hr + 1 sec
+  const res = validateSecureSession(record.token, store, 1000000 + 3601 * 1000);
+  assertEquals(res.valid, false);
+  assertEquals(res.error, 'session_expired_absolute');
+});
+
+Deno.test('SERP-026: validateSecureSession fails closed on idle timeout inactivity', () => {
+  const store: Record<string, SessionTokenRecord> = {};
+  const record = createSecureSessionRecord({
+    userId: 'usr-1',
+    tenantId: ORG,
+    roleId: 'role-admin',
+    seat: 'counter',
+    ttlSeconds: 3600 * 8,
+    nowMs: 1000000,
+  });
+  store[record.token] = record;
+
+  // Inactive for 35 minutes (exceeds default 30 min idle timeout)
+  const res = validateSecureSession(record.token, store, 1000000 + 35 * 60 * 1000);
+  assertEquals(res.valid, false);
+  assertEquals(res.error, 'session_expired_idle_timeout');
+});
+
+Deno.test('SERP-026: revokeSession terminates session immediately upon logout', () => {
+  const store: Record<string, SessionTokenRecord> = {};
+  const record = createSecureSessionRecord({
+    userId: 'usr-1',
+    tenantId: ORG,
+    roleId: 'role-admin',
+    seat: 'counter',
+    ttlSeconds: 3600,
+    nowMs: 1000000,
+  });
+  store[record.token] = record;
+
+  const revRes = revokeSession(record.token, store, 'user_logout');
+  assertEquals(revRes.success, true);
+
+  const valRes = validateSecureSession(record.token, store, 1001000);
+  assertEquals(valRes.valid, false);
+  assertEquals(valRes.error, 'session_revoked: user_logout');
+});
+
+Deno.test('SERP-026: validateReplayProtection detects and refuses repeated request nonces', () => {
+  const seenNonces = new Set<string>();
+  const sessId = 'sess_abc123';
+  const nonce = 'nonce_unique_998124';
+
+  const res1 = validateReplayProtection(sessId, nonce, seenNonces);
+  assertEquals(res1.allowed, true);
+
+  // Attempt replay of exact same nonce
+  const res2 = validateReplayProtection(sessId, nonce, seenNonces);
+  assertEquals(res2.allowed, false);
+  assertEquals(res2.error, 'replay_attack_detected');
+});
+
 
 
 

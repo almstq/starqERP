@@ -2429,6 +2429,141 @@ export function validateModuleAccess(
   return { allowed: true };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-026: Server Identity & Secure Session Boundary Contract
+// (M0 main base / CORE-001 / CORE-002 / Auth & Session Lifecycle)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface SessionTokenRecord {
+  readonly sessionId: string;
+  readonly token: string;
+  readonly userId: string;
+  readonly tenantId: string;
+  readonly roleId: string;
+  readonly seat: SeatCode;
+  readonly issuedAt: number; // epoch ms
+  readonly expiresAt: number; // epoch ms
+  readonly lastAccessedAt: number; // epoch ms
+  readonly isRevoked: boolean;
+  readonly revokedReason?: string;
+  readonly mfaVerified: boolean;
+}
+
+export function createSecureSessionRecord(params: {
+  userId: string;
+  tenantId: string;
+  roleId: string;
+  seat: SeatCode;
+  ttlSeconds?: number;
+  mfaVerified?: boolean;
+  nowMs?: number;
+}): SessionTokenRecord {
+  const now = params.nowMs || Date.now();
+  const ttl = (params.ttlSeconds || 3600 * 8) * 1000; // Default 8 hours
+  const rawId = `${params.userId}:${params.tenantId}:${now}:${Math.random().toString(36).substring(2)}`;
+  
+  let hash = 0;
+  for (let i = 0; i < rawId.length; i++) {
+    const char = rawId.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0;
+  }
+  const sessionId = `sess_${Math.abs(hash).toString(16).padStart(8, '0')}`;
+  const token = `stq_sec_${sessionId}_${Date.now().toString(36)}`;
+
+  return {
+    sessionId,
+    token,
+    userId: params.userId,
+    tenantId: params.tenantId,
+    roleId: params.roleId,
+    seat: params.seat,
+    issuedAt: now,
+    expiresAt: now + ttl,
+    lastAccessedAt: now,
+    isRevoked: false,
+    mfaVerified: !!params.mfaVerified,
+  };
+}
+
+export function validateSecureSession(
+  token: string,
+  sessionStore: Readonly<Record<string, SessionTokenRecord>>,
+  nowMs?: number,
+  idleTimeoutMs = 1800 * 1000, // 30 minutes idle timeout
+): { valid: boolean; error?: string; session?: SessionTokenRecord } {
+  if (!token || typeof token !== 'string') {
+    return { valid: false, error: 'missing_session_token' };
+  }
+
+  const session = sessionStore[token];
+  if (!session) {
+    return { valid: false, error: 'invalid_or_unrecognized_session' };
+  }
+
+  if (session.isRevoked) {
+    return { valid: false, error: `session_revoked: ${session.revokedReason || 'explicit_logout'}` };
+  }
+
+  const now = nowMs || Date.now();
+
+  // 1. Absolute expiration check
+  if (now > session.expiresAt) {
+    return { valid: false, error: 'session_expired_absolute' };
+  }
+
+  // 2. Idle timeout check
+  if (now - session.lastAccessedAt > idleTimeoutMs) {
+    return { valid: false, error: 'session_expired_idle_timeout' };
+  }
+
+  return {
+    valid: true,
+    session: {
+      ...session,
+      lastAccessedAt: now,
+    },
+  };
+}
+
+export function revokeSession(
+  token: string,
+  sessionStore: Record<string, SessionTokenRecord>,
+  reason = 'user_logout',
+): { success: boolean; error?: string } {
+  const session = sessionStore[token];
+  if (!session) {
+    return { success: false, error: 'session_not_found' };
+  }
+
+  sessionStore[token] = {
+    ...session,
+    isRevoked: true,
+    revokedReason: reason,
+  };
+
+  return { success: true };
+}
+
+export function validateReplayProtection(
+  sessionId: string,
+  nonce: string,
+  seenNonces: Set<string>,
+): { allowed: boolean; error?: string } {
+  if (!nonce || nonce.trim().length < 8) {
+    return { allowed: false, error: 'invalid_nonce_parameter' };
+  }
+
+  const key = `${sessionId}:${nonce}`;
+  if (seenNonces.has(key)) {
+    return { allowed: false, error: 'replay_attack_detected' };
+  }
+
+  seenNonces.add(key);
+  return { allowed: true };
+}
+
+
 
 
 

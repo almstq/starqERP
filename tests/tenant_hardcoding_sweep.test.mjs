@@ -18,8 +18,9 @@ const HISTORICAL_MIGRATIONS_IMMUTABLE_ALLOWLIST = [
   'supabase/migrations/202608250015_roles_as_data.sql',
   'supabase/migrations/202608250017_tax_regimes_and_periods.sql',
   'supabase/migrations/202608250018_bank_accounts_entities.sql',
-  // The forward migration 0021 maps old IDs to new IDs
-  'supabase/migrations/202608260021_synthetic_tenant_uuid_transition.sql'
+  // The forward migration 0021 maps old IDs to new IDs, and its rehearsal probe tests that transition
+  'supabase/migrations/202608260021_synthetic_tenant_uuid_transition.sql',
+  'tests/migration_0021_rehearsal_probe.sql',
 ];
 
 const FORBIDDEN_PATTERNS = [
