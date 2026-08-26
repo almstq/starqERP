@@ -294,7 +294,12 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // Quick stats calculations
-  const totalSalesToday = useMemo(() => 38500, []);
+  const totalSalesToday = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return invoices
+      .filter((inv) => inv.date === today)
+      .reduce((acc, inv) => acc + inv.totalAmount, 0);
+  }, [invoices]);
   const totalCashReceived = useMemo(() => {
     return payments.reduce((acc, p) => acc + p.amount, 0);
   }, [payments]);

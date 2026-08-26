@@ -47,6 +47,7 @@ export const DashboardView: React.FC = () => {
     aiInsights,
     triggerAIInsightAction,
     jobs,
+    invoices,
     payments,
     formatMVR,
     setIsCreateJobOpen,
@@ -100,7 +101,9 @@ export const DashboardView: React.FC = () => {
         <div className="erp-card p-4">
           <span className="erp-muted block text-xs font-semibold">Sales Today</span>
           <div className="erp-figure text-lg mt-1 font-bold">{formatMVR(totalSalesToday, false)}</div>
-          <span className="text-[11px] erp-muted mt-0.5 block">3 invoices logged</span>
+          <span className="text-[11px] erp-muted mt-0.5 block">
+            {invoices.filter((inv) => inv.date === new Date().toISOString().split('T')[0]).length} invoices logged
+          </span>
         </div>
 
         <div
