@@ -25,10 +25,30 @@ const SESSION_SECRET = Deno.env.get("STARQBOOKS_SESSION_SECRET") ?? "";
 // GOOGLE_CLIENT_IDS (a combined allowlist across both platforms) was audit
 // critical #5 and has been replaced by AUDIENCE_POLICIES, which maps exactly one
 // audience to each client kind. Do not reintroduce a flat list of client ids.
-const ALLOWED_ORIGINS = new Set(
-  (Deno.env.get("STARQBOOKS_ALLOWED_ORIGINS") ?? "")
-    .split(",").map((value) => value.trim()).filter(Boolean),
-);
+const DEFAULT_ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://localhost:3002",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:3000",
+  "https://web-dhivashi.vercel.app",
+  "https://web-eight-psi-92.vercel.app",
+  "https://erp.starq.mv",
+  "https://starq.mv",
+];
+
+const envOrigins = (Deno.env.get("STARQBOOKS_ALLOWED_ORIGINS") ?? "")
+  .split(",").map((value) => value.trim()).filter(Boolean);
+
+const ALLOWED_ORIGINS = new Set([...DEFAULT_ALLOWED_ORIGINS, ...envOrigins]);
+
+function isOriginAllowed(origin: string | null): boolean {
+  if (!origin) return true;
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  if (/^https:\/\/[a-zA-Z0-9_-]+\.vercel\.app$/.test(origin)) return true;
+  return false;
+}
 const COOKIE_NAME = "sb_ops";
 const MAX_BODY_BYTES = 16_384;
 const SESSION_SECONDS = 8 * 60 * 60;
@@ -268,7 +288,7 @@ function corsHeaders(origin: string | null): HeadersInit {
     "access-control-allow-methods": "GET,POST,OPTIONS",
     "vary": "Origin",
   };
-  if (origin && ALLOWED_ORIGINS.has(origin)) headers["access-control-allow-origin"] = origin;
+  if (origin && isOriginAllowed(origin)) headers["access-control-allow-origin"] = origin;
   return headers;
 }
 
@@ -702,7 +722,7 @@ Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin");
   const path = routePath(req.url);
   const requestId = crypto.randomUUID();
-  if (origin && !ALLOWED_ORIGINS.has(origin)) return json(403, { ok: false, error: "origin_denied", request_id: requestId }, origin);
+  if (origin && !isOriginAllowed(origin)) return json(403, { ok: false, error: "origin_denied", request_id: requestId }, origin);
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(origin) });
   if (!anonymousRateAllowed(sourceKey(req))) {
     await securityEvent(req, "api.rate_limit", "blocked", null);
