@@ -62,6 +62,28 @@ export const CustomerDetailView: React.FC = () => {
         >
           <ArrowLeft size={16} />
         </button>
+
+        {/* Customer Logo or Initials Avatar */}
+        <div
+          className="w-12 h-12 rounded-[var(--md-sys-shape-corner-medium)] flex items-center justify-center shrink-0 overflow-hidden border border-[var(--md-sys-color-outline-variant)]"
+          style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)' }}
+        >
+          {customer.logoUrl ? (
+            <img
+              src={customer.logoUrl}
+              alt={customer.name}
+              className="max-h-full max-w-full object-contain select-none p-1"
+            />
+          ) : (
+            <span
+              className="font-bold text-sm"
+              style={{ color: 'var(--md-sys-color-primary)' }}
+            >
+              {customer.name.slice(0, 2).toUpperCase()}
+            </span>
+          )}
+        </div>
+
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="erp-h1 text-2xl">{customer.name}</h1>

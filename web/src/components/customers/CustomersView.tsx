@@ -70,10 +70,24 @@ export const CustomersView: React.FC = () => {
       header: 'Customer & Contact',
       width: '28%',
       render: (c) => (
-        <div className="min-w-0">
-          <div className="font-semibold text-xs text-[var(--md-sys-color-on-surface)] truncate">{c.name}</div>
-          <div className="text-[11px] mono-num truncate text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
-            {c.phone} • {c.email}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div
+            className="w-7 h-7 rounded-[var(--md-sys-shape-corner-small)] flex items-center justify-center shrink-0 overflow-hidden border border-[var(--md-sys-color-outline-variant)]"
+            style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)' }}
+          >
+            {c.logoUrl ? (
+              <img src={c.logoUrl} alt="" className="max-h-full max-w-full object-contain p-0.5" />
+            ) : (
+              <span className="font-bold text-[10px]" style={{ color: 'var(--md-sys-color-primary)' }}>
+                {c.name.slice(0, 2).toUpperCase()}
+              </span>
+            )}
+          </div>
+          <div className="min-w-0">
+            <div className="font-semibold text-xs text-[var(--md-sys-color-on-surface)] truncate">{c.name}</div>
+            <div className="text-[11px] mono-num truncate text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
+              {c.phone} • {c.email}
+            </div>
           </div>
         </div>
       ),

@@ -128,6 +128,7 @@ describe('SERP Material 3 UI System Consistency & Design System Linter', () => {
       'Switch',
       'SegmentedButton',
       'FilterChip',
+      'ThemeSelector',
     ];
     for (const prim of requiredPrimitives) {
       assert.ok(
@@ -135,5 +136,55 @@ describe('SERP Material 3 UI System Consistency & Design System Linter', () => {
         `web/src/components/ui/index.ts must export ${prim}`
       );
     }
+  });
+
+  it('Zero improvised circle-line fake q logos across web codebase', () => {
+    const files = walk(WEB_SRC);
+    const violations = [];
+    for (const file of files) {
+      if (file.includes('test') || file.endsWith('.d.ts')) continue;
+      const content = fs.readFileSync(file, 'utf8');
+      if (content.includes('circle cx="30"') && content.includes('cy="28"')) {
+        const rel = path.relative(ROOT, file);
+        violations.push(`${rel} contains legacy improvised fake q mark`);
+      }
+    }
+    assert.strictEqual(
+      violations.length,
+      0,
+      `Found legacy improvised fake q mark violations:\n${violations.join('\n')}`
+    );
+  });
+
+  it('ThemeSelector defines System, Light, and Dark options with canonical accessible labels', () => {
+    const selectorPath = path.join(WEB_SRC, 'components', 'ui', 'ThemeSelector.tsx');
+    assert.ok(fs.existsSync(selectorPath), 'ThemeSelector.tsx must exist');
+    const content = fs.readFileSync(selectorPath, 'utf8');
+    assert.match(content, /Theme:\s*System/, 'Must provide "Theme: System" label');
+    assert.match(content, /Theme:\s*Light/, 'Must provide "Theme: Light" label');
+    assert.match(content, /Theme:\s*Dark/, 'Must provide "Theme: Dark" label');
+    assert.match(content, /Laptop/, 'Must use canonical system theme icon');
+    assert.match(content, /Sun/, 'Must use Sun icon for Light mode');
+    assert.match(content, /Moon/, 'Must use Moon icon for Dark mode');
+  });
+
+  it('SettingsView integrates LogoUpload and AboutTab with canonical metadata', () => {
+    const settingsPath = path.join(WEB_SRC, 'components', 'settings', 'SettingsView.tsx');
+    const aboutPath = path.join(WEB_SRC, 'components', 'settings', 'AboutTab.tsx');
+    const logoUploadPath = path.join(WEB_SRC, 'components', 'settings', 'LogoUpload.tsx');
+
+    assert.ok(fs.existsSync(settingsPath), 'SettingsView.tsx must exist');
+    assert.ok(fs.existsSync(aboutPath), 'AboutTab.tsx must exist');
+    assert.ok(fs.existsSync(logoUploadPath), 'LogoUpload.tsx must exist');
+
+    const settingsContent = fs.readFileSync(settingsPath, 'utf8');
+    assert.match(settingsContent, /LogoUpload/, 'SettingsView must integrate LogoUpload');
+    assert.match(settingsContent, /AboutTab/, 'SettingsView must integrate AboutTab');
+
+    const aboutContent = fs.readFileSync(aboutPath, 'utf8');
+    assert.match(aboutContent, /STARQ_ERP_CANONICAL_METADATA/, 'AboutTab must consume canonical metadata SSOT');
+    assert.match(aboutContent, /starqERP/, 'AboutTab must show starqERP');
+    assert.match(aboutContent, /starqAI/, 'AboutTab must acknowledge starqAI');
+    assert.match(aboutContent, /Copy System Information/, 'AboutTab must provide Copy System Information');
   });
 });

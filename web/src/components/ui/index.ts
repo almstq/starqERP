@@ -15,3 +15,4 @@ export * from './StateLayer';
 export * from './Switch';
 export * from './SegmentedButton';
 export * from './FilterChip';
+export * from './ThemeSelector';

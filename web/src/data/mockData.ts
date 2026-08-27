@@ -1289,6 +1289,7 @@ export const INITIAL_TENANTS: import('../types/erp').OrganisationTenant[] = [
     bmlAccount: '7730000100201 (BML MVR Corporate)',
     mibAccount: '9901001002011 (MIB Corporate Current)',
     logoIcon: 'Layers',
+    logoUrl: '/starq-logo.png',
     themeColor: '#4f46e5',
     createdAt: '2024-01-01',
     outlets: [
@@ -1349,6 +1350,7 @@ export const INITIAL_TENANTS: import('../types/erp').OrganisationTenant[] = [
     bmlAccount: '7730000189201 (BML MVR Main Account)',
     mibAccount: '9901004829101 (MIB MVR Current)',
     logoIcon: 'Flame',
+    logoUrl: '/club-ignition-logo.png',
     themeColor: '#2563eb',
     createdAt: '2023-01-15',
     outlets: [

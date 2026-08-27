@@ -20,6 +20,7 @@ export const NewCustomerModal: React.FC = () => {
   const [year, setYear] = useState('2022');
   const [color, setColor] = useState('');
   const [vehicleType, setVehicleType] = useState<'Car' | 'Motorcycle' | 'Speedboat/Jetski' | 'Van/Truck'>('Car');
+  const [logoUrl, setLogoUrl] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,13 +46,15 @@ export const NewCustomerModal: React.FC = () => {
       type,
       island,
       vehicles,
-      notes
+      notes,
+      logoUrl: logoUrl.trim() || undefined,
     });
 
     setIsNewCustomerOpen(false);
     setName('');
     setPhone('+960 ');
     setEmail('');
+    setLogoUrl('');
     setPlateNumber('');
     setMake('');
     setModel('');
@@ -135,6 +138,19 @@ export const NewCustomerModal: React.FC = () => {
               <option value="Fleet">Corporate / Fleet (30-day Terms)</option>
               <option value="Corporate">Government / Corporate</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Client Brand Logo URL <span className="text-slate-400 font-normal">(Optional)</span>
+            </label>
+            <input
+              type="url"
+              value={logoUrl}
+              onChange={(e) => setLogoUrl(e.target.value)}
+              placeholder="https://.../logo.png or asset path"
+              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+            />
           </div>
 
           <div>

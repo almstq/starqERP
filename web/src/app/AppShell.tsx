@@ -9,6 +9,8 @@ import { useERP } from '../context/ERPContext';
 import { useTheme } from '../context/ThemeContext';
 import { MfaSetupModal } from '../components/auth/MfaSetupModal';
 import { MfaChallengeModal } from '../components/auth/MfaChallengeModal';
+import { ThemeSelector } from '../components/ui';
+import { StarqLogomark } from '../components/brand/StarqLogo';
 
 export type MaterialWindowClass = 'compact' | 'medium' | 'expanded' | 'large' | 'extra-large';
 
@@ -65,11 +67,6 @@ export const AppShell: React.FC = () => {
   const workspace = currentTenant?.name || 'Starq Technologies';
   const initials = workspace.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
-  const cycleTheme = () => {
-    if (themeMode === 'system') setThemeMode('light');
-    else if (themeMode === 'light') setThemeMode('dark');
-    else setThemeMode('system');
-  };
 
   useEffect(() => {
     setMobileDrawerOpen(false);
@@ -111,10 +108,7 @@ export const AppShell: React.FC = () => {
             }}
             title="starqERP"
           >
-            <svg width="20" height="20" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-              <circle cx="30" cy="28" r="11" stroke="currentColor" strokeWidth="5" />
-              <path d="M41 28v20" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-            </svg>
+            <StarqLogomark size={20} />
           </div>
 
           {/* Rail Items */}
@@ -172,10 +166,7 @@ export const AppShell: React.FC = () => {
                 color: 'var(--md-sys-color-on-primary)',
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-                <circle cx="30" cy="28" r="11" stroke="currentColor" strokeWidth="5" />
-                <path d="M41 28v20" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-              </svg>
+              <StarqLogomark size={18} />
             </div>
             <div className="leading-tight min-w-0">
               <div className="text-[16px] font-semibold tracking-tight truncate" style={{ color: 'var(--md-sys-color-on-surface)' }}>
@@ -270,10 +261,7 @@ export const AppShell: React.FC = () => {
                     color: 'var(--md-sys-color-on-primary)',
                   }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-                    <circle cx="30" cy="28" r="11" stroke="currentColor" strokeWidth="5" />
-                    <path d="M41 28v20" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-                  </svg>
+                  <StarqLogomark size={16} />
                 </div>
                 <span className="font-semibold text-sm text-[var(--md-sys-color-on-surface)]">starqERP</span>
               </div>
@@ -371,22 +359,8 @@ export const AppShell: React.FC = () => {
 
           {/* Header Action Controls */}
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={cycleTheme}
-              className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full hover:bg-[var(--md-sys-color-surface-container-highest)] transition-colors cursor-pointer"
-              style={{ color: 'var(--md-sys-color-on-surface-variant)' }}
-              aria-label={`Theme: ${themeMode} (${resolvedTheme}). Click to switch.`}
-              title={`Theme: ${themeMode.toUpperCase()} (Click to toggle)`}
-            >
-              {themeMode === 'system' ? (
-                <Laptop size={17} aria-hidden="true" />
-              ) : resolvedTheme === 'dark' ? (
-                <Moon size={17} aria-hidden="true" />
-              ) : (
-                <Sun size={17} aria-hidden="true" />
-              )}
-            </button>
+            {/* Material 3 Three-Option Theme Menu Selector */}
+            <ThemeSelector />
 
             <button
               type="button"
@@ -405,7 +379,7 @@ export const AppShell: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate('/settings')}
-              className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 rounded-[var(--md-sys-shape-corner-full)] hover:bg-[var(--md-sys-color-surface-container-highest)] transition-colors cursor-pointer text-xs font-medium max-w-[120px] sm:max-w-[180px]"
+              className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 rounded-[var(--md-sys-shape-corner-full)] hover:bg-[var(--md-sys-color-surface-container-highest)] transition-colors cursor-pointer text-xs font-medium max-w-[130px] sm:max-w-[200px]"
               style={{
                 backgroundColor: 'var(--md-sys-color-surface-container-lowest)',
                 border: '1px solid var(--md-sys-color-outline-variant)',
@@ -413,16 +387,35 @@ export const AppShell: React.FC = () => {
               }}
               aria-label={`Active workspace: ${workspace}. Click to manage settings.`}
             >
-              <span
-                className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full text-[10px] font-bold mono-num shrink-0"
-                style={{
-                  backgroundColor: 'var(--md-sys-color-primary-container)',
-                  color: 'var(--md-sys-color-on-primary-container)',
-                }}
-                aria-hidden="true"
-              >
-                {initials}
-              </span>
+              {currentTenant.logoUrl ? (
+                <span
+                  className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full overflow-hidden shrink-0"
+                  style={{
+                    backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                    border: '1px solid var(--md-sys-color-outline-variant)',
+                  }}
+                >
+                  <img
+                    src={currentTenant.logoUrl}
+                    alt=""
+                    className="max-h-full max-w-full object-contain select-none"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                </span>
+              ) : (
+                <span
+                  className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full text-[10px] font-bold mono-num shrink-0"
+                  style={{
+                    backgroundColor: 'var(--md-sys-color-primary-container)',
+                    color: 'var(--md-sys-color-on-primary-container)',
+                  }}
+                  aria-hidden="true"
+                >
+                  {initials}
+                </span>
+              )}
               <span className="truncate min-w-0 hidden xs:inline sm:inline">{workspace}</span>
             </button>
           </div>

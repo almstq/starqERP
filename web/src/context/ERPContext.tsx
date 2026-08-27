@@ -69,6 +69,7 @@ export interface ERPContextType {
   switchTenant: (tenantId: string) => void;
   createTenant: (tenantData: Omit<OrganisationTenant, 'id' | 'createdAt'>) => OrganisationTenant;
   updateTenant: (tenantData: Partial<OrganisationTenant>) => void;
+  updateTenantLogo: (logoUrl: string | null) => void;
   isSetupModalOpen: boolean;
   setIsSetupModalOpen: (open: boolean) => void;
 
@@ -208,8 +209,28 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const { resolvedTheme, setThemeMode } = useTheme();
   const theme = resolvedTheme;
 
-  // Multi-tenant state
-  const [tenants, setTenants] = useState<OrganisationTenant[]>(INITIAL_TENANTS);
+  // Multi-tenant state with tenant-scoped storage persistence
+  const [tenants, setTenants] = useState<OrganisationTenant[]>(() => {
+    try {
+      const saved = localStorage.getItem('starq_erp_tenants_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // Fallback to initial seed
+    }
+    return INITIAL_TENANTS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('starq_erp_tenants_v1', JSON.stringify(tenants));
+    } catch {
+      // Storage unavailable or quota exceeded
+    }
+  }, [tenants]);
+
   const [currentTenantId, setCurrentTenantId] = useState<string>('tenant-1');
   const [isSetupModalOpen, setIsSetupModalOpen] = useState<boolean>(false);
 
@@ -431,6 +452,26 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       entityId: currentTenant.id,
       entityName: currentTenant.name,
       summary: `Updated organization settings and profile for ${currentTenant.name}.`
+    });
+  };
+
+  const updateTenantLogo = (logoUrl: string | null) => {
+    setTenants((prev) =>
+      prev.map((t) =>
+        t.id === currentTenant.id
+          ? { ...t, logoUrl: logoUrl || undefined }
+          : t
+      )
+    );
+    logAuditEvent({
+      action: 'ORG_CONFIG_SAVED',
+      module: 'settings',
+      entityType: 'OrganisationTenant',
+      entityId: currentTenant.id,
+      entityName: currentTenant.name,
+      summary: logoUrl
+        ? `Uploaded and configured new brand logo for ${currentTenant.name}.`
+        : `Removed brand logo and reverted to monogram initials for ${currentTenant.name}.`
     });
   };
 
@@ -1598,6 +1639,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         switchTenant,
         createTenant,
         updateTenant,
+        updateTenantLogo,
         isSetupModalOpen,
         setIsSetupModalOpen,
 

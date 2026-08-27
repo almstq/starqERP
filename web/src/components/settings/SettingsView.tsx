@@ -12,7 +12,9 @@ import {
   Plus,
   Sparkles,
   MapPin,
-  LifeBuoy
+  LifeBuoy,
+  Image as ImageIcon,
+  Info
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { GstRegistrationStatus } from '../../types/erp';
@@ -21,11 +23,13 @@ import { RolesPermissionsTab } from './RolesPermissionsTab';
 import { UsersManagementTab } from './UsersManagementTab';
 import { WorkflowsConfigTab } from './WorkflowsConfigTab';
 import { SupportTab } from './SupportTab';
+import { LogoUpload } from './LogoUpload';
+import { AboutTab } from './AboutTab';
 
-type SettingsSubTab = 'profile' | 'roles' | 'users' | 'workflows' | 'support';
+type SettingsSubTab = 'profile' | 'branding' | 'roles' | 'users' | 'workflows' | 'support' | 'about';
 
 export const SettingsView: React.FC = () => {
-  const { currentTenant, updateTenant, setIsSetupModalOpen } = useERP();
+  const { currentTenant, updateTenant, updateTenantLogo, setIsSetupModalOpen } = useERP();
   const [activeSubTab, setActiveSubTab] = useState<SettingsSubTab>('profile');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -101,13 +105,15 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* Settings Navigation Subtabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-2 border-b border-[var(--md-sys-color-outline-variant)] pb-2 overflow-x-auto scrollbar-none">
         {[
-          { id: 'profile', label: 'Company Profile & Tax', icon: Building2 },
+          { id: 'profile', label: 'Organisation Profile & Tax', icon: Building2 },
+          { id: 'branding', label: 'Branding & Logo', icon: ImageIcon },
           { id: 'roles', label: 'Roles & Permissions', icon: ShieldCheck },
           { id: 'users', label: 'Users & Authorizations', icon: Users },
           { id: 'workflows', label: 'Configurable Workflows', icon: GitBranch },
-          { id: 'support', label: 'Support & Escalation', icon: LifeBuoy }
+          { id: 'support', label: 'Support & Escalation', icon: LifeBuoy },
+          { id: 'about', label: 'About starqERP', icon: Info }
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeSubTab === tab.id;
@@ -115,13 +121,23 @@ export const SettingsView: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveSubTab(tab.id as SettingsSubTab)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-[var(--md-sys-shape-corner-full)] text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'shadow-xs'
+                  : 'hover:bg-[var(--md-sys-color-surface-container-high)]'
               }`}
+              style={
+                isActive
+                  ? {
+                      backgroundColor: 'var(--md-sys-color-primary)',
+                      color: 'var(--md-sys-color-on-primary)',
+                    }
+                  : {
+                      color: 'var(--md-sys-color-on-surface-variant)',
+                    }
+              }
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-3.5 h-3.5" />
               <span>{tab.label}</span>
             </button>
           );
@@ -324,6 +340,19 @@ export const SettingsView: React.FC = () => {
         </form>
       )}
 
+      {activeSubTab === 'branding' && (
+        <div className="space-y-6 animate-in fade-in">
+          <LogoUpload
+            currentLogoUrl={currentTenant.logoUrl}
+            entityName={currentTenant.name}
+            onSaveLogo={(url) => updateTenantLogo(url)}
+            title="Organisation / Business Logo"
+            description="Upload an official business logo for invoices, quotations, top chrome, and client headers. Supports PNG, WebP, JPEG, and SVG up to 2MB."
+            defaultLogoUrl="/club-ignition-logo.png"
+          />
+        </div>
+      )}
+
       {activeSubTab === 'roles' && <RolesPermissionsTab />}
 
       {activeSubTab === 'users' && <UsersManagementTab />}
@@ -331,6 +360,8 @@ export const SettingsView: React.FC = () => {
       {activeSubTab === 'workflows' && <WorkflowsConfigTab />}
       
       {activeSubTab === 'support' && <SupportTab />}
+
+      {activeSubTab === 'about' && <AboutTab />}
     </div>
   );
 };

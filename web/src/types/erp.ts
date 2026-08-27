@@ -43,6 +43,7 @@ export interface Customer {
   totalInvoiced: number;
   outstandingBalance: number;
   lastPaymentDate?: string;
+  logoUrl?: string;
   tags?: string[];
   notes: string;
   createdAt: string;
@@ -410,6 +411,7 @@ export interface OrganisationTenant {
   bmlAccount: string;
   mibAccount?: string;
   logoIcon?: string;
+  logoUrl?: string;
   themeColor: string;
   createdAt: string;
   outlets?: Outlet[];
