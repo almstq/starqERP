@@ -1,73 +1,91 @@
 # ELDER RETURN BRIEF — 2026-08-28
 
 **Prepared For**: Project Leadership & Elder Council  
-**Date**: 2026-08-28 (Updated 2026-08-27 14:00)  
-**System**: starqERP Multi-Tenant SaaS Solution  
-**Release Readiness**: RC1 foundation verified; platform realignment is in progress and is not yet live-production complete.
+**Date**: 2026-08-28 (Updated 2026-08-27 14:55)  
+**System**: starqERP Multi-Tenant SaaS Platform  
+**Status**: SaaS Platform Realignment — Foundation Implemented, PR Pending CI/Merge  
+**Branch**: `feat/platform-realignment` (Commit `eb609ed`, PR #10)  
 
 ---
 
 ## 1. Executive Summary & Verification Matrix
 
-The AG Final Takeover, Qoder Foundation Remediation, Authentication Surface Hardening, and Material 3 Design System Migration are complete for their recorded scope. The next correction is architectural: Club Ignition is Tenant #1, not the product boundary.
+The Round 1 Foundation Remediation, Material 3 Design System Migration, and pure Google OAuth boundary are structurally complete. 
+
+The application has now executed a fundamental strategic correction: **Club Ignition is Tenant #1, not the product boundary.** starqERP has established the architectural foundation to operate as a true multi-industry SaaS operating system governed by Starq Technologies Pvt Ltd.
 
 | Verification Dimension | Metric / Output | Result |
 | :--- | :--- | :---: |
+| **Authoritative Nexus Board** | 264 Canonical Tasks | **117 Done / 264 (44.3%)** |
 | **TypeScript / Linter** | `tsc --noEmit` across all workspace modules | **0 Errors (Exit 0)** |
-| **Automated Test Suite** | 35 test files / 144 unit & integration test cases | **144 / 144 PASS (100%)** |
-| **Production Build** | `vite build` minification and bundle compilation | **PASS (7.4s)** |
-| **Responsive Viewports** | 9 discrete viewport profiles (360px to 1920px + 200% zoom) | **100% PASS** |
-| **Canonical Board Progress** | 54 / 56 Tasks Completed on SSOT Board | **96.4% Complete** |
-| **Working Tree Hygiene** | All audit items resolved; strict token enforcement active | **Clean & Frozen** |
+| **Automated Test Suite** | 36 test files / 146 unit & integration test cases | **146 / 146 PASS (100%)** |
+| **Production Build** | `vite build` minification and bundle compilation | **PASS (~7.0s)** |
+| **Platform Realignment PR** | PR #10 on `feat/platform-realignment` | **Open (CI Pending / Failing Backend)** |
+| **Live Database Migration** | Migration `202608270024_platform_control_plane.sql` | **NOT YET APPLIED LIVE** |
+
+> [!IMPORTANT]
+> **Key Founder Test for National SaaS Readiness**:  
+> *"Can we provision a clean second company from a materially different industry without editing starqERP source code specifically for that customer?"*
 
 ---
 
-## 2. Key Accomplishments
+## 2. Platform Realignment Architecture (Two-Plane Model)
 
-### A. Authentication & Founder Access
-1. **Canonical Login Surface**:
-   - Replaced generic title with authoritative `starqERP` branding and `StarqBrandLockup`.
-   - Hidden internal configuration variables (`VITE_GOOGLE_CLIENT_ID`) from end-user display.
-   - Preserved Production Authentication Gate across desktop and mobile screens.
-2. **Founder Instant Access**:
-   - Integrated Founder Quick-Launch for Ali Musthaq (`a.musthaq@gmail.com`) enabling instant single-click entry into all 12 seats and all 4 entities (`starq`, `club-ignition`, `group`, `CI`).
-   - Wired authoritative allowlist (`services/allowlist.ts`) matching backend edge functions with fail-closed security.
+The platform foundation is documented in [`docs/architecture/2026-08-27_PLATFORM_REALIGNMENT.md`](../architecture/2026-08-27_PLATFORM_REALIGNMENT.md) and enforces four strict architectural invariants:
 
-### B. Responsive Navigation & Space Efficiency
-1. **Mobile Bottom Navigation Bar**:
-   - Replaced the intrusive 72px side rail on compact viewports (< 1024px) with an official Material 3 `NavigationBar` docked at the bottom of the screen.
-   - Expanded mobile content to 100% full width, freeing up vital horizontal real estate.
-2. **Settings Navigation Architecture**:
-   - Eliminated the in-page secondary sidebar ("double sidebar") that caused column squishing.
-   - Relocated the 7 Settings Categories directly under `Settings` in the main AppShell sidebar and mobile drawer.
-   - Settings content now occupies 100% of the viewport width.
+### A. Governed Starq HQ Control Plane vs. Tenant Execution Plane
+- **Control Plane**: Manages tenant registry, subscription plans, provisioning runs, daily aggregate usage, and service health metadata. Access is restricted strictly to an authenticated `service_role` boundary.
+- **Governed Boundary**: Starq HQ operators do not have unrestricted cross-tenant access to customer operational data. It does not alter `app_private.current_organisation_id()` or bypass execution-plane RLS.
+- **Tenant Execution Plane**: Houses tenant-scoped commercial records, workflows, users, seats, and inventory with strict RLS multi-tenant isolation.
 
-### C. Data Density & Table Layout Resilience
-1. **Table Column Containment**:
-   - Enforced `min-w-[780px]` and `whitespace-nowrap` on `UsersManagementTab`, `RolesPermissionsTab`, and `AuditLogView`.
-   - Completely resolved word-breaking and letter-by-letter vertical stacking.
-2. **Print Optimization**:
-   - Implemented automated `@media print` rules in `index.css` to hide sidebars, navigation bars, and action buttons during invoice and report printing.
+### B. Single Core Shared Archetype Engine
+- Shared catalog (`web/src/domain/archetypes.ts`) supporting 6 initial industry archetypes:
+  1. *General Business*
+  2. *Automotive / Workshop*
+  3. *Wholesale / Trading*
+  4. *Marine / Service*
+  5. *Construction / Contracting*
+  6. *Retail*
+- `provisionArchetypeDefaults()` configures the single shared ERP core and stamps workflow rows with the tenant ID. **Zero application forks are created.**
+
+### C. Clean Production Tenant Provisioning & Demo Reset Policy
+- Production tenants are **born clean** (`clean_production` mode) with unpolluted ledgers and fresh document sequences.
+- Demo/sample data exists strictly in a separate `demo_sample` run mode.
+- There is **no casual destructive reset button** in live production workspaces; audited resets are restricted to dedicated demo organizations.
+
+### D. Bounded White-Labeling & Subdomain Routing
+- Tenant branding (legal name, trading name, logo, slug) is persisted per tenant and rendered strictly within the **frozen Material 3 design system**.
+- No arbitrary tenant CSS or visual divergence is permitted.
+- Host routing targets `<tenant-slug>.starq.mv`.
 
 ---
 
-## 3. Durability & Handoff Artifacts
+## 3. Current Technical Reality & Deployment Boundaries
 
-## 3A. Platform Realignment Handoff — 2026-08-27
+1. **Authentication Boundary Verified**:
+   - Google Sign-In via Google Identity Services (`Continue with Google`) is wired directly to `POST /api/auth/google`.
+   - All mock founder shortcuts and client-side bypass allowlists have been deleted.
+   - Vite proxy cleanly forwards requests to the Supabase Edge Gateway.
+2. **Platform Schema Foundation**:
+   - Migration `202608270024_platform_control_plane.sql` defines `platform.tenant_registry`, `platform.usage_daily`, `platform.operator_principals`, and `platform.provisioning_runs`.
+   - Migration 0024 is **not yet applied live** to the Seoul Supabase instance.
+3. **Automated Testing Proof**:
+   - `web/src/test/platform_archetypes.test.ts` proves that Automotive and Wholesale configurations produce distinct, tenant-stamped workflows without mutating the shared catalog.
+   - **Live Supabase adversarial cross-tenant isolation testing has not yet been executed**; do not report live proof until executed against staging/production Supabase.
+4. **CI & PR Status**:
+   - PR #10 (`feat/platform-realignment`) is open.
+   - Required CI: Backend/governance CI was failing and frontend CI was pending at last check. PR must achieve green CI before merging into `main`.
 
-The requested `SERP-290` through `SERP-293` IDs were checked against the authoritative Nexus board (`264` records) and are absent, so none was fabricated or marked complete. The implemented foundation is documented in [`docs/architecture/2026-08-27_PLATFORM_REALIGNMENT.md`](docs/architecture/2026-08-27_PLATFORM_REALIGNMENT.md).
+---
 
-- The shared archetype catalog supports General Business, Automotive / Workshop, Wholesale / Trading, Marine / Service, Construction / Contracting, and Retail without application forks.
-- Migration `202608270024_platform_control_plane.sql` adds service-boundary-only platform metadata for tenant registry, plans, provisioning, aggregate usage, operator principals, and health/version state.
-- Onboarding now persists an archetype identity; existing backend/API names and fixture data remain compatibility debt, not evidence of a live production migration.
-- Structural tests prove automotive and wholesale configurations remain distinct and tenant-stamped. No live Supabase adversarial isolation test was run; do not report live proof.
-- Production tenant creation is intended to be clean by default. Demo/sample provisioning is a separate mode, and no generic destructive reset exists.
+## 4. Master Task Index & Durability Artifacts
 
-- **Master Audit Reconciliation**: [`docs/qa/ag-final/MASTER_AUDIT_RECONCILIATION.md`](file:///D:/StarqTech/starqERP/docs/qa/ag-final/MASTER_AUDIT_RECONCILIATION.md)
-- **M3 Final Acceptance**: [`docs/qa/ag-final/M3_FINAL_ACCEPTANCE.md`](file:///D:/StarqTech/starqERP/docs/qa/ag-final/M3_FINAL_ACCEPTANCE.md)
-- **Design System Freeze**: [`docs/qa/ag-final/DESIGN_SYSTEM_FREEZE.md`](file:///D:/StarqTech/starqERP/docs/qa/ag-final/DESIGN_SYSTEM_FREEZE.md)
-- **AG Completion Report**: [`docs/qa/ag-final/AG_COMPLETION_REPORT.md`](file:///D:/StarqTech/starqERP/docs/qa/ag-final/AG_COMPLETION_REPORT.md)
-- **Remaining Technical Debt**: [`docs/qa/ag-final/REMAINING_DEBT.md`](file:///D:/StarqTech/starqERP/docs/qa/ag-final/REMAINING_DEBT.md)
-- **Next Development Handoff**: [`docs/qa/ag-final/NEXT_DEVELOPMENT_HANDOFF.md`](file:///D:/StarqTech/starqERP/docs/qa/ag-final/NEXT_DEVELOPMENT_HANDOFF.md)
-- **Google OAuth Setup Guide**: [`docs/auth/GOOGLE_OAUTH_SETUP.md`](file:///D:/StarqTech/starqERP/docs/auth/GOOGLE_OAUTH_SETUP.md)
-- **Round 1 Foundation Record**: `docs/qa/qoder-round1-foundation/`
+The authoritative task board contains **264 records (117 Done = 44.3%)**. Note that `SERP-290` through `SERP-293` were brainstorm concepts and are not registered canonical task IDs; they are not fabricated or marked Done.
+
+- **Architecture Specification**: [`docs/architecture/2026-08-27_PLATFORM_REALIGNMENT.md`](../architecture/2026-08-27_PLATFORM_REALIGNMENT.md)
+- **Master Audit Reconciliation**: [`docs/qa/ag-final/MASTER_AUDIT_RECONCILIATION.md`](qa/ag-final/MASTER_AUDIT_RECONCILIATION.md)
+- **M3 Final Acceptance**: [`docs/qa/ag-final/M3_FINAL_ACCEPTANCE.md`](qa/ag-final/M3_FINAL_ACCEPTANCE.md)
+- **Design System Freeze**: [`docs/qa/ag-final/DESIGN_SYSTEM_FREEZE.md`](qa/ag-final/DESIGN_SYSTEM_FREEZE.md)
+- **Next Development Handoff**: [`docs/qa/ag-final/NEXT_DEVELOPMENT_HANDOFF.md`](qa/ag-final/NEXT_DEVELOPMENT_HANDOFF.md)
+- **Remaining Technical Debt**: [`docs/qa/ag-final/REMAINING_DEBT.md`](qa/ag-final/REMAINING_DEBT.md)
+- **Google OAuth Setup Guide**: [`docs/auth/GOOGLE_OAUTH_SETUP.md`](auth/GOOGLE_OAUTH_SETUP.md)

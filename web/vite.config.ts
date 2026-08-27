@@ -22,6 +22,11 @@ export default defineConfig(() => {
           target: 'https://wthabguvueewgtabjsdo.supabase.co/functions/v1/starq-api',
           changeOrigin: true,
           secure: true,
+          configure: (proxy) => {
+            proxy.on('proxyReq', (proxyReq) => {
+              proxyReq.removeHeader('origin');
+            });
+          },
         },
       },
     },
