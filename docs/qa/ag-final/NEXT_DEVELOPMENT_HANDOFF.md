@@ -42,9 +42,16 @@ Identity (Google Auth / Person)
 
 ---
 
-## 3. Immediate Next Steps
+## 3. Deployment Plan & Migration Sequence
 
-1. **Resolve Required CI on PR #10**: Fix backend/governance CI checks, confirm frontend tests (36 files / 146 tests green, production build passing), and merge into `main`.
-2. **Apply & Verify Migration 0024 Live**: Deploy `202608270024_platform_control_plane.sql` against Supabase.
-3. **Draft Books & Multi-Activity Schema Migration**: Implement `public.books` and `public.locations` schema to support multi-book entities without duplicating legal identities.
-4. **Resume Canonical Board Tasks**: Execute next canonical task on the 264-task Nexus board.
+1. **Deploy & Verify Migration 0024 Live**:
+   - Migration file: `supabase/migrations/202608270024_platform_control_plane.sql`.
+   - Provisions `platform` schema, `platform.tenant_registry`, `platform.usage_daily`, `platform.operator_principals`, and `platform.provisioning_runs`.
+2. **Deploy & Verify Migration 0025 Live**:
+   - Migration file: `supabase/migrations/202608270025_books_and_operating_activities.sql`.
+   - Provisions `public.books`, `public.book_memberships`, `public.book_locations`, and composite tenant-safe FK constraints.
+   - Deterministically backfills default books (`STQ`, `DYN`, `INK`) and links existing execution records (`garage_jobs`, `commercial_documents`, `journal_entries`, `audit_events`).
+3. **Merge PR #10 (`feat/platform-realignment`) into `main`**:
+   - Frontend quality gate: 37 test files / 153 tests green (100%), 0 TypeScript errors, clean production build.
+4. **Resume Canonical Board Tasks**:
+   - Execute next unblocked canonical task on the 264-task Nexus board (117 Done = 44.3%).

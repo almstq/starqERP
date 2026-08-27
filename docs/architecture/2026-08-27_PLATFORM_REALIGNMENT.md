@@ -59,14 +59,38 @@ Ali Mushthaq (Google Identity)
 
 ---
 
-## 3. Four-Tier Entity Model
+## 3. Four-Tier Entity & Relational Operating Model
 
-| Tier | Entity Name | Responsibilities & Ownership |
-| :--- | :--- | :--- |
-| **Tier 1** | **Identity (`persons`)** | Authentication credential, external Google sub, name, email, platform operator entitlements. |
-| **Tier 2** | **Tenant / Legal Entity (`organisations`)** | Legal name, statutory MIRA TIN, GST registration status, base currency, subscription contract, membership management, consolidated accounts. |
-| **Tier 3** | **Business Activity / Book (`books`)** | Operable trading context: sales, purchasing, inventory items, job workflows, document sequences, and book-level profit/loss reporting. |
-| **Tier 4** | **Location / Branch (`locations`)** | Physical workshop, warehouse store, or island site attached to a book. |
+```
+Legal Entity / Tenant (`public.organisations`)
+  │  • Statutory MIRA TIN & GST registration
+  │  • Subscription contract & membership boundary
+  │  • Consolidated statutory reporting & balance sheet
+  │
+  ├── Business Name / Trading Name (`public.business_names`) [Optional, 1..N]
+  │     • Registered commercial trading brand (e.g. Starq Dynamics, Ignition Ink)
+  │     • Ministry / MED registry code & trademark identity
+  │     • Customer-facing invoice header brand
+  │
+  └── Book / Operating Activity (`public.books`) [1..N]
+        │  • Operating accounting ledger, daybook, and margins
+        │  • Document sequences, inventory items, and job workflows
+        │  • Optional composite FK to `business_names` (`business_name_id`)
+        │  • Industry archetype configuration (`archetype_id`)
+        │
+        └── Location / Branch (`public.locations` via `public.book_locations`) [1..N]
+              • Physical workshop bay, retail counter, or warehouse
+              • Island, physical address, and site coordinates
+```
+
+| Tier | Entity Name | Database Table | Key Invariants & Guarantees |
+| :--- | :--- | :--- | :--- |
+| **Tier 1** | **Identity** | `public.persons` | External Google OAuth subject, email, name, platform operator entitlement. |
+| **Tier 2** | **Tenant / Legal Entity** | `public.organisations` | Legal registration, MIRA TIN, consolidated balance sheet & single statutory tax return. |
+| **Tier 2.5** | **Business / Trading Name** | `public.business_names` | Commercial registered trading brands under the company. Enforces `unique (organisation_id, id)`. |
+| **Tier 3** | **Operating Book** | `public.books` | Operational accounting partition. Enforces `unique(organisation_id, code)`, single default active book per org via partial unique index, and tenant-safe composite FK to `business_names`. |
+| **Tier 3.5** | **Book Memberships** | `public.book_memberships` | Authorizes which specific books a tenant member is allowed to enter/operate. |
+| **Tier 4** | **Location / Branch** | `public.locations` & `public.book_locations` | Physical sites shared across books via M:N junction without row duplication. |
 
 ---
 
