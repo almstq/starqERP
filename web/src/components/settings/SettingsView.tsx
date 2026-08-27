@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   Lock,
   Globe,
-  Plus,
   Sparkles,
   MapPin,
   LifeBuoy,
@@ -90,7 +89,7 @@ const SETTINGS_TABS: TabConfig[] = [
 ];
 
 export const SettingsView: React.FC = () => {
-  const { currentTenant, updateTenant, updateTenantLogo, setIsSetupModalOpen } = useERP();
+  const { currentTenant, updateTenant, updateTenantLogo } = useERP();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeSubTab = (searchParams.get('tab') as SettingsSubTab) || 'profile';
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -173,19 +172,6 @@ export const SettingsView: React.FC = () => {
             {currentTab.desc}
           </p>
         </div>
-
-        <button
-          type="button"
-          onClick={() => setIsSetupModalOpen(true)}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all self-start sm:self-auto cursor-pointer border border-[var(--md-sys-color-outline-variant)]"
-          style={{
-            backgroundColor: 'var(--md-sys-color-surface-container-high)',
-            color: 'var(--md-sys-color-on-surface)',
-          }}
-        >
-          <Plus className="w-4 h-4 text-[var(--md-sys-color-primary)]" />
-          <span>New Client Onboarding</span>
-        </button>
       </div>
 
       {/* Main Content Area: 100% Full Width */}

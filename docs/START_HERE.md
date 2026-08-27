@@ -14,10 +14,10 @@
 | **Organizational Spine** | [`docs/architecture/multi-tenancy.md`](./architecture/multi-tenancy.md) | 5-tier entity hierarchy: Identity → Entitlement/Memberships → Legal Entity → Trading Name → Operating Book → Location |
 | **Control Plane** | [`docs/architecture/control-plane.md`](./architecture/control-plane.md) | Starq HQ SaaS console (`platform` schema) strictly segregated from tenant ERP (`public` schema) |
 | **Canonical Roadmap** | [`docs/roadmap/COMMERCIAL_READINESS_MASTER_ROADMAP.md`](./roadmap/COMMERCIAL_READINESS_MASTER_ROADMAP.md) | G1 → G4 Milestone structure (318 tasks) |
-| **Database Migrations** | [`supabase/migrations/`](../supabase/migrations/) | 26 versioned migrations (0001 through 0026), 100% applied on live staging Supabase |
-| **API Gateway** | [`supabase/functions/starq-api/index.ts`](../supabase/functions/starq-api/index.ts) | Edge router validating command contracts, Google OIDC claims, and signed sessions |
+| **Database Migrations** | [`supabase/migrations/`](../supabase/migrations/) | 27 versioned migrations (0001 through 0027), 100% applied on live staging Supabase |
+| **API Gateway** | [`supabase/functions/starq-api/index.ts`](../supabase/functions/starq-api/index.ts) | Edge router validating command contracts, Google OIDC claims, staff invitation lifecycles, and signed sessions |
 | **Command Contracts** | [`contracts/commands.ts`](../contracts/commands.ts) | Single-source-of-truth authorization schemas & command signatures |
-| **QA Baseline** | [`docs/qa/current/QA_SUITE_BASELINE.md`](./qa/current/QA_SUITE_BASELINE.md) | 40 test files / 161 tests passing cleanly |
+| **QA Baseline** | [`docs/qa/current/QA_SUITE_BASELINE.md`](./qa/current/QA_SUITE_BASELINE.md) | 41 test files / 164 tests passing cleanly |
 
 ---
 
@@ -46,7 +46,7 @@
    - `Starq Technologies Pvt Ltd` is a customer legal entity / tenant (`activePlane === 'tenant'`).
    - `Club Ignition Pvt Ltd` is a customer legal entity / tenant (`activePlane === 'tenant'`).
 3. **Do NOT grant platform access via tenant roles**: A tenant `managing_director` or `super_admin` role has zero authority in Starq HQ unless granted an explicit record in `platform.operator_principals`.
-4. **Do NOT alter live applied migrations (0001–0026)**: Any new schema change requires migration `0027+`.
+4. **Do NOT alter live applied migrations (0001–0027)**: Any new schema change requires migration `0028+`.
 
 ---
 
@@ -59,5 +59,6 @@
    - Friend (Device A) refreshes → operates provisioned tenant with 100% isolation from other tenants.
 3. **Canonical Board Tasks**:
    - **SERP-125**: Reserved for Elder.
-   - **SERP-286**: Tenant-admin self-service staff invitation and lifecycle workflow (`public.invitations`).
-   - **SERP-287**: Removal of hardcoded backend staff allowlist dependency.
+   - **SERP-286**: Tenant-admin staff invitation and lifecycle workflow (`public.invitations`) [DONE].
+   - **SERP-288**: Tenant Archetype Decoupling + Demo-Data Purge [DONE].
+   - **SERP-298**: Workspace switcher correctness & onboarding boundary hardening [DONE].

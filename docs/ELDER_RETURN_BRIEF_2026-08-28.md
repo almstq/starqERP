@@ -17,7 +17,7 @@ The system now features:
 - **Logical & physical two-plane separation**: Starq HQ Platform Control Plane (`platform` schema) vs Tenant ERP Execution Plane (`public` schema).
 - **5-tier organizational spine**: Identity → Platform Entitlement / Tenant Memberships → Legal Entities (`organisations`) → Trading Names (`business_names`) → Operating Books (`books`) → Locations (`locations`).
 - **Server-authoritative external onboarding**: Real Google OAuth applicant sign-in, server persistence (`platform.tenant_applications`), Starq HQ operator review queue, and atomic database provisioning procedure `platform.provision_approved_application`.
-- **Live staging migrations**: 26 versioned SQL migrations (0001 through 0026) applied 1:1 on live Supabase project `wthabguvueewgtabjsdo`.
+- **Live staging migrations**: 27 versioned SQL migrations (0001 through 0027) applied 1:1 on live Supabase project `wthabguvueewgtabjsdo`.
 - **Clean-room public snapshot**: Published at [`almstq/starqERP-public`](https://github.com/almstq/starqERP-public) with 0 high-confidence secret disclosures, fresh Git history, and zero internal/private governance documents.
 
 ---
@@ -26,9 +26,9 @@ The system now features:
 
 1. **Elimination of Mock/Browser Authority**: Local browser `localStorage` authority for business registration, application intake, and tenant creation was completely removed and replaced with PostgreSQL stored procedures.
 2. **True Two-Plane Operating Experience**: Starq HQ is rendered as a standalone SaaS control plane console when `activePlane === 'platform'`, completely isolated from customer tenant ERP operations.
-3. **Multi-Book Segregation**: Migrations `0024`, `0025`, and `0026` unified the identity model, established the `platform` schema, implemented multi-book accounting partitioning, and deployed the atomic provisioning engine.
-4. **Canonical Task Re-alignment**: Tasks were consolidated into a canonical 318-task baseline across four commercial milestone gates (G1–G4). Progress stands at **120 Done (37.74%)**.
-5. **Quality Gate Baseline**: Expanded automated test suite to **40 test files / 161 tests** passing cleanly with 0 TypeScript compilation errors.
+3. **Multi-Book Segregation & Staff Invitation Lifecycles**: Migrations `0024`, `0025`, `0026`, and `0027` unified the identity model, established the `platform` schema, implemented multi-book accounting partitioning, deployed the atomic provisioning engine, and provided secure tenant staff invitations (`public.invitations`).
+4. **Canonical Task Re-alignment**: Tasks were consolidated into a canonical 318-task baseline across four commercial milestone gates (G1–G4). Progress stands at **122 Done (38.36%)**.
+5. **Quality Gate Baseline**: Expanded automated test suite to **41 test files / 164 tests** passing cleanly with 0 TypeScript compilation errors.
 
 ---
 

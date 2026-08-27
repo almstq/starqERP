@@ -108,7 +108,7 @@ export const AboutTab: React.FC = () => {
               {meta.embeddedAiName}
             </div>
             <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
-              Zero-retention Maldivian tax & operational intelligence engine built natively into starqERP.
+              Context-aware Maldivian tax & operational assistant built natively into starqERP.
             </p>
           </div>
         </div>
@@ -146,8 +146,8 @@ export const AboutTab: React.FC = () => {
             </dd>
           </div>
           <div>
-            <dt className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-medium">Tax Compliance Standard</dt>
-            <dd className="font-semibold text-[var(--md-sys-color-on-surface)] mt-0.5">MIRA Tax Act (8% GST / DEC-073)</dd>
+            <dt className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-medium">Tax Compliance Baseline</dt>
+            <dd className="font-semibold text-[var(--md-sys-color-on-surface)] mt-0.5">MIRA Tax Framework (Configurable GST / DEC-073; requires statutory verification)</dd>
           </div>
         </dl>
       </Surface>
@@ -237,8 +237,8 @@ export const AboutTab: React.FC = () => {
           >
             <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-3">
               <h4 className="text-sm font-bold capitalize">
-                {activeDialog === 'privacy' && 'Enterprise Privacy Policy'}
-                {activeDialog === 'terms' && 'Commercial Terms of Service'}
+                {activeDialog === 'privacy' && 'Privacy Summary'}
+                {activeDialog === 'terms' && 'Service Terms Summary'}
                 {activeDialog === 'licenses' && 'Open Source Software Attributions'}
               </h4>
               <Badge variant="neutral" size="sm">Legal Notice</Badge>
@@ -248,10 +248,10 @@ export const AboutTab: React.FC = () => {
               {activeDialog === 'privacy' && (
                 <>
                   <p>
-                    starqERP operates strictly with multi-tenant data segregation. Tenant operational ledgers, customer records, and financial transactions are cryptographically isolated per organization ID.
+                    starqERP enforces strict multi-tenant isolation via database Row-Level Security (RLS) policies and tenant-bound session authorization. Operational ledgers, customer records, and financial transactions are scoped strictly to the authenticated organization.
                   </p>
                   <p>
-                    starqAI operates under a zero-retention guarantee: conversational prompts and financial context are never stored or used for public foundation model training.
+                    starqAI operates strictly within the active tenant session boundary: conversational prompts and business context are processed for operational assistance and are not shared across organizations.
                   </p>
                 </>
               )}
@@ -259,7 +259,7 @@ export const AboutTab: React.FC = () => {
               {activeDialog === 'terms' && (
                 <>
                   <p>
-                    Licensed by Starq Technologies Pvt Ltd for enterprise operation under the Maldivian legal jurisdiction. MIRA tax calculations adhere to the Goods and Services Tax Act (Law No. 10/2011).
+                    Licensed by Starq Technologies Pvt Ltd for enterprise operation under the Maldivian legal jurisdiction. MIRA tax calculation rules provide a configurable baseline in accordance with the Goods and Services Tax Act (Law No. 10/2011) and require statutory accounting verification for live filings.
                   </p>
                   <p>
                     Organizations maintain full provenance, auditability, and legal ownership of all transactional data created within the platform.
