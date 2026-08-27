@@ -18,14 +18,27 @@ The architectural hierarchy has been formally updated with the critical invarian
 | :--- | :--- | :---: |
 | **Authoritative Nexus Board** | 264 Canonical Tasks | **117 Done / 264 (44.3%)** |
 | **TypeScript / Linter** | `tsc --noEmit` across all workspace modules | **0 Errors (Exit 0)** |
-| **Automated Test Suite** | 36 test files / 146 unit & integration test cases | **146 / 146 PASS (100%)** |
-| **Production Build** | `vite build` minification and bundle compilation | **PASS (~7.0s)** |
+| **Automated Test Suite** | 37 test files / 153 unit & integration test cases | **153 / 153 PASS (100%)** |
+| **Production Build** | `vite build` minification and bundle compilation | **PASS (~8.2s)** |
 | **Platform Realignment PR** | PR #10 on `feat/platform-realignment` | **Open (CI Pending)** |
-| **Live Database Migration** | Migration `202608270024_platform_control_plane.sql` | **NOT YET APPLIED LIVE** |
+| **Live Database Migrations** | Migrations `0024` (Platform) & `0025` (Books) | **AUTHORED & TESTED (NOT YET APPLIED LIVE)** |
+| **Commercial Audit Verdict** | Can starqERP replace Odoo/SAP for a Maldivian SME? | **[D] NOT READY FOR EXTERNAL REPLACEMENT / [C] PILOT READY ONLY (Club Ignition)** |
 
 ---
 
-## 2. Authoritative Multi-Context Hierarchy
+## 2. Commercial QA Audit Findings & Replacement Reality
+
+An independent commercial QA audit was performed from the perspective of an established Maldivian business currently on Odoo or SAP Business One.
+
+* **Commercial Verdict**: **`[D] NOT READY FOR EXTERNAL ERP REPLACEMENT`**
+* **Top 3 Fatal Commercial Blockers**:
+  1. **Zero Data Migration Tooling**: 0 CSV/Excel wizards or opening balance import tools to ingest existing customers, suppliers, inventory, or balances.
+  2. **No Dynamic Staff Invitation**: Authentication is hardcoded to a backend environment JSON allowlist (`STARQBOOKS_ALLOWLIST_JSON`). A tenant admin cannot add, invite, or manage their own employees.
+  3. **General Ledger & Double-Entry Not Surfaced**: While PostgreSQL migrations define double-entry tables (`journal_entries`), the web client runs on in-memory summaries without live GL posting, drilldowns, bank statement reconciliation (BML/MIB), or trial balance reporting.
+
+---
+
+## 3. Authoritative Multi-Context Hierarchy
 
 ```
 Ali Mushthaq (Google Identity)
@@ -51,12 +64,17 @@ Ali Mushthaq (Google Identity)
 
 ---
 
-## 3. Durability & Specification Links
+## 4. Durability & Specification Links
 
+- **Commercial Replacement Audit**: [`docs/qa/commercial-replacement-audit/EXECUTIVE_VERDICT.md`](qa/commercial-replacement-audit/EXECUTIVE_VERDICT.md)
+- **Odoo/SAP Gap Analysis**: [`docs/qa/commercial-replacement-audit/ODOO_SAP_REPLACEMENT_GAP_ANALYSIS.md`](qa/commercial-replacement-audit/ODOO_SAP_REPLACEMENT_GAP_ANALYSIS.md)
+- **Maldives Localization Audit**: [`docs/qa/commercial-replacement-audit/MALDIVES_LOCALIZATION_AUDIT.md`](qa/commercial-replacement-audit/MALDIVES_LOCALIZATION_AUDIT.md)
+- **Deep Accounting Audit**: [`docs/qa/commercial-replacement-audit/ACCOUNTING_READINESS_AUDIT.md`](qa/commercial-replacement-audit/ACCOUNTING_READINESS_AUDIT.md)
+- **Data Migration Readiness**: [`docs/qa/commercial-replacement-audit/MIGRATION_READINESS_AUDIT.md`](qa/commercial-replacement-audit/MIGRATION_READINESS_AUDIT.md)
+- **Security & Staff Access Audit**: [`docs/qa/commercial-replacement-audit/SECURITY_AND_SAAS_READINESS.md`](qa/commercial-replacement-audit/SECURITY_AND_SAAS_READINESS.md)
+- **Top 10 Commercial Blockers**: [`docs/qa/commercial-replacement-audit/TOP_10_COMMERCIAL_BLOCKERS.md`](qa/commercial-replacement-audit/TOP_10_COMMERCIAL_BLOCKERS.md)
+- **Pre-Sales Execution Roadmap**: [`docs/qa/commercial-replacement-audit/RECOMMENDED_PRE_SALES_ROADMAP.md`](qa/commercial-replacement-audit/RECOMMENDED_PRE_SALES_ROADMAP.md)
 - **Architecture Specification**: [`docs/architecture/2026-08-27_PLATFORM_REALIGNMENT.md`](../architecture/2026-08-27_PLATFORM_REALIGNMENT.md)
 - **Master Audit Reconciliation**: [`docs/qa/ag-final/MASTER_AUDIT_RECONCILIATION.md`](qa/ag-final/MASTER_AUDIT_RECONCILIATION.md)
 - **M3 Final Acceptance**: [`docs/qa/ag-final/M3_FINAL_ACCEPTANCE.md`](qa/ag-final/M3_FINAL_ACCEPTANCE.md)
-- **Design System Freeze**: [`docs/qa/ag-final/DESIGN_SYSTEM_FREEZE.md`](qa/ag-final/DESIGN_SYSTEM_FREEZE.md)
 - **Next Development Handoff**: [`docs/qa/ag-final/NEXT_DEVELOPMENT_HANDOFF.md`](qa/ag-final/NEXT_DEVELOPMENT_HANDOFF.md)
-- **Remaining Technical Debt**: [`docs/qa/ag-final/REMAINING_DEBT.md`](qa/ag-final/REMAINING_DEBT.md)
-- **Google OAuth Setup Guide**: [`docs/auth/GOOGLE_OAUTH_SETUP.md`](auth/GOOGLE_OAUTH_SETUP.md)
