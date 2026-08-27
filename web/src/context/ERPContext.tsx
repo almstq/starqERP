@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect, useCallback, ReactNode } from 'react';
 import { useTheme } from './ThemeContext';
 import {
   NavigationTab,
@@ -41,11 +41,12 @@ import {
   INITIAL_ROLES,
   INITIAL_USERS,
   INITIAL_WORKFLOW_STAGES,
-  INITIAL_AUDIT_LOGS,
   CLINIC_WORKFLOW_PRESET,
   BOATYARD_WORKFLOW_PRESET
 } from '../data/mockData';
 import { telemetry } from '../services/telemetry';
+import { dispatchCommand, apiGet } from '../services/apiGateway';
+import { useAuth } from './AuthContext';
 
 export interface ERPContextType {
   activeTab: NavigationTab;
@@ -202,11 +203,169 @@ export interface ERPContextType {
   lowStockItemsCount: number;
 }
 
+// Backend data mappers — convert database rows to frontend types
+function mapBackendCustomers(rows: unknown[]): Customer[] {
+  return rows.map((r: any) => ({
+    id: r.id,
+    tenantId: r.organisation_id,
+    name: r.display_name,
+    phone: r.phone ?? '',
+    email: r.email ?? '',
+    type: r.metadata?.type ?? 'Individual',
+    island: r.metadata?.island ?? '',
+    vehicles: r.metadata?.vehicles ?? [],
+    notes: r.metadata?.notes ?? '',
+    activeJobsCount: 0,
+    totalInvoiced: 0,
+    outstandingBalance: 0,
+    createdAt: r.created_at?.split('T')[0] ?? '',
+  }));
+}
+
+function mapBackendJobs(rows: unknown[]): JobOrder[] {
+  return rows.map((r: any) => ({
+    id: r.id,
+    jobId: r.job_no,
+    customerId: r.customer_id ?? '',
+    customerName: r.customer_name ?? '',
+    customerPhone: r.customer_phone ?? '',
+    vehicle: { plateNumber: r.vehicle_reg ?? '', make: '', model: '', year: 0, color: '', type: 'Car' as const },
+    serviceType: '' as any,
+    requestedWork: '',
+    quotedAmount: 0,
+    depositPaid: 0,
+    balanceDue: 0,
+    assignedStaff: [],
+    status: (r.state ?? 'call') as any,
+    priority: 'Normal',
+    startDate: r.created_at?.split('T')[0] ?? '',
+    expectedCompletionDate: '',
+    materialsUsed: [],
+    estimatedMaterialCost: 0,
+    actualMaterialCost: 0,
+    laborCostEstimate: 0,
+    actualLaborCost: 0,
+    targetMarginPercentage: 0,
+    actualProfit: 0,
+    bayNumber: '',
+  }));
+}
+
+function mapBackendInvoices(rows: unknown[]): Invoice[] {
+  return rows.map((r: any) => ({
+    id: r.id,
+    invoiceNumber: r.document_no ?? '',
+    customerId: r.contact_id ?? '',
+    customerName: r.metadata?.customer_name ?? '',
+    customerPhone: '',
+    customerIsland: '',
+    date: r.document_date ?? r.created_at?.split('T')[0] ?? '',
+    dueDate: r.due_date ?? '',
+    items: r.metadata?.items ?? [],
+    subtotal: r.metadata?.subtotal ?? r.gross_total ?? 0,
+    gstRate: 0.08,
+    gstAmount: r.metadata?.gst_amount ?? 0,
+    totalAmount: r.gross_total ?? 0,
+    amountPaid: r.allocated_total ?? 0,
+    balanceDue: r.unallocated_balance ?? r.gross_total ?? 0,
+    status: r.unallocated_balance <= 0 ? 'Paid' : r.allocated_total > 0 ? 'Partially Paid' : 'Sent',
+    notes: r.metadata?.notes ?? '',
+    bankDetails: '',
+  }));
+}
+
+function mapBackendExpenses(rows: unknown[]): Expense[] {
+  return rows.map((r: any) => ({
+    id: r.id,
+    expenseNumber: r.document_no ?? '',
+    date: r.metadata?.date ?? r.document_date ?? '',
+    payee: r.metadata?.payee ?? '',
+    category: r.metadata?.category ?? 'General' as any,
+    description: r.metadata?.description ?? r.metadata?.notes ?? '',
+    amount: r.gross_total ?? 0,
+    paymentMethod: r.metadata?.payment_method ?? 'Bank Transfer' as any,
+    status: 'Paid' as const,
+  }));
+}
+
+function mapBackendPayments(rows: unknown[]): Payment[] {
+  return rows.map((r: any) => ({
+    id: r.id,
+    paymentNumber: r.document_no ?? '',
+    invoiceId: r.metadata?.invoice_id ?? '',
+    invoiceNumber: '',
+    customerId: r.contact_id ?? '',
+    customerName: '',
+    amount: r.gross_total ?? 0,
+    paymentDate: r.document_date ?? r.created_at?.split('T')[0] ?? '',
+    method: r.metadata?.method ?? 'Bank Transfer',
+    referenceNumber: r.metadata?.reference ?? '',
+    bankAccount: r.metadata?.bank_account ?? '',
+    status: 'Verified',
+    notes: r.metadata?.notes ?? '',
+  }));
+}
+
+function mapBackendSuppliers(rows: unknown[]): Supplier[] {
+  return rows.map((r: any) => ({
+    id: r.id,
+    name: r.display_name,
+    contactPerson: r.metadata?.contact_person ?? '',
+    email: r.email ?? '',
+    phone: r.phone ?? '',
+    address: r.metadata?.address ?? '',
+    islandOrCountry: r.metadata?.island ?? '',
+    category: r.metadata?.category ?? '',
+    outstandingPayable: 0,
+    leadTimeDays: r.metadata?.lead_time_days ?? 7,
+    rating: 0,
+  }));
+}
+
+function mapBackendPurchaseOrders(rows: unknown[]): PurchaseOrder[] {
+  return rows.map((r: any) => ({
+    id: r.id,
+    poNumber: r.document_no ?? '',
+    supplierId: r.contact_id ?? '',
+    supplierName: '',
+    orderDate: r.document_date ?? r.created_at?.split('T')[0] ?? '',
+    expectedDeliveryDate: r.metadata?.expected_delivery ?? '',
+    items: [],
+    subtotal: r.gross_total ?? 0,
+    gstAmount: 0,
+    totalAmount: r.gross_total ?? 0,
+    status: (r.status === 'settled' ? 'Received & Stocked' : 'Sent') as PurchaseOrder['status'],
+    paymentStatus: r.unallocated_balance <= 0 ? 'Paid' : r.allocated_total > 0 ? 'Partially Paid' : 'Unpaid',
+    notes: '',
+  }));
+}
+
+function mapBackendAuditEvents(rows: unknown[]): AuditLogEntry[] {
+  return rows.map((r: any) => ({
+    id: r.id,
+    tenantId: r.organisation_id,
+    userId: r.actor_person_id ?? '',
+    userName: r.acting_seat ?? '',
+    userRole: r.acting_seat ?? '',
+    userEmail: '',
+    timestamp: r.occurred_at?.replace('T', ' ').substring(0, 19) ?? '',
+    ipAddress: '',
+    location: '',
+    action: r.action?.replace('erp.', '').toUpperCase() ?? 'UNKNOWN',
+    module: 'audit' as PermissionModule,
+    entityType: r.object_type ?? '',
+    entityId: r.object_id ?? '',
+    entityName: '',
+    summary: r.action ?? '',
+  }));
+}
+
 const ERPContext = createContext<ERPContextType | undefined>(undefined);
 
 export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [activeTab, setActiveTab] = useState<NavigationTab>('dashboard');
   const { resolvedTheme, setThemeMode } = useTheme();
+  const { session } = useAuth();
   const theme = resolvedTheme;
 
   // Multi-tenant state with tenant-scoped storage persistence
@@ -237,25 +396,75 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // RBAC & User State
   const [users, setUsers] = useState<AppUser[]>(INITIAL_USERS);
   const [roles, setRoles] = useState<UserRole[]>(INITIAL_ROLES);
-  const [currentUserId, setCurrentUserId] = useState<string>('user-1'); // Default to Ali Musthaq (Super Admin)
+  const [currentUserId, setCurrentUserId] = useState<string>('user-1');
 
-  // Workflows & Audit
-  const [workflowStages, setWorkflowStages] = useState<WorkflowStage[]>(INITIAL_WORKFLOW_STAGES);
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(INITIAL_AUDIT_LOGS);
+  // Workflows & Audit — start empty, loaded from backend
+  const [workflowStages, setWorkflowStages] = useState<WorkflowStage[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
 
-  // Domain state
-  const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
-  const [jobs, setJobs] = useState<JobOrder[]>(INITIAL_JOBS);
-  const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES);
-  const [payments, setPayments] = useState<Payment[]>(INITIAL_PAYMENTS);
-  const [expenses, setExpenses] = useState<Expense[]>(INITIAL_EXPENSES);
-  const [inventory, setInventory] = useState<InventoryItem[]>(INITIAL_INVENTORY);
-  const [stockMovements, setStockMovements] = useState<StockMovement[]>(INITIAL_STOCK_MOVEMENTS);
-  const [suppliers, setSuppliers] = useState<Supplier[]>(INITIAL_SUPPLIERS);
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(INITIAL_PURCHASE_ORDERS);
+  // Domain state — start empty, loaded from backend
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [jobs, setJobs] = useState<JobOrder[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [alerts, setAlerts] = useState<NeedsAttentionAlert[]>(INITIAL_ALERTS);
   const [aiInsights, setAiInsights] = useState<AIAssistantInsight[]>(INITIAL_AI_INSIGHTS);
   const [staff] = useState<StaffMember[]>(INITIAL_STAFF);
+
+  // Load data from backend when session is available
+  useEffect(() => {
+    if (!session) return;
+
+    const loadDomainData = async () => {
+      try {
+        const [customersRes, jobsRes, invoicesRes, expensesRes, paymentsRes,
+                suppliersRes, poRes, auditRes] = await Promise.allSettled([
+          apiGet<{ ok: boolean; customers: unknown[] }>('/api/ops/customers'),
+          apiGet<{ ok: boolean; jobs: unknown[] }>('/api/ops/jobs'),
+          apiGet<{ ok: boolean; invoices: unknown[] }>('/api/ops/invoices'),
+          apiGet<{ ok: boolean; expenses: unknown[] }>('/api/ops/expenses'),
+          apiGet<{ ok: boolean; payments: unknown[] }>('/api/ops/payments'),
+          apiGet<{ ok: boolean; suppliers: unknown[] }>('/api/ops/suppliers'),
+          apiGet<{ ok: boolean; purchaseOrders: unknown[] }>('/api/ops/purchase-orders'),
+          apiGet<{ ok: boolean; events: unknown[] }>('/api/ops/audit?limit=100'),
+        ]);
+
+        if (customersRes.status === 'fulfilled' && customersRes.value.ok) {
+          setCustomers(mapBackendCustomers(customersRes.value.customers));
+        }
+        if (jobsRes.status === 'fulfilled' && jobsRes.value.ok) {
+          setJobs(mapBackendJobs(jobsRes.value.jobs));
+        }
+        if (invoicesRes.status === 'fulfilled' && invoicesRes.value.ok) {
+          setInvoices(mapBackendInvoices(invoicesRes.value.invoices));
+        }
+        if (expensesRes.status === 'fulfilled' && expensesRes.value.ok) {
+          setExpenses(mapBackendExpenses(expensesRes.value.expenses));
+        }
+        if (paymentsRes.status === 'fulfilled' && paymentsRes.value.ok) {
+          setPayments(mapBackendPayments(paymentsRes.value.payments));
+        }
+        if (suppliersRes.status === 'fulfilled' && suppliersRes.value.ok) {
+          setSuppliers(mapBackendSuppliers(suppliersRes.value.suppliers));
+        }
+        if (poRes.status === 'fulfilled' && poRes.value.ok) {
+          setPurchaseOrders(mapBackendPurchaseOrders(poRes.value.purchaseOrders));
+        }
+        if (auditRes.status === 'fulfilled' && auditRes.value.ok) {
+          setAuditLogs(mapBackendAuditEvents(auditRes.value.events));
+        }
+      } catch (err) {
+        console.error('[ERP] Failed to load domain data from backend:', err);
+      }
+    };
+
+    loadDomainData();
+  }, [session]);
 
   // Selected drawers & modals
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -374,7 +583,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       userRole: currentUser.roleName,
       userEmail: currentUser.email,
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      ipAddress: '123.231.104.18 (Dhiraagu Maldives)',
+      ipAddress: '',
       location: `${currentTenant.island} Office`,
       ...entry
     };
@@ -1068,6 +1277,20 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
     setCustomers((prev) => [newCustomer, ...prev]);
 
+    // Dispatch to backend
+    dispatchCommand({
+      command: 'CUSTOMER',
+      payload: {
+        name: customerData.name,
+        phone: customerData.phone,
+        email: customerData.email,
+        island: customerData.island,
+        notes: customerData.notes,
+        type: customerData.type,
+        vehicles: customerData.vehicles,
+      },
+    }).catch((err) => console.error('[ERP] CUSTOMER command failed:', err));
+
     logAuditEvent({
       action: 'CREATED',
       module: 'customers' as PermissionModule,
@@ -1094,6 +1317,26 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     setJobs((prev) => [newJob, ...prev]);
+
+    // Dispatch to backend
+    dispatchCommand({
+      command: 'CALL',
+      payload: {
+        customer_name: jobData.customerName,
+        vehicle_reg: jobData.vehicle?.plateNumber ?? '',
+        phone: jobData.customerPhone,
+        consent: true,
+      },
+    }).then((res) => {
+      if (res.ok && (res as any).event) {
+        const serverEvent = (res as any).event;
+        setJobs((prev) => prev.map((j) =>
+          j.id === newJob.id
+            ? { ...j, jobId: serverEvent.job_no || j.jobId }
+            : j
+        ));
+      }
+    }).catch((err) => console.error('[ERP] CALL command failed:', err));
 
     // Update customer active jobs count
     setCustomers((prev) =>
@@ -1125,6 +1368,33 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     setInvoices((prev) => [newInvoice, ...prev]);
+
+    // Dispatch to backend
+    dispatchCommand({
+      command: 'INVOICE',
+      payload: {
+        customer_id: invoiceData.customerId,
+        customer_name: invoiceData.customerName,
+        total_amount: invoiceData.totalAmount,
+        subtotal: invoiceData.subtotal,
+        gst_amount: invoiceData.gstAmount,
+        date: invoiceData.date,
+        due_date: invoiceData.dueDate,
+        items: invoiceData.items,
+        notes: invoiceData.notes,
+        job_id: invoiceData.linkedJobId,
+        bank_details: invoiceData.bankDetails,
+      },
+    }).then((res) => {
+      if (res.ok && (res as any).invoice) {
+        const serverInvoice = (res as any).invoice;
+        setInvoices((prev) => prev.map((inv) =>
+          inv.id === newInvoice.id
+            ? { ...inv, invoiceNumber: serverInvoice.invoice_number || inv.invoiceNumber }
+            : inv
+        ));
+      }
+    }).catch((err) => console.error('[ERP] INVOICE command failed:', err));
 
     // Update customer totalInvoiced and outstandingBalance
     setCustomers((prev) =>
@@ -1159,8 +1429,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!job) throw new Error('Job not found');
 
     const gstRateDecimal = (currentTenant.gstRate || 8) / 100;
-    const subtotal = job.quotedAmount / (1 + gstRateDecimal);
-    const gstAmount = job.quotedAmount - subtotal;
+    const subtotal = Math.round((job.quotedAmount / (1 + gstRateDecimal)) * 100) / 100;
+    const gstAmount = Math.round((job.quotedAmount - subtotal) * 100) / 100;
 
     const newInvoice: Invoice = {
       id: `inv-${Date.now()}`,
@@ -1225,6 +1495,29 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     setPayments((prev) => [newPayment, ...prev]);
+
+    // Dispatch to backend
+    dispatchCommand({
+      command: 'INVOICE_PAYMENT',
+      payload: {
+        invoice_id: paymentData.invoiceId,
+        customer_id: paymentData.customerId,
+        amount: paymentData.amount,
+        method: paymentData.method,
+        reference: paymentData.referenceNumber,
+        bank_account: paymentData.bankAccount,
+        notes: paymentData.notes,
+      },
+    }).then((res) => {
+      if (res.ok && (res as any).payment) {
+        const serverPayment = (res as any).payment;
+        setPayments((prev) => prev.map((p) =>
+          p.id === newPayment.id
+            ? { ...p, paymentNumber: serverPayment.payment_number || p.paymentNumber }
+            : p
+        ));
+      }
+    }).catch((err) => console.error('[ERP] INVOICE_PAYMENT command failed:', err));
 
     // Update invoice balance
     setInvoices((prev) =>
@@ -1403,6 +1696,19 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
     setExpenses((prev) => [newExpense, ...prev]);
 
+    // Dispatch to backend
+    dispatchCommand({
+      command: 'EXPENSE',
+      payload: {
+        amount: expenseData.amount,
+        payee: expenseData.payee,
+        category: expenseData.category,
+        payment_method: expenseData.paymentMethod,
+        description: expenseData.description,
+        date: expenseData.date,
+      },
+    }).catch((err) => console.error('[ERP] EXPENSE command failed:', err));
+
     logAuditEvent({
       action: 'CREATED',
       module: 'expenses',
@@ -1573,9 +1879,9 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const po = purchaseOrders.find((p) => p.id === poId);
     if (!po) return;
 
-    // Update PO status
+    // Update PO status — receipt is separate from payment
     setPurchaseOrders((prev) =>
-      prev.map((p) => (p.id === poId ? { ...p, status: 'Received & Stocked', paymentStatus: 'Paid' } : p))
+      prev.map((p) => (p.id === poId ? { ...p, status: 'Received & Stocked', paymentStatus: p.paymentStatus } : p))
     );
 
     // Increase stock for each item in the PO

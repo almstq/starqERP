@@ -15,6 +15,16 @@ export default defineConfig(() => {
         '@': path.resolve(rootDir, 'src'),
       },
     },
+    server: {
+      port: 3001,
+      proxy: {
+        '/api': {
+          target: 'https://wthabguvueewgtabjsdo.supabase.co/functions/v1/starq-api',
+          changeOrigin: true,
+          secure: true,
+        },
+      },
+    },
     test: {
       globals: true,
       environment: 'jsdom',

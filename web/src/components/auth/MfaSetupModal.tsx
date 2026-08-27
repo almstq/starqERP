@@ -72,11 +72,11 @@ export const MfaSetupModal: React.FC = () => {
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <span>Admin Two-Factor Authentication (MFA)</span>
+                <span>Admin Demo PIN Setup</span>
                 <Badge variant="blue" size="sm">SERP-268</Badge>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Required for privileged administrator roles and multi-tenant access
+                Demo environment — multi-factor authentication is not enabled. This simulates a PIN challenge.
               </p>
             </div>
           </div>
@@ -267,7 +267,7 @@ export const MfaSetupModal: React.FC = () => {
                   className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold shadow-xs transition-all"
                   data-testid="mfa-enroll-submit-button"
                 >
-                  Activate Admin MFA
+                  Activate Demo PIN
                 </button>
               </div>
             </form>

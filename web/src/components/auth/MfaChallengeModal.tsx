@@ -48,10 +48,10 @@ export const MfaChallengeModal: React.FC = () => {
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <span>Elevated Privileges Required</span>
-                <Badge variant="warning" size="sm">2FA Challenge</Badge>
+                <Badge variant="warning" size="sm">Demo PIN</Badge>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Action requires administrator second factor authorization
+                Demo environment — this is a simulated PIN challenge, not real MFA.
               </p>
             </div>
           </div>

@@ -614,6 +614,117 @@ Deno.serve(async (req: Request) => {
       return json(200, { ok: true, job: job.data, events: events.data ?? [] }, origin);
     }
 
+    if (req.method === "GET" && path === "/api/ops/customers") {
+      const { data, error } = await db.from("contacts").select("*")
+        .eq("organisation_id", session.organisation_id)
+        .eq("kind", "customer")
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+      if (error) throw new Error("customers_query_failed");
+      return json(200, { ok: true, customers: data ?? [] }, origin);
+    }
+
+    if (req.method === "GET" && path === "/api/ops/suppliers") {
+      const { data, error } = await db.from("contacts").select("*")
+        .eq("organisation_id", session.organisation_id)
+        .eq("kind", "supplier")
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+      if (error) throw new Error("suppliers_query_failed");
+      return json(200, { ok: true, suppliers: data ?? [] }, origin);
+    }
+
+    if (req.method === "GET" && path === "/api/ops/invoices") {
+      const { data, error } = await db.from("commercial_documents").select("*")
+        .eq("organisation_id", session.organisation_id)
+        .eq("document_type", "sales_invoice")
+        .order("created_at", { ascending: false });
+      if (error) throw new Error("invoices_query_failed");
+      return json(200, { ok: true, invoices: data ?? [] }, origin);
+    }
+
+    if (req.method === "GET" && path === "/api/ops/expenses") {
+      const { data, error } = await db.from("commercial_documents").select("*")
+        .eq("organisation_id", session.organisation_id)
+        .eq("document_type", "direct_expense")
+        .order("created_at", { ascending: false });
+      if (error) throw new Error("expenses_query_failed");
+      return json(200, { ok: true, expenses: data ?? [] }, origin);
+    }
+
+    if (req.method === "GET" && path === "/api/ops/payments") {
+      const { data, error } = await db.from("commercial_documents").select("*")
+        .eq("organisation_id", session.organisation_id)
+        .in("document_type", ["receipt", "payment"])
+        .order("created_at", { ascending: false });
+      if (error) throw new Error("payments_query_failed");
+      return json(200, { ok: true, payments: data ?? [] }, origin);
+    }
+
+    if (req.method === "GET" && path === "/api/ops/purchase-orders") {
+      const { data, error } = await db.from("commercial_documents").select("*")
+        .eq("organisation_id", session.organisation_id)
+        .eq("document_type", "purchase_order")
+        .order("created_at", { ascending: false });
+      if (error) throw new Error("purchase_orders_query_failed");
+      return json(200, { ok: true, purchaseOrders: data ?? [] }, origin);
+    }
+
+    if (req.method === "GET" && path === "/api/ops/inventory") {
+      const { data: items, error: itemsError } = await db.from("products").select("*, inventory_items(*)")
+        .eq("organisation_id", session.organisation_id);
+      if (itemsError) throw new Error("inventory_query_failed");
+      const { data: movements, error: movError } = await db.from("stock_movements").select("*")
+        .eq("organisation_id", session.organisation_id)
+        .order("occurred_at", { ascending: false })
+        .limit(100);
+      if (movError) throw new Error("stock_movements_query_failed");
+      return json(200, { ok: true, items: items ?? [], movements: movements ?? [] }, origin);
+    }
+
+    if (req.method === "GET" && path === "/api/ops/jobs") {
+      const { data, error } = await db.from("garage_jobs").select("*")
+        .eq("organisation_id", session.organisation_id)
+        .order("opened_at", { ascending: false });
+      if (error) throw new Error("jobs_query_failed");
+      return json(200, { ok: true, jobs: data ?? [] }, origin);
+    }
+
+    if (req.method === "GET" && path === "/api/ops/audit") {
+      const limit = Math.min(Number(new URL(req.url).searchParams.get("limit") ?? "50"), 200);
+      const { data, error } = await db.from("audit_events").select("*")
+        .eq("organisation_id", session.organisation_id)
+        .order("occurred_at", { ascending: false })
+        .limit(limit);
+      if (error) throw new Error("audit_query_failed");
+      return json(200, { ok: true, events: data ?? [] }, origin);
+    }
+
+    if (req.method === "GET" && path === "/api/ops/workflows") {
+      const { data: templates, error: tmplError } = await db.from("workflow_templates").select("*, workflow_stages(*)")
+        .eq("organisation_id", session.organisation_id)
+        .eq("active", true);
+      if (tmplError) throw new Error("workflows_query_failed");
+      return json(200, { ok: true, templates: templates ?? [] }, origin);
+    }
+
+    if (req.method === "GET" && path === "/api/ops/roles") {
+      const { data: rolesData, error: rolesError } = await db.from("roles").select("*, role_permissions(*)")
+        .eq("organisation_id", session.organisation_id)
+        .eq("active", true);
+      if (rolesError) throw new Error("roles_query_failed");
+      return json(200, { ok: true, roles: rolesData ?? [] }, origin);
+    }
+
+    if (req.method === "GET" && path === "/api/ops/members") {
+      const { data, error } = await db.from("memberships").select("*, persons(*)")
+        .eq("organisation_id", session.organisation_id)
+        .in("status", ["active", "pending", "suspended"])
+        .order("created_at", { ascending: false });
+      if (error) throw new Error("members_query_failed");
+      return json(200, { ok: true, members: data ?? [] }, origin);
+    }
+
     if (req.method === "POST" && path === "/api/ops/event") {
       const body = await readJson(req);
       if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);

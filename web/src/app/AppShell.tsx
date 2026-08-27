@@ -3,9 +3,10 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Wrench, FileText, CreditCard, Receipt,
   Package, ShoppingCart, Truck, BarChart3, ShieldCheck, Settings as SettingsIcon,
-  Search, Bell, Sun, Moon, Laptop, Menu, X,
+  Search, Bell, Sun, Moon, Laptop, Menu, X, LogOut, ChevronDown,
 } from 'lucide-react';
 import { useERP } from '../context/ERPContext';
+import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { MfaSetupModal } from '../components/auth/MfaSetupModal';
 import { MfaChallengeModal } from '../components/auth/MfaChallengeModal';
@@ -60,9 +61,11 @@ export const AppShell: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentTenant } = useERP();
+  const { session, logout } = useAuth();
   const { themeMode, setThemeMode, resolvedTheme } = useTheme();
   const windowClass = useMaterialWindowClass();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [tenantMenuOpen, setTenantMenuOpen] = useState(false);
 
   const workspace = currentTenant?.name || 'Starq Technologies';
   const initials = workspace.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -376,48 +379,115 @@ export const AppShell: React.FC = () => {
               />
             </button>
 
-            <button
-              type="button"
-              onClick={() => navigate('/settings')}
-              className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 rounded-[var(--md-sys-shape-corner-full)] hover:bg-[var(--md-sys-color-surface-container-highest)] transition-colors cursor-pointer text-xs font-medium max-w-[130px] sm:max-w-[200px]"
-              style={{
-                backgroundColor: 'var(--md-sys-color-surface-container-lowest)',
-                border: '1px solid var(--md-sys-color-outline-variant)',
-                color: 'var(--md-sys-color-on-surface)',
-              }}
-              aria-label={`Active workspace: ${workspace}. Click to manage settings.`}
-            >
-              {currentTenant.logoUrl ? (
-                <span
-                  className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full overflow-hidden shrink-0"
-                  style={{
-                    backgroundColor: 'var(--md-sys-color-surface-container-high)',
-                    border: '1px solid var(--md-sys-color-outline-variant)',
-                  }}
-                >
-                  <img
-                    src={currentTenant.logoUrl}
-                    alt=""
-                    className="max-h-full max-w-full object-contain select-none"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLElement).style.display = 'none';
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setTenantMenuOpen(!tenantMenuOpen)}
+                className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 rounded-[var(--md-sys-shape-corner-full)] hover:bg-[var(--md-sys-color-surface-container-highest)] transition-colors cursor-pointer text-xs font-medium max-w-[130px] sm:max-w-[200px]"
+                style={{
+                  backgroundColor: 'var(--md-sys-color-surface-container-lowest)',
+                  border: '1px solid var(--md-sys-color-outline-variant)',
+                  color: 'var(--md-sys-color-on-surface)',
+                }}
+                aria-label={`Active workspace: ${workspace}. Click to switch tenant or logout.`}
+                aria-expanded={tenantMenuOpen}
+                aria-haspopup="menu"
+              >
+                {currentTenant.logoUrl ? (
+                  <span
+                    className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full overflow-hidden shrink-0"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                      border: '1px solid var(--md-sys-color-outline-variant)',
                     }}
-                  />
-                </span>
-              ) : (
-                <span
-                  className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full text-[10px] font-bold mono-num shrink-0"
-                  style={{
-                    backgroundColor: 'var(--md-sys-color-primary-container)',
-                    color: 'var(--md-sys-color-on-primary-container)',
-                  }}
-                  aria-hidden="true"
-                >
-                  {initials}
-                </span>
+                  >
+                    <img
+                      src={currentTenant.logoUrl}
+                      alt=""
+                      className="max-h-full max-w-full object-contain select-none"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  </span>
+                ) : (
+                  <span
+                    className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full text-[10px] font-bold mono-num shrink-0"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-primary-container)',
+                      color: 'var(--md-sys-color-on-primary-container)',
+                    }}
+                    aria-hidden="true"
+                  >
+                    {initials}
+                  </span>
+                )}
+                <span className="truncate min-w-0 hidden xs:inline sm:inline">{workspace}</span>
+                <ChevronDown size={14} className="shrink-0 hidden sm:block" aria-hidden="true" />
+              </button>
+
+              {tenantMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setTenantMenuOpen(false)} aria-hidden="true" />
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-full mt-1 z-50 w-56 rounded-xl shadow-lg border overflow-hidden"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface-container)',
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                    }}
+                  >
+                    {session?.organisations && session.organisations.length > 1 && (
+                      <>
+                        <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                          Switch Tenant
+                        </div>
+                        {session.organisations.map((org) => (
+                          <button
+                            key={org.id}
+                            role="menuitem"
+                            onClick={() => {
+                              setTenantMenuOpen(false);
+                              if (org.id !== session.current_organisation_id) {
+                                window.location.href = `/api/auth/switch-org?id=${org.id}`;
+                              }
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--md-sys-color-surface-container-high)] transition-colors flex items-center gap-2"
+                            style={{
+                              color: org.id === session.current_organisation_id
+                                ? 'var(--md-sys-color-primary)'
+                                : 'var(--md-sys-color-on-surface)',
+                              fontWeight: org.id === session.current_organisation_id ? 600 : 400,
+                            }}
+                          >
+                            {org.name}
+                          </button>
+                        ))}
+                        <div className="mx-2 my-1 border-t" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }} />
+                      </>
+                    )}
+                    <div className="px-3 py-1.5 text-[10px]" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                      {session?.name ?? 'Not signed in'}
+                      {session?.seat_label && (
+                        <span className="block text-[9px] opacity-70">{session.seat_label}</span>
+                      )}
+                    </div>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setTenantMenuOpen(false);
+                        logout().then(() => navigate('/login'));
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--md-sys-color-surface-container-high)] transition-colors flex items-center gap-2"
+                      style={{ color: 'var(--md-sys-color-error, #b3261e)' }}
+                    >
+                      <LogOut size={14} aria-hidden="true" />
+                      Sign Out
+                    </button>
+                  </div>
+                </>
               )}
-              <span className="truncate min-w-0 hidden xs:inline sm:inline">{workspace}</span>
-            </button>
+            </div>
           </div>
         </header>
 

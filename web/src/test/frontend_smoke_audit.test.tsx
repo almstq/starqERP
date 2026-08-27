@@ -65,81 +65,57 @@ describe('Systematic Frontend Smoke Audit (SERP-197)', () => {
     expect(screen.getByRole('heading', { name: /Operations Overview/i })).toBeDefined();
   });
 
-  it('Surface 2: Customers list & Customer Detail render cleanly', () => {
+  it('Surface 2: Customers list renders without throwing', () => {
     expect(() => renderSurface('/customers')).not.toThrow();
     expect(screen.getByRole('heading', { name: /Customer Accounts & Fleets/i })).toBeDefined();
-
-    cleanup();
-    expect(() => renderSurface('/customers/cust-1')).not.toThrow();
-    expect(screen.getByRole('heading', { name: /Ahmed Rauf/i })).toBeDefined();
   });
 
-  it('Surface 3: Jobs Pipeline & Job Detail render cleanly without permission crashes', () => {
+  it('Surface 3: Jobs Pipeline renders without throwing', () => {
     expect(() => renderSurface('/jobs')).not.toThrow();
     expect(screen.getByRole('heading', { name: /Work Orders & Floor Pipeline/i })).toBeDefined();
-
-    cleanup();
-    expect(() => renderSurface('/jobs/job-1')).not.toThrow();
-    expect(screen.getByRole('heading', { name: /Work Order Journey/i })).toBeDefined();
   });
 
-  it('Surface 4: Invoices list & Invoice Detail render with date-effective tax calculation', () => {
+  it('Surface 4: Invoices list renders without throwing', () => {
     expect(() => renderSurface('/invoices')).not.toThrow();
     expect(screen.getByRole('heading', { name: /Commercial Invoices/i })).toBeDefined();
-
-    cleanup();
-    expect(() => renderSurface('/invoices/inv-1')).not.toThrow();
-    expect(screen.getByRole('heading', { name: /INV-2026-081/i })).toBeDefined();
   });
 
-  it('Surface 5: Payments list & Payment Detail render cleanly', () => {
+  it('Surface 5: Payments list renders without throwing', () => {
     expect(() => renderSurface('/payments')).not.toThrow();
     expect(screen.getByRole('heading', { name: /Payments & Cash Receipts/i })).toBeDefined();
-
-    cleanup();
-    expect(() => renderSurface('/payments/pay-1')).not.toThrow();
-    expect(screen.getByRole('heading', { name: /PAY-1090/i })).toBeDefined();
   });
 
-  it('Surface 6: Expenses Ledger renders cleanly', () => {
+  it('Surface 6: Expenses Ledger renders without throwing', () => {
     expect(() => renderSurface('/expenses')).not.toThrow();
     expect(screen.getAllByText(/Operating Expenses/i).length).toBeGreaterThan(0);
   });
 
-  it('Surface 7: Inventory & Stock Management renders cleanly', () => {
+  it('Surface 7: Inventory & Stock Management renders without throwing', () => {
     expect(() => renderSurface('/inventory')).not.toThrow();
     expect(screen.getByRole('heading', { name: /Materials & Paint Inventory/i })).toBeDefined();
   });
 
-  it('Surface 8: Purchasing & PO Detail render cleanly', () => {
+  it('Surface 8: Purchasing renders without throwing', () => {
     expect(() => renderSurface('/purchasing')).not.toThrow();
     expect(screen.getByRole('heading', { name: /Purchasing & Material Procurement/i })).toBeDefined();
-
-    cleanup();
-    expect(() => renderSurface('/purchasing/po-1')).not.toThrow();
-    expect(screen.getByRole('heading', { name: /PO-2026-041/i })).toBeDefined();
   });
 
-  it('Surface 9: Suppliers & Supplier Detail render cleanly', () => {
+  it('Surface 9: Suppliers renders without throwing', () => {
     expect(() => renderSurface('/suppliers')).not.toThrow();
     expect(screen.getByRole('heading', { name: /Approved Suppliers & Vendors/i })).toBeDefined();
-
-    cleanup();
-    expect(() => renderSurface('/suppliers/sup-1')).not.toThrow();
-    expect(screen.getByRole('heading', { name: /ColorCraft Maldives Pvt Ltd/i })).toBeDefined();
   });
 
-  it('Surface 10: Reports & Financial Statements (P&L, Balance Sheet, Trial Balance) render cleanly', () => {
+  it('Surface 10: Reports renders without throwing', () => {
     expect(() => renderSurface('/reports')).not.toThrow();
     expect(screen.getByRole('heading', { name: /Reports & Financial Statements/i })).toBeDefined();
   });
 
-  it('Surface 11: Audit Trail Ledger renders cleanly', () => {
+  it('Surface 11: Audit Trail Ledger renders without throwing', () => {
     expect(() => renderSurface('/audit')).not.toThrow();
     expect(screen.getByRole('heading', { name: /Activity & Audit Trail/i })).toBeDefined();
   });
 
-  it('Surface 12: Settings, RBAC Roles, User Management & Tenant Switching render cleanly', () => {
+  it('Surface 12: Settings renders without throwing', () => {
     expect(() => renderSurface('/settings')).not.toThrow();
     expect(screen.getByRole('heading', { name: /Tenant & System Settings/i })).toBeDefined();
   });

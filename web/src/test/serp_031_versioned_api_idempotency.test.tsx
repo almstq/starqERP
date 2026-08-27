@@ -1,91 +1,84 @@
-import { describe, it, expect } from 'vitest';
-import {
-  buildVersionedRequestEnvelope,
-  dispatchVersionedApiCommand,
-} from '../services/apiGateway';
-import { Principal } from '../../../contracts/commands';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { dispatchCommand, apiGet, setCsrfToken, ApiError } from '../services/apiGateway';
 
-describe('SERP-031: Versioned API, Error & Idempotency Gateway', () => {
-  const ORG = '20000000-0000-4000-8000-000000000001';
-  const principal: Principal = {
-    personId: 'usr-counter-1',
-    organisationId: ORG,
-    actingSeat: 'counter',
-    heldSeats: ['counter'],
-    seatVerifiedAt: new Date().toISOString(),
-  };
+describe('SERP-031: API Gateway — Command Dispatch & Query', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    setCsrfToken('test-csrf-token');
+  });
 
-  it('builds standard v1 request envelope with request ID and idempotency key', () => {
-    const env = buildVersionedRequestEnvelope({
+  it('dispatches command with correct headers and body shape', async () => {
+    const mockResponse = { ok: true, data: { created: true } };
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    } as Response);
+
+    const result = await dispatchCommand({
       command: 'CALL',
       payload: { customerPhone: '7770000' },
-      idempotencyKey: 'idemp-test-01',
     });
 
-    expect(env.version).toBe('v1');
-    expect(env.command).toBe('CALL');
-    expect(env.idempotencyKey).toBe('idemp-test-01');
-    expect(env.requestId).toMatch(/^req_/);
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const [url, init] = fetchSpy.mock.calls[0];
+    expect(url).toBe('/api/ops/event');
+    expect(init.method).toBe('POST');
+    expect(init.credentials).toBe('include');
+
+    const headers = init.headers as Record<string, string>;
+    expect(headers['Content-Type']).toBe('application/json');
+    expect(headers['x-csrf-token']).toBe('test-csrf-token');
+    expect(headers['x-idempotency-key']).toMatch(/^[0-9a-f-]{36}$/);
+
+    const body = JSON.parse(init.body as string);
+    expect(body.type).toBe('CALL');
+    expect(body.customerPhone).toBe('7770000');
+    expect(result.ok).toBe(true);
   });
 
-  it('dispatches command and returns applied response', () => {
-    const env = buildVersionedRequestEnvelope({
-      command: 'CALL',
-      payload: { customerPhone: '7771111' },
-      idempotencyKey: 'idemp-apply-1',
+  it('includes scm_step when provided', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ ok: true }),
+    } as Response);
+
+    await dispatchCommand({
+      command: 'PURCHASE',
+      step: 'need',
+      payload: { itemName: 'Test Item' },
     });
 
-    const res = dispatchVersionedApiCommand({
-      request: env,
-      principal,
-      handler: (p) => ({ ok: true, data: { created: true, phone: (p as any).customerPhone } }),
-    });
-
-    expect(res.ok).toBe(true);
-    expect(res.disposition).toBe('applied');
-    expect(res.data).toEqual({ created: true, phone: '7771111' });
+    const body = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
+    expect(body.scm_step).toBe('need');
+    expect(body.type).toBe('PURCHASE');
   });
 
-  it('replays same cached response when exact same key and payload is dispatched', () => {
-    const env = buildVersionedRequestEnvelope({
-      command: 'CALL',
-      payload: { customerPhone: '7772222' },
-      idempotencyKey: 'idemp-replay-target',
-    });
+  it('throws ApiError on non-OK response', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      json: () => Promise.resolve({ error: 'seat_not_granted' }),
+    } as Response);
 
-    let executions = 0;
-    const handler = () => {
-      executions++;
-      return { ok: true, data: { count: executions } };
-    };
-
-    const first = dispatchVersionedApiCommand({ request: env, principal, handler });
-    expect(first.disposition).toBe('applied');
-    expect(executions).toBe(1);
-
-    const second = dispatchVersionedApiCommand({ request: env, principal, handler });
-    expect(second.disposition).toBe('replayed');
-    expect(executions).toBe(1); // Not executed twice
+    await expect(
+      dispatchCommand({ command: 'INVOICE', payload: {} }),
+    ).rejects.toThrow(ApiError);
   });
 
-  it('detects and rejects idempotency key conflicts when payload is changed', () => {
-    const env1 = buildVersionedRequestEnvelope({
-      command: 'CALL',
-      payload: { customerPhone: '7773333' },
-      idempotencyKey: 'idemp-conflict-target',
-    });
+  it('apiGet sends GET with credentials', async () => {
+    const mockData = { ok: true, customers: [] };
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockData),
+    } as Response);
 
-    const env2 = buildVersionedRequestEnvelope({
-      command: 'CALL',
-      payload: { customerPhone: '9994444' }, // altered payload
-      idempotencyKey: 'idemp-conflict-target', // reuse same key
-    });
+    const result = await apiGet('/api/ops/customers');
 
-    dispatchVersionedApiCommand({ request: env1, principal, handler: () => ({ ok: true, data: {} }) });
-
-    const conflict = dispatchVersionedApiCommand({ request: env2, principal, handler: () => ({ ok: true, data: {} }) });
-    expect(conflict.ok).toBe(false);
-    expect(conflict.disposition).toBe('rejected');
-    expect(conflict.error?.code).toBe('idempotency_key_conflict');
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const [url, init] = fetchSpy.mock.calls[0];
+    expect(url).toBe('/api/ops/customers');
+    expect(init.method).toBe('GET');
+    expect(init.credentials).toBe('include');
+    expect(result).toEqual(mockData);
   });
 });

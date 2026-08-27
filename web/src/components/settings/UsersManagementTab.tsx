@@ -199,7 +199,7 @@ export const UsersManagementTab: React.FC = () => {
               <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400">
                 <th className="py-2.5 px-3 font-semibold">User & Contact</th>
                 <th className="py-2.5 px-3 font-semibold">Assigned Role</th>
-                <th className="py-2.5 px-3 font-semibold">2FA Security</th>
+                <th className="py-2.5 px-3 font-semibold">Demo PIN</th>
                 <th className="py-2.5 px-3 font-semibold">Authorization Authority</th>
                 <th className="py-2.5 px-3 font-semibold">Last Active</th>
                 <th className="py-2.5 px-3 font-semibold text-right">Actions</th>
@@ -255,7 +255,7 @@ export const UsersManagementTab: React.FC = () => {
                         <div className="flex flex-col gap-0.5">
                           <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
                             <ShieldCheck className="w-3.5 h-3.5" />
-                            <span>MFA Active</span>
+                            <span>PIN Active</span>
                           </span>
                           {user.recoveryCodes && (
                             <span className="text-[10px] text-slate-400">
@@ -266,7 +266,7 @@ export const UsersManagementTab: React.FC = () => {
                       ) : user.mfaRequired ? (
                         <span className="inline-flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
                           <AlertTriangle className="w-3.5 h-3.5" />
-                          <span>MFA Required</span>
+                          <span>PIN Required</span>
                         </span>
                       ) : (
                         <span className="text-slate-400 text-[10px]">Optional</span>
@@ -288,10 +288,10 @@ export const UsersManagementTab: React.FC = () => {
                           <button
                             onClick={openMfaEnrollment}
                             className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 text-blue-700 dark:text-blue-300 font-semibold text-[11px] transition-colors"
-                            title="Configure 2FA / MFA Authenticator"
+                            title="Configure Demo PIN (simulated)"
                             data-testid="setup-mfa-btn"
                           >
-                            {user.mfaEnabled ? 'Re-enroll 2FA' : 'Setup 2FA'}
+                            {user.mfaEnabled ? 'Re-enroll PIN' : 'Setup PIN'}
                           </button>
                         )}
                         <button
