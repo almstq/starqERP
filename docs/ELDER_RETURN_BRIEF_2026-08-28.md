@@ -16,7 +16,7 @@ The architectural hierarchy has been formally updated with the critical invarian
 
 | Verification Dimension | Metric / Output | Result |
 | :--- | :--- | :---: |
-| **Authoritative Nexus Board** | 264 Canonical Tasks | **117 Done / 264 (44.3%)** |
+| **Authoritative Nexus Board** | 318 Canonical Tasks (Reconciled 2026-08-27) | **117 Done / 318 (36.79%)** |
 | **TypeScript / Linter** | `tsc --noEmit` across all workspace modules | **0 Errors (Exit 0)** |
 | **Automated Test Suite** | 37 test files / 153 unit & integration test cases | **153 / 153 PASS (100%)** |
 | **Production Build** | `vite build` minification and bundle compilation | **PASS (~8.2s)** |

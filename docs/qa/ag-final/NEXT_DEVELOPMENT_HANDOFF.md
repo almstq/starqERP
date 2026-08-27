@@ -51,7 +51,7 @@ Identity (Google Auth / Person)
    - Migration file: `supabase/migrations/202608270025_books_and_operating_activities.sql`.
    - Provisions `public.books`, `public.book_memberships`, `public.book_locations`, and composite tenant-safe FK constraints.
    - Deterministically backfills default books (`STQ`, `DYN`, `INK`) and links existing execution records (`garage_jobs`, `commercial_documents`, `journal_entries`, `audit_events`).
-3. **Merge PR #10 (`feat/platform-realignment`) into `main`**:
+3. **Merge PR #10 (`feat/platform-realignment`) into `main` (`SERP-283`)**:
    - Frontend quality gate: 37 test files / 153 tests green (100%), 0 TypeScript errors, clean production build.
 4. **Resume Canonical Board Tasks**:
-   - Execute next unblocked canonical task on the 264-task Nexus board (117 Done = 44.3%).
+   - Execute next unblocked canonical task on the 318-task Nexus board (117 Done = 36.79%, Next: `SERP-283`).
