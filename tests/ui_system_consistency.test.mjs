@@ -108,7 +108,7 @@ describe('SERP Material 3 UI System Consistency & Design System Linter', () => {
     const indexPath = path.join(WEB_SRC, 'components', 'ui', 'index.ts');
     assert.ok(fs.existsSync(indexPath), 'web/src/components/ui/index.ts must exist');
     const content = fs.readFileSync(indexPath, 'utf8');
-    const requiredPrimitives = ['Button', 'Input', 'Select', 'Surface', 'Table', 'Badge', 'Modal', 'Drawer', 'Tabs'];
+    const requiredPrimitives = ['Button', 'Input', 'Select', 'Surface', 'Table', 'DataTable', 'Badge', 'Modal', 'Drawer', 'Tabs'];
     for (const prim of requiredPrimitives) {
       assert.ok(
         content.includes(prim),

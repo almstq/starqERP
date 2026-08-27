@@ -1,8 +1,9 @@
 # starqERP — Canonical UI Constitution & Material 3 Design System Specification
 
 > **Status**: AUTHORITATIVE SSOT  
-> **Authority**: Founder Directive & Google Material 3 (M3) Adoption (2026-08-27)  
+> **Authority**: Founder Directives & Google Material 3 (M3) Adoption  
 > **Design Framework**: Google Material 3 (M3 Expressive)  
+> **Generator**: `@material/material-color-utilities@0.4.0`  
 > **Adaptive Engine**: Material 3 Adaptive Window-Size Classes & Container Queries  
 > **Brand Identity**: Starq Technologies (`starqERP`, `starqAI`)
 
@@ -22,7 +23,7 @@ starqERP is built on **Google Material 3** as its design system while preserving
 │ Embedded AI Capability        │ starqAI                                     │
 │ (Forbidden Variants)          │ STARQ AI, Starq AI, StarqAI, starq AI       │
 ├───────────────────────────────┼─────────────────────────────────────────────┤
-│ Brand Primary Seed Color      │ #E59500 (Starq Warm Amber)                  │
+│ Brand Primary Seed Color      │ #E59500 (Starq Warm Amber, HCT 72 57 68)    │
 ├───────────────────────────────┼─────────────────────────────────────────────┤
 │ First Production Tenant       │ Club Ignition (Automotive Garage)           │
 └───────────────────────────────┴─────────────────────────────────────────────┘
@@ -35,7 +36,58 @@ starqERP is built on **Google Material 3** as its design system while preserving
 
 ---
 
-## 2. Material 3 Adaptive Window Classes & Container Responsiveness
+## 2. Official Material Color Utilities Generation & Palette Architecture
+
+### Generator SSOT
+All semantic color roles are generated using **`@material/material-color-utilities@0.4.0`**:
+- **Seed Color**: `#E59500` (Starq Amber, HCT: Hue 72, Chroma 57, Tone 68)
+- **Contrast Level**: `0.0` (Standard)
+- **Scheme Architecture**: Official Material 3 `DynamicScheme` with crisp neutral canvas (`neutralPalette`: 0 chroma; `neutralVariantPalette`: 0 chroma).
+- **Neutral Policy**: Starq amber is used exclusively for primary interactive emphasis and focused indicators, **never** as an all-over wash across neutral surfaces. Surfaces remain crisp, clean neutral Material grays in light mode, and crisp charcoal slates in dark mode.
+
+### Canonical Token Roles (`md.sys.color.*`)
+
+```
+┌───────────────────────────────────────┬───────────┬───────────┐
+│ Semantic Role                         │ Light     │ Dark      │
+├───────────────────────────────────────┼───────────┼───────────┤
+│ --md-sys-color-primary                │ #845400   │ #ffb95a   │
+│ --md-sys-color-on-primary             │ #ffffff   │ #462a00   │
+│ --md-sys-color-primary-container      │ #ffddb6   │ #643f00   │
+│ --md-sys-color-on-primary-container   │ #643f00   │ #ffddb6   │
+│ --md-sys-color-secondary              │ #576062   │ #bfc8ca   │
+│ --md-sys-color-on-secondary           │ #ffffff   │ #293234   │
+│ --md-sys-color-secondary-container    │ #dbe4e6   │ #3f484a   │
+│ --md-sys-color-on-secondary-container │ #3f484a   │ #dbe4e6   │
+│ --md-sys-color-tertiary               │ #4a6364   │ #b0cccc   │
+│ --md-sys-color-on-tertiary            │ #ffffff   │ #1b3435   │
+│ --md-sys-color-tertiary-container     │ #cce8e8   │ #324b4c   │
+│ --md-sys-color-on-tertiary-container  │ #324b4c   │ #cce8e8   │
+│ --md-sys-color-error                  │ #ba1a1a   │ #ffb4ab   │
+│ --md-sys-color-on-error               │ #ffffff   │ #690005   │
+│ --md-sys-color-error-container        │ #ffdad6   │ #93000a   │
+│ --md-sys-color-on-error-container     │ #93000a   │ #ffdad6   │
+│ --md-sys-color-surface                │ #f9f9f9   │ #131313   │
+│ --md-sys-color-surface-dim            │ #dadada   │ #131313   │
+│ --md-sys-color-surface-bright         │ #f9f9f9   │ #393939   │
+│ --md-sys-color-surface-container-lowest│ #ffffff  │ #0e0e0e   │
+│ --md-sys-color-surface-container-low  │ #f3f3f3   │ #1b1b1b   │
+│ --md-sys-color-surface-container      │ #eeeeee   │ #1f1f1f   │
+│ --md-sys-color-surface-container-high │ #e8e8e8   │ #2a2a2a   │
+│ --md-sys-color-surface-container-highest│ #e2e2e2 │ #353535   │
+│ --md-sys-color-on-surface             │ #1b1b1b   │ #e2e2e2   │
+│ --md-sys-color-on-surface-variant     │ #474747   │ #c6c6c6   │
+│ --md-sys-color-outline                │ #777777   │ #919191   │
+│ --md-sys-color-outline-variant        │ #c6c6c6   │ #474747   │
+│ --md-sys-color-inverse-surface        │ #303030   │ #e2e2e2   │
+│ --md-sys-color-inverse-on-surface     │ #f1f1f1   │ #303030   │
+│ --md-sys-color-inverse-primary        │ #ffb95a   │ #845400   │
+└───────────────────────────────────────┴───────────┴───────────┘
+```
+
+---
+
+## 3. Material 3 Adaptive Window Classes & Container Responsiveness
 
 The responsive engine uses **Google Material 3 Adaptive Window Classes** and **Container Queries**:
 
@@ -47,7 +99,7 @@ The responsive engine uses **Google Material 3 Adaptive Window Classes** and **C
 │                       │ Single pane, modal drawer, 1-col reflow             │
 ├───────────────────────┼─────────────────────────────────────────────────────┤
 │ Medium                │ 600 – 839px                                         │
-│                       │ NavigationRail, multi-col card grids                │
+│                       │ NavigationRail (72px), multi-col card grids         │
 ├───────────────────────┼─────────────────────────────────────────────────────┤
 │ Expanded              │ 840 – 1199px                                        │
 │                       │ Persistent drawer, 2-pane master-detail workflows   │
@@ -61,121 +113,63 @@ The responsive engine uses **Google Material 3 Adaptive Window Classes** and **C
 ```
 
 ### Container Responsiveness (`container-type: inline-size`)
-Reusable ERP components must adapt to the space actually allocated to them, not merely the viewport:
+Reusable ERP components adapt to the inline space actually allocated to them:
 - `@container (max-width: 420px)`: Single column stacking for KPI tiles, entity cards, and forms.
-- `@container (min-width: 421px)`: Side-by-side multi-column arrangement.
-- Applied to: KPI cards, Work Order cards, Customer cards, Form fieldsets, Drawer side panels, Modal dialog bodies.
+- `@container (min-width: 421px)`: Multi-column arrangement.
 
 ---
 
-## 3. Canonical Content-Overflow Policy
+## 4. Starq ERP DataTable Primitive Contract
 
-Zero page-level horizontal overflow: `scrollWidth <= clientWidth`.
-`overflow-x: hidden` is **forbidden** as an overflow mask. Responsiveness must be solved at the component level:
+The `DataTable` is a Starq ERP primitive governed by Material 3 system tokens:
 
-```
-┌───────────────────────────┬─────────────────────────────────────────────────┐
-│ Content Category          │ Policy & Behavior                               │
-├───────────────────────────┼─────────────────────────────────────────────────┤
-│ Names / Descriptions      │ Wrap naturally; line-clamp-2 or line-clamp-3    │
-│                           │ where density dictates. Never cut off abruptly. │
-├───────────────────────────┼─────────────────────────────────────────────────┤
-│ IDs / UUIDs / Hashes      │ min-w-0; truncate with title/copy affordance    │
-│                           │ to preserve complete cryptographic identity.    │
-├───────────────────────────┼─────────────────────────────────────────────────┤
-│ Currencies & Quantities   │ Intact always; tabular figures (`mono-num`);    │
-│                           │ layout reflows around them; zero chopped digits.│
-├───────────────────────────┼─────────────────────────────────────────────────┤
-│ Badges / Status Chips     │ Atomic (`whitespace-nowrap`); surrounding chip  │
-│                           │ group wraps (`flex-wrap`).                      │
-├───────────────────────────┼─────────────────────────────────────────────────┤
-│ Action Groups / Toolbars  │ Flex-wrap by default; secondary actions stack   │
-│                           │ or collapse into overflow menus on Compact.     │
-└───────────────────────────┴─────────────────────────────────────────────────┘
-```
-
----
-
-## 4. Material 3 Tonal Surface Hierarchy & Color Roles
-
-### Tonal Surface Roles
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                       MATERIAL 3 SURFACE PROGRESSION                        │
-├───────────────────────────────┬─────────────────────────────────────────────┤
-│ surface                       │ Base screen background                      │
-│ surface-dim / surface-bright  │ Dynamic contrast anchors                    │
-│ surface-container-lowest      │ Deepest container (tables, cards in light)  │
-│ surface-container-low         │ Base column containers, panels              │
-│ surface-container             │ Primary cards, dialog body, top bar         │
-│ surface-container-high        │ Raised cards, search inputs, active toolbars│
-│ surface-container-highest     │ Highest elevation, dropdowns, popovers      │
-└───────────────────────────────┴─────────────────────────────────────────────┘
+│                       STARQ ERP DATATABLE CONTRACT                          │
+├───────────────────────┬─────────────────────────────────────────────────────┤
+│ Density & Heights     │ Desktop dense visual row: min 44px – 48px           │
+│                       │ Interactive controls: min 48×48px effective touch   │
+│                       │ Compact / mobile rows: >= 48px touch-friendly       │
+├───────────────────────┼─────────────────────────────────────────────────────┤
+│ Header Typography     │ Material 3 label role (label-medium / label-large)  │
+│                       │ text-xs font-semibold; no mandatory uppercase       │
+├───────────────────────┼─────────────────────────────────────────────────────┤
+│ Cell Padding          │ px-4 py-3 (consistent across all tables)            │
+├───────────────────────┼─────────────────────────────────────────────────────┤
+│ Divider Treatment     │ 1px solid var(--md-sys-color-outline-variant)       │
+├───────────────────────┼─────────────────────────────────────────────────────┤
+│ Hover State           │ hover:bg-[var(--md-sys-color-surface-container-high)]│
+├───────────────────────┼─────────────────────────────────────────────────────┤
+│ Financial Numbers     │ UI font (Instrument Sans) + tabular figures         │
+│                       │ Right-aligned; zero digit truncation                │
+├───────────────────────┼─────────────────────────────────────────────────────┤
+│ Technical IDs         │ Geist Mono (font-mono text-xs); min-w-0; tooltip    │
+├───────────────────────┼─────────────────────────────────────────────────────┤
+│ Scroll Containment    │ erp-scroll-region owns horizontal scroll            │
+│                       │ Whole-page scrollWidth <= clientWidth strictly kept │
+└───────────────────────┴─────────────────────────────────────────────────────┘
 ```
-
-### Semantic Token Architecture (`md.sys.*`)
-
-#### Light Theme (`:root` / `.light`)
-- `--md-sys-color-primary`: `#855300`
-- `--md-sys-color-on-primary`: `#ffffff`
-- `--md-sys-color-primary-container`: `#ffddb6`
-- `--md-sys-color-on-primary-container`: `#2b1700`
-- `--md-sys-color-secondary`: `#705b41`
-- `--md-sys-color-on-secondary`: `#ffffff`
-- `--md-sys-color-secondary-container`: `#fce0be`
-- `--md-sys-color-on-secondary-container`: `#281805`
-- `--md-sys-color-tertiary`: `#516440`
-- `--md-sys-color-on-tertiary`: `#ffffff`
-- `--md-sys-color-tertiary-container`: `#d3eabb`
-- `--md-sys-color-on-tertiary-container`: `#101f04`
-- `--md-sys-color-surface`: `#fff8f4`
-- `--md-sys-color-surface-dim`: `#e5d7d0`
-- `--md-sys-color-surface-bright`: `#fff8f4`
-- `--md-sys-color-surface-container-lowest`: `#ffffff`
-- `--md-sys-color-surface-container-low`: `#fef1eb`
-- `--md-sys-color-surface-container`: `#f8ece5`
-- `--md-sys-color-surface-container-high`: `#f3e6df`
-- `--md-sys-color-surface-container-highest`: `#ede0da`
-- `--md-sys-color-on-surface`: `#211a15`
-- `--md-sys-color-on-surface-variant`: `#51443b`
-- `--md-sys-color-outline`: `#83746a`
-- `--md-sys-color-outline-variant`: `#d5c3b8`
-- `--md-sys-color-error`: `#ba1a1a`
-- `--md-sys-color-error-container`: `#ffdad6`
-- `--md-sys-color-on-error`: `#ffffff`
-
-#### Dark Theme (`.dark`)
-- `--md-sys-color-primary`: `#ffb865`
-- `--md-sys-color-on-primary`: `#472a00`
-- `--md-sys-color-primary-container`: `#653e00`
-- `--md-sys-color-on-primary-container`: `#ffddb6`
-- `--md-sys-color-secondary`: `#dec1a0`
-- `--md-sys-color-on-secondary`: `#3e2d17`
-- `--md-sys-color-secondary-container`: `#57432b`
-- `--md-sys-color-on-secondary-container`: `#fce0be`
-- `--md-sys-color-tertiary`: `#b8cea1`
-- `--md-sys-color-on-tertiary`: `#243516`
-- `--md-sys-color-tertiary-container`: `#3a4c2a`
-- `--md-sys-color-on-tertiary-container`: `#d3eabb`
-- `--md-sys-color-surface`: `#18120e`
-- `--md-sys-color-surface-dim`: `#18120e`
-- `--md-sys-color-surface-bright`: `#3f3833`
-- `--md-sys-color-surface-container-lowest`: `#130d09`
-- `--md-sys-color-surface-container-low`: `#211a16`
-- `--md-sys-color-surface-container`: `#251e1a`
-- `--md-sys-color-surface-container-high`: `#302924`
-- `--md-sys-color-surface-container-highest`: `#3b342f`
-- `--md-sys-color-on-surface`: `#ede0da`
-- `--md-sys-color-on-surface-variant`: `#d5c3b8`
-- `--md-sys-color-outline`: `#9e8e83`
-- `--md-sys-color-outline-variant`: `#51443b`
-- `--md-sys-color-error`: `#ffb4ab`
-- `--md-sys-color-error-container`: `#93000a`
-- `--md-sys-color-on-error`: `#690005`
 
 ---
 
-## 5. Material 3 Shape Scale (`md.sys.shape.*`)
+## 5. One Typography Contract
+
+| Role | Typography Specification | Usage |
+|------|--------------------------|-------|
+| **Page Title** | `text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)]` | Top view headings |
+| **Section Title** | `text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface)]` | Widget / section boundaries |
+| **Card / KPI Title** | `text-xs font-medium text-[var(--md-sys-color-on-surface-variant)]` | Metric card labels |
+| **Body Primary** | `text-xs sm:text-sm font-medium text-[var(--md-sys-color-on-surface)]` | Primary descriptions, cell text |
+| **Table Header** | `text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)]` | Column labels |
+| **Secondary Metadata** | `text-[11px] text-[var(--md-sys-color-on-surface-variant)]` | Sub-labels, helper memos |
+| **Button Label** | `text-xs sm:text-sm font-medium` | Button text |
+| **Chip / Badge Label** | `text-[11px] font-semibold uppercase tracking-wider` | Status pills, category chips |
+| **Financial / Numeric** | UI Font + `tabular-nums font-semibold` | Amounts, quantities, balances |
+| **Technical ID / Code** | `font-mono text-xs font-semibold text-[var(--md-sys-color-primary)]` | Work order IDs, UUIDs, SKUs |
+
+---
+
+## 6. Material 3 Shape Scale (`md.sys.shape.*`)
 
 ```css
 --md-sys-shape-none:               0px;

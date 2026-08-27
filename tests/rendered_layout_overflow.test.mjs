@@ -112,6 +112,9 @@ describe('SERP Material 3 Rendered Browser Layout & Viewport Overflow Suite', ()
     { path: '/jobs/job-1', name: 'Job Detail' },
     { path: '/invoices', name: 'Invoices' },
     { path: '/inventory', name: 'Inventory' },
+    { path: '/customers', name: 'Customers' },
+    { path: '/payments', name: 'Payments' },
+    { path: '/expenses', name: 'Expenses' },
   ];
 
   for (const vp of VIEWPORTS) {

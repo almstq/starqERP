@@ -20,12 +20,8 @@ import {
   Button,
   Input,
   Surface,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
+  DataTable,
+  ColumnDef,
   Badge,
   ActionGroup,
   ResponsiveGrid,
@@ -68,6 +64,134 @@ export const InventoryView: React.FC = () => {
     return matchesSearch && matchesCategory && matchesStock;
   });
 
+  const columns: ColumnDef<InventoryItem>[] = [
+    {
+      key: 'name',
+      header: 'SKU & Description',
+      width: '26%',
+      render: (item) => (
+        <div className="min-w-0">
+          <div className="font-semibold text-xs text-[var(--md-sys-color-on-surface)] truncate">
+            {item.name}
+          </div>
+          <div
+            className="text-[11px] mono-num truncate font-semibold mt-0.5"
+            style={{ color: 'var(--md-sys-color-primary)' }}
+            title={item.sku}
+          >
+            {item.sku}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'category',
+      header: 'Category & Location',
+      width: '18%',
+      hideOn: 'compact',
+      render: (item) => (
+        <div className="min-w-0">
+          <div className="font-medium text-xs text-[var(--md-sys-color-on-surface)] truncate">{item.category}</div>
+          <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] truncate mt-0.5">{item.locationInShop}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'quantityOnHand',
+      header: 'In Stock',
+      align: 'right',
+      isNumeric: true,
+      width: '14%',
+      render: (item) => {
+        const isLow = item.quantityOnHand <= item.reorderLevel;
+        return (
+          <div className="flex items-center justify-end gap-1.5 min-w-0">
+            {isLow && <AlertTriangle size={13} style={{ color: 'var(--md-sys-color-error)' }} />}
+            <span
+              className="tabular-nums font-semibold text-xs"
+              style={{ color: isLow ? 'var(--md-sys-color-error)' : 'inherit' }}
+            >
+              {item.quantityOnHand} {item.unit}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'reorderLevel',
+      header: 'Min',
+      align: 'right',
+      isNumeric: true,
+      width: '10%',
+      hideOn: 'medium',
+      render: (item) => (
+        <span className="text-xs text-[var(--md-sys-color-on-surface-variant)] tabular-nums">
+          {item.reorderLevel} {item.unit}
+        </span>
+      ),
+    },
+    {
+      key: 'unitCost',
+      header: 'Unit Cost',
+      align: 'right',
+      isNumeric: true,
+      width: '12%',
+      hideOn: 'compact',
+      render: (item) => (
+        <span className="text-xs text-[var(--md-sys-color-on-surface)] tabular-nums">
+          {formatMVR(item.unitCost)}
+        </span>
+      ),
+    },
+    {
+      key: 'totalValuation',
+      header: 'Total Value',
+      align: 'right',
+      isNumeric: true,
+      width: '14%',
+      render: (item) => (
+        <span className="font-semibold text-xs tabular-nums text-[var(--md-sys-color-on-surface)]">
+          {formatMVR(item.quantityOnHand * item.unitCost)}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Action',
+      align: 'right',
+      width: '14%',
+      render: (item) => {
+        const isLow = item.quantityOnHand <= item.reorderLevel;
+        return (
+          <ActionGroup align="right">
+            <Button
+              variant="tonal"
+              size="xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedItemForAdjust(item);
+              }}
+            >
+              Adjust
+            </Button>
+            {isLow && (
+              <Button
+                variant="filled"
+                size="xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsCreatePOOpen(true);
+                }}
+              >
+                Reorder
+              </Button>
+            )}
+          </ActionGroup>
+        );
+      },
+    },
+  ];
+
   return (
     <div className="space-y-4 sm:space-y-6 pb-12 w-full min-w-0">
       {/* Header */}
@@ -109,37 +233,37 @@ export const InventoryView: React.FC = () => {
       {/* KPI Cards */}
       <ResponsiveGrid columns="auto" minItemWidth="200px" gap="sm">
         <Surface variant="filled" level={1} padding="sm" container className="space-y-1 min-w-0">
-          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+          <span className="block text-xs font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
             Total Stock Valuation
           </span>
-          <div className="text-base sm:text-lg font-bold mono-num text-[var(--md-sys-color-on-surface)] truncate">
+          <div className="text-base sm:text-lg font-bold tabular-nums text-[var(--md-sys-color-on-surface)] truncate">
             {formatMVR(totalInventoryValue, false)}
           </div>
-          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
+          <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
             Asset value across all bays
           </span>
         </Surface>
 
         <Surface variant="filled" level={1} padding="sm" container className="space-y-1 min-w-0">
-          <span className="block text-[11px] font-medium truncate" style={{ color: 'var(--md-sys-color-error)' }}>
+          <span className="block text-xs font-medium truncate" style={{ color: 'var(--md-sys-color-error)' }}>
             Low Stock Warnings
           </span>
-          <div className="text-base sm:text-lg font-bold mono-num truncate" style={{ color: 'var(--md-sys-color-error)' }}>
+          <div className="text-base sm:text-lg font-bold tabular-nums truncate" style={{ color: 'var(--md-sys-color-error)' }}>
             {lowStockItemsCount} SKUs below threshold
           </div>
-          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
+          <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
             Requires supplier replenishment
           </span>
         </Surface>
 
         <Surface variant="filled" level={1} padding="sm" container className="space-y-1 min-w-0">
-          <span className="block text-[11px] font-medium truncate" style={{ color: 'var(--positive)' }}>
+          <span className="block text-xs font-medium truncate" style={{ color: 'var(--positive)' }}>
             Stock Turnover Health
           </span>
-          <div className="text-base sm:text-lg font-bold mono-num truncate" style={{ color: 'var(--positive)' }}>
+          <div className="text-base sm:text-lg font-bold tabular-nums truncate" style={{ color: 'var(--positive)' }}>
             94.2% Available
           </div>
-          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
+          <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
             Zero work order delays
           </span>
         </Surface>
@@ -158,7 +282,7 @@ export const InventoryView: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-2 text-xs min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[11px] font-medium shrink-0" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Category:</span>
+            <span className="text-xs font-medium shrink-0" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Category:</span>
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
@@ -180,7 +304,7 @@ export const InventoryView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[11px] font-medium shrink-0" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Status:</span>
+            <span className="text-xs font-medium shrink-0" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Status:</span>
             <select
               value={stockStatusFilter}
               onChange={(e) => setStockStatusFilter(e.target.value as any)}
@@ -200,91 +324,13 @@ export const InventoryView: React.FC = () => {
         </div>
       </Surface>
 
-      {/* Inventory Table in Contained Scroll Region */}
-      <Table>
-        <TableHeader>
-          <tr>
-            <TableHead>SKU & Description</TableHead>
-            <TableHead className="hidden sm:table-cell">Category</TableHead>
-            <TableHead alignRight>In Stock</TableHead>
-            <TableHead alignRight className="hidden md:table-cell">Min</TableHead>
-            <TableHead alignRight className="hidden sm:table-cell">Cost</TableHead>
-            <TableHead alignRight>Total Value</TableHead>
-            <TableHead className="hidden lg:table-cell">Supplier</TableHead>
-            <TableHead alignRight>Action</TableHead>
-          </tr>
-        </TableHeader>
-        <TableBody>
-          {filteredInventory.map((item) => {
-            const isLow = item.quantityOnHand <= item.reorderLevel;
-            const totalItemVal = item.quantityOnHand * item.unitCost;
-
-            return (
-              <TableRow key={item.id}>
-                <TableCell>
-                  <div className="font-semibold text-xs text-[var(--md-sys-color-on-surface)] truncate max-w-[140px] sm:max-w-none">
-                    {item.name}
-                  </div>
-                  <div className="text-[11px] mono-num truncate" style={{ color: 'var(--md-sys-color-primary)' }}>
-                    {item.sku}
-                  </div>
-                </TableCell>
-
-                <TableCell className="hidden sm:table-cell">
-                  <div className="font-medium text-xs text-[var(--md-sys-color-on-surface)] truncate">{item.category}</div>
-                  <div className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] truncate">{item.locationInShop}</div>
-                </TableCell>
-
-                <TableCell isNumeric>
-                  <div className="flex items-center justify-end gap-1">
-                    {isLow && <AlertTriangle size={12} style={{ color: 'var(--md-sys-color-error)' }} />}
-                    <span className="mono-num font-bold" style={{ color: isLow ? 'var(--md-sys-color-error)' : 'inherit' }}>
-                      {item.quantityOnHand} {item.unit}
-                    </span>
-                  </div>
-                </TableCell>
-
-                <TableCell isNumeric className="hidden md:table-cell text-xs" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                  {item.reorderLevel} {item.unit}
-                </TableCell>
-
-                <TableCell isNumeric className="hidden sm:table-cell">
-                  {formatMVR(item.unitCost)}
-                </TableCell>
-
-                <TableCell isNumeric className="font-bold text-[var(--md-sys-color-on-surface)]">
-                  {formatMVR(totalItemVal)}
-                </TableCell>
-
-                <TableCell className="hidden lg:table-cell text-xs text-[var(--md-sys-color-on-surface-variant)] truncate max-w-[120px]">
-                  {item.supplierName}
-                </TableCell>
-
-                <TableCell alignRight>
-                  <ActionGroup align="right">
-                    <Button
-                      variant="tonal"
-                      size="xs"
-                      onClick={() => setSelectedItemForAdjust(item)}
-                    >
-                      Adjust
-                    </Button>
-                    {isLow && (
-                      <Button
-                        variant="filled"
-                        size="xs"
-                        onClick={() => setIsCreatePOOpen(true)}
-                      >
-                        Reorder
-                      </Button>
-                    )}
-                  </ActionGroup>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+      {/* Canonical DataTable */}
+      <DataTable
+        data={filteredInventory}
+        columns={columns}
+        keyExtractor={(item) => item.id}
+        emptyMessage="No inventory items matching filter criteria."
+      />
 
       <StockAdjustmentModal
         item={selectedItemForAdjust}

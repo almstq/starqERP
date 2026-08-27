@@ -17,16 +17,13 @@ import {
 import { useERP } from '../../context/ERPContext';
 import { CreateInvoiceModal } from './CreateInvoiceModal';
 import { RecordPaymentModal } from '../payments/RecordPaymentModal';
+import { Invoice } from '../../types/erp';
 import {
   Button,
   Input,
   Surface,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
+  DataTable,
+  ColumnDef,
   Badge,
   ActionGroup,
   ResponsiveGrid,
@@ -69,6 +66,107 @@ export const InvoicesView: React.FC = () => {
     }
   };
 
+  const columns: ColumnDef<Invoice>[] = [
+    {
+      key: 'invoiceNumber',
+      header: 'Invoice #',
+      width: '16%',
+      render: (inv) => (
+        <span
+          className="mono-num text-xs font-semibold"
+          style={{ color: 'var(--md-sys-color-primary)' }}
+          title={inv.invoiceNumber}
+        >
+          {inv.invoiceNumber}
+        </span>
+      ),
+    },
+    {
+      key: 'customerName',
+      header: 'Customer & Job',
+      width: '26%',
+      render: (inv) => (
+        <div className="min-w-0">
+          <div className="font-semibold text-xs text-[var(--md-sys-color-on-surface)] truncate">
+            {inv.customerName}
+          </div>
+          {inv.linkedJobNumber && (
+            <div className="text-[11px] mono-num truncate text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
+              Job: {inv.linkedJobNumber}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'date',
+      header: 'Date',
+      width: '12%',
+      hideOn: 'compact',
+      render: (inv) => (
+        <span className="text-xs text-[var(--md-sys-color-on-surface-variant)]">{inv.date}</span>
+      ),
+    },
+    {
+      key: 'dueDate',
+      header: 'Due Date',
+      width: '12%',
+      hideOn: 'medium',
+      render: (inv) => (
+        <span className="text-xs text-[var(--md-sys-color-on-surface-variant)]">{inv.dueDate}</span>
+      ),
+    },
+    {
+      key: 'totalAmount',
+      header: 'Total',
+      align: 'right',
+      isNumeric: true,
+      width: '14%',
+      render: (inv) => (
+        <span className="font-semibold text-xs text-[var(--md-sys-color-on-surface)]">
+          {formatMVR(inv.totalAmount)}
+        </span>
+      ),
+    },
+    {
+      key: 'balanceDue',
+      header: 'Balance Due',
+      align: 'right',
+      isNumeric: true,
+      width: '14%',
+      render: (inv) => (
+        <span
+          className="font-semibold text-xs"
+          style={{ color: inv.balanceDue > 0 ? 'var(--md-sys-color-error)' : 'var(--positive)' }}
+        >
+          {inv.balanceDue > 0 ? formatMVR(inv.balanceDue) : '0.00'}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      width: '12%',
+      render: (inv) => (
+        <Badge variant={getStatusBadgeVariant(inv.status)} size="sm">
+          {inv.status}
+        </Badge>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Action',
+      align: 'right',
+      width: '8%',
+      render: () => (
+        <span className="text-xs font-semibold hover:underline" style={{ color: 'var(--md-sys-color-primary)' }}>
+          Inspect →
+        </span>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-4 sm:space-y-6 pb-12 w-full min-w-0">
       {/* Header */}
@@ -83,7 +181,7 @@ export const InvoicesView: React.FC = () => {
             </Badge>
           </div>
           <p className="mt-0.5 text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">
-            Track customer billings, payment settlements, and balances
+            Track customer billings, payment settlements, and outstanding balances
           </p>
         </div>
 
@@ -102,20 +200,20 @@ export const InvoicesView: React.FC = () => {
       {/* KPI Cards */}
       <ResponsiveGrid columns="auto" minItemWidth="200px" gap="sm">
         <Surface variant="filled" level={1} padding="sm" container className="space-y-1 min-w-0">
-          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+          <span className="block text-xs font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
             Total Invoiced (MTD)
           </span>
-          <div className="text-base sm:text-lg font-bold mono-num text-[var(--md-sys-color-on-surface)] truncate">
+          <div className="text-base sm:text-lg font-bold tabular-nums text-[var(--md-sys-color-on-surface)] truncate">
             {formatMVR(totalInvoicedSum, false)}
           </div>
         </Surface>
 
         <Surface variant="filled" level={1} padding="sm" container className="space-y-1 min-w-0">
-          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+          <span className="block text-xs font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
             Outstanding Receivables
           </span>
           <div
-            className="text-base sm:text-lg font-bold mono-num truncate"
+            className="text-base sm:text-lg font-bold tabular-nums truncate"
             style={{ color: totalOutstandingInvoices > 0 ? 'var(--md-sys-color-error)' : 'var(--positive)' }}
           >
             {formatMVR(totalOutstandingInvoices, false)}
@@ -123,16 +221,16 @@ export const InvoicesView: React.FC = () => {
         </Surface>
 
         <Surface variant="filled" level={1} padding="sm" container className="space-y-1 min-w-0">
-          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+          <span className="block text-xs font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
             Settled Collections
           </span>
-          <div className="text-base sm:text-lg font-bold mono-num truncate" style={{ color: 'var(--positive)' }}>
+          <div className="text-base sm:text-lg font-bold tabular-nums truncate" style={{ color: 'var(--positive)' }}>
             {formatMVR(totalPaidSum, false)}
           </div>
         </Surface>
       </ResponsiveGrid>
 
-      {/* Toolbar & Search */}
+      {/* Filter & Search Toolbar */}
       <Surface variant="filled" level={1} padding="sm" className="flex flex-col md:flex-row md:items-center justify-between gap-3 min-w-0">
         <div className="relative flex-1 w-full md:max-w-md min-w-0">
           <Input
@@ -144,7 +242,7 @@ export const InvoicesView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 text-xs shrink-0 min-w-0">
-          <span className="text-[11px] font-medium shrink-0" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+          <span className="text-xs font-medium shrink-0" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
             Status:
           </span>
           <select
@@ -167,78 +265,14 @@ export const InvoicesView: React.FC = () => {
         </div>
       </Surface>
 
-      {/* Invoices Table in Contained Scroll Region */}
-      <Table>
-        <TableHeader>
-          <tr>
-            <TableHead>Invoice #</TableHead>
-            <TableHead>Customer & Job</TableHead>
-            <TableHead className="hidden sm:table-cell">Date</TableHead>
-            <TableHead className="hidden md:table-cell">Due Date</TableHead>
-            <TableHead alignRight>Total</TableHead>
-            <TableHead alignRight className="hidden sm:table-cell">Paid</TableHead>
-            <TableHead alignRight>Balance Due</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead alignRight>Action</TableHead>
-          </tr>
-        </TableHeader>
-        <TableBody>
-          {filteredInvoices.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={9} className="text-center py-8" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                No commercial invoices matching filter criteria.
-              </TableCell>
-            </TableRow>
-          ) : (
-            filteredInvoices.map((inv) => (
-              <TableRow
-                key={inv.id}
-                onClick={() => navigate(`/invoices/${inv.id}`)}
-                className="cursor-pointer"
-              >
-                <TableCell className="font-bold" style={{ color: 'var(--md-sys-color-primary)' }}>
-                  <span className="mono-num">{inv.invoiceNumber}</span>
-                </TableCell>
-                <TableCell>
-                  <div className="font-semibold text-xs text-[var(--md-sys-color-on-surface)] truncate max-w-[140px] sm:max-w-none">{inv.customerName}</div>
-                  {inv.linkedJobNumber && (
-                    <div className="text-[11px] mono-num truncate" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Job: {inv.linkedJobNumber}</div>
-                  )}
-                </TableCell>
-                <TableCell className="hidden sm:table-cell text-xs" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                  {inv.date}
-                </TableCell>
-                <TableCell className="hidden md:table-cell text-xs" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                  {inv.dueDate}
-                </TableCell>
-                <TableCell isNumeric className="font-bold text-[var(--md-sys-color-on-surface)]">
-                  {formatMVR(inv.totalAmount)}
-                </TableCell>
-                <TableCell isNumeric className="hidden sm:table-cell" style={{ color: 'var(--positive)' }}>
-                  {formatMVR(inv.amountPaid)}
-                </TableCell>
-                <TableCell isNumeric className="font-bold">
-                  {inv.balanceDue > 0 ? (
-                    <span style={{ color: 'var(--md-sys-color-error)' }}>{formatMVR(inv.balanceDue)}</span>
-                  ) : (
-                    <span style={{ color: 'var(--positive)' }}>0.00</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Badge variant={getStatusBadgeVariant(inv.status)} size="sm">
-                    {inv.status}
-                  </Badge>
-                </TableCell>
-                <TableCell alignRight>
-                  <span className="text-xs font-semibold hover:underline" style={{ color: 'var(--md-sys-color-primary)' }}>
-                    Inspect →
-                  </span>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+      {/* Canonical DataTable */}
+      <DataTable
+        data={filteredInvoices}
+        columns={columns}
+        keyExtractor={(inv) => inv.id}
+        onRowClick={(inv) => navigate(`/invoices/${inv.id}`)}
+        emptyMessage="No commercial invoices matching filter criteria."
+      />
 
       <CreateInvoiceModal />
       <RecordPaymentModal />

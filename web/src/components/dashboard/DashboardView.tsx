@@ -36,12 +36,8 @@ import {
   Button,
   Surface,
   Badge,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
+  DataTable,
+  ColumnDef,
   ActionGroup,
   ResponsiveGrid,
 } from '../ui';
@@ -69,6 +65,102 @@ export const DashboardView: React.FC = () => {
   } = useERP();
 
   const activeJobs = jobs.filter((j) => !['Completed', 'Paid'].includes(j.status));
+
+  const recentJobColumns: ColumnDef<any>[] = [
+    {
+      key: 'jobId',
+      header: 'Job ID / Bay',
+      width: '16%',
+      render: (job) => (
+        <div className="min-w-0">
+          <div className="mono-num text-xs font-semibold" style={{ color: 'var(--md-sys-color-primary)' }} title={job.jobId}>
+            {job.jobId}
+          </div>
+          <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] truncate mt-0.5">
+            {job.bayNumber || 'Main Bay'}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'customerName',
+      header: 'Customer & Asset',
+      width: '26%',
+      render: (job) => (
+        <div className="min-w-0">
+          <div className="font-semibold text-xs text-[var(--md-sys-color-on-surface)] truncate">{job.customerName}</div>
+          <div className="text-[11px] mono-num truncate text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
+            {job.vehicle?.plateNumber} ({job.vehicle?.model})
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'serviceType',
+      header: 'Service',
+      width: '16%',
+      hideOn: 'compact',
+      render: (job) => (
+        <span className="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">
+          {job.serviceType}
+        </span>
+      ),
+    },
+    {
+      key: 'assignedStaff',
+      header: 'Staff',
+      width: '16%',
+      hideOn: 'medium',
+      render: (job) => (
+        <div className="flex flex-wrap gap-1 min-w-0">
+          {job.assignedStaff.map((s: any) => (
+            <Badge key={s.id} variant="neutral" size="sm">
+              {s.name}
+            </Badge>
+          ))}
+        </div>
+      ),
+    },
+    {
+      key: 'quotedAmount',
+      header: 'Quoted',
+      align: 'right',
+      isNumeric: true,
+      width: '14%',
+      render: (job) => (
+        <div className="text-right">
+          <div className="font-semibold text-xs tabular-nums text-[var(--md-sys-color-on-surface)]">
+            {formatMVR(job.quotedAmount)}
+          </div>
+          <div className="text-[10px] tabular-nums" style={{ color: 'var(--positive)' }}>
+            Est: {formatMVR(job.actualProfit)}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      width: '12%',
+      render: (job) => (
+        <Badge variant="neutral" size="sm">
+          {job.status}
+        </Badge>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Action',
+      align: 'right',
+      width: '8%',
+      render: () => (
+        <span className="text-xs font-semibold hover:underline" style={{ color: 'var(--md-sys-color-primary)' }}>
+          Inspect →
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4 sm:space-y-6 pb-12 w-full min-w-0">
@@ -424,60 +516,14 @@ export const DashboardView: React.FC = () => {
           </Link>
         </div>
 
-        {/* Jobs Table in Contained Scroll Region */}
-        <Table>
-          <TableHeader>
-            <tr>
-              <TableHead>Job ID / Bay</TableHead>
-              <TableHead>Customer & Asset</TableHead>
-              <TableHead className="hidden md:table-cell">Service</TableHead>
-              <TableHead className="hidden lg:table-cell">Staff</TableHead>
-              <TableHead alignRight>Quoted</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead alignRight>Action</TableHead>
-            </tr>
-          </TableHeader>
-          <TableBody>
-            {activeJobs.map((job) => (
-              <TableRow
-                key={job.id}
-                onClick={() => navigate(`/jobs/${job.id}`)}
-                className="cursor-pointer"
-              >
-                <TableCell className="font-bold" style={{ color: 'var(--md-sys-color-primary)' }}>
-                  <div className="mono-num">{job.jobId}</div>
-                  <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-normal">{job.bayNumber || 'Main Bay'}</div>
-                </TableCell>
-                <TableCell>
-                  <div className="font-semibold text-[var(--md-sys-color-on-surface)] truncate max-w-[140px] sm:max-w-none">{job.customerName}</div>
-                  <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mono-num truncate">{job.vehicle.plateNumber} ({job.vehicle.model})</div>
-                </TableCell>
-                <TableCell className="hidden md:table-cell text-[var(--md-sys-color-on-surface-variant)]">
-                  {job.serviceType}
-                </TableCell>
-                <TableCell className="hidden lg:table-cell">
-                  <div className="flex flex-wrap gap-1">
-                    {job.assignedStaff.map((s) => (
-                      <Badge key={s.id} variant="neutral" size="sm">{s.name}</Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell isNumeric className="font-bold text-[var(--md-sys-color-on-surface)]">
-                  <div>{formatMVR(job.quotedAmount)}</div>
-                  <div className="text-[10px] font-normal" style={{ color: 'var(--positive)' }}>Est: {formatMVR(job.actualProfit)}</div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="neutral" size="sm">{job.status}</Badge>
-                </TableCell>
-                <TableCell alignRight>
-                  <span className="text-xs font-semibold hover:underline" style={{ color: 'var(--md-sys-color-primary)' }}>
-                    Inspect →
-                  </span>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {/* Jobs Table in Canonical DataTable */}
+        <DataTable
+          data={activeJobs}
+          columns={recentJobColumns}
+          keyExtractor={(j) => j.id}
+          onRowClick={(j) => navigate(`/jobs/${j.id}`)}
+          emptyMessage="No active work orders on floor."
+        />
       </Surface>
 
       {/* Financial Performance Snapshot */}

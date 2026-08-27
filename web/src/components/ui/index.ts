@@ -3,6 +3,7 @@ export * from './Input';
 export * from './Select';
 export * from './Surface';
 export * from './Table';
+export * from './DataTable';
 export * from './Badge';
 export * from './Modal';
 export * from './Drawer';

@@ -185,12 +185,6 @@ export const AppShell: React.FC = () => {
                   ERP
                 </span>
               </div>
-              <div
-                className="text-[9px] font-medium tracking-[0.12em] uppercase mt-0.5"
-                style={{ color: 'var(--md-sys-color-on-surface-variant)' }}
-              >
-                Material 3
-              </div>
             </div>
           </div>
 

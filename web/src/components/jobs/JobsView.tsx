@@ -9,18 +9,15 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
+import { JobOrder } from '../../types/erp';
 import { CreateJobModal } from './CreateJobModal';
 import {
   Button,
   Input,
   Select,
   Surface,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
+  DataTable,
+  ColumnDef,
   Badge,
   ActionGroup,
   type BadgeVariant,
@@ -65,6 +62,107 @@ export const JobsView: React.FC = () => {
     if (lower.includes('void') || lower.includes('cancel')) return 'destructive';
     return 'neutral';
   };
+
+  const jobColumns: ColumnDef<JobOrder>[] = [
+    {
+      key: 'jobId',
+      header: 'Job ID',
+      width: '14%',
+      render: (job) => (
+        <span
+          className="mono-num text-xs font-semibold"
+          style={{ color: 'var(--md-sys-color-primary)' }}
+          title={job.jobId}
+        >
+          {job.jobId}
+        </span>
+      ),
+    },
+    {
+      key: 'customerName',
+      header: 'Customer & Vehicle',
+      width: '28%',
+      render: (job) => (
+        <div className="min-w-0">
+          <div className="font-semibold text-xs text-[var(--md-sys-color-on-surface)] truncate">
+            {job.customerName}
+          </div>
+          <div className="text-[11px] mono-num truncate text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
+            {job.vehicle?.plateNumber} ({job.vehicle?.model})
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'serviceType',
+      header: 'Service',
+      width: '16%',
+      hideOn: 'compact',
+      render: (job) => (
+        <span className="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">
+          {job.serviceType}
+        </span>
+      ),
+    },
+    {
+      key: 'bayNumber',
+      header: 'Bay',
+      width: '12%',
+      hideOn: 'medium',
+      render: (job) => (
+        <span className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
+          {job.bayNumber || 'Main Bay'}
+        </span>
+      ),
+    },
+    {
+      key: 'quotedAmount',
+      header: 'Amount',
+      align: 'right',
+      isNumeric: true,
+      width: '14%',
+      render: (job) => (
+        <span className="font-semibold text-xs tabular-nums text-[var(--md-sys-color-on-surface)]">
+          {formatMVR(job.quotedAmount)}
+        </span>
+      ),
+    },
+    {
+      key: 'targetMarginPercentage',
+      header: 'Margin',
+      align: 'right',
+      isNumeric: true,
+      width: '10%',
+      hideOn: 'compact',
+      render: (job) => (
+        <span className="text-xs tabular-nums font-semibold" style={{ color: 'var(--positive)' }}>
+          {job.targetMarginPercentage}%
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      width: '12%',
+      render: (job) => (
+        <Badge variant={getStatusBadgeVariant(job.status)} size="sm">
+          {job.status}
+        </Badge>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Action',
+      align: 'right',
+      width: '8%',
+      render: () => (
+        <span className="text-xs font-semibold hover:underline" style={{ color: 'var(--md-sys-color-primary)' }}>
+          Inspect →
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4 sm:space-y-6 pb-12 w-full min-w-0">
@@ -300,71 +398,13 @@ export const JobsView: React.FC = () => {
 
       {/* Table View Mode */}
       {viewMode === 'list' && (
-        <Table>
-          <TableHeader>
-            <tr>
-              <TableHead>Job ID</TableHead>
-              <TableHead>Customer & Vehicle</TableHead>
-              <TableHead className="hidden sm:table-cell">Service</TableHead>
-              <TableHead className="hidden md:table-cell">Bay</TableHead>
-              <TableHead alignRight>Amount</TableHead>
-              <TableHead alignRight className="hidden sm:table-cell">Margin</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead alignRight>Action</TableHead>
-            </tr>
-          </TableHeader>
-          <TableBody>
-            {filteredJobs.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                  No work orders matching search criteria.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredJobs.map((job) => (
-                <TableRow
-                  key={job.id}
-                  onClick={() => navigate(`/jobs/${job.id}`)}
-                  className="cursor-pointer"
-                >
-                  <TableCell className="font-bold" style={{ color: 'var(--md-sys-color-primary)' }}>
-                    <span className="mono-num">{job.jobId}</span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-semibold text-[var(--md-sys-color-on-surface)] truncate max-w-[160px] sm:max-w-none">
-                      {job.customerName}
-                    </div>
-                    <div className="text-[11px] mono-num truncate" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                      {job.vehicle?.plateNumber} ({job.vehicle?.model})
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                    {job.serviceType}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                    {job.bayNumber || 'Main Bay'}
-                  </TableCell>
-                  <TableCell isNumeric className="font-bold text-[var(--md-sys-color-on-surface)]">
-                    {formatMVR(job.quotedAmount)}
-                  </TableCell>
-                  <TableCell isNumeric style={{ color: 'var(--positive)' }} className="hidden sm:table-cell">
-                    {job.targetMarginPercentage}%
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusBadgeVariant(job.status)} size="sm">
-                      {job.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell alignRight>
-                    <span className="text-xs font-semibold hover:underline" style={{ color: 'var(--md-sys-color-primary)' }}>
-                      Inspect →
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        <DataTable
+          data={filteredJobs}
+          columns={jobColumns}
+          keyExtractor={(j) => j.id}
+          onRowClick={(j) => navigate(`/jobs/${j.id}`)}
+          emptyMessage="No work orders matching search criteria."
+        />
       )}
 
       <CreateJobModal />
