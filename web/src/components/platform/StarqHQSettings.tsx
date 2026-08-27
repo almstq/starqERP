@@ -37,7 +37,7 @@ export const StarqHQSettings: React.FC = () => {
               <Globe size={16} className="text-[var(--md-sys-color-primary)]" />
               <span>Production Origin & Domains</span>
             </div>
-            <Badge variant="positive" size="sm">Verified</Badge>
+            <Badge variant="warning" size="sm">Pending Production Verification (SERP-299)</Badge>
           </div>
           <div className="space-y-1.5 text-[var(--md-sys-color-on-surface-variant)]">
             <div className="flex justify-between">
@@ -50,7 +50,7 @@ export const StarqHQSettings: React.FC = () => {
             </div>
             <div className="flex justify-between">
               <span>SSL / TLS Certificate:</span>
-              <span className="font-semibold text-emerald-600">Active (Auto-Renewing)</span>
+              <span className="font-semibold text-amber-600">Pending Verification</span>
             </div>
           </div>
         </div>
@@ -97,12 +97,12 @@ export const StarqHQSettings: React.FC = () => {
               <Database size={16} className="text-indigo-500" />
               <span>Database & Disaster Recovery</span>
             </div>
-            <Badge variant="positive" size="sm">Active</Badge>
+            <Badge variant="warning" size="sm">Verification Pending</Badge>
           </div>
           <div className="space-y-1.5 text-[var(--md-sys-color-on-surface-variant)]">
             <div className="flex justify-between">
               <span>Continuous WAL Archiving:</span>
-              <span className="font-semibold text-emerald-600">Enabled (Point-in-Time Recovery)</span>
+              <span className="font-semibold text-amber-600">Restore Drill Pending</span>
             </div>
             <div className="flex justify-between">
               <span>Snapshot Frequency:</span>
