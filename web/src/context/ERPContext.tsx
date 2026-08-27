@@ -532,6 +532,16 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [currentBookId, setCurrentBookId] = useState<string>('book-starq-tech');
   const [isSetupModalOpen, setIsSetupModalOpen] = useState<boolean>(false);
 
+  // Synchronize active tenant & book context from authoritative backend session
+  useEffect(() => {
+    if (session?.current_organisation_id) {
+      setCurrentTenantId(session.current_organisation_id);
+    }
+    if (session?.current_book_id) {
+      setCurrentBookId(session.current_book_id);
+    }
+  }, [session?.current_organisation_id, session?.current_book_id]);
+
   // RBAC & User State
   const [users, setUsers] = useState<AppUser[]>(INITIAL_USERS);
   const [roles, setRoles] = useState<UserRole[]>(INITIAL_ROLES);
