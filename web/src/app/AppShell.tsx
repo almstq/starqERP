@@ -40,6 +40,7 @@ import {
   GitBranch,
   LifeBuoy,
   Info,
+  Plus,
 } from 'lucide-react';
 
 export type MaterialWindowClass = 'compact' | 'medium' | 'expanded' | 'large' | 'extra-large';
@@ -162,7 +163,7 @@ export const AppShell: React.FC = () => {
 
       {/* ── 1. DESKTOP PERSISTENT DRAWER (>= 1024px) ── */}
       <aside
-        className="hidden lg:flex shrink-0 flex-col w-60 lg:w-64"
+        className="hidden lg:flex shrink-0 flex-col w-60 lg:w-64 sticky top-0 h-screen overflow-y-auto"
         style={{
           backgroundColor: 'var(--md-sys-color-surface-container-low)',
           borderRight: '1px solid var(--md-sys-color-outline-variant)',

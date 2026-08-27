@@ -257,14 +257,16 @@ export const InventoryView: React.FC = () => {
         </Surface>
 
         <Surface variant="filled" level={1} padding="sm" container className="space-y-1 min-w-0">
-          <span className="block text-xs font-medium truncate" style={{ color: 'var(--positive)' }}>
-            Stock Turnover Health
+          <span className="block text-xs font-medium truncate text-[var(--md-sys-color-on-surface-variant)]">
+            Stock Availability Rate
           </span>
-          <div className="text-base sm:text-lg font-bold tabular-nums truncate" style={{ color: 'var(--positive)' }}>
-            94.2% Available
+          <div className="text-base sm:text-lg font-bold tabular-nums truncate text-[var(--md-sys-color-on-surface)]">
+            {inventory.length > 0
+              ? `${Math.round(((inventory.length - lowStockItemsCount) / inventory.length) * 100)}% Available`
+              : '0 Active SKUs'}
           </div>
           <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
-            Zero work order delays
+            {inventory.length > 0 ? `${inventory.length - lowStockItemsCount} of ${inventory.length} SKUs in optimal stock` : 'Catalog empty — click Add Item'}
           </span>
         </Surface>
       </ResponsiveGrid>

@@ -47,6 +47,7 @@ export const DashboardView: React.FC = () => {
   const navigate = useNavigate();
   const {
     activePlane,
+    currentTenant,
     totalSalesToday,
     totalCashReceived,
     totalOutstandingInvoices,
@@ -558,25 +559,29 @@ export const DashboardView: React.FC = () => {
             )}
           </div>
 
-          <div
-            className="p-3 rounded-[var(--md-sys-shape-corner-small)] text-xs flex items-center justify-between mt-3 min-w-0"
-            style={{
-              backgroundColor: 'var(--md-sys-color-surface-container-high)',
-              border: '1px solid var(--md-sys-color-outline-variant)',
-            }}
-          >
-            <div className="flex items-center gap-2 min-w-0 truncate">
-              <Zap size={14} style={{ color: 'var(--md-sys-color-primary)' }} className="shrink-0" />
-              <span className="truncate text-[var(--md-sys-color-on-surface)]">Job IGN-0234 reached clearcoat bake pass.</span>
-            </div>
-            <Link
-              to="/jobs/job-1"
-              className="font-bold hover:underline shrink-0 ml-2"
-              style={{ color: 'var(--md-sys-color-primary)' }}
+          {jobs.length > 0 && (
+            <div
+              className="p-3 rounded-[var(--md-sys-shape-corner-small)] text-xs flex items-center justify-between mt-3 min-w-0"
+              style={{
+                backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                border: '1px solid var(--md-sys-color-outline-variant)',
+              }}
             >
-              View
-            </Link>
-          </div>
+              <div className="flex items-center gap-2 min-w-0 truncate">
+                <Zap size={14} style={{ color: 'var(--md-sys-color-primary)' }} className="shrink-0" />
+                <span className="truncate text-[var(--md-sys-color-on-surface)]">
+                  Job {jobs[0].jobId}: {jobs[0].serviceType || 'Work Order in Progress'}
+                </span>
+              </div>
+              <Link
+                to={`/jobs/${jobs[0].id}`}
+                className="font-bold hover:underline shrink-0 ml-2"
+                style={{ color: 'var(--md-sys-color-primary)' }}
+              >
+                View
+              </Link>
+            </div>
+          )}
         </Surface>
       </div>
 
@@ -638,7 +643,14 @@ export const DashboardView: React.FC = () => {
 
           <div className="h-56 sm:h-60 w-full pt-2 min-w-0">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={MONTHLY_SALES_CHART_DATA}>
+              <AreaChart data={invoices.length > 0 ? MONTHLY_SALES_CHART_DATA : [
+                { month: 'Jan', revenue: 0, profit: 0 },
+                { month: 'Feb', revenue: 0, profit: 0 },
+                { month: 'Mar', revenue: 0, profit: 0 },
+                { month: 'Apr', revenue: 0, profit: 0 },
+                { month: 'May', revenue: 0, profit: 0 },
+                { month: 'Jun', revenue: 0, profit: 0 },
+              ]}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--md-sys-color-primary)" stopOpacity={0.4} />
@@ -674,20 +686,26 @@ export const DashboardView: React.FC = () => {
               Service Mix Distribution
             </h2>
             <div className="mt-3.5 space-y-2.5 text-xs min-w-0">
-              {SERVICE_BREAKDOWN_DATA.map((srv, i) => (
-                <div key={i} className="space-y-1 min-w-0">
-                  <div className="flex items-center justify-between text-xs min-w-0">
-                    <span className="font-medium text-[var(--md-sys-color-on-surface)] truncate">{srv.name}</span>
-                    <span className="mono-num font-bold shrink-0">{srv.value}%</span>
+              {jobs.length > 0 ? (
+                SERVICE_BREAKDOWN_DATA.map((srv, i) => (
+                  <div key={i} className="space-y-1 min-w-0">
+                    <div className="flex items-center justify-between text-xs min-w-0">
+                      <span className="font-medium text-[var(--md-sys-color-on-surface)] truncate">{srv.name}</span>
+                      <span className="mono-num font-bold shrink-0">{srv.value}%</span>
+                    </div>
+                    <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'var(--md-sys-color-surface-container-high)' }}>
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${srv.value}%`, backgroundColor: srv.color }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'var(--md-sys-color-surface-container-high)' }}>
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${srv.value}%`, backgroundColor: srv.color }}
-                    />
-                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6 text-xs text-[var(--md-sys-color-on-surface-variant)]">
+                  No service breakdown recorded yet. Create a job order to track service categories.
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
@@ -699,12 +717,22 @@ export const DashboardView: React.FC = () => {
             }}
           >
             <div className="flex items-center justify-between min-w-0">
-              <span className="text-[var(--md-sys-color-on-surface-variant)]">BML Main Account:</span>
-              <span className="mono-num font-semibold text-[var(--md-sys-color-on-surface)]">7730000189201</span>
+              <span className="text-[var(--md-sys-color-on-surface-variant)]">BML Settlement:</span>
+              <span className="mono-num font-semibold text-[var(--md-sys-color-on-surface)]">
+                {currentTenant?.bmlAccount ? currentTenant.bmlAccount.split(' ')[0] : 'Not Configured'}
+              </span>
             </div>
             <div className="flex items-center justify-between min-w-0">
               <span className="text-[var(--md-sys-color-on-surface-variant)]">Tax Status:</span>
-              <span className="font-semibold text-[var(--positive)]">Non-GST Registered</span>
+              <span
+                className={`font-semibold ${
+                  currentTenant?.gstStatus === 'registered' ? 'text-[var(--md-sys-color-primary)]' : 'text-emerald-600'
+                }`}
+              >
+                {currentTenant?.gstStatus === 'registered'
+                  ? `8% GST (${currentTenant.tinNumber || 'Registered'})`
+                  : 'Non-GST Registered'}
+              </span>
             </div>
           </div>
         </Surface>
