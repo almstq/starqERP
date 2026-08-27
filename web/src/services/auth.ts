@@ -13,20 +13,42 @@ export interface OperableOrganisation {
   books?: OperableBook[];
 }
 
+export function getApiBaseUrl(): string {
+  const custom = import.meta.env.VITE_API_URL;
+  if (custom) return custom.replace(/\/+$/, '');
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (supabaseUrl && !supabaseUrl.includes('localhost') && !supabaseUrl.includes('127.0.0.1')) {
+    return `${supabaseUrl.replace(/\/+$/, '')}/functions/v1/starq-api`;
+  }
+  return '';
+}
+
 export interface UserSession {
   person_id: string;
+  person_uuid?: string;
   name: string;
+  email?: string;
   seats: string[];
   acting_as: string;
   seat_label: string;
   csrf: string;
   allowed_entities: string[];
   organisations?: OperableOrganisation[];
-  current_organisation_id?: string;
+  current_organisation_id?: string | null;
   current_book_id?: string | null;
   platform_entitlement?: {
     operator_role: string;
     mfa_verified: boolean;
+  } | null;
+  application?: {
+    id: string;
+    status: 'pending' | 'approved' | 'rejected' | 'info_requested';
+    name: string;
+    legal_name: string;
+    created_at: string;
+    rejection_reason?: string | null;
+    info_request_note?: string | null;
+    provisioned_organisation_id?: string | null;
   } | null;
 }
 
@@ -38,7 +60,8 @@ export interface AuthState {
 
 export async function fetchCurrentUser(): Promise<UserSession | null> {
   try {
-    const response = await fetch('/api/me', {
+    const base = getApiBaseUrl();
+    const response = await fetch(`${base}/api/me`, {
       method: 'GET',
       credentials: 'include',
       headers: { 'Accept': 'application/json' },
@@ -52,7 +75,8 @@ export async function fetchCurrentUser(): Promise<UserSession | null> {
 }
 
 export async function loginWithGoogle(credential: string): Promise<UserSession> {
-  const response = await fetch('/api/auth/google', {
+  const base = getApiBaseUrl();
+  const response = await fetch(`${base}/api/auth/google`, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -73,7 +97,8 @@ export async function loginWithGoogle(credential: string): Promise<UserSession> 
 }
 
 export async function logout(csrf: string): Promise<void> {
-  await fetch('/api/auth/logout', {
+  const base = getApiBaseUrl();
+  await fetch(`${base}/api/auth/logout`, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -86,7 +111,8 @@ export async function logout(csrf: string): Promise<void> {
 }
 
 export async function switchSeat(seat: string, csrf: string): Promise<UserSession> {
-  const response = await fetch('/api/auth/seat', {
+  const base = getApiBaseUrl();
+  const response = await fetch(`${base}/api/auth/seat`, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -100,18 +126,18 @@ export async function switchSeat(seat: string, csrf: string): Promise<UserSessio
   const data = await response.json();
 
   if (!response.ok || !data.ok) {
-    throw new Error(data.error ?? 'seat_switch_failed');
+    throw new Error(data.error ?? 'switch_seat_failed');
   }
 
   return data.user as UserSession;
 }
 
 export async function switchContext(
-  organisationId: string,
-  bookId: string | null | undefined,
-  csrf: string,
+  params: { organisation_id?: string; book_id?: string },
+  csrf: string
 ): Promise<UserSession> {
-  const response = await fetch('/api/auth/context', {
+  const base = getApiBaseUrl();
+  const response = await fetch(`${base}/api/auth/context`, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -119,15 +145,14 @@ export async function switchContext(
       'Accept': 'application/json',
       'x-csrf-token': csrf,
     },
-    body: JSON.stringify({ organisation_id: organisationId, book_id: bookId, csrf }),
+    body: JSON.stringify({ ...params, csrf }),
   });
 
   const data = await response.json();
 
   if (!response.ok || !data.ok) {
-    throw new Error(data.error ?? 'context_switch_failed');
+    throw new Error(data.error ?? 'switch_context_failed');
   }
 
   return data.user as UserSession;
 }
-

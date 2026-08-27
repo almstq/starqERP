@@ -39,16 +39,22 @@ export const StarqHQView: React.FC = () => {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const handleApprove = (appId: string) => {
-    const approved = approveOrganisationApplication(appId);
-    if (approved) {
-      showToast(`Successfully provisioned "${approved.name}" as an active client tenant!`);
+  const handleApprove = async (appId: string) => {
+    try {
+      await approveOrganisationApplication(appId);
+      showToast(`Successfully provisioned organisation as an active client tenant!`);
+    } catch {
+      showToast(`Provisioning failed.`);
     }
   };
 
-  const handleReject = (appId: string) => {
-    rejectOrganisationApplication(appId, 'Application declined by Starq HQ Operator');
-    showToast(`Application rejected.`);
+  const handleReject = async (appId: string) => {
+    try {
+      await rejectOrganisationApplication(appId, 'Application declined by Starq HQ Operator');
+      showToast(`Application rejected.`);
+    } catch {
+      showToast(`Rejection failed.`);
+    }
   };
 
   const pendingCount = pendingApplications.filter((a) => a.status === 'pending_approval').length;

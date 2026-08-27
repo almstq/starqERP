@@ -49,6 +49,16 @@ import {
 import { telemetry } from '../services/telemetry';
 import { dispatchCommand, apiGet } from '../services/apiGateway';
 import { useAuth } from './AuthContext';
+import { switchContext as apiSwitchContext, fetchCurrentUser } from '../services/auth';
+import { ARCHETYPES } from '../domain/archetypes';
+import {
+  submitOrganisationApplication as apiSubmitApplication,
+  getPlatformApplications as apiGetPlatformApplications,
+  approvePlatformApplication as apiApproveApplication,
+  rejectPlatformApplication as apiRejectApplication,
+  requestInfoPlatformApplication as apiRequestInfoApplication,
+  PlatformApplicationRecord,
+} from '../services/apiGateway';
 
 export interface ERPContextType {
   activeTab: NavigationTab;
@@ -84,7 +94,7 @@ export interface ERPContextType {
   // Platform Application & Organisation Registration
   pendingApplications: OrganisationApplication[];
   submitOrganisationApplication: (appData: Omit<OrganisationApplication, 'id' | 'submittedAt' | 'status'>) => void;
-  approveOrganisationApplication: (appId: string) => OrganisationTenant | undefined;
+  approveOrganisationApplication: (appId: string) => Promise<OrganisationTenant | undefined>;
   rejectOrganisationApplication: (appId: string, reason?: string) => void;
   isRegisterOrgModalOpen: boolean;
   setIsRegisterOrgModalOpen: (open: boolean) => void;
@@ -405,127 +415,123 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [tenants]);
 
-  // Organisation Applications & Superadmin Approval State
-  const [pendingApplications, setPendingApplications] = useState<OrganisationApplication[]>(() => {
-    try {
-      const saved = localStorage.getItem('starq_erp_pending_applications_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch {
-      // Storage fallback
-    }
-    return INITIAL_APPLICATIONS;
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('starq_erp_pending_applications_v1', JSON.stringify(pendingApplications));
-    } catch {
-      // Storage unavailable
-    }
-  }, [pendingApplications]);
-
+  // Organisation Applications & Platform Approval State (Authoritative Server Persistence)
+  const [pendingApplications, setPendingApplications] = useState<OrganisationApplication[]>(INITIAL_APPLICATIONS);
   const [isRegisterOrgModalOpen, setIsRegisterOrgModalOpen] = useState(false);
 
+  const mapPlatformAppToClient = useCallback((record: PlatformApplicationRecord): OrganisationApplication => {
+    return {
+      id: record.id,
+      name: record.name,
+      legalName: record.legal_name,
+      primaryBookName: record.primary_book_name,
+      primaryBookCode: record.primary_book_code,
+      archetypeId: record.archetype_id,
+      archetypeName: (ARCHETYPES as any)[record.archetype_id]?.name || 'General Business',
+      island: record.island,
+      atoll: record.atoll,
+      applicantName: record.applicant_name,
+      applicantEmail: record.applicant_email,
+      phone: record.phone || '',
+      submittedAt: record.created_at.replace('T', ' ').substring(0, 16),
+      status: record.status === 'pending' ? 'pending_approval' : (record.status as any),
+      rejectionReason: record.rejection_reason || undefined,
+    };
+  }, []);
+
+  // Fetch server-side applications if current identity holds platform operator entitlement
+  useEffect(() => {
+    if (session?.platform_entitlement) {
+      apiGetPlatformApplications()
+        .then((res) => {
+          if (res.ok && Array.isArray(res.applications)) {
+            setPendingApplications(res.applications.map(mapPlatformAppToClient));
+          }
+        })
+        .catch(() => {
+          // Fallback to initial applications if offline
+        });
+    }
+  }, [session?.platform_entitlement, mapPlatformAppToClient]);
+
   const submitOrganisationApplication = useCallback(
-    (appData: Omit<OrganisationApplication, 'id' | 'submittedAt' | 'status'>) => {
-      const newApp: OrganisationApplication = {
-        ...appData,
-        id: `app-${Date.now()}`,
-        submittedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-        status: 'pending_approval',
-      };
-      setPendingApplications((prev) => [newApp, ...prev]);
+    async (appData: Omit<OrganisationApplication, 'id' | 'submittedAt' | 'status'>) => {
+      try {
+        const res = await apiSubmitApplication({
+          name: appData.name,
+          legal_name: appData.legalName,
+          archetype_id: appData.archetypeId,
+          primary_book_name: appData.primaryBookName,
+          primary_book_code: appData.primaryBookCode,
+          island: appData.island,
+          atoll: appData.atoll,
+          phone: appData.phone,
+        });
+
+        if (res.ok && res.application) {
+          const clientApp = mapPlatformAppToClient(res.application);
+          setPendingApplications((prev) => [clientApp, ...prev.filter((a) => a.id !== clientApp.id)]);
+        }
+      } catch (err) {
+        console.error('Failed to submit organisation application:', err);
+        // Optimistic fallback
+        const newApp: OrganisationApplication = {
+          ...appData,
+          id: `app-${Date.now()}`,
+          submittedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+          status: 'pending_approval',
+        };
+        setPendingApplications((prev) => [newApp, ...prev]);
+      }
     },
-    []
+    [mapPlatformAppToClient]
   );
 
   const approveOrganisationApplication = useCallback(
-    (appId: string): OrganisationTenant | undefined => {
-      const app = pendingApplications.find((a) => a.id === appId);
-      if (!app) return undefined;
-
-      const newTenantId = `tenant-${app.name.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 20)}-${Date.now().toString().slice(-4)}`;
-      const newBookId = `book-${app.primaryBookCode.toLowerCase()}-${Date.now().toString().slice(-4)}`;
-
-      const newTenant: OrganisationTenant = {
-        id: newTenantId,
-        name: app.name,
-        slug: app.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-        legalName: app.legalName,
-        industry: (app.archetypeName || 'General Business') as import('../types/erp').IndustryType,
-        currency: 'MVR',
-        currencySymbol: 'Rf',
-        tinNumber: '',
-        gstStatus: 'not_registered',
-        gstRate: 8,
-        financialYearStart: '01-01',
-        financialYearEnd: '12-31',
-        phone: app.phone,
-        email: app.applicantEmail,
-        address: `${app.island}, ${app.atoll}`,
-        island: app.island,
-        atoll: app.atoll,
-        bmlAccount: '7730000' + Math.floor(100000 + Math.random() * 900000) + ' (BML MVR)',
-        logoIcon: 'Building2',
-        themeColor: '#4f46e5',
-        createdAt: new Date().toISOString().split('T')[0],
-        books: [
-          {
-            id: newBookId,
-            tenantId: newTenantId,
-            code: app.primaryBookCode || 'MAIN',
-            name: app.primaryBookName || app.name,
-            archetypeId: (app.archetypeId || 'general_business') as import('../domain/archetypes').ArchetypeId,
-            isDefault: true,
-          },
-        ],
-        outlets: [
-          {
-            id: `out-${newTenantId}`,
-            tenantId: newTenantId,
-            name: app.primaryBookName || app.name,
-            code: app.primaryBookCode || 'MAIN',
-            tradingBrand: app.name,
-            island: app.island,
-            isPrimary: true,
-          },
-        ],
-        enabledModules: [
-          'dashboard',
-          'jobs',
-          'invoices',
-          'payments',
-          'expenses',
-          'inventory',
-          'purchasing',
-          'suppliers',
-          'reports',
-          'audit',
-          'workflows',
-          'roles',
-          'users',
-          'settings',
-        ],
-      };
-
-      setTenants((prev) => [...prev, newTenant]);
-      setPendingApplications((prev) =>
-        prev.map((a) => (a.id === appId ? { ...a, status: 'approved' } : a))
-      );
-
-      return newTenant;
+    async (appId: string): Promise<OrganisationTenant | undefined> => {
+      try {
+        const res = await apiApproveApplication(appId);
+        if (res.ok) {
+          setPendingApplications((prev) =>
+            prev.map((a) => (a.id === appId ? { ...a, status: 'approved' } : a))
+          );
+          if (session?.platform_entitlement) {
+            const appsRes = await apiGetPlatformApplications();
+            if (appsRes.ok) {
+              setPendingApplications(appsRes.applications.map(mapPlatformAppToClient));
+            }
+          }
+        }
+        return undefined;
+      } catch (err) {
+        console.error('Failed to approve organisation application:', err);
+        setPendingApplications((prev) =>
+          prev.map((a) => (a.id === appId ? { ...a, status: 'approved' } : a))
+        );
+        return undefined;
+      }
     },
-    [pendingApplications]
+    [session?.platform_entitlement, mapPlatformAppToClient]
   );
 
-  const rejectOrganisationApplication = useCallback((appId: string, reason?: string) => {
-    setPendingApplications((prev) =>
-      prev.map((a) => (a.id === appId ? { ...a, status: 'rejected', rejectionReason: reason } : a))
-    );
-  }, []);
+  const rejectOrganisationApplication = useCallback(
+    async (appId: string, reason?: string) => {
+      try {
+        const res = await apiRejectApplication(appId, reason || 'Application declined by Starq HQ Operator');
+        if (res.ok) {
+          setPendingApplications((prev) =>
+            prev.map((a) => (a.id === appId ? { ...a, status: 'rejected', rejectionReason: reason } : a))
+          );
+        }
+      } catch (err) {
+        console.error('Failed to reject organisation application:', err);
+        setPendingApplications((prev) =>
+          prev.map((a) => (a.id === appId ? { ...a, status: 'rejected', rejectionReason: reason } : a))
+        );
+      }
+    },
+    []
+  );
 
   const [activePlane, setActivePlane] = useState<'platform' | 'tenant'>('tenant');
   const [currentTenantId, setCurrentTenantId] = useState<string>('tenant-starq');

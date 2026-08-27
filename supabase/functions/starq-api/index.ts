@@ -421,9 +421,39 @@ async function verifyGoogleToken(
   }
 }
 
+interface Session {
+  person_uuid: string;
+  person_key: string;
+  display_label: string;
+  email: string;
+  organisation_id: string | null;
+  book_id: string | null;
+  seats: string[];
+  acting_as: string;
+  csrf: string;
+  exp: number;
+  allowed_entities?: string[];
+  organisations?: OperableOrganisation[];
+  platform_entitlement?: {
+    operator_role: "platform_support" | "platform_admin";
+    mfa_verified: boolean;
+  } | null;
+  application?: {
+    id: string;
+    status: "pending" | "approved" | "rejected" | "info_requested";
+    name: string;
+    legal_name: string;
+    created_at: string;
+    rejection_reason?: string | null;
+    info_request_note?: string | null;
+    provisioned_organisation_id?: string | null;
+  } | null;
+}
+
 async function establishPerson(claims: { sub: string; email: string; name: string }): Promise<Session> {
+  const normalizedEmail = claims.email.trim().toLowerCase();
   const entry = allowlist().find((person) =>
-    person.status !== "disabled" && person.email?.trim().toLowerCase() === claims.email
+    person.status !== "disabled" && person.email?.trim().toLowerCase() === normalizedEmail
   );
 
   let personKey = entry?.person_id;
@@ -455,7 +485,7 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
     personUuid = personWrite.data.id as string;
   } else {
     // New person signing in with verified Google account
-    const newKey = `user-${claims.email.split("@")[0].replace(/[^a-z0-9_-]/gi, "").toLowerCase() || crypto.randomUUID().slice(0, 8)}`;
+    const newKey = `user-${normalizedEmail.split("@")[0].replace(/[^a-z0-9_-]/gi, "").toLowerCase() || crypto.randomUUID().slice(0, 8)}`;
     const personWrite = await db.from("persons").insert({
       person_key: newKey,
       external_subject: claims.sub,
@@ -501,7 +531,7 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
   }
 
   // Find existing memberships
-  const membershipsRes = await db.from("memberships").select("id, organisation_id, organisations(id, slug, legal_name, status)")
+  const membershipsRes = await db.from("memberships").select("id, organisation_id, role, organisations(id, slug, legal_name, status)")
     .eq("person_id", personUuid)
     .eq("status", "active");
 
@@ -509,19 +539,6 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
 
   if (!orgId && memberRows.length > 0) {
     orgId = memberRows[0].organisation_id as string;
-  }
-
-  if (!orgId) {
-    const defaultOrg = await db.from("organisations").select("id")
-      .eq("status", "active")
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (defaultOrg.data?.id) orgId = defaultOrg.data.id as string;
-  }
-
-  if (!orgId && !platformEntitlement) {
-    throw new Error("organisation_not_found");
   }
 
   if (orgId && seats.length > 0) {
@@ -586,13 +603,39 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
     seats = ["managing_director"];
   }
 
+  // 4. Resolve applicant's pending/latest business application
+  let application: Session["application"] = null;
+  try {
+    const appLookup = await db.schema("platform").from("tenant_applications")
+      .select("id, status, name, legal_name, created_at, rejection_reason, info_request_note, provisioned_organisation_id")
+      .eq("applicant_person_id", personUuid)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (appLookup.data) {
+      application = {
+        id: appLookup.data.id,
+        status: appLookup.data.status,
+        name: appLookup.data.name,
+        legal_name: appLookup.data.legal_name,
+        created_at: appLookup.data.created_at,
+        rejection_reason: appLookup.data.rejection_reason,
+        info_request_note: appLookup.data.info_request_note,
+        provisioned_organisation_id: appLookup.data.provisioned_organisation_id,
+      };
+    }
+  } catch {
+    // Platform schema isolation
+  }
+
   const preferred = entry?.default_seat && seats.includes(entry.default_seat) ? entry.default_seat : seats[0];
 
   return {
     person_uuid: personUuid,
     person_key: personKey!,
     display_label: displayLabel,
-    organisation_id: orgId ?? resolvedOrgs[0]?.id ?? "00000000-0000-0000-0000-000000000000",
+    email: normalizedEmail,
+    organisation_id: orgId ?? resolvedOrgs[0]?.id ?? null,
     book_id: defaultBookId,
     seats,
     acting_as: preferred,
@@ -601,22 +644,26 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
     allowed_entities: resolvedOrgs.map((o) => o.slug),
     organisations: resolvedOrgs,
     platform_entitlement: platformEntitlement,
+    application,
   };
 }
 
 function userDto(session: Session): Json {
   return {
     person_id: session.person_key,
+    person_uuid: session.person_uuid,
     name: session.display_label,
+    email: session.email,
     seats: session.seats,
     acting_as: session.acting_as,
     seat_label: session.acting_as.replaceAll("_", " "),
     csrf: session.csrf,
-    allowed_entities: session.allowed_entities ?? ["CI", "STQ"],
+    allowed_entities: session.allowed_entities ?? [],
     organisations: session.organisations ?? [],
     current_organisation_id: session.organisation_id,
     current_book_id: session.book_id ?? null,
     platform_entitlement: session.platform_entitlement ?? null,
+    application: session.application ?? null,
   };
 }
 
@@ -712,6 +759,158 @@ Deno.serve(async (req: Request) => {
       };
       await securityEvent(req, "auth.switch_context", "accepted", updated, { target_org: targetOrgId, target_book: targetBookId });
       return json(200, { ok: true, user: userDto(updated) }, origin, { "set-cookie": cookie(await signSession(updated)) });
+    }
+
+    // =========================================================================
+    // Onboarding & Business Registration Application Routes (Applicant Scope)
+    // =========================================================================
+    if (req.method === "POST" && path === "/api/onboarding/apply") {
+      const body = await readJson(req);
+      if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+
+      const name = String(body.name ?? "").trim();
+      if (!name) return json(400, { ok: false, error: "business_name_required" }, origin);
+
+      const legalName = String(body.legal_name ?? "").trim() || `${name} Pvt Ltd`;
+      const archetypeId = String(body.archetype_id ?? "general_business");
+      const primaryBookName = String(body.primary_book_name ?? name).trim();
+      const primaryBookCode = String(body.primary_book_code ?? name.slice(0, 3)).trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || "MAIN";
+      const island = String(body.island ?? "Male'").trim();
+      const atoll = String(body.atoll ?? "Kaafu Atoll").trim();
+      const phone = body.phone ? String(body.phone).trim() : null;
+
+      const { data: appData, error: appError } = await db.schema("platform").from("tenant_applications").insert({
+        applicant_person_id: session.person_uuid,
+        applicant_email: session.email,
+        applicant_name: session.display_label,
+        name,
+        legal_name: legalName,
+        archetype_id: archetypeId,
+        primary_book_name: primaryBookName,
+        primary_book_code: primaryBookCode,
+        island,
+        atoll,
+        phone,
+        status: "pending",
+      }).select("id, status, name, legal_name, created_at").single();
+
+      if (appError || !appData) {
+        throw new Error("application_submission_failed");
+      }
+
+      const updatedSession: Session = {
+        ...session,
+        application: {
+          id: appData.id,
+          status: appData.status,
+          name: appData.name,
+          legal_name: appData.legal_name,
+          created_at: appData.created_at,
+        },
+      };
+
+      await securityEvent(req, "onboarding.apply", "accepted", session, { application_id: appData.id, name });
+      return json(200, { ok: true, application: appData, user: userDto(updatedSession) }, origin, {
+        "set-cookie": cookie(await signSession(updatedSession)),
+      });
+    }
+
+    if (req.method === "GET" && path === "/api/onboarding/application") {
+      const { data, error } = await db.schema("platform").from("tenant_applications")
+        .select("*")
+        .eq("applicant_person_id", session.person_uuid)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw new Error("application_query_failed");
+      return json(200, { ok: true, application: data ?? null }, origin);
+    }
+
+    // =========================================================================
+    // Starq HQ Platform Control Plane Routes (Platform Entitlement Required)
+    // =========================================================================
+    if (path.startsWith("/api/platform/")) {
+      if (!session.platform_entitlement) {
+        await securityEvent(req, "platform.access", "rejected", session, { path, reason: "platform_entitlement_required" });
+        return json(403, { ok: false, error: "platform_entitlement_required" }, origin);
+      }
+
+      if (req.method === "GET" && path === "/api/platform/applications") {
+        const { data, error } = await db.schema("platform").from("tenant_applications")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) throw new Error("platform_applications_query_failed");
+        return json(200, { ok: true, applications: data ?? [] }, origin);
+      }
+
+      if (req.method === "POST" && path.match(/^\/api\/platform\/applications\/[^\/]+\/approve$/)) {
+        const body = await readJson(req);
+        if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+
+        const appId = path.split("/")[4];
+        if (!uuid(appId)) return json(400, { ok: false, error: "invalid_application_id" }, origin);
+
+        const { data: provResult, error: provError } = await db.rpc("provision_approved_application", {
+          p_application_id: appId,
+          p_reviewer_person_id: session.person_uuid,
+        });
+
+        if (provError || !provResult) {
+          await securityEvent(req, "platform.provision", "rejected", session, { application_id: appId, error: provError?.message });
+          throw new Error("provisioning_failed");
+        }
+
+        await securityEvent(req, "platform.provision", "accepted", session, { application_id: appId, result: provResult });
+        return json(200, { ok: true, result: provResult }, origin);
+      }
+
+      if (req.method === "POST" && path.match(/^\/api\/platform\/applications\/[^\/]+\/reject$/)) {
+        const body = await readJson(req);
+        if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+
+        const appId = path.split("/")[4];
+        if (!uuid(appId)) return json(400, { ok: false, error: "invalid_application_id" }, origin);
+
+        const reason = String(body.reason ?? "Application declined during platform review.").trim();
+        const { error } = await db.schema("platform").from("tenant_applications")
+          .update({
+            status: "rejected",
+            rejection_reason: reason,
+            reviewed_by: session.person_uuid,
+            reviewed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", appId);
+
+        if (error) throw new Error("application_rejection_failed");
+        await securityEvent(req, "platform.application_reject", "accepted", session, { application_id: appId, reason });
+        return json(200, { ok: true, status: "rejected" }, origin);
+      }
+
+      if (req.method === "POST" && path.match(/^\/api\/platform\/applications\/[^\/]+\/request-info$/)) {
+        const body = await readJson(req);
+        if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+
+        const appId = path.split("/")[4];
+        if (!uuid(appId)) return json(400, { ok: false, error: "invalid_application_id" }, origin);
+
+        const note = String(body.note ?? "Additional business information required.").trim();
+        const { error } = await db.schema("platform").from("tenant_applications")
+          .update({
+            status: "info_requested",
+            info_request_note: note,
+            reviewed_by: session.person_uuid,
+            reviewed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", appId);
+
+        if (error) throw new Error("application_info_request_failed");
+        await securityEvent(req, "platform.application_request_info", "accepted", session, { application_id: appId, note });
+        return json(200, { ok: true, status: "info_requested" }, origin);
+      }
     }
 
     if (req.method === "GET" && path === "/api/ops/pulse") {
