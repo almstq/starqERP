@@ -21,6 +21,8 @@ declare
   old_ci_wf uuid := '30222026-0000-4000-8000-000000000801';
   new_ci_wf uuid := '20000000-0000-4000-8000-000000000801';
 begin
+  -- Temporarily set session_replication_role to replica to allow atomic key restructuring
+  set local session_replication_role = 'replica';
   -- 1. Disambiguate legacy unique constraints (slug and registry_code)
   -- Appending temporary transition suffix prevents unique constraint violation
   -- when inserting new synthetic organisation rows.
@@ -75,13 +77,17 @@ begin
     alter table public.sod_exception_dispositions disable trigger sod_exception_dispositions_append_only;
   end if;
 
-  -- 4. Update Business Names
+  -- 4. Update Business Names and Locations
   if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'business_names') then
     update public.business_names set id = '10000000-0000-4000-8000-000000000002', organisation_id = new_st where id = '29552026-0000-4000-8000-000000000002';
     update public.business_names set id = '10000000-0000-4000-8000-000000000003', organisation_id = new_st where id = '29552026-0000-4000-8000-000000000003';
     update public.business_names set id = '20000000-0000-4000-8000-000000000002', organisation_id = new_ci where id = '30222026-0000-4000-8000-000000000002';
     update public.business_names set organisation_id = new_st where organisation_id = old_st;
     update public.business_names set organisation_id = new_ci where organisation_id = old_ci;
+  end if;
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'locations') then
+    update public.locations set organisation_id = new_st where organisation_id = old_st;
+    update public.locations set organisation_id = new_ci where organisation_id = old_ci;
   end if;
 
   -- 5. Update Roles, Role Permissions, and Memberships (handling composite FKs)
@@ -309,6 +315,9 @@ begin
 
   -- 17. Delete old legacy organisation rows now that all child references are migrated
   delete from public.organisations where id in (old_st, old_ci);
+
+  -- Restore normal replication role
+  set local session_replication_role = 'origin';
 end $$;
 
 commit;
