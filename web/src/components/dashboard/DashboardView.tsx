@@ -335,72 +335,118 @@ export const DashboardView: React.FC = () => {
                 Needs Attention
               </h2>
             </div>
-            <Badge variant="destructive" size="sm">
-              {alerts.length} Action Required
+            <Badge variant={alerts.length > 0 ? "destructive" : "neutral"} size="sm">
+              {alerts.length > 0 ? `${alerts.length} Action Required` : '0 Actions Required'}
             </Badge>
           </div>
 
-          <div className="space-y-2.5 min-w-0">
-            {alerts.map((alert) => (
+          {alerts.length === 0 ? (
+            <div
+              className="p-6 rounded-[var(--md-sys-shape-corner-medium)] flex flex-col items-center justify-center text-center gap-3 min-w-0"
+              style={{
+                backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                border: '1px dashed var(--md-sys-color-outline-variant)',
+              }}
+            >
               <div
-                key={alert.id}
-                className="p-3 rounded-[var(--md-sys-shape-corner-medium)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0 transition-all"
+                className="w-10 h-10 rounded-full flex items-center justify-center"
                 style={{
-                  backgroundColor: 'var(--md-sys-color-surface-container-high)',
-                  border: '1px solid var(--md-sys-color-outline-variant)',
+                  backgroundColor: 'var(--md-sys-color-surface-container-highest)',
+                  color: 'var(--positive)',
                 }}
               >
-                <div className="flex items-start gap-2.5 min-w-0">
-                  <AlertTriangle
-                    size={16}
-                    className="shrink-0 mt-0.5"
-                    style={{ color: alert.urgency === 'critical' ? 'var(--md-sys-color-error)' : 'var(--warning)' }}
-                  />
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-                      <p className="text-xs font-semibold text-[var(--md-sys-color-on-surface)] truncate">{alert.title}</p>
-                      {alert.amount && (
-                        <span className="mono-num text-xs font-bold" style={{ color: 'var(--md-sys-color-error)' }}>
-                          {formatMVR(alert.amount)}
-                        </span>
-                      )}
+                <CheckCircle2 size={20} />
+              </div>
+              <div className="space-y-1 max-w-sm">
+                <p className="text-xs font-semibold text-[var(--md-sys-color-on-surface)]">
+                  No Operational Issues Pending
+                </p>
+                <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">
+                  All receivables, stock levels, and work orders are currently clear. Real-time alerts and exceptions will appear here as operational activity occurs.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                <Button
+                  variant="tonal"
+                  size="xs"
+                  onClick={() => setIsCreateJobOpen(true)}
+                  icon={<Plus size={12} />}
+                >
+                  <span>New Work Order</span>
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="xs"
+                  onClick={() => setIsCreateInvoiceOpen(true)}
+                  icon={<Receipt size={12} />}
+                >
+                  <span>Create Invoice</span>
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2.5 min-w-0">
+              {alerts.map((alert) => (
+                <div
+                  key={alert.id}
+                  className="p-3 rounded-[var(--md-sys-shape-corner-medium)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0 transition-all"
+                  style={{
+                    backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                    border: '1px solid var(--md-sys-color-outline-variant)',
+                  }}
+                >
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <AlertTriangle
+                      size={16}
+                      className="shrink-0 mt-0.5"
+                      style={{ color: alert.urgency === 'critical' ? 'var(--md-sys-color-error)' : 'var(--warning)' }}
+                    />
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                        <p className="text-xs font-semibold text-[var(--md-sys-color-on-surface)] truncate">{alert.title}</p>
+                        {alert.amount && (
+                          <span className="mono-num text-xs font-bold" style={{ color: 'var(--md-sys-color-error)' }}>
+                            {formatMVR(alert.amount)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-0.5 line-clamp-2">
+                        {alert.description}
+                      </p>
                     </div>
-                    <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-0.5 line-clamp-2">
-                      {alert.description}
-                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                    <Button
+                      variant="filled"
+                      size="xs"
+                      onClick={() => {
+                        if (alert.targetTab === 'invoices' && alert.targetId) {
+                          navigate(`/invoices/${alert.targetId}`);
+                        } else if (alert.targetTab === 'jobs' && alert.targetId) {
+                          navigate(`/jobs/${alert.targetId}`);
+                        } else if (alert.targetTab === 'purchasing' && alert.targetId) {
+                          navigate(`/purchasing/${alert.targetId}`);
+                        } else {
+                          navigate(`/${alert.targetTab}`);
+                        }
+                      }}
+                    >
+                      <span>{alert.actionLabel}</span>
+                      <ArrowRight size={12} />
+                    </Button>
+                    <Button
+                      variant="text"
+                      size="xs"
+                      onClick={() => dismissAlert(alert.id)}
+                    >
+                      Dismiss
+                    </Button>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                  <Button
-                    variant="filled"
-                    size="xs"
-                    onClick={() => {
-                      if (alert.targetTab === 'invoices' && alert.targetId) {
-                        navigate(`/invoices/${alert.targetId}`);
-                      } else if (alert.targetTab === 'jobs' && alert.targetId) {
-                        navigate(`/jobs/${alert.targetId}`);
-                      } else if (alert.targetTab === 'purchasing' && alert.targetId) {
-                        navigate(`/purchasing/${alert.targetId}`);
-                      } else {
-                        navigate(`/${alert.targetTab}`);
-                      }
-                    }}
-                  >
-                    <span>{alert.actionLabel}</span>
-                    <ArrowRight size={12} />
-                  </Button>
-                  <Button
-                    variant="text"
-                    size="xs"
-                    onClick={() => dismissAlert(alert.id)}
-                  >
-                    Dismiss
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Surface>
 
         {/* starqAI Insights Widget (5 cols) */}
@@ -425,50 +471,85 @@ export const DashboardView: React.FC = () => {
               </button>
             </div>
 
-            <div className="mt-3.5 space-y-3 min-w-0">
-              {aiInsights.slice(0, 2).map((insight) => (
+            {aiInsights.length === 0 ? (
+              <div
+                className="p-6 rounded-[var(--md-sys-shape-corner-medium)] flex flex-col items-center justify-center text-center gap-3 min-w-0 mt-3.5"
+                style={{
+                  backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                  border: '1px dashed var(--md-sys-color-outline-variant)',
+                }}
+              >
                 <div
-                  key={insight.id}
-                  className="p-3 rounded-[var(--md-sys-shape-corner-medium)] text-xs space-y-1.5 min-w-0"
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
                   style={{
-                    backgroundColor: 'var(--md-sys-color-surface-container-high)',
-                    border: '1px solid var(--md-sys-color-outline-variant)',
+                    backgroundColor: 'var(--md-sys-color-surface-container-highest)',
+                    color: 'var(--md-sys-color-primary)',
                   }}
                 >
-                  <div className="flex items-center justify-between min-w-0">
-                    <span
-                      className="text-[10px] font-bold uppercase tracking-wider truncate"
-                      style={{ color: 'var(--md-sys-color-primary)' }}
-                    >
-                      {insight.category}
-                    </span>
-                    <Badge variant="neutral" size="sm">
-                      {insight.impact}
-                    </Badge>
-                  </div>
-                  <p className="font-semibold text-[var(--md-sys-color-on-surface)] truncate">{insight.title}</p>
-                  <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] leading-relaxed line-clamp-2">
-                    {insight.description}
-                  </p>
-                  <div
-                    className="pt-2 flex items-center justify-between min-w-0"
-                    style={{ borderTop: '1px solid var(--md-sys-color-outline-variant)' }}
-                  >
-                    <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] truncate max-w-[160px]">
-                      {insight.recommendedAction}
-                    </span>
-                    <Button
-                      variant="tonal"
-                      size="xs"
-                      onClick={() => triggerAIInsightAction(insight)}
-                      className="shrink-0"
-                    >
-                      {insight.actionButtonLabel}
-                    </Button>
-                  </div>
+                  <Sparkles size={20} />
                 </div>
-              ))}
-            </div>
+                <div className="space-y-1 max-w-xs">
+                  <p className="text-xs font-semibold text-[var(--md-sys-color-on-surface)]">
+                    Ready for Live Analysis
+                  </p>
+                  <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">
+                    starqAI continuously monitors your floor workflows, margin trends, and receivable aging. Operational recommendations will appear as activity is recorded.
+                  </p>
+                </div>
+                <Button
+                  variant="tonal"
+                  size="xs"
+                  onClick={() => setIsAICopilotOpen(true)}
+                  icon={<Sparkles size={12} />}
+                >
+                  <span>Open Copilot</span>
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-3.5 space-y-3 min-w-0">
+                {aiInsights.slice(0, 2).map((insight) => (
+                  <div
+                    key={insight.id}
+                    className="p-3 rounded-[var(--md-sys-shape-corner-medium)] text-xs space-y-1.5 min-w-0"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                      border: '1px solid var(--md-sys-color-outline-variant)',
+                    }}
+                  >
+                    <div className="flex items-center justify-between min-w-0">
+                      <span
+                        className="text-[10px] font-bold uppercase tracking-wider truncate"
+                        style={{ color: 'var(--md-sys-color-primary)' }}
+                      >
+                        {insight.category}
+                      </span>
+                      <Badge variant="neutral" size="sm">
+                        {insight.impact}
+                      </Badge>
+                    </div>
+                    <p className="font-semibold text-[var(--md-sys-color-on-surface)] truncate">{insight.title}</p>
+                    <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] leading-relaxed line-clamp-2">
+                      {insight.description}
+                    </p>
+                    <div
+                      className="pt-2 flex items-center justify-between min-w-0"
+                      style={{ borderTop: '1px solid var(--md-sys-color-outline-variant)' }}
+                    >
+                      <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] truncate max-w-[160px]">
+                        {insight.recommendedAction}
+                      </span>
+                      <Button
+                        variant="tonal"
+                        size="xs"
+                        onClick={() => triggerAIInsightAction(insight)}
+                      >
+                        {insight.actionButtonLabel}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div

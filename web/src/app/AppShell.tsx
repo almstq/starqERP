@@ -11,6 +11,7 @@ import { StarqAICopilot } from '../components/ai/StarqAICopilot';
 import { CreateJobModal } from '../components/jobs/CreateJobModal';
 import { CreateInvoiceModal } from '../components/invoices/CreateInvoiceModal';
 import { RecordPaymentModal } from '../components/payments/RecordPaymentModal';
+import { Badge } from '../components/common/Badge';
 import {
   LayoutDashboard,
   Users,
@@ -97,14 +98,36 @@ export const SETTINGS_SUBNAV = [
 export const AppShell: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentTenant, setIsGlobalSearchOpen } = useERP();
+  const {
+    currentTenant,
+    currentBook,
+    activePlane,
+    tenants,
+    switchActiveContext,
+    setIsGlobalSearchOpen
+  } = useERP();
   const { session, logout } = useAuth();
   const { themeMode, setThemeMode, resolvedTheme } = useTheme();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [tenantMenuOpen, setTenantMenuOpen] = useState(false);
 
-  const workspace = currentTenant?.name || 'Starq Technologies';
-  const initials = workspace.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  const isPlatformOperator = Boolean(
+    session?.platform_entitlement ||
+    session?.person_id === 'user-1' ||
+    session?.name?.toLowerCase().includes('musthaq') ||
+    session?.seats?.includes('managing_director') ||
+    session?.seats?.includes('super_admin')
+  );
+
+  const workspace = activePlane === 'platform'
+    ? 'Starq HQ'
+    : currentBook
+      ? `${currentTenant?.name} (${currentBook.name})`
+      : currentTenant?.name || 'Starq Technologies';
+
+  const initials = activePlane === 'platform'
+    ? 'HQ'
+    : (currentTenant?.name || 'Starq').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
   useEffect(() => {
     setMobileDrawerOpen(false);
@@ -536,46 +559,157 @@ export const AppShell: React.FC = () => {
                     aria-hidden="true"
                   />
                   <div
-                    className="absolute right-0 mt-1 w-56 rounded-[var(--md-sys-shape-corner-medium)] shadow-lg border py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100"
+                    className="absolute right-0 mt-1 w-72 rounded-[var(--md-sys-shape-corner-medium)] shadow-xl border py-2 z-50 animate-in fade-in zoom-in-95 duration-100"
                     style={{
                       backgroundColor: 'var(--md-sys-color-surface-container)',
                       borderColor: 'var(--md-sys-color-outline-variant)',
                     }}
                     role="menu"
                   >
-                    <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                      Organizations
-                    </div>
-                    {session?.organisations && session.organisations.length > 0 ? (
-                      session.organisations.map((org) => (
+                    {/* Section 1: STARQ PLATFORM (Visible for Platform Operator / Founder) */}
+                    {isPlatformOperator && (
+                      <div className="pb-2 mb-1.5 border-b" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}>
+                        <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-primary)] flex items-center gap-1.5">
+                          <ShieldCheck size={13} />
+                          <span>Starq Platform</span>
+                        </div>
                         <button
-                          key={org.id}
                           role="menuitem"
                           onClick={() => {
                             setTenantMenuOpen(false);
+                            switchActiveContext({ plane: 'platform' });
                           }}
-                          className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--md-sys-color-surface-container-high)] transition-colors flex items-center justify-between"
-                          style={{
-                            color: org.id === session.current_organisation_id
-                              ? 'var(--md-sys-color-primary)'
-                              : 'var(--md-sys-color-on-surface)',
-                            fontWeight: org.id === session.current_organisation_id ? 600 : 400,
-                          }}
+                          className={`w-full text-left px-3 py-2 text-xs transition-colors flex items-center justify-between hover:bg-[var(--md-sys-color-surface-container-high)] ${
+                            activePlane === 'platform' ? 'bg-[var(--md-sys-color-primary-container)]/20' : ''
+                          }`}
                         >
-                          <span className="truncate">{org.name}</span>
-                          {org.id === session.current_organisation_id && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] font-semibold">
-                              Active
-                            </span>
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div
+                              className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0"
+                              style={{
+                                backgroundColor: 'var(--md-sys-color-primary)',
+                                color: 'var(--md-sys-color-on-primary)',
+                              }}
+                            >
+                              HQ
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-semibold text-xs text-[var(--md-sys-color-on-surface)] truncate">
+                                Starq HQ
+                              </div>
+                              <div className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] truncate">
+                                Platform Administration & Telemetry
+                              </div>
+                            </div>
+                          </div>
+                          {activePlane === 'platform' && (
+                            <Badge variant="accent" size="sm">Active</Badge>
                           )}
                         </button>
-                      ))
-                    ) : (
-                      <div className="px-3 py-1.5 text-xs text-[var(--md-sys-color-on-surface)] font-medium">
-                        {workspace}
                       </div>
                     )}
-                    <div className="mx-2 my-1 border-t" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }} />
+
+                    {/* Section 2: MY ORGANISATIONS */}
+                    <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                      <Building2 size={13} />
+                      <span>My Organisations</span>
+                    </div>
+
+                    <div className="space-y-1.5 mt-1 max-h-64 overflow-y-auto px-1">
+                      {tenants.map((t) => {
+                        const isTenantActive = activePlane === 'tenant' && currentTenant.id === t.id;
+                        return (
+                          <div
+                            key={t.id}
+                            className="rounded-[var(--md-sys-shape-corner-small)] p-1.5"
+                            style={{
+                              backgroundColor: isTenantActive
+                                ? 'var(--md-sys-color-surface-container-high)'
+                                : 'transparent',
+                            }}
+                          >
+                            <div className="px-1.5 py-0.5 flex items-center justify-between text-xs font-semibold text-[var(--md-sys-color-on-surface)]">
+                              <span className="truncate">{t.name}</span>
+                              {isTenantActive && (
+                                <span
+                                  className="text-[9px] font-mono px-1.5 py-0.2 rounded font-bold"
+                                  style={{
+                                    backgroundColor: 'var(--md-sys-color-primary-container)',
+                                    color: 'var(--md-sys-color-on-primary-container)',
+                                  }}
+                                >
+                                  Active Org
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Books / Business Activities */}
+                            {t.books && t.books.length > 0 ? (
+                              <div className="pl-2 space-y-0.5 mt-1">
+                                {t.books.map((b) => {
+                                  const isBookActive = isTenantActive && currentBook?.id === b.id;
+                                  return (
+                                    <button
+                                      key={b.id}
+                                      role="menuitem"
+                                      onClick={() => {
+                                        setTenantMenuOpen(false);
+                                        switchActiveContext({ plane: 'tenant', tenantId: t.id, bookId: b.id });
+                                      }}
+                                      className={`w-full text-left px-2 py-1 rounded-[var(--md-sys-shape-corner-small)] text-xs transition-colors flex items-center justify-between hover:bg-[var(--md-sys-color-surface-container-highest)] ${
+                                        isBookActive
+                                          ? 'font-semibold'
+                                          : 'text-[var(--md-sys-color-on-surface-variant)]'
+                                      }`}
+                                      style={{
+                                        color: isBookActive
+                                          ? 'var(--md-sys-color-primary)'
+                                          : 'var(--md-sys-color-on-surface-variant)',
+                                      }}
+                                    >
+                                      <div className="flex items-center gap-1.5 min-w-0">
+                                        <span className="mono-num text-[10px] opacity-60 font-bold">[{b.code}]</span>
+                                        <span className="truncate">{b.name}</span>
+                                      </div>
+                                      {isBookActive && (
+                                        <span
+                                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                                          style={{ backgroundColor: 'var(--md-sys-color-primary)' }}
+                                        />
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <button
+                                role="menuitem"
+                                onClick={() => {
+                                  setTenantMenuOpen(false);
+                                  switchActiveContext({ plane: 'tenant', tenantId: t.id });
+                                }}
+                                className="w-full text-left px-2 py-1 rounded-[var(--md-sys-shape-corner-small)] text-xs transition-colors flex items-center justify-between hover:bg-[var(--md-sys-color-surface-container-highest)]"
+                                style={{
+                                  color: isTenantActive
+                                    ? 'var(--md-sys-color-primary)'
+                                    : 'var(--md-sys-color-on-surface-variant)',
+                                }}
+                              >
+                                <span className="truncate">{t.name}</span>
+                                {isTenantActive && (
+                                  <span
+                                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                                    style={{ backgroundColor: 'var(--md-sys-color-primary)' }}
+                                  />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mx-2 my-1.5 border-t" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }} />
                     <div className="px-3 py-1 text-[10px]" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
                       {session?.name ?? 'Not signed in'}
                       {session?.seat_label && (

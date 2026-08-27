@@ -64,10 +64,15 @@ export interface ERPContextType {
   aiInsights: AIAssistantInsight[];
   staff: StaffMember[];
 
-  // Multi-Tenant State
+  // Multi-Tenant & Multi-Book Context State
+  activePlane: 'platform' | 'tenant';
   currentTenant: OrganisationTenant;
+  currentBookId?: string;
+  currentBook?: import('../types/erp').OrganisationBook;
   tenants: OrganisationTenant[];
   switchTenant: (tenantId: string) => void;
+  switchBook?: (bookId: string) => void;
+  switchActiveContext: (context: { plane: 'platform' | 'tenant'; tenantId?: string; bookId?: string }) => void;
   createTenant: (tenantData: Omit<OrganisationTenant, 'id' | 'createdAt'>) => OrganisationTenant;
   updateTenant: (tenantData: Partial<OrganisationTenant>) => void;
   updateTenantLogo: (logoUrl: string | null) => void;
@@ -390,7 +395,9 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [tenants]);
 
-  const [currentTenantId, setCurrentTenantId] = useState<string>('tenant-1');
+  const [activePlane, setActivePlane] = useState<'platform' | 'tenant'>('tenant');
+  const [currentTenantId, setCurrentTenantId] = useState<string>('tenant-starq');
+  const [currentBookId, setCurrentBookId] = useState<string>('book-starq-tech');
   const [isSetupModalOpen, setIsSetupModalOpen] = useState<boolean>(false);
 
   // RBAC & User State
@@ -412,8 +419,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
-  const [alerts, setAlerts] = useState<NeedsAttentionAlert[]>(INITIAL_ALERTS);
-  const [aiInsights, setAiInsights] = useState<AIAssistantInsight[]>(INITIAL_AI_INSIGHTS);
+  const [alerts, setAlerts] = useState<NeedsAttentionAlert[]>([]);
+  const [aiInsights, setAiInsights] = useState<AIAssistantInsight[]>([]);
   const [staff] = useState<StaffMember[]>(INITIAL_STAFF);
 
   // Load data from backend when session is available
@@ -493,6 +500,12 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return tenants.find((t) => t.id === currentTenantId) || tenants[0];
   }, [tenants, currentTenantId]);
 
+  // Current Book computation
+  const currentBook = useMemo(() => {
+    if (!currentTenant.books || currentTenant.books.length === 0) return undefined;
+    return currentTenant.books.find((b) => b.id === currentBookId) || currentTenant.books[0];
+  }, [currentTenant, currentBookId]);
+
   // Current User computation
   const currentUser = useMemo(() => {
     return users.find((u) => u.id === currentUserId) || users[0];
@@ -503,6 +516,87 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     telemetry.setTenantId(currentTenantId);
   }, [currentTenantId]);
+
+  // Dynamic real alerts derived from active domain state
+  useEffect(() => {
+    const list: NeedsAttentionAlert[] = [];
+
+    // 1. Real Overdue Invoices
+    const overdueInvoices = invoices.filter((inv) => {
+      if (inv.status === 'Paid' || inv.status === 'Draft') return false;
+      if (inv.status === 'Overdue') return true;
+      if (inv.dueDate && new Date(inv.dueDate) < new Date() && (inv.amountPaid || 0) < inv.totalAmount) return true;
+      return false;
+    });
+    for (const inv of overdueInvoices.slice(0, 3)) {
+      list.push({
+        id: `alert-inv-${inv.id}`,
+        type: 'overdue_invoice',
+        title: `Invoice ${inv.invoiceNumber} overdue`,
+        description: `${inv.customerName} has an unpaid balance of MVR ${(inv.totalAmount - (inv.amountPaid || 0)).toLocaleString()}.`,
+        amount: inv.totalAmount - (inv.amountPaid || 0),
+        urgency: 'critical',
+        actionLabel: 'View Invoice',
+        targetTab: 'invoices',
+        targetId: inv.id,
+      });
+    }
+
+    // 2. Real Low Stock Items
+    const lowStock = inventory.filter((item) => item.quantityOnHand <= item.reorderLevel);
+    if (lowStock.length > 0) {
+      const first = lowStock[0];
+      list.push({
+        id: `alert-stock-${first.id}`,
+        type: 'low_stock',
+        title: `${first.name} (${first.sku}) below reorder level`,
+        description: `Only ${first.quantityOnHand} ${first.unit} remain. Reorder threshold is ${first.reorderLevel} ${first.unit}.`,
+        urgency: 'warning',
+        actionLabel: 'Check Inventory',
+        targetTab: 'inventory',
+        targetId: first.id,
+      });
+    }
+
+    // 3. Real Pending Payments
+    const pendingPayments = payments.filter((p) => p.status === 'Pending Reconciliation');
+    for (const p of pendingPayments.slice(0, 2)) {
+      list.push({
+        id: `alert-pay-${p.id}`,
+        type: 'payment_unreconciled',
+        title: `Customer payment pending allocation`,
+        description: `Payment of MVR ${(p.amount || 0).toLocaleString()} via ${p.method} pending reconciliation.`,
+        amount: p.amount,
+        urgency: 'warning',
+        actionLabel: 'Reconcile',
+        targetTab: 'payments',
+        targetId: p.id,
+      });
+    }
+
+    setAlerts(list);
+  }, [invoices, inventory, payments]);
+
+  // Dynamic real AI insights derived from active operational conditions
+  useEffect(() => {
+    if (jobs.length === 0 && invoices.length === 0) {
+      setAiInsights([]);
+      return;
+    }
+    const list: AIAssistantInsight[] = [];
+    if (invoices.some((i) => i.status === 'Overdue')) {
+      list.push({
+        id: 'ai-rec-overdue',
+        category: 'Cash Flow',
+        title: 'Overdue Receivables Acceleration',
+        impact: 'High Impact',
+        description: 'Sending automated WhatsApp statement reminders to overdue fleet accounts accelerates settlement turnaround by up to 40%.',
+        recommendedAction: 'Send Statement of Account',
+        actionButtonLabel: 'Send Statements',
+      });
+    }
+    setAiInsights(list);
+  }, [jobs, invoices]);
 
   const toggleTheme = () => {
     const next = theme === 'light' ? 'dark' : 'light';
@@ -524,6 +618,78 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const modulePerms = userRole.permissions[module];
     if (!modulePerms) return false;
     return modulePerms.includes(action) || modulePerms.includes('manage');
+  };
+
+  // Audit Logging Helper
+  const logAuditEvent = (entry: Omit<AuditLogEntry, 'id' | 'userId' | 'userName' | 'userRole' | 'userEmail' | 'timestamp' | 'ipAddress' | 'location' | 'tenantId'> & { location?: string; tenantId?: string }) => {
+    const newAudit: AuditLogEntry = {
+      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userRole: currentUser.roleName,
+      userEmail: currentUser.email,
+      tenantId: entry.tenantId || currentTenant.id,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      ipAddress: '',
+      location: `${currentTenant.island} Office`,
+      ...entry
+    };
+    setAuditLogs((prev) => [newAudit, ...prev]);
+  };
+
+  // Switch Tenant
+  const switchTenant = (tenantId: string) => {
+    const target = tenants.find((t) => t.id === tenantId);
+    if (!target) return;
+    setCurrentTenantId(tenantId);
+    if (target.books && target.books.length > 0) {
+      setCurrentBookId(target.books[0].id);
+    }
+    setActivePlane('tenant');
+    logAuditEvent({
+      action: 'ORG_CONFIG_SAVED',
+      module: 'settings',
+      entityType: 'OrganisationTenant',
+      entityId: target.id,
+      entityName: target.name,
+      summary: `Switched active organization to ${target.name} (${target.industry}).`
+    });
+  };
+
+  // Switch Book within active Tenant
+  const switchBook = (bookId: string) => {
+    setCurrentBookId(bookId);
+    const book = currentTenant.books?.find((b) => b.id === bookId);
+    logAuditEvent({
+      action: 'ORG_CONFIG_SAVED',
+      module: 'settings',
+      entityType: 'OrganisationBook',
+      entityId: bookId,
+      entityName: book?.name || bookId,
+      summary: `Switched active book to ${book?.name || bookId}.`
+    });
+  };
+
+  // Switch Active Operating Context (Platform vs Tenant)
+  const switchActiveContext = (context: { plane: 'platform' | 'tenant'; tenantId?: string; bookId?: string }) => {
+    setActivePlane(context.plane);
+    if (context.tenantId) {
+      setCurrentTenantId(context.tenantId);
+      const target = tenants.find((t) => t.id === context.tenantId);
+      if (context.bookId) {
+        setCurrentBookId(context.bookId);
+      } else if (target?.books && target.books.length > 0) {
+        setCurrentBookId(target.books[0].id);
+      }
+    }
+    logAuditEvent({
+      action: 'ORG_CONFIG_SAVED',
+      module: 'settings',
+      entityType: 'OperatingContext',
+      entityId: context.tenantId || 'platform-hq',
+      entityName: context.plane === 'platform' ? 'Starq HQ' : (tenants.find((t) => t.id === context.tenantId)?.name || 'Tenant'),
+      summary: `Switched active operating context to ${context.plane === 'platform' ? 'Starq HQ Platform Control Plane' : `${context.tenantId} / ${context.bookId || 'default'}`}.`
+    });
   };
 
   // Currency Formatter
@@ -562,48 +728,6 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const lowStockItemsCount = useMemo(() => {
     return inventory.filter((item) => item.quantityOnHand <= item.reorderLevel).length;
   }, [inventory]);
-
-  // Logging Helper
-  const logAuditEvent = (entry: {
-    action: AuditLogEntry['action'];
-    module: PermissionModule;
-    entityType: string;
-    entityId: string;
-    entityName: string;
-    summary: string;
-    details?: string;
-    previousValue?: string;
-    newValue?: string;
-  }) => {
-    const newAudit: AuditLogEntry = {
-      id: `audit-${Date.now()}`,
-      tenantId: currentTenant.id,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.roleName,
-      userEmail: currentUser.email,
-      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      ipAddress: '',
-      location: `${currentTenant.island} Office`,
-      ...entry
-    };
-    setAuditLogs((prev) => [newAudit, ...prev]);
-  };
-
-  // Switch Tenant
-  const switchTenant = (tenantId: string) => {
-    const target = tenants.find((t) => t.id === tenantId);
-    if (!target) return;
-    setCurrentTenantId(tenantId);
-    logAuditEvent({
-      action: 'ORG_CONFIG_SAVED',
-      module: 'settings',
-      entityType: 'OrganisationTenant',
-      entityId: target.id,
-      entityName: target.name,
-      summary: `Switched active organization to ${target.name} (${target.industry}).`
-    });
-  };
 
   // Create new Tenant (Organisation Setup)
   const createTenant = (tenantData: Omit<OrganisationTenant, 'id' | 'createdAt'>): OrganisationTenant => {
@@ -1939,10 +2063,15 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         aiInsights,
         staff,
 
-        // Multi-tenant
+        // Multi-tenant & Multi-Book Context
+        activePlane,
         currentTenant,
+        currentBookId,
+        currentBook,
         tenants,
         switchTenant,
+        switchBook,
+        switchActiveContext,
         createTenant,
         updateTenant,
         updateTenantLogo,

@@ -1292,6 +1292,24 @@ export const INITIAL_TENANTS: import('../types/erp').OrganisationTenant[] = [
     logoUrl: '/starq-logo.png',
     themeColor: '#4f46e5',
     createdAt: '2024-01-01',
+    books: [
+      {
+        id: 'book-starq-tech',
+        tenantId: 'tenant-starq',
+        code: 'STQ',
+        name: 'Starq Technologies',
+        archetypeId: 'general_business',
+        isDefault: true,
+      },
+      {
+        id: 'book-starq-dyn',
+        tenantId: 'tenant-starq',
+        code: 'DYN',
+        name: 'Starq Dynamics',
+        archetypeId: 'general_business',
+        isDefault: false,
+      },
+    ],
     outlets: [
       {
         id: 'out-starq-dyn',
@@ -1353,6 +1371,16 @@ export const INITIAL_TENANTS: import('../types/erp').OrganisationTenant[] = [
     logoUrl: '/club-ignition-logo.png',
     themeColor: '#2563eb',
     createdAt: '2023-01-15',
+    books: [
+      {
+        id: 'book-ignition-ink',
+        tenantId: 'tenant-ignition',
+        code: 'INK',
+        name: 'Ignition Ink',
+        archetypeId: 'automotive_workshop',
+        isDefault: true,
+      },
+    ],
     outlets: [
       {
         id: 'out-ign-ink',

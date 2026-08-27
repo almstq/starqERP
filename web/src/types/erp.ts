@@ -416,8 +416,18 @@ export interface OrganisationTenant {
   logoUrl?: string;
   themeColor: string;
   createdAt: string;
+  books?: OrganisationBook[];
   outlets?: Outlet[];
   enabledModules?: PermissionModule[];
+}
+
+export interface OrganisationBook {
+  id: string;
+  tenantId: string;
+  code: string;
+  name: string;
+  archetypeId?: import('../domain/archetypes').ArchetypeId;
+  isDefault?: boolean;
 }
 
 export interface Outlet {
