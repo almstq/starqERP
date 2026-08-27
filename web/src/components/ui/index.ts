@@ -10,3 +10,8 @@ export * from './Drawer';
 export * from './Tabs';
 export * from './ResponsiveGrid';
 export * from './ActionGroup';
+export * from './Ripple';
+export * from './StateLayer';
+export * from './Switch';
+export * from './SegmentedButton';
+export * from './FilterChip';

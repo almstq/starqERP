@@ -66,11 +66,11 @@ export const Modal: React.FC<ModalProps> = ({
           border: '1px solid var(--md-sys-color-outline-variant)',
           borderRadius: 'var(--md-sys-shape-corner-extra-large)',
           color: 'var(--md-sys-color-on-surface)',
-          boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.25)',
+          boxShadow: 'var(--md-sys-elevation-3)',
           maxWidth: `min(calc(100vw - 1.5rem), ${maxWidthValues})`,
           maxHeight: 'min(90dvh, 800px)',
         }}
-        className="relative w-full overflow-hidden z-10 flex flex-col min-w-0"
+        className="relative w-full overflow-hidden z-10 flex flex-col min-w-0 m3-dialog-enter"
       >
         {/* Header (Sticky / Accessible) */}
         <div

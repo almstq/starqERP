@@ -20,6 +20,7 @@ import {
   ColumnDef,
   Badge,
   ActionGroup,
+  SegmentedButton,
   type BadgeVariant,
 } from '../ui';
 
@@ -184,30 +185,15 @@ export const JobsView: React.FC = () => {
 
         <ActionGroup align="right" className="shrink-0">
           {/* View Toggle */}
-          <div
-            className="flex items-center p-0.5 sm:p-1 rounded-[var(--md-sys-shape-corner-full)]"
-            style={{
-              backgroundColor: 'var(--md-sys-color-surface-container-high)',
-              border: '1px solid var(--md-sys-color-outline-variant)',
-            }}
-          >
-            <Button
-              variant={viewMode === 'kanban' ? 'tonal' : 'text'}
-              size="xs"
-              onClick={() => setViewMode('kanban')}
-              icon={<LayoutGrid size={14} />}
-            >
-              <span>Kanban</span>
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'tonal' : 'text'}
-              size="xs"
-              onClick={() => setViewMode('list')}
-              icon={<List size={14} />}
-            >
-              <span>Table</span>
-            </Button>
-          </div>
+          <SegmentedButton<'kanban' | 'list'>
+            value={viewMode}
+            onChange={(v) => setViewMode(v)}
+            size="sm"
+            options={[
+              { value: 'kanban', label: 'Kanban', icon: <LayoutGrid size={13} /> },
+              { value: 'list', label: 'Table', icon: <List size={13} /> },
+            ]}
+          />
 
           <Button
             variant="filled"

@@ -2,7 +2,7 @@ import React from 'react';
 
 export interface SurfaceProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'elevated' | 'filled' | 'outlined';
-  level?: 1 | 2 | 3;
+  level?: 1 | 2 | 3 | 4 | 5;
   padding?: 'none' | 'sm' | 'md' | 'lg';
   bordered?: boolean;
   container?: boolean;
@@ -26,13 +26,13 @@ export const Surface: React.FC<SurfaceProps> = ({
     lg: 'p-5 sm:p-6 md:p-8',
   }[padding];
 
-  // Material 3 card container styling
+  // Material 3 card container styling with tonal elevation
   const getCardStyles = (): React.CSSProperties => {
     if (variant === 'elevated') {
       return {
         backgroundColor: 'var(--md-sys-color-surface-container-low)',
         border: '1px solid var(--md-sys-color-outline-variant)',
-        boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+        boxShadow: 'var(--md-sys-elevation-1)',
       };
     }
     if (variant === 'outlined' || bordered) {
@@ -42,13 +42,15 @@ export const Surface: React.FC<SurfaceProps> = ({
       };
     }
     // filled
+    const bgMap = {
+      1: 'var(--md-sys-color-surface-container-low)',
+      2: 'var(--md-sys-color-surface-container)',
+      3: 'var(--md-sys-color-surface-container-high)',
+      4: 'var(--md-sys-color-surface-container-highest)',
+      5: 'var(--md-sys-color-surface-container-highest)',
+    };
     return {
-      backgroundColor:
-        level === 2
-          ? 'var(--md-sys-color-surface-container)'
-          : level === 3
-          ? 'var(--md-sys-color-surface-container-high)'
-          : 'var(--md-sys-color-surface-container-low)',
+      backgroundColor: bgMap[level as keyof typeof bgMap] || 'var(--md-sys-color-surface-container-low)',
       border: '1px solid var(--md-sys-color-outline-variant)',
     };
   };
@@ -69,5 +71,3 @@ export const Surface: React.FC<SurfaceProps> = ({
     </div>
   );
 };
-
-export const Card = Surface;

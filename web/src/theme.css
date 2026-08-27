@@ -28,6 +28,42 @@
   --radius-xl: var(--md-sys-shape-corner-large);
   --radius-2xl: var(--md-sys-shape-corner-extra-large);
   --radius-full: var(--md-sys-shape-corner-full);
+
+  /* Material 3 Motion Curves */
+  --md-sys-motion-easing-emphasized: cubic-bezier(0.2, 0.0, 0, 1.0);
+  --md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1.0);
+  --md-sys-motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0.0, 0.8, 0.15);
+  --md-sys-motion-easing-standard: cubic-bezier(0.2, 0.0, 0, 1.0);
+  --md-sys-motion-easing-standard-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --md-sys-motion-easing-standard-accelerate: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Material 3 Motion Durations */
+  --md-sys-motion-duration-short1: 50ms;
+  --md-sys-motion-duration-short2: 100ms;
+  --md-sys-motion-duration-short3: 150ms;
+  --md-sys-motion-duration-short4: 200ms;
+  --md-sys-motion-duration-medium1: 250ms;
+  --md-sys-motion-duration-medium2: 300ms;
+  --md-sys-motion-duration-medium3: 350ms;
+  --md-sys-motion-duration-medium4: 400ms;
+  --md-sys-motion-duration-long1: 450ms;
+  --md-sys-motion-duration-long2: 500ms;
+  --md-sys-motion-duration-long3: 550ms;
+  --md-sys-motion-duration-long4: 600ms;
+
+  /* Material 3 State Layer Opacities */
+  --md-sys-state-hover-opacity: 0.08;
+  --md-sys-state-focus-opacity: 0.12;
+  --md-sys-state-pressed-opacity: 0.12;
+  --md-sys-state-dragged-opacity: 0.16;
+
+  /* Material 3 Elevation Models */
+  --md-sys-elevation-0: none;
+  --md-sys-elevation-1: 0px 1px 3px 1px rgba(0, 0, 0, 0.08), 0px 1px 2px 0px rgba(0, 0, 0, 0.16);
+  --md-sys-elevation-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.08), 0px 1px 2px 0px rgba(0, 0, 0, 0.16);
+  --md-sys-elevation-3: 0px 1px 3px 0px rgba(0, 0, 0, 0.16), 0px 4px 8px 3px rgba(0, 0, 0, 0.08);
+  --md-sys-elevation-4: 0px 2px 3px 0px rgba(0, 0, 0, 0.16), 0px 6px 10px 4px rgba(0, 0, 0, 0.08);
+  --md-sys-elevation-5: 0px 4px 4px 0px rgba(0, 0, 0, 0.16), 0px 8px 12px 6px rgba(0, 0, 0, 0.08);
 }
 
 /* ── LIGHT THEME (Official Material 3 Blue + Crisp Neutral Canvas) ───────── */
@@ -195,4 +231,44 @@ html.dark,
   --border: var(--border-subtle);
   --input: var(--border-strong);
   --ring: var(--border-focus);
+}
+
+/* ── M3 KEYFRAME ANIMATIONS ─────────────────────────────────────────────── */
+@keyframes md-ripple-expand {
+  0% {
+    transform: scale(0);
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(3.5);
+    opacity: 0;
+  }
+}
+
+@keyframes md-dialog-entrance {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes md-drawer-slide-in {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.m3-dialog-enter {
+  animation: md-dialog-entrance var(--md-sys-motion-duration-medium3) var(--md-sys-motion-easing-emphasized-decelerate) forwards;
+}
+
+.m3-drawer-enter {
+  animation: md-drawer-slide-in var(--md-sys-motion-duration-medium4) var(--md-sys-motion-easing-emphasized-decelerate) forwards;
 }

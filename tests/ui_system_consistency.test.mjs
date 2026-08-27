@@ -61,6 +61,10 @@ describe('SERP Material 3 UI System Consistency & Design System Linter', () => {
       '--md-sys-shape-corner-large',
       '--md-sys-shape-corner-extra-large',
       '--md-sys-shape-corner-full',
+      '--md-sys-motion-easing-emphasized',
+      '--md-sys-state-hover-opacity',
+      '--md-sys-state-pressed-opacity',
+      '--md-sys-elevation-1',
     ];
     for (const token of requiredM3Tokens) {
       assert.ok(content.includes(token), `theme.css must define Material 3 token ${token}`);
@@ -108,7 +112,23 @@ describe('SERP Material 3 UI System Consistency & Design System Linter', () => {
     const indexPath = path.join(WEB_SRC, 'components', 'ui', 'index.ts');
     assert.ok(fs.existsSync(indexPath), 'web/src/components/ui/index.ts must exist');
     const content = fs.readFileSync(indexPath, 'utf8');
-    const requiredPrimitives = ['Button', 'Input', 'Select', 'Surface', 'Table', 'DataTable', 'Badge', 'Modal', 'Drawer', 'Tabs'];
+    const requiredPrimitives = [
+      'Button',
+      'Input',
+      'Select',
+      'Surface',
+      'Table',
+      'DataTable',
+      'Badge',
+      'Modal',
+      'Drawer',
+      'Tabs',
+      'Ripple',
+      'StateLayer',
+      'Switch',
+      'SegmentedButton',
+      'FilterChip',
+    ];
     for (const prim of requiredPrimitives) {
       assert.ok(
         content.includes(prim),

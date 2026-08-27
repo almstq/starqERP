@@ -60,10 +60,11 @@ export const Drawer: React.FC<DrawerProps> = ({
             borderLeft: '1px solid var(--md-sys-color-outline-variant)',
             borderRadius: 'var(--md-sys-shape-corner-large) 0 0 var(--md-sys-shape-corner-large)',
             color: 'var(--md-sys-color-on-surface)',
+            boxShadow: 'var(--md-sys-elevation-3)',
             maxWidth: `min(calc(100vw - 1rem), ${maxWidthValues})`,
             width: '100vw',
           }}
-          className="flex flex-col shadow-2xl min-w-0 h-full max-h-[100dvh]"
+          className="flex flex-col min-w-0 h-full max-h-[100dvh]"
         >
           {/* Header */}
           <div

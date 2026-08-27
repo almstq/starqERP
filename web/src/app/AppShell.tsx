@@ -126,8 +126,8 @@ export const AppShell: React.FC = () => {
                 end={end}
                 title={label}
                 className={({ isActive }) =>
-                  `flex flex-col items-center justify-center p-2 rounded-[var(--md-sys-shape-corner-full)] transition-all ${
-                    isActive ? 'font-semibold' : 'hover:bg-[var(--md-sys-color-surface-container-high)]'
+                  `group relative overflow-hidden flex flex-col items-center justify-center p-2 rounded-[var(--md-sys-shape-corner-full)] transition-all duration-150 ${
+                    isActive ? 'font-semibold' : ''
                   }`
                 }
                 style={({ isActive }) =>
@@ -141,7 +141,12 @@ export const AppShell: React.FC = () => {
                       }
                 }
               >
-                <Icon size={18} strokeWidth={1.9} aria-hidden="true" />
+                {/* State Layer */}
+                <span
+                  className="absolute inset-0 pointer-events-none rounded-[inherit] transition-opacity duration-150 opacity-0 group-hover:opacity-[var(--md-sys-state-hover-opacity)] group-active:opacity-[var(--md-sys-state-pressed-opacity)] bg-current"
+                  aria-hidden="true"
+                />
+                <Icon size={18} strokeWidth={1.9} aria-hidden="true" className="relative z-10" />
               </NavLink>
             ))}
           </nav>
@@ -196,8 +201,8 @@ export const AppShell: React.FC = () => {
                 to={to}
                 end={end}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--md-sys-shape-corner-full)] text-xs font-medium transition-all ${
-                    isActive ? 'font-semibold' : 'hover:bg-[var(--md-sys-color-surface-container-high)]'
+                  `group relative overflow-hidden flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--md-sys-shape-corner-full)] text-xs font-medium transition-all duration-150 ${
+                    isActive ? 'font-semibold' : ''
                   }`
                 }
                 style={({ isActive }) =>
@@ -211,8 +216,13 @@ export const AppShell: React.FC = () => {
                       }
                 }
               >
-                <Icon size={17} strokeWidth={1.9} aria-hidden="true" className="shrink-0" />
-                <span className="truncate">{label}</span>
+                {/* State Layer */}
+                <span
+                  className="absolute inset-0 pointer-events-none rounded-[inherit] transition-opacity duration-150 opacity-0 group-hover:opacity-[var(--md-sys-state-hover-opacity)] group-active:opacity-[var(--md-sys-state-pressed-opacity)] bg-current"
+                  aria-hidden="true"
+                />
+                <Icon size={17} strokeWidth={1.9} aria-hidden="true" className="relative z-10 shrink-0" />
+                <span className="relative z-10 truncate">{label}</span>
               </NavLink>
             ))}
           </nav>
@@ -284,8 +294,8 @@ export const AppShell: React.FC = () => {
                   to={to}
                   end={end}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--md-sys-shape-corner-full)] text-xs font-medium transition-all ${
-                      isActive ? 'font-semibold' : 'hover:bg-[var(--md-sys-color-surface-container-high)]'
+                    `group relative overflow-hidden flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--md-sys-shape-corner-full)] text-xs font-medium transition-all duration-150 ${
+                      isActive ? 'font-semibold' : ''
                     }`
                   }
                   style={({ isActive }) =>
@@ -299,8 +309,13 @@ export const AppShell: React.FC = () => {
                         }
                   }
                 >
-                  <Icon size={17} strokeWidth={1.9} aria-hidden="true" className="shrink-0" />
-                  <span className="truncate">{label}</span>
+                  {/* State Layer */}
+                  <span
+                    className="absolute inset-0 pointer-events-none rounded-[inherit] transition-opacity duration-150 opacity-0 group-hover:opacity-[var(--md-sys-state-hover-opacity)] group-active:opacity-[var(--md-sys-state-pressed-opacity)] bg-current"
+                    aria-hidden="true"
+                  />
+                  <Icon size={17} strokeWidth={1.9} aria-hidden="true" className="relative z-10 shrink-0" />
+                  <span className="relative z-10 truncate">{label}</span>
                 </NavLink>
               ))}
             </nav>
