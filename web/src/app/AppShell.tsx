@@ -11,6 +11,7 @@ import { StarqAICopilot } from '../components/ai/StarqAICopilot';
 import { CreateJobModal } from '../components/jobs/CreateJobModal';
 import { CreateInvoiceModal } from '../components/invoices/CreateInvoiceModal';
 import { RecordPaymentModal } from '../components/payments/RecordPaymentModal';
+import { RegisterOrganisationModal } from '../components/onboarding/RegisterOrganisationModal';
 import { Badge } from '../components/common/Badge';
 import {
   LayoutDashboard,
@@ -104,7 +105,9 @@ export const AppShell: React.FC = () => {
     activePlane,
     tenants,
     switchActiveContext,
-    setIsGlobalSearchOpen
+    setIsGlobalSearchOpen,
+    isRegisterOrgModalOpen,
+    setIsRegisterOrgModalOpen
   } = useERP();
   const { session, logout } = useAuth();
   const { themeMode, setThemeMode, resolvedTheme } = useTheme();
@@ -709,7 +712,22 @@ export const AppShell: React.FC = () => {
                       })}
                     </div>
 
-                    <div className="mx-2 my-1.5 border-t" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }} />
+                    {/* Register New Organisation */}
+                    <div className="px-2 pt-1 pb-1 border-t" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}>
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          setTenantMenuOpen(false);
+                          setIsRegisterOrgModalOpen(true);
+                        }}
+                        className="w-full text-left px-2.5 py-1.5 rounded-[var(--md-sys-shape-corner-small)] text-xs font-semibold text-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-primary-container)]/20 transition-colors flex items-center gap-1.5 border border-dashed border-[var(--md-sys-color-primary)]/40 cursor-pointer"
+                      >
+                        <Plus size={13} />
+                        <span>Register New Business</span>
+                      </button>
+                    </div>
+
+                    <div className="mx-2 my-1 border-t" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }} />
                     <div className="px-3 py-1 text-[10px]" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
                       {session?.name ?? 'Not signed in'}
                       {session?.seat_label && (
@@ -894,6 +912,12 @@ export const AppShell: React.FC = () => {
       {/* Security & Authentication Modals (SERP-268) */}
       <MfaSetupModal />
       <MfaChallengeModal />
+
+      {/* Organisation Registration Modal */}
+      <RegisterOrganisationModal
+        isOpen={isRegisterOrgModalOpen}
+        onClose={() => setIsRegisterOrgModalOpen(false)}
+      />
     </div>
   );
 };

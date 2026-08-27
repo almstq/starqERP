@@ -32,6 +32,7 @@ import {
 } from 'recharts';
 import { useERP } from '../../context/ERPContext';
 import { MONTHLY_SALES_CHART_DATA, SERVICE_BREAKDOWN_DATA } from '../../data/mockData';
+import { StarqHQView } from '../platform/StarqHQView';
 import {
   Button,
   Surface,
@@ -45,6 +46,7 @@ import {
 export const DashboardView: React.FC = () => {
   const navigate = useNavigate();
   const {
+    activePlane,
     totalSalesToday,
     totalCashReceived,
     totalOutstandingInvoices,
@@ -63,6 +65,10 @@ export const DashboardView: React.FC = () => {
     setIsCreateInvoiceOpen,
     setIsAICopilotOpen,
   } = useERP();
+
+  if (activePlane === 'platform') {
+    return <StarqHQView />;
+  }
 
   const activeJobs = jobs.filter((j) => !['Completed', 'Paid'].includes(j.status));
 

@@ -42,7 +42,9 @@ import {
   INITIAL_USERS,
   INITIAL_WORKFLOW_STAGES,
   CLINIC_WORKFLOW_PRESET,
-  BOATYARD_WORKFLOW_PRESET
+  BOATYARD_WORKFLOW_PRESET,
+  OrganisationApplication,
+  INITIAL_APPLICATIONS
 } from '../data/mockData';
 import { telemetry } from '../services/telemetry';
 import { dispatchCommand, apiGet } from '../services/apiGateway';
@@ -78,6 +80,14 @@ export interface ERPContextType {
   updateTenantLogo: (logoUrl: string | null) => void;
   isSetupModalOpen: boolean;
   setIsSetupModalOpen: (open: boolean) => void;
+
+  // Platform Application & Organisation Registration
+  pendingApplications: OrganisationApplication[];
+  submitOrganisationApplication: (appData: Omit<OrganisationApplication, 'id' | 'submittedAt' | 'status'>) => void;
+  approveOrganisationApplication: (appId: string) => OrganisationTenant | undefined;
+  rejectOrganisationApplication: (appId: string, reason?: string) => void;
+  isRegisterOrgModalOpen: boolean;
+  setIsRegisterOrgModalOpen: (open: boolean) => void;
 
   // RBAC & User Management State
   currentUser: AppUser;
@@ -376,7 +386,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Multi-tenant state with tenant-scoped storage persistence
   const [tenants, setTenants] = useState<OrganisationTenant[]>(() => {
     try {
-      const saved = localStorage.getItem('starq_erp_tenants_v1');
+      const saved = localStorage.getItem('starq_erp_tenants_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -389,11 +399,136 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   useEffect(() => {
     try {
-      localStorage.setItem('starq_erp_tenants_v1', JSON.stringify(tenants));
+      localStorage.setItem('starq_erp_tenants_v2', JSON.stringify(tenants));
     } catch {
       // Storage unavailable or quota exceeded
     }
   }, [tenants]);
+
+  // Organisation Applications & Superadmin Approval State
+  const [pendingApplications, setPendingApplications] = useState<OrganisationApplication[]>(() => {
+    try {
+      const saved = localStorage.getItem('starq_erp_pending_applications_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {
+      // Storage fallback
+    }
+    return INITIAL_APPLICATIONS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('starq_erp_pending_applications_v1', JSON.stringify(pendingApplications));
+    } catch {
+      // Storage unavailable
+    }
+  }, [pendingApplications]);
+
+  const [isRegisterOrgModalOpen, setIsRegisterOrgModalOpen] = useState(false);
+
+  const submitOrganisationApplication = useCallback(
+    (appData: Omit<OrganisationApplication, 'id' | 'submittedAt' | 'status'>) => {
+      const newApp: OrganisationApplication = {
+        ...appData,
+        id: `app-${Date.now()}`,
+        submittedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+        status: 'pending_approval',
+      };
+      setPendingApplications((prev) => [newApp, ...prev]);
+      telemetry.capture('application.submitted', { name: appData.name, archetype: appData.archetypeId });
+    },
+    []
+  );
+
+  const approveOrganisationApplication = useCallback(
+    (appId: string): OrganisationTenant | undefined => {
+      const app = pendingApplications.find((a) => a.id === appId);
+      if (!app) return undefined;
+
+      const newTenantId = `tenant-${app.name.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 20)}-${Date.now().toString().slice(-4)}`;
+      const newBookId = `book-${app.primaryBookCode.toLowerCase()}-${Date.now().toString().slice(-4)}`;
+
+      const newTenant: OrganisationTenant = {
+        id: newTenantId,
+        name: app.name,
+        slug: app.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+        legalName: app.legalName,
+        industry: app.archetypeName,
+        currency: 'MVR',
+        currencySymbol: 'Rf',
+        tinNumber: '',
+        gstStatus: 'not_registered',
+        gstRate: 8,
+        financialYearStart: '01-01',
+        financialYearEnd: '12-31',
+        phone: app.phone,
+        email: app.applicantEmail,
+        address: `${app.island}, ${app.atoll}`,
+        island: app.island,
+        atoll: app.atoll,
+        bmlAccount: '7730000' + Math.floor(100000 + Math.random() * 900000) + ' (BML MVR)',
+        logoIcon: 'Building2',
+        themeColor: '#4f46e5',
+        createdAt: new Date().toISOString().split('T')[0],
+        books: [
+          {
+            id: newBookId,
+            tenantId: newTenantId,
+            code: app.primaryBookCode || 'MAIN',
+            name: app.primaryBookName || app.name,
+            archetypeId: app.archetypeId || 'general_business',
+            isDefault: true,
+          },
+        ],
+        outlets: [
+          {
+            id: `out-${newTenantId}`,
+            tenantId: newTenantId,
+            name: app.primaryBookName || app.name,
+            code: app.primaryBookCode || 'MAIN',
+            tradingBrand: app.name,
+            island: app.island,
+            isPrimary: true,
+          },
+        ],
+        enabledModules: [
+          'dashboard',
+          'jobs',
+          'invoices',
+          'payments',
+          'expenses',
+          'inventory',
+          'purchasing',
+          'suppliers',
+          'reports',
+          'audit',
+          'workflows',
+          'roles',
+          'users',
+          'settings',
+        ],
+      };
+
+      setTenants((prev) => [...prev, newTenant]);
+      setPendingApplications((prev) =>
+        prev.map((a) => (a.id === appId ? { ...a, status: 'approved' } : a))
+      );
+
+      telemetry.capture('application.approved', { appId, tenantId: newTenantId, name: app.name });
+      return newTenant;
+    },
+    [pendingApplications]
+  );
+
+  const rejectOrganisationApplication = useCallback((appId: string, reason?: string) => {
+    setPendingApplications((prev) =>
+      prev.map((a) => (a.id === appId ? { ...a, status: 'rejected', rejectionReason: reason } : a))
+    );
+    telemetry.capture('application.rejected', { appId, reason });
+  }, []);
 
   const [activePlane, setActivePlane] = useState<'platform' | 'tenant'>('tenant');
   const [currentTenantId, setCurrentTenantId] = useState<string>('tenant-starq');
@@ -2077,6 +2212,14 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updateTenantLogo,
         isSetupModalOpen,
         setIsSetupModalOpen,
+
+        // Organisation Applications & Registrations
+        pendingApplications,
+        submitOrganisationApplication,
+        approveOrganisationApplication,
+        rejectOrganisationApplication,
+        isRegisterOrgModalOpen,
+        setIsRegisterOrgModalOpen,
 
         // RBAC & User Management
         currentUser,
