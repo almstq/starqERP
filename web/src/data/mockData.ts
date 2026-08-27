@@ -1292,6 +1292,24 @@ export const INITIAL_TENANTS: import('../types/erp').OrganisationTenant[] = [
     logoUrl: '/starq-logo.png',
     themeColor: '#4f46e5',
     createdAt: '2024-01-01',
+    books: [
+      {
+        id: 'book-starq-tech',
+        tenantId: 'tenant-starq',
+        code: 'STQ',
+        name: 'Starq Technologies',
+        archetypeId: 'general_business',
+        isDefault: true,
+      },
+      {
+        id: 'book-starq-dyn',
+        tenantId: 'tenant-starq',
+        code: 'DYN',
+        name: 'Starq Dynamics',
+        archetypeId: 'general_business',
+        isDefault: false,
+      },
+    ],
     outlets: [
       {
         id: 'out-starq-dyn',
@@ -1331,9 +1349,9 @@ export const INITIAL_TENANTS: import('../types/erp').OrganisationTenant[] = [
   },
   {
     id: 'tenant-ignition',
-    name: 'Club Ignition Garage Pvt Ltd',
+    name: 'Club Ignition Pvt Ltd',
     slug: 'club-ignition',
-    legalName: 'Club Ignition Garage Private Limited',
+    legalName: 'Club Ignition Private Limited',
     industry: 'Automotive & Body Repair',
     currency: 'MVR',
     currencySymbol: 'Rf',
@@ -1353,6 +1371,16 @@ export const INITIAL_TENANTS: import('../types/erp').OrganisationTenant[] = [
     logoUrl: '/club-ignition-logo.png',
     themeColor: '#2563eb',
     createdAt: '2023-01-15',
+    books: [
+      {
+        id: 'book-ignition-ink',
+        tenantId: 'tenant-ignition',
+        code: 'INK',
+        name: 'Ignition Ink',
+        archetypeId: 'automotive_workshop',
+        isDefault: true,
+      },
+    ],
     outlets: [
       {
         id: 'out-ign-ink',
@@ -1380,128 +1408,134 @@ export const INITIAL_TENANTS: import('../types/erp').OrganisationTenant[] = [
       'users',
       'settings',
     ],
-  },
+  }
+];
+
+export interface OrganisationApplication {
+  id: string;
+  name: string;
+  legalName: string;
+  primaryBookName: string;
+  primaryBookCode: string;
+  archetypeId: string;
+  archetypeName: string;
+  island: string;
+  atoll: string;
+  applicantName: string;
+  applicantEmail: string;
+  phone: string;
+  submittedAt: string;
+  status: 'pending_approval' | 'approved' | 'rejected';
+  rejectionReason?: string;
+}
+
+export const INITIAL_APPLICATIONS: OrganisationApplication[] = [
   {
-    id: 'tenant-1',
-    name: 'Ignition Ink Garage Pvt Ltd',
-    slug: 'ignition-ink',
-    legalName: 'Ignition Ink Garage Private Limited',
-    industry: 'Automotive & Body Repair',
-    currency: 'MVR',
-    currencySymbol: 'Rf',
-    tinNumber: '1004829GST001',
-    gstStatus: 'registered',
-    gstRate: 8,
-    financialYearStart: '01-01',
-    financialYearEnd: '12-31',
-    phone: '+960 778-9900',
-    email: 'accounts@ignitionink.mv',
-    address: 'Lot 11492, Industrial Zone, Phase 2',
-    island: "Hulhumale'",
-    atoll: 'Kaafu Atoll',
-    bmlAccount: '7730000189201 (BML MVR Main Account)',
-    mibAccount: '9901004829101 (MIB MVR Current)',
-    logoIcon: 'Flame',
-    themeColor: '#2563eb',
-    createdAt: '2023-01-15',
-    outlets: [
-      {
-        id: 'out-ign-main',
-        tenantId: 'tenant-1',
-        name: 'Ignition Ink Garage',
-        code: 'INK',
-        tradingBrand: 'Ignition Ink Body & Wrap',
-        island: "Hulhumale'",
-        isPrimary: true,
-      },
-    ],
-    enabledModules: [
-      'dashboard',
-      'jobs',
-      'invoices',
-      'payments',
-      'expenses',
-      'inventory',
-      'purchasing',
-      'suppliers',
-      'reports',
-      'audit',
-      'workflows',
-      'roles',
-      'users',
-      'settings',
-    ],
-  },
-  {
-    id: 'tenant-2',
+    id: 'app-alif-marine',
     name: 'Alif Marine & Speedboat Yard',
-    slug: 'alif-marine',
     legalName: 'Alif Marine Engineering Pvt Ltd',
-    industry: 'Marine & Boatyard',
-    currency: 'MVR',
-    currencySymbol: 'Rf',
-    tinNumber: '',
-    gstStatus: 'not_registered',
-    gstRate: 8,
-    financialYearStart: '01-01',
-    financialYearEnd: '12-31',
-    phone: '+960 791-4455',
-    email: 'dockmaster@alifmarine.mv',
-    address: 'Plot 48, Maritime Slipway & Dry Dock',
+    primaryBookName: 'Slipway & Dry Dock',
+    primaryBookCode: 'SLIP',
+    archetypeId: 'marine_boatyard',
+    archetypeName: 'Marine & Boatyard',
     island: 'Thilafushi',
     atoll: 'Kaafu Atoll',
-    bmlAccount: '7730000294811 (BML Corporate Marine)',
-    mibAccount: '9901005829188 (MIB Business)',
-    logoIcon: 'Ship',
-    themeColor: '#0284c7',
-    createdAt: '2023-06-10'
+    applicantName: 'Captain Ahmed Nizar',
+    applicantEmail: 'dockmaster@alifmarine.mv',
+    phone: '+960 791-4455',
+    submittedAt: '2026-08-27 14:30',
+    status: 'pending_approval',
   },
   {
-    id: 'tenant-3',
+    id: 'app-medilink',
     name: 'Medilink Clinic & Diagnostic Centre',
-    slug: 'medilink-clinic',
     legalName: 'Medilink Health Services LLP',
-    industry: 'Medical Clinic & Diagnostics',
-    currency: 'MVR',
-    currencySymbol: 'Rf',
-    tinNumber: '',
-    gstStatus: 'not_registered',
-    gstRate: 8,
-    financialYearStart: '01-01',
-    financialYearEnd: '12-31',
-    phone: '+960 330-8800',
-    email: 'admin@medilink.mv',
-    address: 'H. Coral Haven, 2nd Floor, Sosun Magu',
+    primaryBookName: 'Clinic & Pharmacy',
+    primaryBookCode: 'MED',
+    archetypeId: 'medical_clinic',
+    archetypeName: 'Medical Clinic & Diagnostics',
     island: "Male'",
     atoll: 'Kaafu Atoll',
-    bmlAccount: '7730000381920 (BML Healthcare Main)',
-    logoIcon: 'Activity',
-    themeColor: '#059669',
-    createdAt: '2024-01-01'
+    applicantName: 'Dr. Mariyam Latheef',
+    applicantEmail: 'admin@medilink.mv',
+    phone: '+960 330-8800',
+    submittedAt: '2026-08-26 11:15',
+    status: 'pending_approval',
+  }
+];
+
+export interface PlatformClientRecord {
+  id: string;
+  name: string;
+  legalName: string;
+  archetype: string;
+  island: string;
+  booksCount: number;
+  activeUsersCount: number;
+  plan: 'Starter' | 'Professional' | 'Enterprise';
+  mrr: number;
+  status: 'active' | 'suspended' | 'pending';
+  lastActive: string;
+  storageMb: number;
+}
+
+export const PLATFORM_CLIENTS_REGISTRY: PlatformClientRecord[] = [
+  {
+    id: 'tenant-starq',
+    name: 'Starq Technologies Pvt Ltd (Tenant #0)',
+    legalName: 'Starq Technologies Private Limited',
+    archetype: 'Technology & SaaS Provider',
+    island: "Male'",
+    booksCount: 2,
+    activeUsersCount: 12,
+    plan: 'Enterprise',
+    mrr: 0,
+    status: 'active',
+    lastActive: 'Just now',
+    storageMb: 1420,
   },
   {
-    id: 'tenant-4',
-    name: 'Horizon Hardware & Marine Supplies',
-    slug: 'horizon-supplies',
-    legalName: 'Horizon Wholesale & Trading Pvt Ltd',
-    industry: 'Retail & Wholesale Trading',
-    currency: 'MVR',
-    currencySymbol: 'Rf',
-    tinNumber: '',
-    gstStatus: 'not_registered',
-    gstRate: 8,
-    financialYearStart: '01-01',
-    financialYearEnd: '12-31',
-    phone: '+960 334-1212',
-    email: 'sales@horizonsupplies.mv',
-    address: 'M. Silverline, Boduthakurufaanu Magu',
+    id: 'tenant-ignition',
+    name: 'Club Ignition Pvt Ltd (Tenant #1)',
+    legalName: 'Club Ignition Private Limited',
+    archetype: 'Automotive & Workshop',
+    island: "Hulhumale'",
+    booksCount: 1,
+    activeUsersCount: 8,
+    plan: 'Professional',
+    mrr: 12500,
+    status: 'active',
+    lastActive: '4 mins ago',
+    storageMb: 850,
+  },
+  {
+    id: 'client-horizon',
+    name: 'Horizon Wholesale & Supplies',
+    legalName: 'Horizon Wholesale Trading Pvt Ltd',
+    archetype: 'Retail & Wholesale Trading',
     island: "Male'",
-    atoll: 'Kaafu Atoll',
-    bmlAccount: '7730000492100 (BML Trading)',
-    logoIcon: 'Boxes',
-    themeColor: '#d97706',
-    createdAt: '2024-03-20'
-  }
+    booksCount: 2,
+    activeUsersCount: 14,
+    plan: 'Enterprise',
+    mrr: 18000,
+    status: 'active',
+    lastActive: '12 mins ago',
+    storageMb: 2100,
+  },
+  {
+    id: 'client-medilink',
+    name: 'Medilink Diagnostic Centre',
+    legalName: 'Medilink Health Services LLP',
+    archetype: 'Medical Clinic & Diagnostics',
+    island: "Male'",
+    booksCount: 1,
+    activeUsersCount: 6,
+    plan: 'Professional',
+    mrr: 12000,
+    status: 'active',
+    lastActive: '1 hour ago',
+    storageMb: 620,
+  },
 ];
 
 // ----------------------------------------------------

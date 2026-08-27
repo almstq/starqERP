@@ -273,9 +273,6 @@ export const InvoicesView: React.FC = () => {
         onRowClick={(inv) => navigate(`/invoices/${inv.id}`)}
         emptyMessage="No commercial invoices matching filter criteria."
       />
-
-      <CreateInvoiceModal />
-      <RecordPaymentModal />
     </div>
   );
 };

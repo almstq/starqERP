@@ -1,24 +1,16 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Users,
   Car,
-  Phone,
-  Mail,
   MapPin,
-  Calendar,
   Receipt,
   Wrench,
-  DollarSign,
-  Plus,
-  FileText,
-  Clock,
-  CheckCircle2,
-  ChevronRight,
-  Edit3
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
+import { Surface, Button, Badge, DataTable, ColumnDef } from '../ui';
+import { JobOrder, Invoice } from '../../types/erp';
 
 export const CustomerDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -32,18 +24,28 @@ export const CustomerDetailView: React.FC = () => {
   if (!customer) {
     return (
       <div className="space-y-6">
-        <button onClick={() => navigate('/customers')} className="erp-btn-quiet flex items-center gap-2">
-          <ArrowLeft size={16} />
+        <Button
+          variant="text"
+          size="sm"
+          onClick={() => navigate('/customers')}
+          icon={<ArrowLeft size={16} />}
+        >
           <span>Back to Customers</span>
-        </button>
-        <div className="erp-card p-12 text-center">
-          <Users size={40} className="erp-muted mx-auto mb-3" />
-          <h2 className="erp-h1 text-xl">Customer Profile Not Found</h2>
-          <p className="erp-muted mt-2 text-sm">No customer matching ID "{id}" was found.</p>
-          <button onClick={() => navigate('/customers')} className="erp-btn-primary mt-6">
-            View All Customers
-          </button>
-        </div>
+        </Button>
+        <Surface variant="outlined" padding="lg" className="text-center py-12 space-y-3">
+          <Users size={40} className="mx-auto text-[var(--md-sys-color-on-surface-variant)] opacity-60" />
+          <h2 className="text-xl font-bold text-[var(--md-sys-color-on-surface)]">
+            Customer Profile Not Found
+          </h2>
+          <p className="text-sm text-[var(--md-sys-color-on-surface-variant)]">
+            No customer matching ID "{id}" was found in this workspace.
+          </p>
+          <div className="pt-2">
+            <Button variant="filled" size="sm" onClick={() => navigate('/customers')}>
+              <span>View All Customers</span>
+            </Button>
+          </div>
+        </Surface>
       </div>
     );
   }
@@ -51,22 +53,122 @@ export const CustomerDetailView: React.FC = () => {
   const customerJobs = jobs.filter((j) => j.customerId === customer.id);
   const customerInvoices = invoices.filter((inv) => inv.customerId === customer.id);
 
+  const jobColumns: ColumnDef<JobOrder>[] = [
+    {
+      key: 'jobId',
+      header: 'Job ID',
+      render: (j) => <span className="font-mono font-bold text-[var(--md-sys-color-primary)]">{j.jobId}</span>,
+    },
+    {
+      key: 'serviceType',
+      header: 'Service',
+      render: (j) => <span className="font-semibold text-[var(--md-sys-color-on-surface)]">{j.serviceType}</span>,
+    },
+    {
+      key: 'vehicle',
+      header: 'Vehicle',
+      render: (j) => (
+        <span className="font-mono text-xs text-[var(--md-sys-color-on-surface-variant)]">
+          {j.vehicle.plateNumber} ({j.vehicle.model})
+        </span>
+      ),
+    },
+    {
+      key: 'quotedAmount',
+      header: 'Quoted Amount',
+      align: 'right',
+      render: (j) => <span className="font-mono font-bold mono-num">{formatMVR(j.quotedAmount)}</span>,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      render: (j) => (
+        <Badge
+          variant={j.status === 'Completed' ? 'positive' : j.status === 'In Progress' ? 'info' : 'warning'}
+          size="sm"
+        >
+          {j.status}
+        </Badge>
+      ),
+    },
+  ];
+
+  const invoiceColumns: ColumnDef<Invoice>[] = [
+    {
+      key: 'invoiceNumber',
+      header: 'Invoice #',
+      render: (inv) => <span className="font-mono font-bold text-[var(--md-sys-color-primary)]">{inv.invoiceNumber}</span>,
+    },
+    {
+      key: 'date',
+      header: 'Date',
+      render: (inv) => <span className="text-xs text-[var(--md-sys-color-on-surface-variant)]">{inv.date}</span>,
+    },
+    {
+      key: 'totalAmount',
+      header: 'Total Amount',
+      align: 'right',
+      render: (inv) => <span className="font-mono font-bold mono-num">{formatMVR(inv.totalAmount)}</span>,
+    },
+    {
+      key: 'amountPaid',
+      header: 'Paid',
+      align: 'right',
+      render: (inv) => (
+        <span className="font-mono text-[var(--md-sys-color-primary)] mono-num">
+          {formatMVR(inv.amountPaid)}
+        </span>
+      ),
+    },
+    {
+      key: 'balanceDue',
+      header: 'Balance',
+      align: 'right',
+      render: (inv) => (
+        <span
+          className={`font-mono font-bold mono-num ${
+            inv.balanceDue > 0 ? 'text-[var(--md-sys-color-error)]' : 'text-[var(--md-sys-color-primary)]'
+          }`}
+        >
+          {formatMVR(inv.balanceDue)}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      render: (inv) => (
+        <Badge
+          variant={inv.status === 'Paid' ? 'positive' : inv.status === 'Overdue' ? 'destructive' : 'warning'}
+          size="sm"
+        >
+          {inv.status}
+        </Badge>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6 pb-12">
       {/* Top Navigation & Profile Header */}
-      <div className="flex items-center gap-3">
-        <button
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          variant="tonal"
+          size="sm"
           onClick={() => navigate('/customers')}
-          className="erp-btn-quiet p-2 rounded-xl flex items-center justify-center"
-          title="Back to Customers"
-        >
-          <ArrowLeft size={16} />
-        </button>
+          icon={<ArrowLeft size={16} />}
+          aria-label="Back to Customers"
+        />
 
         {/* Customer Logo or Initials Avatar */}
         <div
-          className="w-12 h-12 rounded-[var(--md-sys-shape-corner-medium)] flex items-center justify-center shrink-0 overflow-hidden border border-[var(--md-sys-color-outline-variant)]"
-          style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)' }}
+          className="w-12 h-12 rounded-[var(--md-sys-shape-corner-medium)] flex items-center justify-center shrink-0 overflow-hidden border"
+          style={{
+            backgroundColor: 'var(--md-sys-color-surface-container-high)',
+            borderColor: 'var(--md-sys-color-outline-variant)',
+          }}
         >
           {customer.logoUrl ? (
             <img
@@ -84,21 +186,24 @@ export const CustomerDetailView: React.FC = () => {
           )}
         </div>
 
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center gap-2.5">
-            <h1 className="erp-h1 text-2xl">{customer.name}</h1>
-            <span className={`erp-pill ${
-              customer.type === 'VIP' ? 'erp-pill-warning' : customer.type === 'Fleet' ? 'erp-pill-info' : 'erp-pill-neutral'
-            }`}>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] truncate">
+              {customer.name}
+            </h1>
+            <Badge
+              variant={customer.type === 'VIP' ? 'warning' : customer.type === 'Fleet' ? 'info' : 'neutral'}
+              size="sm"
+            >
               {customer.type}
-            </span>
+            </Badge>
           </div>
-          <p className="erp-muted mt-0.5 text-xs flex items-center gap-3">
+          <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5 flex flex-wrap items-center gap-2 sm:gap-3">
             <span>{customer.phone}</span>
             <span>•</span>
             <span>{customer.email}</span>
             <span>•</span>
-            <span className="flex items-center gap-1">
+            <span className="inline-flex items-center gap-1">
               <MapPin size={12} />
               <span>{customer.island}</span>
             </span>
@@ -106,225 +211,258 @@ export const CustomerDetailView: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="erp-card p-4">
-          <span className="erp-muted block text-xs font-semibold">Total Invoiced</span>
-          <div className="erp-figure text-lg mt-1">{formatMVR(customer.totalInvoiced, false)}</div>
-        </div>
-        <div className="erp-card p-4">
-          <span className="erp-muted block text-xs font-semibold">Outstanding Balance</span>
-          <div className={`erp-figure text-lg mt-1 ${customer.outstandingBalance > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+      {/* KPI Summary Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <Surface variant="outlined" padding="sm" className="space-y-1">
+          <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] block">
+            Total Invoiced
+          </span>
+          <div className="text-lg font-bold font-mono mono-num text-[var(--md-sys-color-on-surface)]">
+            {formatMVR(customer.totalInvoiced, false)}
+          </div>
+        </Surface>
+
+        <Surface variant="outlined" padding="sm" className="space-y-1">
+          <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] block">
+            Outstanding Balance
+          </span>
+          <div
+            className={`text-lg font-bold font-mono mono-num ${
+              customer.outstandingBalance > 0
+                ? 'text-[var(--md-sys-color-error)]'
+                : 'text-[var(--md-sys-color-on-surface)]'
+            }`}
+          >
             {formatMVR(customer.outstandingBalance, false)}
           </div>
-        </div>
-        <div className="erp-card p-4">
-          <span className="erp-muted block text-xs font-semibold">Active Work Orders</span>
-          <div className="erp-figure text-lg mt-1" style={{ color: 'var(--accent)' }}>
-            {customerJobs.filter(j => !['Completed', 'Paid'].includes(j.status)).length} Active
+        </Surface>
+
+        <Surface variant="outlined" padding="sm" className="space-y-1">
+          <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] block">
+            Active Work Orders
+          </span>
+          <div className="text-lg font-bold font-mono mono-num text-[var(--md-sys-color-primary)]">
+            {customerJobs.filter((j) => !['Completed', 'Paid'].includes(j.status)).length} Active
           </div>
-        </div>
-        <div className="erp-card p-4">
-          <span className="erp-muted block text-xs font-semibold">Registered Vehicles</span>
-          <div className="erp-figure text-lg mt-1">{customer.vehicles.length} Units</div>
-        </div>
+        </Surface>
+
+        <Surface variant="outlined" padding="sm" className="space-y-1">
+          <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] block">
+            Registered Vehicles
+          </span>
+          <div className="text-lg font-bold font-mono mono-num text-[var(--md-sys-color-on-surface)]">
+            {customer.vehicles.length} Units
+          </div>
+        </Surface>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b gap-4" style={{ borderColor: 'var(--border)' }}>
-        {[
-          { id: 'overview', label: 'Overview' },
-          { id: 'vehicles', label: `Vehicles (${customer.vehicles.length})` },
-          { id: 'jobs', label: `Work Orders (${customerJobs.length})` },
-          { id: 'invoices', label: `Invoices (${customerInvoices.length})` },
-          { id: 'notes', label: 'Notes & Preferences' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className="pb-3 text-sm font-semibold transition-all relative"
-            style={{
-              color: activeTab === tab.id ? 'var(--foreground)' : 'var(--muted-foreground)',
-              borderBottom: activeTab === tab.id ? '2px solid var(--accent)' : '2px solid transparent'
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Navigation Tabs */}
+      <div
+        className="w-full max-w-full overflow-x-auto no-scrollbar border-b"
+        style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}
+      >
+        <div className="flex gap-4 min-w-max">
+          {[
+            { id: 'overview', label: 'Overview' },
+            { id: 'vehicles', label: `Vehicles (${customer.vehicles.length})` },
+            { id: 'jobs', label: `Work Orders (${customerJobs.length})` },
+            { id: 'invoices', label: `Invoices (${customerInvoices.length})` },
+            { id: 'notes', label: 'Notes & Preferences' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className="pb-3 text-xs sm:text-sm font-semibold transition-all relative whitespace-nowrap shrink-0 cursor-pointer"
+              style={{
+                color:
+                  activeTab === tab.id
+                    ? 'var(--md-sys-color-primary)'
+                    : 'var(--md-sys-color-on-surface-variant)',
+                borderBottom:
+                  activeTab === tab.id
+                    ? '2px solid var(--md-sys-color-primary)'
+                    : '2px solid transparent',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="erp-card p-5 space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider erp-muted">Primary Contact & Location</h3>
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between py-1 border-b" style={{ borderColor: 'var(--border)' }}>
-                <span className="erp-muted">Full Name:</span>
-                <span className="font-semibold">{customer.name}</span>
+          <Surface variant="outlined" padding="md" className="space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">
+              Primary Contact & Location
+            </h3>
+            <div className="space-y-2.5 text-xs">
+              <div
+                className="flex justify-between py-1.5 border-b"
+                style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}
+              >
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">Full Name:</span>
+                <span className="font-semibold text-[var(--md-sys-color-on-surface)]">{customer.name}</span>
               </div>
-              <div className="flex justify-between py-1 border-b" style={{ borderColor: 'var(--border)' }}>
-                <span className="erp-muted">Phone Number:</span>
-                <span className="font-mono">{customer.phone}</span>
+              <div
+                className="flex justify-between py-1.5 border-b"
+                style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}
+              >
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">Phone Number:</span>
+                <span className="font-mono text-[var(--md-sys-color-on-surface)]">{customer.phone}</span>
               </div>
-              <div className="flex justify-between py-1 border-b" style={{ borderColor: 'var(--border)' }}>
-                <span className="erp-muted">Email Address:</span>
-                <span>{customer.email}</span>
+              <div
+                className="flex justify-between py-1.5 border-b"
+                style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}
+              >
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">Email Address:</span>
+                <span className="text-[var(--md-sys-color-on-surface)]">{customer.email}</span>
               </div>
-              <div className="flex justify-between py-1 border-b" style={{ borderColor: 'var(--border)' }}>
-                <span className="erp-muted">Island / Atoll:</span>
-                <span>{customer.island}</span>
+              <div
+                className="flex justify-between py-1.5 border-b"
+                style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}
+              >
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">Island / Atoll:</span>
+                <span className="text-[var(--md-sys-color-on-surface)]">{customer.island}</span>
               </div>
-              <div className="flex justify-between py-1" style={{ borderColor: 'var(--border)' }}>
-                <span className="erp-muted">Customer Since:</span>
-                <span>{customer.createdAt}</span>
+              <div className="flex justify-between py-1.5">
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">Customer Since:</span>
+                <span className="text-[var(--md-sys-color-on-surface)]">{customer.createdAt}</span>
               </div>
             </div>
-          </div>
+          </Surface>
 
-          <div className="erp-card p-5 space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider erp-muted">Quick Registered Vehicles</h3>
+          <Surface variant="outlined" padding="md" className="space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">
+              Registered Vehicles
+            </h3>
             <div className="space-y-2">
               {customer.vehicles.map((v, idx) => (
-                <div key={idx} className="p-3 rounded-xl border flex items-center justify-between text-xs" style={{ background: 'var(--muted)', borderColor: 'var(--border)' }}>
+                <div
+                  key={idx}
+                  className="p-3 rounded-[var(--md-sys-shape-corner-medium)] border flex items-center justify-between text-xs"
+                  style={{
+                    backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                    borderColor: 'var(--md-sys-color-outline-variant)',
+                  }}
+                >
                   <div className="flex items-center gap-2.5">
-                    <Car size={16} style={{ color: 'var(--accent)' }} />
+                    <Car size={16} className="text-[var(--md-sys-color-primary)]" />
                     <div>
-                      <span className="font-mono font-bold block" style={{ color: 'var(--accent)' }}>{v.plateNumber}</span>
-                      <span className="erp-muted text-[11px]">{v.make} {v.model} ({v.color})</span>
+                      <span className="font-mono font-bold block text-[var(--md-sys-color-primary)]">
+                        {v.plateNumber}
+                      </span>
+                      <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
+                        {v.make} {v.model} ({v.color})
+                      </span>
                     </div>
                   </div>
-                  <span className="erp-pill erp-pill-neutral text-[10px]">{v.type}</span>
+                  <Badge variant="neutral" size="sm">
+                    {v.type}
+                  </Badge>
                 </div>
               ))}
             </div>
-          </div>
+          </Surface>
         </div>
       )}
 
       {activeTab === 'vehicles' && (
-        <div className="erp-card p-5 space-y-4">
-          <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--border)' }}>
-            <h3 className="text-sm font-bold uppercase tracking-wider">Registered Vehicles & Vessels</h3>
+        <Surface variant="outlined" padding="md" className="space-y-4">
+          <div
+            className="flex items-center justify-between border-b pb-3"
+            style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}
+          >
+            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface)]">
+              Registered Vehicles & Vessels
+            </h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {customer.vehicles.map((v, idx) => (
-              <div key={idx} className="p-4 rounded-xl border space-y-2" style={{ background: 'var(--muted)', borderColor: 'var(--border)' }}>
+              <div
+                key={idx}
+                className="p-4 rounded-[var(--md-sys-shape-corner-medium)] border space-y-2"
+                style={{
+                  backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                  borderColor: 'var(--md-sys-color-outline-variant)',
+                }}
+              >
                 <div className="flex items-center justify-between">
-                  <span className="font-mono font-bold text-sm" style={{ color: 'var(--accent)' }}>{v.plateNumber}</span>
-                  <span className="erp-pill erp-pill-neutral text-[10px]">{v.type}</span>
+                  <span className="font-mono font-bold text-sm text-[var(--md-sys-color-primary)]">
+                    {v.plateNumber}
+                  </span>
+                  <Badge variant="neutral" size="sm">
+                    {v.type}
+                  </Badge>
                 </div>
-                <div className="text-xs font-semibold">{v.make} {v.model}</div>
-                <div className="text-[11px] erp-muted">
+                <div className="text-xs font-semibold text-[var(--md-sys-color-on-surface)]">
+                  {v.make} {v.model}
+                </div>
+                <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
                   Year: {v.year || 'N/A'} • Color: {v.color}
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </Surface>
       )}
 
       {activeTab === 'jobs' && (
-        <div className="erp-card p-5 space-y-4">
-          <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--border)' }}>
-            <h3 className="text-sm font-bold uppercase tracking-wider">Work Order History</h3>
+        <Surface variant="outlined" padding="md" className="space-y-4">
+          <div
+            className="flex items-center justify-between border-b pb-3"
+            style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}
+          >
+            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface)]">
+              Work Order History
+            </h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="erp-table">
-              <thead>
-                <tr>
-                  <th>Job ID</th>
-                  <th>Service</th>
-                  <th>Vehicle</th>
-                  <th className="text-right">Quoted Amount</th>
-                  <th className="text-center">Status</th>
-                  <th className="text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customerJobs.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center erp-muted py-8">No work orders recorded for this customer.</td>
-                  </tr>
-                ) : (
-                  customerJobs.map((j) => (
-                    <tr key={j.id} data-clickable="true" onClick={() => navigate(`/jobs/${j.id}`)}>
-                      <td className="font-mono font-bold" style={{ color: 'var(--accent)' }}>{j.jobId}</td>
-                      <td className="font-semibold">{j.serviceType}</td>
-                      <td className="font-mono text-xs">{j.vehicle.plateNumber} ({j.vehicle.model})</td>
-                      <td className="text-right font-mono font-bold">{formatMVR(j.quotedAmount)}</td>
-                      <td className="text-center">
-                        <span className="erp-pill erp-pill-info">{j.status}</span>
-                      </td>
-                      <td className="text-right">
-                        <span className="text-xs font-semibold hover:underline" style={{ color: 'var(--accent)' }}>View →</span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+          <DataTable
+            data={customerJobs}
+            columns={jobColumns}
+            keyExtractor={(j) => j.id}
+            onRowClick={(j) => navigate(`/jobs/${j.id}`)}
+            emptyMessage="No work orders recorded for this customer."
+          />
+        </Surface>
       )}
 
       {activeTab === 'invoices' && (
-        <div className="erp-card p-5 space-y-4">
-          <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--border)' }}>
-            <h3 className="text-sm font-bold uppercase tracking-wider">Commercial Invoices</h3>
+        <Surface variant="outlined" padding="md" className="space-y-4">
+          <div
+            className="flex items-center justify-between border-b pb-3"
+            style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}
+          >
+            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface)]">
+              Commercial Invoices
+            </h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="erp-table">
-              <thead>
-                <tr>
-                  <th>Invoice #</th>
-                  <th>Date</th>
-                  <th className="text-right">Total Amount</th>
-                  <th className="text-right">Paid</th>
-                  <th className="text-right">Balance</th>
-                  <th className="text-center">Status</th>
-                  <th className="text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customerInvoices.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center erp-muted py-8">No invoices generated for this customer.</td>
-                  </tr>
-                ) : (
-                  customerInvoices.map((inv) => (
-                    <tr key={inv.id} data-clickable="true" onClick={() => navigate(`/invoices/${inv.id}`)}>
-                      <td className="font-mono font-bold" style={{ color: 'var(--accent)' }}>{inv.invoiceNumber}</td>
-                      <td className="text-xs">{inv.date}</td>
-                      <td className="text-right font-mono font-bold">{formatMVR(inv.totalAmount)}</td>
-                      <td className="text-right font-mono erp-money-in">{formatMVR(inv.amountPaid)}</td>
-                      <td className={`text-right font-mono font-bold ${inv.balanceDue > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                        {formatMVR(inv.balanceDue)}
-                      </td>
-                      <td className="text-center">
-                        <span className={`erp-pill ${inv.status === 'Paid' ? 'erp-pill-positive' : 'erp-pill-warning'}`}>
-                          {inv.status}
-                        </span>
-                      </td>
-                      <td className="text-right">
-                        <span className="text-xs font-semibold hover:underline" style={{ color: 'var(--accent)' }}>Inspect →</span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+          <DataTable
+            data={customerInvoices}
+            columns={invoiceColumns}
+            keyExtractor={(inv) => inv.id}
+            onRowClick={(inv) => navigate(`/invoices/${inv.id}`)}
+            emptyMessage="No invoices generated for this customer."
+          />
+        </Surface>
       )}
 
       {activeTab === 'notes' && (
-        <div className="erp-card p-5 space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider">Customer Operational Notes</h3>
-          <div className="p-4 rounded-xl text-xs leading-relaxed" style={{ background: 'var(--muted)' }}>
+        <Surface variant="outlined" padding="md" className="space-y-4">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface)]">
+            Customer Operational Notes
+          </h3>
+          <div
+            className="p-4 rounded-[var(--md-sys-shape-corner-medium)] text-xs leading-relaxed"
+            style={{
+              backgroundColor: 'var(--md-sys-color-surface-container-low)',
+              color: 'var(--md-sys-color-on-surface)',
+            }}
+          >
             {customer.notes || 'No customer notes recorded.'}
           </div>
-        </div>
+        </Surface>
       )}
     </div>
   );

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { IndustryType } from '../../types/erp';
+import type { ArchetypeId } from '../../domain/archetypes';
 import { Badge } from '../common/Badge';
 
 interface OrganisationSetupModalProps {
@@ -54,6 +55,14 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
   const [mibAccount, setMibAccount] = useState('');
   const [jobPrefix, setJobPrefix] = useState('JOB-');
   const [invoicePrefix, setInvoicePrefix] = useState('INV-');
+
+  const archetypeIdForIndustry = (value: IndustryType): ArchetypeId => {
+    if (value === 'Automotive & Body Repair') return 'automotive_workshop';
+    if (value === 'Marine & Boatyard') return 'marine_service';
+    if (value === 'Retail & Wholesale Trading') return 'wholesale_trading';
+    if (value === 'Construction & Engineering') return 'construction_contracting';
+    return 'general_business';
+  };
 
   if (!isOpen) return null;
 
@@ -114,6 +123,7 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
     createTenant({
       name: name.trim(),
       slug,
+      archetypeId: archetypeIdForIndustry(industry),
       legalName: legalName.trim() || `${name.trim()} Pvt Ltd`,
       industry,
       currency,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ERPProvider, useERP } from '../context/ERPContext';
@@ -26,6 +26,10 @@ const SettingsAndReportsHarness: React.FC<{ initialTenantId?: string }> = ({ ini
 };
 
 describe('SERP-164: Explicit MIRA GST Registration Status State & Reports Reactivity', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it('allows changing gstStatus to registered in Settings and immediately reflects in Reports', async () => {
     render(
       <MemoryRouter>
@@ -67,12 +71,12 @@ describe('SERP-164: Explicit MIRA GST Registration Status State & Reports Reacti
     render(
       <MemoryRouter>
         <ERPProvider>
-          <SettingsAndReportsHarness initialTenantId="tenant-2" />
+          <SettingsAndReportsHarness initialTenantId="tenant-starq" />
         </ERPProvider>
       </MemoryRouter>
     );
 
-    // tenant-2 (Alif Marine) is not_registered by default
+    // tenant-starq (Starq Technologies) is not_registered by default
     expect(screen.getByText(/Non-Registered \(0% GST\)/i)).toBeDefined();
 
     const tinInput = screen.getByPlaceholderText(/e\.g\. 1004829GST001/i);

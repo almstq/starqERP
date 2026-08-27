@@ -149,9 +149,9 @@ export const UsersManagementTab: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
-                    <span className="text-[11px]">Proposed Role:</span>
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 min-w-0">
+                    <span className="text-[11px] whitespace-nowrap">Proposed Role:</span>
                     <select
                       value={user.roleId}
                       onChange={(e) => updateUserRole(user.id, e.target.value)}
@@ -167,7 +167,7 @@ export const UsersManagementTab: React.FC = () => {
 
                   <button
                     onClick={() => authorizeUser(user.id, user.roleId)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-all"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span>Authorize</span>
@@ -181,7 +181,7 @@ export const UsersManagementTab: React.FC = () => {
 
       {/* ACTIVE TEAM MEMBERS LIST */}
       <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-blue-600" />
             <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
@@ -193,16 +193,16 @@ export const UsersManagementTab: React.FC = () => {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse min-w-[780px]">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400">
-                <th className="py-2.5 px-3 font-semibold">User & Contact</th>
-                <th className="py-2.5 px-3 font-semibold">Assigned Role</th>
-                <th className="py-2.5 px-3 font-semibold">Demo PIN</th>
-                <th className="py-2.5 px-3 font-semibold">Authorization Authority</th>
-                <th className="py-2.5 px-3 font-semibold">Last Active</th>
-                <th className="py-2.5 px-3 font-semibold text-right">Actions</th>
+                <th className="py-2.5 px-3 font-semibold whitespace-nowrap">User & Contact</th>
+                <th className="py-2.5 px-3 font-semibold whitespace-nowrap">Assigned Role</th>
+                <th className="py-2.5 px-3 font-semibold whitespace-nowrap">Demo PIN</th>
+                <th className="py-2.5 px-3 font-semibold whitespace-nowrap">Authorization Authority</th>
+                <th className="py-2.5 px-3 font-semibold whitespace-nowrap">Last Active</th>
+                <th className="py-2.5 px-3 font-semibold text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -213,9 +213,9 @@ export const UsersManagementTab: React.FC = () => {
                     key={user.id}
                     className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                   >
-                    <td className="py-3 px-3">
+                    <td className="py-3 px-3 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold flex items-center justify-center text-xs">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold flex items-center justify-center text-xs shrink-0">
                           {user.name.charAt(0)}
                         </div>
                         <div>
@@ -236,7 +236,7 @@ export const UsersManagementTab: React.FC = () => {
                       </div>
                     </td>
 
-                    <td className="py-3 px-3">
+                    <td className="py-3 px-3 whitespace-nowrap">
                       <select
                         value={user.roleId}
                         onChange={(e) => updateUserRole(user.id, e.target.value)}
@@ -250,11 +250,11 @@ export const UsersManagementTab: React.FC = () => {
                       </select>
                     </td>
 
-                    <td className="py-3 px-3 text-[11px]">
+                    <td className="py-3 px-3 text-[11px] whitespace-nowrap">
                       {user.mfaEnabled ? (
                         <div className="flex flex-col gap-0.5">
                           <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
-                            <ShieldCheck className="w-3.5 h-3.5" />
+                            <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
                             <span>PIN Active</span>
                           </span>
                           {user.recoveryCodes && (
@@ -265,7 +265,7 @@ export const UsersManagementTab: React.FC = () => {
                         </div>
                       ) : user.mfaRequired ? (
                         <span className="inline-flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
-                          <AlertTriangle className="w-3.5 h-3.5" />
+                          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                           <span>PIN Required</span>
                         </span>
                       ) : (
@@ -273,21 +273,21 @@ export const UsersManagementTab: React.FC = () => {
                       )}
                     </td>
 
-                    <td className="py-3 px-3 text-slate-500 dark:text-slate-400 text-[11px]">
+                    <td className="py-3 px-3 text-slate-500 dark:text-slate-400 text-[11px] whitespace-nowrap">
                       <div>{user.authorizedBy || 'System'}</div>
                       <div className="text-slate-400 text-[10px]">{user.authorizedAt}</div>
                     </td>
 
-                    <td className="py-3 px-3 text-slate-500 dark:text-slate-400 text-[11px]">
+                    <td className="py-3 px-3 text-slate-500 dark:text-slate-400 text-[11px] whitespace-nowrap">
                       {user.lastActiveAt}
                     </td>
 
-                    <td className="py-3 px-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="py-3 px-3 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                         {isCurrent && (
                           <button
                             onClick={openMfaEnrollment}
-                            className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 text-blue-700 dark:text-blue-300 font-semibold text-[11px] transition-colors"
+                            className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 text-blue-700 dark:text-blue-300 font-semibold text-[11px] transition-colors whitespace-nowrap"
                             title="Configure Demo PIN (simulated)"
                             data-testid="setup-mfa-btn"
                           >
@@ -296,7 +296,7 @@ export const UsersManagementTab: React.FC = () => {
                         )}
                         <button
                           onClick={() => switchCurrentUser(user.id)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-[11px] transition-colors"
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-[11px] transition-colors whitespace-nowrap"
                           title="Switch active user session to test role UI gating"
                         >
                           Simulate User
@@ -304,7 +304,7 @@ export const UsersManagementTab: React.FC = () => {
                         {user.id !== 'user-1' && (
                           <button
                             onClick={() => suspendUser(user.id)}
-                            className="p-1 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                            className="p-1 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shrink-0"
                             title="Suspend user access"
                           >
                             <XCircle className="w-4 h-4" />

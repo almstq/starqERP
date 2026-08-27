@@ -7,15 +7,10 @@ import {
   Phone,
   Mail,
   MapPin,
-  Calendar,
-  DollarSign,
   Package,
-  FileText,
-  CreditCard,
-  CheckCircle2,
-  ChevronRight
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
+import { Surface, Button, Badge } from '../ui';
 
 export const SupplierDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,72 +22,108 @@ export const SupplierDetailView: React.FC = () => {
   if (!supplier) {
     return (
       <div className="space-y-6">
-        <button onClick={() => navigate('/suppliers')} className="erp-btn-quiet flex items-center gap-2">
-          <ArrowLeft size={16} />
+        <Button
+          variant="text"
+          size="sm"
+          onClick={() => navigate('/suppliers')}
+          icon={<ArrowLeft size={16} />}
+        >
           <span>Back to Suppliers</span>
-        </button>
-        <div className="erp-card p-12 text-center">
-          <Truck size={40} className="erp-muted mx-auto mb-3" />
-          <h2 className="erp-h1 text-xl">Supplier Record Not Found</h2>
-          <p className="erp-muted mt-2 text-sm">No supplier matching ID "{id}" was found.</p>
-          <button onClick={() => navigate('/suppliers')} className="erp-btn-primary mt-6">
-            View All Suppliers
-          </button>
-        </div>
+        </Button>
+        <Surface variant="outlined" padding="lg" className="text-center py-12 space-y-3">
+          <Truck size={40} className="mx-auto text-[var(--md-sys-color-on-surface-variant)] opacity-60" />
+          <h2 className="text-xl font-bold text-[var(--md-sys-color-on-surface)]">
+            Supplier Record Not Found
+          </h2>
+          <p className="text-sm text-[var(--md-sys-color-on-surface-variant)]">
+            No supplier matching ID "{id}" was found in this workspace.
+          </p>
+          <div className="pt-2">
+            <Button variant="filled" size="sm" onClick={() => navigate('/suppliers')}>
+              <span>View All Suppliers</span>
+            </Button>
+          </div>
+        </Surface>
       </div>
     );
   }
 
-  const supplierPOs = purchaseOrders.filter((p) => p.supplierId === supplier.id || p.supplierName === supplier.name);
-  const suppliedItems = inventory.filter((item) => item.supplierId === supplier.id || item.supplierName === supplier.name);
+  const supplierPOs = purchaseOrders.filter(
+    (p) => p.supplierId === supplier.id || p.supplierName === supplier.name,
+  );
+  const suppliedItems = inventory.filter(
+    (item) => item.supplierId === supplier.id || item.supplierName === supplier.name,
+  );
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12 print:p-0 print:m-0">
       {/* Top Header */}
-      <div className="flex items-center gap-3">
-        <button
+      <div className="flex items-center gap-3 print:hidden">
+        <Button
+          variant="tonal"
+          size="sm"
           onClick={() => navigate('/suppliers')}
-          className="erp-btn-quiet p-2 rounded-xl flex items-center justify-center"
-          title="Back to Suppliers"
-        >
-          <ArrowLeft size={16} />
-        </button>
+          icon={<ArrowLeft size={16} />}
+          aria-label="Back to Suppliers"
+        />
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="erp-h1 text-2xl">{supplier.name}</h1>
-            <span className="erp-pill erp-pill-neutral text-xs">{supplier.category}</span>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)]">
+              {supplier.name}
+            </h1>
+            <Badge variant="neutral" size="sm">
+              {supplier.category}
+            </Badge>
           </div>
-          <p className="erp-muted mt-0.5 text-xs">
+          <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
             Contact: {supplier.contactPerson} • {supplier.phone} • {supplier.islandOrCountry}
           </p>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="erp-card p-4">
-          <span className="erp-muted block text-xs font-semibold">Outstanding Payable</span>
-          <div className={`erp-figure text-xl mt-1 ${supplier.outstandingPayable > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <Surface variant="outlined" padding="sm" className="space-y-1">
+          <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] block">
+            Outstanding Payable
+          </span>
+          <div
+            className={`text-xl font-bold font-mono mono-num ${
+              supplier.outstandingPayable > 0
+                ? 'text-[var(--md-sys-color-error)]'
+                : 'text-[var(--md-sys-color-primary)]'
+            }`}
+          >
             {formatMVR(supplier.outstandingPayable)}
           </div>
-          <span className="text-[11px] erp-muted">Pending balance due to vendor</span>
-        </div>
+          <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
+            Pending balance due to vendor
+          </span>
+        </Surface>
 
-        <div className="erp-card p-4">
-          <span className="erp-muted block text-xs font-semibold">Total POs Placed</span>
-          <div className="erp-figure text-xl mt-1" style={{ color: 'var(--accent)' }}>
+        <Surface variant="outlined" padding="sm" className="space-y-1">
+          <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] block">
+            Total POs Placed
+          </span>
+          <div className="text-xl font-bold font-mono mono-num text-[var(--md-sys-color-primary)]">
             {supplierPOs.length} Orders
           </div>
-          <span className="text-[11px] erp-muted">Lifetime purchase orders</span>
-        </div>
+          <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
+            Lifetime purchase orders
+          </span>
+        </Surface>
 
-        <div className="erp-card p-4">
-          <span className="erp-muted block text-xs font-semibold">Supplied Inventory SKUs</span>
-          <div className="erp-figure text-xl mt-1">
+        <Surface variant="outlined" padding="sm" className="space-y-1">
+          <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] block">
+            Supplied Inventory SKUs
+          </span>
+          <div className="text-xl font-bold font-mono mono-num text-[var(--md-sys-color-on-surface)]">
             {suppliedItems.length} Materials
           </div>
-          <span className="text-[11px] erp-muted">Catalog items sourced</span>
-        </div>
+          <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
+            Catalog items sourced
+          </span>
+        </Surface>
       </div>
 
       {/* Main Content Grid */}
@@ -100,39 +131,65 @@ export const SupplierDetailView: React.FC = () => {
         {/* Left Column (8 cols): PO History & Catalog */}
         <div className="lg:col-span-8 space-y-6">
           {/* Purchase Order History */}
-          <div className="erp-card p-5 space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider">Purchase Order History</h2>
+          <Surface variant="outlined" padding="md" className="space-y-4">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface)]">
+              Purchase Order History
+            </h2>
             <div className="overflow-x-auto">
-              <table className="erp-table">
+              <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr>
-                    <th>PO #</th>
-                    <th>Order Date</th>
-                    <th>Items</th>
-                    <th className="text-right">Amount</th>
-                    <th className="text-center">Status</th>
+                  <tr
+                    className="border-b"
+                    style={{
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                      color: 'var(--md-sys-color-on-surface-variant)',
+                    }}
+                  >
+                    <th className="py-2.5 pr-4 font-semibold">PO #</th>
+                    <th className="py-2.5 px-3 font-semibold">Order Date</th>
+                    <th className="py-2.5 px-3 font-semibold">Items</th>
+                    <th className="py-2.5 px-3 font-semibold text-right">Amount</th>
+                    <th className="py-2.5 pl-4 font-semibold text-center">Status</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}>
                   {supplierPOs.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center erp-muted py-6">
+                      <td
+                        colSpan={5}
+                        className="text-center py-6 text-[var(--md-sys-color-on-surface-variant)]"
+                      >
                         No purchase orders recorded for this supplier.
                       </td>
                     </tr>
                   ) : (
                     supplierPOs.map((po) => (
-                      <tr key={po.id} data-clickable="true" onClick={() => navigate(`/purchasing/${po.id}`)}>
-                        <td className="font-mono font-bold" style={{ color: 'var(--accent)' }}>{po.poNumber}</td>
-                        <td className="text-xs">{po.orderDate}</td>
-                        <td className="text-xs font-semibold">{po.items.length} items</td>
-                        <td className="text-right font-mono font-bold erp-money-out">{formatMVR(po.totalAmount)}</td>
-                        <td className="text-center">
-                          <span className={`erp-pill ${
-                            po.status === 'Received & Stocked' ? 'erp-pill-positive' : 'erp-pill-warning'
-                          } text-[11px]`}>
+                      <tr
+                        key={po.id}
+                        className="hover:bg-[var(--md-sys-color-surface-container-low)] cursor-pointer"
+                        onClick={() => navigate(`/purchasing/${po.id}`)}
+                      >
+                        <td className="py-3 pr-4 font-mono font-bold text-[var(--md-sys-color-primary)]">
+                          {po.poNumber}
+                        </td>
+                        <td className="py-3 px-3 text-xs text-[var(--md-sys-color-on-surface)]">
+                          {po.orderDate}
+                        </td>
+                        <td className="py-3 px-3 text-xs text-[var(--md-sys-color-on-surface)]">
+                          {po.items.length} items
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono font-bold mono-num text-[var(--md-sys-color-on-surface)]">
+                          {formatMVR(po.totalAmount)}
+                        </td>
+                        <td className="py-3 pl-4 text-center">
+                          <Badge
+                            variant={
+                              po.status === 'Received & Stocked' ? 'positive' : 'warning'
+                            }
+                            size="sm"
+                          >
                             {po.status}
-                          </span>
+                          </Badge>
                         </td>
                       </tr>
                     ))
@@ -140,71 +197,97 @@ export const SupplierDetailView: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Surface>
 
           {/* Supplied Inventory SKUs */}
-          <div className="erp-card p-5 space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider">Supplied Inventory SKUs</h2>
+          <Surface variant="outlined" padding="md" className="space-y-4">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface)]">
+              Supplied Inventory SKUs
+            </h2>
             <div className="overflow-x-auto">
-              <table className="erp-table">
+              <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr>
-                    <th>SKU</th>
-                    <th>Material Name</th>
-                    <th>Stock Qty</th>
-                    <th className="text-right">Unit Cost</th>
+                  <tr
+                    className="border-b"
+                    style={{
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                      color: 'var(--md-sys-color-on-surface-variant)',
+                    }}
+                  >
+                    <th className="py-2.5 pr-4 font-semibold">SKU</th>
+                    <th className="py-2.5 px-3 font-semibold">Material Name</th>
+                    <th className="py-2.5 px-3 font-semibold">Stock Qty</th>
+                    <th className="py-2.5 pl-4 font-semibold text-right">Unit Cost</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}>
                   {suppliedItems.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="text-center erp-muted py-6">
+                      <td
+                        colSpan={4}
+                        className="text-center py-6 text-[var(--md-sys-color-on-surface-variant)]"
+                      >
                         No catalog inventory items mapped to this supplier.
                       </td>
                     </tr>
                   ) : (
                     suppliedItems.map((item) => (
-                      <tr key={item.id}>
-                        <td className="font-mono text-xs font-bold" style={{ color: 'var(--accent)' }}>{item.sku}</td>
-                        <td className="font-semibold text-xs">{item.name}</td>
-                        <td className="font-mono text-xs">{item.quantityOnHand} {item.unit}</td>
-                        <td className="text-right font-mono text-xs">{formatMVR(item.unitCost)}</td>
+                      <tr key={item.id} className="hover:bg-[var(--md-sys-color-surface-container-low)]">
+                        <td className="py-3 pr-4 font-mono text-xs font-bold text-[var(--md-sys-color-primary)]">
+                          {item.sku}
+                        </td>
+                        <td className="py-3 px-3 text-xs font-semibold text-[var(--md-sys-color-on-surface)]">
+                          {item.name}
+                        </td>
+                        <td className="py-3 px-3 font-mono text-xs text-[var(--md-sys-color-on-surface)]">
+                          {item.quantityOnHand} {item.unit}
+                        </td>
+                        <td className="py-3 pl-4 text-right font-mono text-xs mono-num text-[var(--md-sys-color-on-surface)]">
+                          {formatMVR(item.unitCost)}
+                        </td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
             </div>
-          </div>
+          </Surface>
         </div>
 
         {/* Right Column (4 cols): Vendor Profile */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="erp-card p-5 space-y-4 text-xs">
-            <h2 className="text-sm font-bold uppercase tracking-wider">Vendor Profile</h2>
+          <Surface variant="outlined" padding="md" className="space-y-4 text-xs">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface)]">
+              Vendor Profile
+            </h2>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="erp-muted">Contact Person:</span>
-                <span className="font-semibold">{supplier.contactPerson}</span>
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">Contact Person:</span>
+                <span className="font-semibold text-[var(--md-sys-color-on-surface)]">{supplier.contactPerson}</span>
               </div>
               <div className="flex justify-between">
-                <span className="erp-muted">Phone:</span>
-                <span className="font-mono">{supplier.phone}</span>
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">Phone:</span>
+                <span className="font-mono text-[var(--md-sys-color-on-surface)]">{supplier.phone}</span>
               </div>
               <div className="flex justify-between">
-                <span className="erp-muted">Email:</span>
-                <span>{supplier.email}</span>
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">Email:</span>
+                <span className="text-[var(--md-sys-color-on-surface)]">{supplier.email}</span>
               </div>
               <div className="flex justify-between">
-                <span className="erp-muted">Lead Time:</span>
-                <span>{supplier.leadTimeDays} days</span>
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">Lead Time:</span>
+                <span className="text-[var(--md-sys-color-on-surface)]">{supplier.leadTimeDays} days</span>
               </div>
-              <div className="flex justify-between pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
-                <span className="erp-muted">Address:</span>
-                <span className="font-semibold text-right">{supplier.address}</span>
+              <div
+                className="flex justify-between pt-2 border-t"
+                style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}
+              >
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">Address:</span>
+                <span className="font-semibold text-right text-[var(--md-sys-color-on-surface)]">
+                  {supplier.address}
+                </span>
               </div>
             </div>
-          </div>
+          </Surface>
         </div>
       </div>
     </div>

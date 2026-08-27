@@ -3,18 +3,13 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   FileText,
-  User,
-  Wrench,
-  Calendar,
-  DollarSign,
   CreditCard,
   Printer,
   CheckCircle2,
   AlertTriangle,
-  ChevronRight,
-  Plus
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
+import { Surface, Button, Badge } from '../ui';
 
 export const InvoiceDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,24 +17,34 @@ export const InvoiceDetailView: React.FC = () => {
   const { invoices, jobs, payments, formatMVR, setIsRecordPaymentOpen } = useERP();
 
   const invoice = invoices.find(
-    (inv) => inv.id === id || inv.invoiceNumber.toLowerCase() === id?.toLowerCase()
+    (inv) => inv.id === id || inv.invoiceNumber.toLowerCase() === id?.toLowerCase(),
   );
 
   if (!invoice) {
     return (
       <div className="space-y-6">
-        <button onClick={() => navigate('/invoices')} className="erp-btn-quiet flex items-center gap-2">
-          <ArrowLeft size={16} />
+        <Button
+          variant="text"
+          size="sm"
+          onClick={() => navigate('/invoices')}
+          icon={<ArrowLeft size={16} />}
+        >
           <span>Back to Invoices</span>
-        </button>
-        <div className="erp-card p-12 text-center">
-          <FileText size={40} className="erp-muted mx-auto mb-3" />
-          <h2 className="erp-h1 text-xl">Invoice Not Found</h2>
-          <p className="erp-muted mt-2 text-sm">No commercial invoice matching ID "{id}" was found.</p>
-          <button onClick={() => navigate('/invoices')} className="erp-btn-primary mt-6">
-            View All Invoices
-          </button>
-        </div>
+        </Button>
+        <Surface variant="outlined" padding="lg" className="text-center py-12 space-y-3">
+          <FileText size={40} className="mx-auto text-[var(--md-sys-color-on-surface-variant)] opacity-60" />
+          <h2 className="text-xl font-bold text-[var(--md-sys-color-on-surface)]">
+            Invoice Not Found
+          </h2>
+          <p className="text-sm text-[var(--md-sys-color-on-surface-variant)]">
+            No commercial invoice matching ID "{id}" was found in this workspace.
+          </p>
+          <div className="pt-2">
+            <Button variant="filled" size="sm" onClick={() => navigate('/invoices')}>
+              <span>View All Invoices</span>
+            </Button>
+          </div>
+        </Surface>
       </div>
     );
   }
@@ -48,27 +53,36 @@ export const InvoiceDetailView: React.FC = () => {
   const linkedPayments = payments.filter((p) => p.invoiceId === invoice.id || p.invoiceNumber === invoice.invoiceNumber);
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12 print:p-0 print:m-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            variant="tonal"
+            size="sm"
             onClick={() => navigate('/invoices')}
-            className="erp-btn-quiet p-2 rounded-xl flex items-center justify-center"
-            title="Back to Invoices"
-          >
-            <ArrowLeft size={16} />
-          </button>
+            icon={<ArrowLeft size={16} />}
+            aria-label="Back to Invoices"
+          />
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="erp-h1 text-2xl">{invoice.invoiceNumber}</h1>
-              <span className={`erp-pill ${
-                invoice.status === 'Paid' ? 'erp-pill-positive' : invoice.status === 'Overdue' ? 'erp-pill-danger' : 'erp-pill-warning'
-              }`}>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)]">
+                {invoice.invoiceNumber}
+              </h1>
+              <Badge
+                variant={
+                  invoice.status === 'Paid'
+                    ? 'positive'
+                    : invoice.status === 'Overdue'
+                    ? 'destructive'
+                    : 'warning'
+                }
+                size="sm"
+              >
                 {invoice.status}
-              </span>
+              </Badge>
             </div>
-            <p className="erp-muted mt-0.5 text-xs">
+            <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
               Issued: {invoice.date} • Due: {invoice.dueDate}
             </p>
           </div>
@@ -76,21 +90,24 @@ export const InvoiceDetailView: React.FC = () => {
 
         <div className="flex items-center gap-2">
           {invoice.balanceDue > 0 && (
-            <button
+            <Button
+              variant="filled"
+              size="sm"
               onClick={() => setIsRecordPaymentOpen(true)}
-              className="erp-btn-primary flex items-center gap-1.5"
+              icon={<CreditCard size={15} />}
             >
-              <CreditCard size={14} />
               <span>Record Payment</span>
-            </button>
+            </Button>
           )}
-          <button
+          <Button
+            variant="outlined"
+            size="sm"
             onClick={() => window.print()}
-            className="erp-btn-quiet p-2"
-            title="Print Invoice"
+            icon={<Printer size={16} />}
+            aria-label="Print Invoice"
           >
-            <Printer size={16} />
-          </button>
+            <span>Print</span>
+          </Button>
         </div>
       </div>
 
@@ -99,60 +116,83 @@ export const InvoiceDetailView: React.FC = () => {
         {/* Left Column (8 cols): Line items, Customer details, Billing terms */}
         <div className="lg:col-span-8 space-y-6">
           {/* Customer & Job Links */}
-          <div className="erp-card p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <Surface variant="outlined" padding="md" className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div className="space-y-1">
-              <span className="erp-muted block text-[11px]">Billed To Customer:</span>
+              <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] block">
+                Billed To Customer:
+              </span>
               <Link
                 to={`/customers/${invoice.customerId}`}
-                className="font-bold text-sm hover:underline block"
-                style={{ color: 'var(--accent)' }}
+                className="font-bold text-sm hover:underline block text-[var(--md-sys-color-primary)]"
               >
                 {invoice.customerName} →
               </Link>
               {invoice.customerPhone && (
-                <span className="erp-muted block font-mono">{invoice.customerPhone}</span>
+                <span className="font-mono text-[var(--md-sys-color-on-surface-variant)] block">
+                  {invoice.customerPhone}
+                </span>
               )}
             </div>
 
             {(invoice.linkedJobId || invoice.linkedJobNumber) && (
-              <div className="space-y-1 sm:border-l sm:pl-4" style={{ borderColor: 'var(--border)' }}>
-                <span className="erp-muted block text-[11px]">Linked Work Order:</span>
+              <div
+                className="space-y-1 sm:border-l sm:pl-4"
+                style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}
+              >
+                <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] block">
+                  Linked Work Order:
+                </span>
                 <Link
                   to={`/jobs/${invoice.linkedJobId || linkedJob?.id || ''}`}
-                  className="font-mono font-bold text-sm hover:underline block"
-                  style={{ color: 'var(--accent)' }}
+                  className="font-mono font-bold text-sm hover:underline block text-[var(--md-sys-color-primary)]"
                 >
                   {invoice.linkedJobNumber || linkedJob?.jobId || 'Work Order'} →
                 </Link>
                 {linkedJob?.vehicle && (
-                  <span className="erp-muted block">
+                  <span className="text-[var(--md-sys-color-on-surface-variant)] block">
                     Asset: {linkedJob.vehicle.plateNumber} ({linkedJob.vehicle.model})
                   </span>
                 )}
               </div>
             )}
-          </div>
+          </Surface>
 
           {/* Line Items Table */}
-          <div className="erp-card p-5 space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider">Line Items & Services</h2>
+          <Surface variant="outlined" padding="md" className="space-y-4">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface)]">
+              Line Items & Services
+            </h2>
             <div className="overflow-x-auto">
-              <table className="erp-table">
+              <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr>
-                    <th>Description</th>
-                    <th className="text-center">Qty</th>
-                    <th className="text-right">Unit Price</th>
-                    <th className="text-right">Total</th>
+                  <tr
+                    className="border-b"
+                    style={{
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                      color: 'var(--md-sys-color-on-surface-variant)',
+                    }}
+                  >
+                    <th className="py-2.5 pr-4 font-semibold">Description</th>
+                    <th className="py-2.5 px-3 font-semibold text-center">Qty</th>
+                    <th className="py-2.5 px-3 font-semibold text-right">Unit Price</th>
+                    <th className="py-2.5 pl-4 font-semibold text-right">Total</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}>
                   {invoice.items.map((item) => (
-                    <tr key={item.id}>
-                      <td className="font-semibold">{item.description}</td>
-                      <td className="text-center font-mono">{item.quantity}</td>
-                      <td className="text-right font-mono">{formatMVR(item.unitPrice)}</td>
-                      <td className="text-right font-mono font-bold">{formatMVR(item.amount)}</td>
+                    <tr key={item.id} className="hover:bg-[var(--md-sys-color-surface-container-low)]">
+                      <td className="py-3 pr-4 font-semibold text-[var(--md-sys-color-on-surface)]">
+                        {item.description}
+                      </td>
+                      <td className="py-3 px-3 text-center font-mono text-[var(--md-sys-color-on-surface)]">
+                        {item.quantity}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono mono-num text-[var(--md-sys-color-on-surface)]">
+                        {formatMVR(item.unitPrice)}
+                      </td>
+                      <td className="py-3 pl-4 text-right font-mono font-bold mono-num text-[var(--md-sys-color-on-surface)]">
+                        {formatMVR(item.amount)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -160,54 +200,93 @@ export const InvoiceDetailView: React.FC = () => {
             </div>
 
             {/* Totals Summary */}
-            <div className="pt-4 border-t space-y-2 text-xs" style={{ borderColor: 'var(--border)' }}>
-              <div className="flex justify-between">
-                <span className="erp-muted">Subtotal:</span>
-                <span className="font-mono font-semibold">{formatMVR(invoice.subtotal)}</span>
+            <div
+              className="pt-4 border-t space-y-2 text-xs"
+              style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}
+            >
+              <div className="flex justify-between text-[var(--md-sys-color-on-surface)]">
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">Subtotal:</span>
+                <span className="font-mono font-semibold mono-num">{formatMVR(invoice.subtotal)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="erp-muted">Tax Status:</span>
-                <span className="font-mono erp-muted">Non-GST Registered</span>
+              <div className="flex justify-between text-[var(--md-sys-color-on-surface-variant)]">
+                <span>Tax Status:</span>
+                <span className="font-mono">GST Exempt (Under Threshold)</span>
               </div>
-              <div className="flex justify-between pt-2 border-t text-sm font-bold" style={{ borderColor: 'var(--border)' }}>
+              <div
+                className="flex justify-between pt-2 border-t text-sm font-bold"
+                style={{
+                  borderColor: 'var(--md-sys-color-outline-variant)',
+                  color: 'var(--md-sys-color-on-surface)',
+                }}
+              >
                 <span>Total Amount Due:</span>
-                <span className="font-mono" style={{ color: 'var(--accent)' }}>{formatMVR(invoice.totalAmount)}</span>
+                <span className="font-mono text-[var(--md-sys-color-primary)] mono-num">
+                  {formatMVR(invoice.totalAmount)}
+                </span>
               </div>
             </div>
-          </div>
+          </Surface>
 
           {/* Applied Payments Table */}
-          <div className="erp-card p-5 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--border)' }}>
-              <h2 className="text-sm font-bold uppercase tracking-wider">Payments Received for this Invoice</h2>
+          <Surface variant="outlined" padding="md" className="space-y-4">
+            <div
+              className="flex items-center justify-between border-b pb-3"
+              style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}
+            >
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface)]">
+                Payments Received for this Invoice
+              </h2>
             </div>
             <div className="overflow-x-auto">
-              <table className="erp-table">
+              <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr>
-                    <th>Payment #</th>
-                    <th>Date</th>
-                    <th>Method / Reference</th>
-                    <th className="text-right">Amount</th>
-                    <th className="text-right">Action</th>
+                  <tr
+                    className="border-b"
+                    style={{
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                      color: 'var(--md-sys-color-on-surface-variant)',
+                    }}
+                  >
+                    <th className="py-2.5 pr-4 font-semibold">Payment #</th>
+                    <th className="py-2.5 px-3 font-semibold">Date</th>
+                    <th className="py-2.5 px-3 font-semibold">Method / Reference</th>
+                    <th className="py-2.5 px-3 font-semibold text-right">Amount</th>
+                    <th className="py-2.5 pl-4 font-semibold text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}>
                   {linkedPayments.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center erp-muted py-6">
+                      <td
+                        colSpan={5}
+                        className="text-center py-6 text-[var(--md-sys-color-on-surface-variant)]"
+                      >
                         No payments recorded against this invoice yet.
                       </td>
                     </tr>
                   ) : (
                     linkedPayments.map((p) => (
-                      <tr key={p.id} data-clickable="true" onClick={() => navigate(`/payments/${p.id}`)}>
-                        <td className="font-mono font-bold" style={{ color: 'var(--accent)' }}>{p.paymentNumber}</td>
-                        <td className="text-xs">{p.paymentDate}</td>
-                        <td className="text-xs">{p.method} ({p.referenceNumber})</td>
-                        <td className="text-right font-mono font-bold erp-money-in">{formatMVR(p.amount)}</td>
-                        <td className="text-right">
-                          <span className="text-xs font-semibold hover:underline" style={{ color: 'var(--accent)' }}>View Receipt →</span>
+                      <tr
+                        key={p.id}
+                        className="hover:bg-[var(--md-sys-color-surface-container-low)] cursor-pointer"
+                        onClick={() => navigate(`/payments/${p.id}`)}
+                      >
+                        <td className="py-3 pr-4 font-mono font-bold text-[var(--md-sys-color-primary)]">
+                          {p.paymentNumber}
+                        </td>
+                        <td className="py-3 px-3 text-xs text-[var(--md-sys-color-on-surface)]">
+                          {p.paymentDate}
+                        </td>
+                        <td className="py-3 px-3 text-xs text-[var(--md-sys-color-on-surface-variant)]">
+                          {p.method} ({p.referenceNumber})
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono font-bold mono-num text-[var(--md-sys-color-primary)]">
+                          {formatMVR(p.amount)}
+                        </td>
+                        <td className="py-3 pl-4 text-right">
+                          <span className="text-xs font-semibold text-[var(--md-sys-color-primary)] hover:underline">
+                            View Receipt →
+                          </span>
                         </td>
                       </tr>
                     ))
@@ -215,47 +294,72 @@ export const InvoiceDetailView: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Surface>
         </div>
 
         {/* Right Column (4 cols): Settlement Snapshot & Balances */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="erp-card p-5 space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider">Settlement Overview</h2>
+          <Surface variant="outlined" padding="md" className="space-y-4">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface)]">
+              Settlement Overview
+            </h2>
             <div className="space-y-3 text-xs">
               <div className="flex justify-between">
-                <span className="erp-muted">Invoice Total:</span>
-                <span className="font-mono font-bold">{formatMVR(invoice.totalAmount)}</span>
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">Invoice Total:</span>
+                <span className="font-mono font-bold text-[var(--md-sys-color-on-surface)] mono-num">
+                  {formatMVR(invoice.totalAmount)}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="erp-muted">Amount Settled:</span>
-                <span className="font-mono font-semibold erp-money-in">{formatMVR(invoice.amountPaid)}</span>
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">Amount Settled:</span>
+                <span className="font-mono font-semibold text-[var(--md-sys-color-primary)] mono-num">
+                  {formatMVR(invoice.amountPaid)}
+                </span>
               </div>
-              <div className="flex justify-between pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
-                <span className="font-semibold">Remaining Balance:</span>
-                <span className={`font-mono font-bold text-sm ${invoice.balanceDue > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+              <div
+                className="flex justify-between pt-2 border-t"
+                style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}
+              >
+                <span className="font-semibold text-[var(--md-sys-color-on-surface)]">
+                  Remaining Balance:
+                </span>
+                <span
+                  className={`font-mono font-bold text-sm mono-num ${
+                    invoice.balanceDue > 0
+                      ? 'text-[var(--md-sys-color-error)]'
+                      : 'text-[var(--md-sys-color-primary)]'
+                  }`}
+                >
                   {formatMVR(invoice.balanceDue)}
                 </span>
               </div>
             </div>
 
             {invoice.balanceDue > 0 ? (
-              <button
-                onClick={() => setIsRecordPaymentOpen(true)}
-                className="erp-btn-primary w-full text-xs py-2 flex items-center justify-center gap-1.5 mt-2"
-              >
-                <CreditCard size={14} />
-                <span>Record Payment of {formatMVR(invoice.balanceDue)}</span>
-              </button>
+              <div className="pt-2">
+                <Button
+                  variant="filled"
+                  className="w-full text-xs"
+                  onClick={() => setIsRecordPaymentOpen(true)}
+                  icon={<CreditCard size={15} />}
+                >
+                  <span>Record Payment of {formatMVR(invoice.balanceDue)}</span>
+                </Button>
+              </div>
             ) : (
-              <div className="p-3 rounded-xl border flex items-center gap-2 text-xs" style={{ background: 'var(--muted)', borderColor: 'var(--border)' }}>
-                <CheckCircle2 size={16} style={{ color: 'var(--positive)' }} />
-                <span className="font-semibold" style={{ color: 'var(--positive)' }}>
-                  Fully settled and cleared.
-                </span>
+              <div
+                className="p-3 rounded-[var(--md-sys-shape-corner-medium)] border flex items-center gap-2 text-xs"
+                style={{
+                  backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                  borderColor: 'var(--md-sys-color-outline-variant)',
+                  color: 'var(--md-sys-color-primary)',
+                }}
+              >
+                <CheckCircle2 size={16} />
+                <span className="font-semibold">Fully settled and cleared.</span>
               </div>
             )}
-          </div>
+          </Surface>
         </div>
       </div>
     </div>

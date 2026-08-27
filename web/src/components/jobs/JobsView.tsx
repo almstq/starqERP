@@ -392,8 +392,6 @@ export const JobsView: React.FC = () => {
           emptyMessage="No work orders matching search criteria."
         />
       )}
-
-      <CreateJobModal />
     </div>
   );
 };

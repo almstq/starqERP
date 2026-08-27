@@ -3,18 +3,11 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   ShoppingCart,
-  Truck,
-  Calendar,
-  DollarSign,
   Package,
-  CheckCircle2,
-  AlertTriangle,
-  Clock,
   Printer,
-  ChevronRight,
-  ShieldCheck
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
+import { Surface, Button, Badge } from '../ui';
 
 export const PODetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,18 +19,28 @@ export const PODetailView: React.FC = () => {
   if (!po) {
     return (
       <div className="space-y-6">
-        <button onClick={() => navigate('/purchasing')} className="erp-btn-quiet flex items-center gap-2">
-          <ArrowLeft size={16} />
+        <Button
+          variant="text"
+          size="sm"
+          onClick={() => navigate('/purchasing')}
+          icon={<ArrowLeft size={16} />}
+        >
           <span>Back to Purchasing</span>
-        </button>
-        <div className="erp-card p-12 text-center">
-          <ShoppingCart size={40} className="erp-muted mx-auto mb-3" />
-          <h2 className="erp-h1 text-xl">Purchase Order Not Found</h2>
-          <p className="erp-muted mt-2 text-sm">No purchase order matching ID "{id}" was found.</p>
-          <button onClick={() => navigate('/purchasing')} className="erp-btn-primary mt-6">
-            View All Purchase Orders
-          </button>
-        </div>
+        </Button>
+        <Surface variant="outlined" padding="lg" className="text-center py-12 space-y-3">
+          <ShoppingCart size={40} className="mx-auto text-[var(--md-sys-color-on-surface-variant)] opacity-60" />
+          <h2 className="text-xl font-bold text-[var(--md-sys-color-on-surface)]">
+            Purchase Order Not Found
+          </h2>
+          <p className="text-sm text-[var(--md-sys-color-on-surface-variant)]">
+            No purchase order matching ID "{id}" was found in this workspace.
+          </p>
+          <div className="pt-2">
+            <Button variant="filled" size="sm" onClick={() => navigate('/purchasing')}>
+              <span>View All Purchase Orders</span>
+            </Button>
+          </div>
+        </Surface>
       </div>
     );
   }
@@ -45,31 +48,36 @@ export const PODetailView: React.FC = () => {
   const supplier = suppliers.find((s) => s.id === po.supplierId || s.name === po.supplierName);
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12 print:p-0 print:m-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            variant="tonal"
+            size="sm"
             onClick={() => navigate('/purchasing')}
-            className="erp-btn-quiet p-2 rounded-xl flex items-center justify-center"
-            title="Back to Purchasing"
-          >
-            <ArrowLeft size={16} />
-          </button>
+            icon={<ArrowLeft size={16} />}
+            aria-label="Back to Purchasing"
+          />
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="erp-h1 text-2xl">{po.poNumber}</h1>
-              <span className={`erp-pill ${
-                po.status === 'Received & Stocked'
-                  ? 'erp-pill-positive'
-                  : po.status === 'Sent'
-                  ? 'erp-pill-warning'
-                  : 'erp-pill-neutral'
-              }`}>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)]">
+                {po.poNumber}
+              </h1>
+              <Badge
+                variant={
+                  po.status === 'Received & Stocked'
+                    ? 'positive'
+                    : po.status === 'Sent'
+                    ? 'warning'
+                    : 'neutral'
+                }
+                size="sm"
+              >
                 {po.status}
-              </span>
+              </Badge>
             </div>
-            <p className="erp-muted mt-0.5 text-xs">
+            <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
               Ordered: {po.orderDate} • Expected: {po.expectedDeliveryDate}
             </p>
           </div>
@@ -77,21 +85,24 @@ export const PODetailView: React.FC = () => {
 
         <div className="flex items-center gap-2">
           {po.status !== 'Received & Stocked' && (
-            <button
+            <Button
+              variant="filled"
+              size="sm"
               onClick={() => receivePurchaseOrder(po.id)}
-              className="erp-btn-primary flex items-center gap-1.5"
+              icon={<Package size={15} />}
             >
-              <Package size={14} />
               <span>Receive & Stock Items</span>
-            </button>
+            </Button>
           )}
-          <button
+          <Button
+            variant="outlined"
+            size="sm"
             onClick={() => window.print()}
-            className="erp-btn-quiet p-2"
-            title="Print PO"
+            icon={<Printer size={16} />}
+            aria-label="Print PO"
           >
-            <Printer size={16} />
-          </button>
+            <span>Print PO</span>
+          </Button>
         </div>
       </div>
 
@@ -100,80 +111,117 @@ export const PODetailView: React.FC = () => {
         {/* Left (8 cols): Ordered Items & Receiving Log */}
         <div className="lg:col-span-8 space-y-6">
           {/* Supplier Details */}
-          <div className="erp-card p-5 space-y-2 text-xs">
-            <span className="erp-muted block text-[11px]">Vendor / Supplier:</span>
+          <Surface variant="outlined" padding="md" className="space-y-2 text-xs">
+            <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] block">
+              Vendor / Supplier:
+            </span>
             <div className="flex items-center justify-between">
               {supplier ? (
                 <Link
                   to={`/suppliers/${supplier.id}`}
-                  className="font-bold text-sm hover:underline"
-                  style={{ color: 'var(--accent)' }}
+                  className="font-bold text-sm hover:underline text-[var(--md-sys-color-primary)]"
                 >
                   {po.supplierName} →
                 </Link>
               ) : (
-                <span className="font-bold text-sm">{po.supplierName}</span>
+                <span className="font-bold text-sm text-[var(--md-sys-color-on-surface)]">
+                  {po.supplierName}
+                </span>
               )}
               {supplier && (
-                <span className="erp-muted">{supplier.phone} • {supplier.islandOrCountry}</span>
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">
+                  {supplier.phone} • {supplier.islandOrCountry}
+                </span>
               )}
             </div>
-          </div>
+          </Surface>
 
           {/* Ordered Line Items Table */}
-          <div className="erp-card p-5 space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider">Ordered Items & Quantities</h2>
+          <Surface variant="outlined" padding="md" className="space-y-4">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface)]">
+              Ordered Items & Quantities
+            </h2>
             <div className="overflow-x-auto">
-              <table className="erp-table">
+              <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr>
-                    <th>Item Description</th>
-                    <th className="text-center">Ordered Qty</th>
-                    <th className="text-right">Unit Cost</th>
-                    <th className="text-right">Total</th>
+                  <tr
+                    className="border-b"
+                    style={{
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                      color: 'var(--md-sys-color-on-surface-variant)',
+                    }}
+                  >
+                    <th className="py-2.5 pr-4 font-semibold">Item Description</th>
+                    <th className="py-2.5 px-3 font-semibold text-center">Ordered Qty</th>
+                    <th className="py-2.5 px-3 font-semibold text-right">Unit Cost</th>
+                    <th className="py-2.5 pl-4 font-semibold text-right">Total</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}>
                   {po.items.map((item) => (
-                    <tr key={item.id}>
-                      <td className="font-semibold">{item.itemName}</td>
-                      <td className="text-center font-mono">{item.quantity} {item.unit}</td>
-                      <td className="text-right font-mono">{formatMVR(item.unitCost)}</td>
-                      <td className="text-right font-mono font-bold">{formatMVR(item.totalCost)}</td>
+                    <tr key={item.id} className="hover:bg-[var(--md-sys-color-surface-container-low)]">
+                      <td className="py-3 pr-4 font-semibold text-[var(--md-sys-color-on-surface)]">
+                        {item.itemName}
+                      </td>
+                      <td className="py-3 px-3 text-center font-mono text-[var(--md-sys-color-on-surface)]">
+                        {item.quantity} {item.unit}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono mono-num text-[var(--md-sys-color-on-surface)]">
+                        {formatMVR(item.unitCost)}
+                      </td>
+                      <td className="py-3 pl-4 text-right font-mono font-bold mono-num text-[var(--md-sys-color-on-surface)]">
+                        {formatMVR(item.totalCost)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <div className="flex justify-between pt-4 border-t text-sm font-bold" style={{ borderColor: 'var(--border)' }}>
+            <div
+              className="flex justify-between pt-4 border-t text-sm font-bold"
+              style={{
+                borderColor: 'var(--md-sys-color-outline-variant)',
+                color: 'var(--md-sys-color-on-surface)',
+              }}
+            >
               <span>Total Purchase Value:</span>
-              <span className="font-mono erp-money-out">{formatMVR(po.totalAmount)}</span>
+              <span className="font-mono text-[var(--md-sys-color-primary)] mono-num">
+                {formatMVR(po.totalAmount)}
+              </span>
             </div>
-          </div>
+          </Surface>
         </div>
 
         {/* Right (4 cols): Order Status & Procurement Chain */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="erp-card p-5 space-y-4 text-xs">
-            <h2 className="text-sm font-bold uppercase tracking-wider">Procurement Details</h2>
+          <Surface variant="outlined" padding="md" className="space-y-4 text-xs">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface)]">
+              Procurement Details
+            </h2>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="erp-muted">Order Date:</span>
-                <span className="font-mono">{po.orderDate}</span>
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">Order Date:</span>
+                <span className="font-mono text-[var(--md-sys-color-on-surface)]">{po.orderDate}</span>
               </div>
               <div className="flex justify-between">
-                <span className="erp-muted">Expected Delivery:</span>
-                <span className="font-mono">{po.expectedDeliveryDate}</span>
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">Expected Delivery:</span>
+                <span className="font-mono text-[var(--md-sys-color-on-surface)]">{po.expectedDeliveryDate}</span>
               </div>
-              <div className="flex justify-between pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
-                <span className="erp-muted">Receipt Status:</span>
-                <span className={`erp-pill ${po.status === 'Received & Stocked' ? 'erp-pill-positive' : 'erp-pill-warning'}`}>
+              <div
+                className="flex justify-between pt-2 border-t"
+                style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}
+              >
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">Receipt Status:</span>
+                <Badge
+                  variant={po.status === 'Received & Stocked' ? 'positive' : 'warning'}
+                  size="sm"
+                >
                   {po.status}
-                </span>
+                </Badge>
               </div>
             </div>
-          </div>
+          </Surface>
         </div>
       </div>
     </div>

@@ -30,6 +30,7 @@ export const PaymentsView: React.FC = () => {
   const navigate = useNavigate();
   const {
     payments,
+    currentTenant,
     setIsRecordPaymentOpen,
     formatMVR,
     totalCashReceived
@@ -37,6 +38,18 @@ export const PaymentsView: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [methodFilter, setMethodFilter] = useState('All');
+
+  const bmlReceived = payments
+    .filter((p) => p.method.toLowerCase().includes('bml') || p.method.toLowerCase().includes('transfer'))
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const mibReceived = payments
+    .filter((p) => p.method.toLowerCase().includes('mib') || p.method.toLowerCase().includes('islamic'))
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const cashReceived = payments
+    .filter((p) => p.method.toLowerCase().includes('cash') || p.method.toLowerCase().includes('pos'))
+    .reduce((sum, p) => sum + p.amount, 0);
 
   const filteredPayments = payments.filter((p) => {
     const matchesSearch =
@@ -100,10 +113,9 @@ export const PaymentsView: React.FC = () => {
       ),
     },
     {
-      key: 'paymentDate',
+      key: 'date',
       header: 'Date',
       width: '12%',
-      hideOn: 'compact',
       render: (p) => (
         <span className="text-xs text-[var(--md-sys-color-on-surface-variant)]">{p.paymentDate}</span>
       ),
@@ -115,7 +127,7 @@ export const PaymentsView: React.FC = () => {
       isNumeric: true,
       width: '16%',
       render: (p) => (
-        <span className="font-semibold text-xs tabular-nums" style={{ color: 'var(--positive)' }}>
+        <span className="font-bold text-xs tabular-nums text-[var(--positive)]">
           {formatMVR(p.amount)}
         </span>
       ),
@@ -126,7 +138,7 @@ export const PaymentsView: React.FC = () => {
       align: 'center',
       width: '12%',
       render: (p) => (
-        <Badge variant="positive" size="sm">
+        <Badge variant={p.status === 'Verified' ? 'positive' : 'warning'} size="sm">
           {p.status}
         </Badge>
       ),
@@ -184,10 +196,10 @@ export const PaymentsView: React.FC = () => {
             <Landmark size={15} style={{ color: 'var(--md-sys-color-primary)' }} />
           </div>
           <div className="text-base sm:text-lg font-bold tabular-nums text-[var(--md-sys-color-on-surface)] truncate">
-            MVR 342,890.00
+            {formatMVR(bmlReceived)}
           </div>
           <div className="text-[11px] mono-num text-[var(--md-sys-color-on-surface-variant)] truncate">
-            A/C: 7730000189201
+            {currentTenant?.bmlAccount ? currentTenant.bmlAccount.split(' ')[0] : 'BML Main'}
           </div>
         </Surface>
 
@@ -199,25 +211,25 @@ export const PaymentsView: React.FC = () => {
             <Landmark size={15} style={{ color: 'var(--positive)' }} />
           </div>
           <div className="text-base sm:text-lg font-bold tabular-nums text-[var(--md-sys-color-on-surface)] truncate">
-            MVR 88,400.00
+            {formatMVR(mibReceived)}
           </div>
           <div className="text-[11px] mono-num text-[var(--md-sys-color-on-surface-variant)] truncate">
-            A/C: 9010048192011
+            {currentTenant?.mibAccount ? currentTenant.mibAccount.split(' ')[0] : 'MIB Corporate'}
           </div>
         </Surface>
 
         <Surface variant="filled" level={1} padding="sm" container className="space-y-1 min-w-0">
           <div className="flex items-center justify-between min-w-0">
             <span className="text-xs font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
-              Workshop Cash Register
+              Counter Cash / POS
             </span>
             <CreditCard size={15} style={{ color: 'var(--warning)' }} />
           </div>
           <div className="text-base sm:text-lg font-bold tabular-nums text-[var(--md-sys-color-on-surface)] truncate">
-            MVR 12,500.00
+            {formatMVR(cashReceived)}
           </div>
           <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] truncate">
-            Physical drawer cash
+            Cash in hand / counter drawer
           </div>
         </Surface>
       </ResponsiveGrid>
@@ -265,8 +277,6 @@ export const PaymentsView: React.FC = () => {
         onRowClick={(p) => navigate(`/payments/${p.id}`)}
         emptyMessage="No payment transactions matching search criteria."
       />
-
-      <RecordPaymentModal />
     </div>
   );
 };

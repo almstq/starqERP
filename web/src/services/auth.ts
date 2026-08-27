@@ -8,6 +8,10 @@ export interface UserSession {
   allowed_entities: string[];
   organisations?: { id: string; name: string }[];
   current_organisation_id?: string;
+  platform_entitlement?: {
+    operator_role: string;
+    mfa_verified: boolean;
+  } | null;
 }
 
 export interface AuthState {

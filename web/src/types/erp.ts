@@ -392,6 +392,8 @@ export interface OrganisationTenant {
   id: string;
   name: string;
   slug: string;
+  /** Shared configuration identity; never a code fork or security boundary. */
+  archetypeId?: import('../domain/archetypes').ArchetypeId;
   legalName: string;
   industry: IndustryType;
   currency: 'MVR' | 'USD';
@@ -414,8 +416,18 @@ export interface OrganisationTenant {
   logoUrl?: string;
   themeColor: string;
   createdAt: string;
+  books?: OrganisationBook[];
   outlets?: Outlet[];
   enabledModules?: PermissionModule[];
+}
+
+export interface OrganisationBook {
+  id: string;
+  tenantId: string;
+  code: string;
+  name: string;
+  archetypeId?: import('../domain/archetypes').ArchetypeId;
+  isDefault?: boolean;
 }
 
 export interface Outlet {
@@ -460,6 +472,7 @@ export interface WorkflowStage {
 // User & Role-Based Access Control (RBAC)
 export type PermissionModule =
   | 'dashboard'
+  | 'customers'
   | 'jobs'
   | 'invoices'
   | 'payments'
