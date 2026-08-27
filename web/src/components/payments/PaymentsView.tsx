@@ -138,7 +138,7 @@ export const PaymentsView: React.FC = () => {
       align: 'center',
       width: '12%',
       render: (p) => (
-        <Badge variant={p.status === 'Cleared' ? 'positive' : 'warning'} size="sm">
+        <Badge variant={p.status === 'Verified' ? 'positive' : 'warning'} size="sm">
           {p.status}
         </Badge>
       ),

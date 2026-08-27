@@ -161,14 +161,14 @@ export const AppShell: React.FC = () => {
         Skip to main content
       </a>
 
-      {/* ── 1. DESKTOP PERSISTENT DRAWER (>= 1024px) ── */}
+      {/* ── 1. MATERIAL 3 NAVIGATION RAIL & PERSISTENT DRAWER (>= 1024px) ── */}
       <aside
         className="hidden lg:flex shrink-0 flex-col w-60 lg:w-64 sticky top-0 h-screen overflow-y-auto"
         style={{
           backgroundColor: 'var(--md-sys-color-surface-container-low)',
           borderRight: '1px solid var(--md-sys-color-outline-variant)',
         }}
-        aria-label="Main Navigation"
+        aria-label="Main Navigation Rail"
       >
         {/* Brand Header */}
         <div className="flex items-center gap-3 px-5 py-4 shrink-0">

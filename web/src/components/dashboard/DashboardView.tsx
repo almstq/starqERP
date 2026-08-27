@@ -644,12 +644,12 @@ export const DashboardView: React.FC = () => {
           <div className="h-56 sm:h-60 w-full pt-2 min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={invoices.length > 0 ? MONTHLY_SALES_CHART_DATA : [
-                { month: 'Jan', revenue: 0, profit: 0 },
-                { month: 'Feb', revenue: 0, profit: 0 },
-                { month: 'Mar', revenue: 0, profit: 0 },
-                { month: 'Apr', revenue: 0, profit: 0 },
-                { month: 'May', revenue: 0, profit: 0 },
-                { month: 'Jun', revenue: 0, profit: 0 },
+                { month: 'Jan', revenue: 0, expenses: 0, profit: 0 },
+                { month: 'Feb', revenue: 0, expenses: 0, profit: 0 },
+                { month: 'Mar', revenue: 0, expenses: 0, profit: 0 },
+                { month: 'Apr', revenue: 0, expenses: 0, profit: 0 },
+                { month: 'May', revenue: 0, expenses: 0, profit: 0 },
+                { month: 'Jun', revenue: 0, expenses: 0, profit: 0 },
               ]}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">

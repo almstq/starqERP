@@ -78,7 +78,6 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
       isOpen={isOpen}
       onClose={handleDone}
       title={step === 'form' ? 'Register New Business Organisation' : 'Application Submitted'}
-      size="md"
     >
       {step === 'form' ? (
         <form onSubmit={handleSubmit} className="space-y-4">

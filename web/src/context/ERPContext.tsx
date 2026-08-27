@@ -438,7 +438,6 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         status: 'pending_approval',
       };
       setPendingApplications((prev) => [newApp, ...prev]);
-      telemetry.capture('application.submitted', { name: appData.name, archetype: appData.archetypeId });
     },
     []
   );
@@ -456,7 +455,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         name: app.name,
         slug: app.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
         legalName: app.legalName,
-        industry: app.archetypeName,
+        industry: (app.archetypeName || 'General Business') as import('../types/erp').IndustryType,
         currency: 'MVR',
         currencySymbol: 'Rf',
         tinNumber: '',
@@ -479,7 +478,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             tenantId: newTenantId,
             code: app.primaryBookCode || 'MAIN',
             name: app.primaryBookName || app.name,
-            archetypeId: app.archetypeId || 'general_business',
+            archetypeId: (app.archetypeId || 'general_business') as import('../domain/archetypes').ArchetypeId,
             isDefault: true,
           },
         ],
@@ -517,7 +516,6 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         prev.map((a) => (a.id === appId ? { ...a, status: 'approved' } : a))
       );
 
-      telemetry.capture('application.approved', { appId, tenantId: newTenantId, name: app.name });
       return newTenant;
     },
     [pendingApplications]
@@ -527,7 +525,6 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setPendingApplications((prev) =>
       prev.map((a) => (a.id === appId ? { ...a, status: 'rejected', rejectionReason: reason } : a))
     );
-    telemetry.capture('application.rejected', { appId, reason });
   }, []);
 
   const [activePlane, setActivePlane] = useState<'platform' | 'tenant'>('tenant');
