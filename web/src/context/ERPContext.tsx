@@ -56,7 +56,13 @@ import {
   approvePlatformApplication as apiApproveApplication,
   rejectPlatformApplication as apiRejectApplication,
   requestInfoPlatformApplication as apiRequestInfoApplication,
+  getTenantInvitations as apiGetTenantInvitations,
+  createTenantInvitation as apiCreateTenantInvitation,
+  resendTenantInvitation as apiResendTenantInvitation,
+  revokeTenantInvitation as apiRevokeTenantInvitation,
   PlatformApplicationRecord,
+  StaffInvitationRecord,
+  CreateStaffInvitationPayload,
 } from '../services/apiGateway';
 
 export interface ERPContextType {
@@ -102,10 +108,14 @@ export interface ERPContextType {
   currentUser: AppUser;
   users: AppUser[];
   roles: UserRole[];
+  invitations: StaffInvitationRecord[];
   switchCurrentUser: (userId: string) => void;
   authorizeUser: (userId: string, roleId?: string) => void;
   suspendUser: (userId: string) => void;
   inviteUser: (userData: { name: string; email: string; phone: string; roleId: string; jobTitle?: string }) => AppUser;
+  inviteStaffMember: (payload: CreateStaffInvitationPayload) => Promise<StaffInvitationRecord>;
+  resendInvitation: (id: string) => Promise<void>;
+  revokeInvitation: (id: string) => Promise<void>;
   updateUserRole: (userId: string, roleId: string) => void;
   createRole: (roleData: Omit<UserRole, 'id' | 'tenantId'>) => UserRole;
   updateRolePermissions: (roleId: string, permissions: UserRole['permissions']) => void;
@@ -1215,7 +1225,84 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   };
 
-  // Invite User
+  // Staff Invitations State & Lifecycle (SERP-286)
+  const [invitations, setInvitations] = useState<StaffInvitationRecord[]>([]);
+
+  useEffect(() => {
+    const activeOrgId = session?.current_organisation_id || currentTenant?.id;
+    if (activeOrgId) {
+      apiGetTenantInvitations()
+        .then((res) => {
+          if (res.ok && Array.isArray(res.invitations)) {
+            setInvitations(res.invitations);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [session?.current_organisation_id, currentTenant?.id]);
+
+  const inviteStaffMember = useCallback(
+    async (payload: CreateStaffInvitationPayload): Promise<StaffInvitationRecord> => {
+      const res = await apiCreateTenantInvitation(payload);
+      if (res.ok && res.invitation) {
+        setInvitations((prev) => [res.invitation, ...prev.filter((i) => i.id !== res.invitation.id)]);
+        logAuditEvent({
+          action: 'STAFF_INVITED',
+          module: 'users',
+          entityType: 'Invitation',
+          entityId: res.invitation.id,
+          entityName: res.invitation.name,
+          summary: `Dispatched staff invitation to ${res.invitation.email} for role ${res.invitation.role_id}. Token expires in 7 days.`,
+          newValue: 'Status: Pending Invite'
+        });
+        return res.invitation;
+      }
+      throw new Error('Failed to create invitation');
+    },
+    [logAuditEvent]
+  );
+
+  const resendInvitation = useCallback(
+    async (id: string): Promise<void> => {
+      const res = await apiResendTenantInvitation(id);
+      if (res.ok && res.invitation) {
+        setInvitations((prev) =>
+          prev.map((i) => (i.id === id ? res.invitation : i))
+        );
+        logAuditEvent({
+          action: 'INVITATION_RESENT',
+          module: 'users',
+          entityType: 'Invitation',
+          entityId: id,
+          entityName: res.invitation.name,
+          summary: `Resent staff invitation to ${res.invitation.email}. Token refreshed with 7-day expiration.`,
+        });
+      }
+    },
+    [logAuditEvent]
+  );
+
+  const revokeInvitation = useCallback(
+    async (id: string): Promise<void> => {
+      const res = await apiRevokeTenantInvitation(id);
+      if (res.ok) {
+        setInvitations((prev) =>
+          prev.map((i) => (i.id === id ? { ...i, status: 'revoked' } : i))
+        );
+        logAuditEvent({
+          action: 'INVITATION_REVOKED',
+          module: 'users',
+          entityType: 'Invitation',
+          entityId: id,
+          entityName: 'Staff Invitation',
+          summary: `Revoked staff invitation ${id}.`,
+        });
+      }
+    },
+    [logAuditEvent]
+  );
+
+  // Legacy Invite User wrapper for local state compatibility
   const inviteUser = (userData: {
     name: string;
     email: string;
@@ -1232,28 +1319,25 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       phone: userData.phone,
       roleId: userData.roleId,
       roleName: roleObj ? roleObj.name : 'Custom Role',
-      status: 'Pending Approval', // Land in pending until admin authorises!
+      status: 'Active',
       invitedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
       lastActiveAt: 'Invitation Dispatched',
       jobTitle: userData.jobTitle || 'Team Member'
     };
 
     setUsers((prev) => [...prev, newUser]);
-
-    // Add alert for admin attention
-    setAlerts((prev) => [
-      {
-        id: `alert-user-${newUser.id}`,
-        type: 'pending_user_approval',
-        title: `New User Sign-in Pending: ${newUser.name}`,
-        description: `${newUser.name} (${newUser.email}) is pending approval for role ${newUser.roleName}.`,
-        urgency: 'warning',
-        actionLabel: 'Review & Authorize',
-        targetTab: 'settings',
-        targetId: newUser.id
-      },
-      ...prev
-    ]);
+    // Dispatch server invitation asynchronously
+    apiCreateTenantInvitation({
+      email: userData.email,
+      name: userData.name,
+      role_id: userData.roleId,
+      job_title: userData.jobTitle,
+      phone: userData.phone,
+    }).then((res) => {
+      if (res.ok && res.invitation) {
+        setInvitations((prev) => [res.invitation, ...prev.filter((i) => i.id !== res.invitation.id)]);
+      }
+    }).catch(() => {});
 
     logAuditEvent({
       action: 'USER_INVITED',
@@ -1261,8 +1345,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       entityType: 'AppUser',
       entityId: newUser.id,
       entityName: newUser.name,
-      summary: `Invited user ${newUser.name} (${newUser.email}) with initial role ${newUser.roleName}. Lands in Pending state.`,
-      newValue: 'Status: Pending Approval'
+      summary: `Invited user ${newUser.name} (${userData.email}) with initial role ${newUser.roleName}.`,
+      newValue: 'Status: Invited'
     });
 
     return newUser;
@@ -2237,10 +2321,14 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         currentUser,
         users,
         roles,
+        invitations,
         switchCurrentUser,
         authorizeUser,
         suspendUser,
         inviteUser,
+        inviteStaffMember,
+        resendInvitation,
+        revokeInvitation,
         updateUserRole,
         createRole,
         updateRolePermissions,

@@ -516,6 +516,27 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
     // Platform schema isolation
   }
 
+  // 2b. Auto-accept pending staff invitations for this verified Google email (SERP-286)
+  try {
+    const pendingInvites = await db.from("invitations")
+      .select("id, organisation_id, role_id, email")
+      .eq("status", "pending")
+      .ilike("email", normalizedEmail)
+      .gt("expires_at", new Date().toISOString());
+
+    if (pendingInvites.data && pendingInvites.data.length > 0) {
+      for (const invite of pendingInvites.data) {
+        await db.rpc("accept_staff_invitation", {
+          p_invitation_id: invite.id,
+          p_person_id: personUuid,
+          p_verified_email: normalizedEmail,
+        });
+      }
+    }
+  } catch {
+    // Non-blocking invitation acceptance
+  }
+
   // 3. Resolve organizations and memberships
   const declaredEntities = entry?.entities ?? [];
   let orgId: string | null = null;
@@ -1051,6 +1072,98 @@ Deno.serve(async (req: Request) => {
         .order("created_at", { ascending: false });
       if (error) throw new Error("members_query_failed");
       return json(200, { ok: true, members: data ?? [] }, origin);
+    }
+
+    // =========================================================================
+    // Staff Invitation & Authorization Lifecycle Routes (SERP-286)
+    // =========================================================================
+    if (req.method === "GET" && path === "/api/tenant/invitations") {
+      const { data, error } = await db.from("invitations")
+        .select("*, persons:invited_by(display_label)")
+        .eq("organisation_id", session.organisation_id)
+        .order("created_at", { ascending: false });
+      if (error) throw new Error("invitations_query_failed");
+      return json(200, { ok: true, invitations: data ?? [] }, origin);
+    }
+
+    if (req.method === "POST" && path === "/api/tenant/invitations") {
+      const body = await readJson(req);
+      if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+
+      const email = String(body.email ?? "").trim().toLowerCase();
+      const name = String(body.name ?? "").trim();
+      const roleId = String(body.role_id ?? "viewer").trim();
+      const jobTitle = body.job_title ? String(body.job_title).trim() : null;
+      const phone = body.phone ? String(body.phone).trim() : null;
+      const bookIds = Array.isArray(body.book_ids) ? body.book_ids : [];
+      const locationIds = Array.isArray(body.location_ids) ? body.location_ids : [];
+
+      if (!email || !name) return json(400, { ok: false, error: "email_and_name_required" }, origin);
+
+      // Duplicate check in pending invitations
+      const existingInvite = await db.from("invitations").select("id")
+        .eq("organisation_id", session.organisation_id)
+        .ilike("email", email)
+        .eq("status", "pending")
+        .maybeSingle();
+
+      if (existingInvite.data) return json(400, { ok: false, error: "invitation_already_pending" }, origin);
+
+      const { data: invData, error: invError } = await db.from("invitations").insert({
+        organisation_id: session.organisation_id,
+        email,
+        name,
+        role_id: roleId,
+        job_title: jobTitle,
+        phone,
+        book_ids: bookIds,
+        location_ids: locationIds,
+        invited_by: session.person_uuid,
+        status: "pending",
+      }).select("*").single();
+
+      if (invError || !invData) throw new Error("invitation_creation_failed");
+      await securityEvent(req, "invitation.created", "accepted", session, { invitation_id: invData.id, email, role: roleId });
+      return json(200, { ok: true, invitation: invData }, origin);
+    }
+
+    if (req.method === "POST" && path.match(/^\/api\/tenant\/invitations\/[^\/]+\/resend$/)) {
+      const body = await readJson(req);
+      if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+
+      const invId = path.split("/")[4];
+      const { data: updated, error } = await db.from("invitations")
+        .update({
+          status: "pending",
+          expires_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", invId)
+        .eq("organisation_id", session.organisation_id)
+        .select("*")
+        .single();
+
+      if (error || !updated) return json(404, { ok: false, error: "invitation_not_found" }, origin);
+      await securityEvent(req, "invitation.resent", "accepted", session, { invitation_id: invId });
+      return json(200, { ok: true, invitation: updated }, origin);
+    }
+
+    if (req.method === "POST" && path.match(/^\/api\/tenant\/invitations\/[^\/]+\/revoke$/)) {
+      const body = await readJson(req);
+      if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+
+      const invId = path.split("/")[4];
+      const { error } = await db.from("invitations")
+        .update({
+          status: "revoked",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", invId)
+        .eq("organisation_id", session.organisation_id);
+
+      if (error) return json(404, { ok: false, error: "invitation_not_found" }, origin);
+      await securityEvent(req, "invitation.revoked", "accepted", session, { invitation_id: invId });
+      return json(200, { ok: true, status: "revoked" }, origin);
     }
 
     if (req.method === "POST" && path === "/api/ops/event") {

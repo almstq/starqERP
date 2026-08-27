@@ -201,7 +201,7 @@ describe('Adaptive Viewport & Layout Acceptance (SERP-ADAPTIVE)', () => {
       // Verify table headers
       expect(screen.getByText(/User & Contact/i)).toBeInTheDocument();
       expect(screen.getByText(/Assigned Role/i)).toBeInTheDocument();
-      expect(screen.getByText(/Demo PIN/i)).toBeInTheDocument();
+      expect(screen.getByText(/Job Title/i)).toBeInTheDocument();
 
       // Verify simulate user buttons are present
       const simulateBtns = screen.getAllByRole('button', { name: /Simulate User/i });

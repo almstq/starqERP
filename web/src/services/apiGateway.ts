@@ -205,3 +205,65 @@ export async function requestInfoPlatformApplication(
     { note }
   );
 }
+
+export interface StaffInvitationRecord {
+  id: string;
+  organisation_id: string;
+  email: string;
+  name: string;
+  role_id: string;
+  job_title?: string;
+  phone?: string;
+  book_ids: string[];
+  location_ids: string[];
+  token: string;
+  status: 'pending' | 'accepted' | 'expired' | 'revoked' | 'cancelled';
+  invited_by?: string;
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+  persons?: {
+    display_label?: string;
+  };
+}
+
+export interface CreateStaffInvitationPayload {
+  email: string;
+  name: string;
+  role_id: string;
+  job_title?: string;
+  phone?: string;
+  book_ids?: string[];
+  location_ids?: string[];
+}
+
+export async function getTenantInvitations(): Promise<{ ok: boolean; invitations: StaffInvitationRecord[] }> {
+  return apiGet<{ ok: boolean; invitations: StaffInvitationRecord[] }>('/api/tenant/invitations');
+}
+
+export async function createTenantInvitation(
+  payload: CreateStaffInvitationPayload
+): Promise<{ ok: boolean; invitation: StaffInvitationRecord }> {
+  return apiPost<{ ok: boolean; invitation: StaffInvitationRecord }>(
+    '/api/tenant/invitations',
+    payload as unknown as Record<string, unknown>
+  );
+}
+
+export async function resendTenantInvitation(
+  invitationId: string
+): Promise<{ ok: boolean; invitation: StaffInvitationRecord }> {
+  return apiPost<{ ok: boolean; invitation: StaffInvitationRecord }>(
+    `/api/tenant/invitations/${invitationId}/resend`,
+    {}
+  );
+}
+
+export async function revokeTenantInvitation(
+  invitationId: string
+): Promise<{ ok: boolean; status: string }> {
+  return apiPost<{ ok: boolean; status: string }>(
+    `/api/tenant/invitations/${invitationId}/revoke`,
+    {}
+  );
+}
