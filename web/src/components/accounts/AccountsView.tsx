@@ -223,51 +223,58 @@ export const AccountsView: React.FC = () => {
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-        <div className="p-3.5 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)]">
-          <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-medium">Total Accounts</div>
-          <div className="text-xl font-mono font-bold text-[var(--md-sys-color-on-surface)] mt-1">{metrics.total}</div>
-          <div className="text-[11px] text-[var(--md-sys-color-primary)] font-medium mt-0.5">{metrics.active} active</div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="p-3.5 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] flex flex-col justify-between h-[104px]">
+          <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-medium flex items-center gap-1.5 h-4 truncate">
+            <span className="truncate">Total Accounts</span>
+          </div>
+          <div className="text-2xl font-mono font-bold text-[var(--md-sys-color-on-surface)] leading-none my-auto">{metrics.total}</div>
+          <div className="text-[11px] text-[var(--md-sys-color-primary)] font-medium h-3.5 truncate leading-none">{metrics.active} active</div>
         </div>
 
-        <div className="p-3.5 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)]">
-          <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-medium flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5 text-blue-500" /> Assets (1000s)
+        <div className="p-3.5 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] flex flex-col justify-between h-[104px]">
+          <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-medium flex items-center gap-1.5 h-4 truncate">
+            <TrendingUp className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+            <span className="truncate">Assets (1000s)</span>
           </div>
-          <div className="text-xl font-mono font-bold text-[var(--md-sys-color-on-surface)] mt-1">{metrics.assetsCount}</div>
-          <div className="text-[11px] text-[var(--md-sys-color-outline)] mt-0.5">Cash, Bank, AR, Stock</div>
+          <div className="text-2xl font-mono font-bold text-[var(--md-sys-color-on-surface)] leading-none my-auto">{metrics.assetsCount}</div>
+          <div className="text-[11px] text-[var(--md-sys-color-outline)] h-3.5 truncate leading-none">Cash, Bank, Stock</div>
         </div>
 
-        <div className="p-3.5 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)]">
-          <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-medium flex items-center gap-1">
-            <TrendingDown className="w-3.5 h-3.5 text-rose-500" /> Liabilities (2000s)
+        <div className="p-3.5 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] flex flex-col justify-between h-[104px]">
+          <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-medium flex items-center gap-1.5 h-4 truncate">
+            <TrendingDown className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+            <span className="truncate">Liabilities (2000s)</span>
           </div>
-          <div className="text-xl font-mono font-bold text-[var(--md-sys-color-on-surface)] mt-1">{metrics.liabilitiesCount}</div>
-          <div className="text-[11px] text-[var(--md-sys-color-outline)] mt-0.5">AP, GST, TGST, MPAO</div>
+          <div className="text-2xl font-mono font-bold text-[var(--md-sys-color-on-surface)] leading-none my-auto">{metrics.liabilitiesCount}</div>
+          <div className="text-[11px] text-[var(--md-sys-color-outline)] h-3.5 truncate leading-none">AP, GST, TGST</div>
         </div>
 
-        <div className="p-3.5 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)]">
-          <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-medium flex items-center gap-1">
-            <Scale className="w-3.5 h-3.5 text-emerald-500" /> Equity (3000s)
+        <div className="p-3.5 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] flex flex-col justify-between h-[104px]">
+          <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-medium flex items-center gap-1.5 h-4 truncate">
+            <Scale className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <span className="truncate">Equity (3000s)</span>
           </div>
-          <div className="text-xl font-mono font-bold text-[var(--md-sys-color-on-surface)] mt-1">{metrics.equityCount}</div>
-          <div className="text-[11px] text-[var(--md-sys-color-outline)] mt-0.5">Capital & Retained Earn.</div>
+          <div className="text-2xl font-mono font-bold text-[var(--md-sys-color-on-surface)] leading-none my-auto">{metrics.equityCount}</div>
+          <div className="text-[11px] text-[var(--md-sys-color-outline)] h-3.5 truncate leading-none">Capital & Retained</div>
         </div>
 
-        <div className="p-3.5 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)]">
-          <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-medium flex items-center gap-1">
-            <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> Revenue (4000s)
+        <div className="p-3.5 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] flex flex-col justify-between h-[104px]">
+          <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-medium flex items-center gap-1.5 h-4 truncate">
+            <DollarSign className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <span className="truncate">Revenue (4000s)</span>
           </div>
-          <div className="text-xl font-mono font-bold text-[var(--md-sys-color-on-surface)] mt-1">{metrics.revenueCount}</div>
-          <div className="text-[11px] text-[var(--md-sys-color-outline)] mt-0.5">Services & Merchandise</div>
+          <div className="text-2xl font-mono font-bold text-[var(--md-sys-color-on-surface)] leading-none my-auto">{metrics.revenueCount}</div>
+          <div className="text-[11px] text-[var(--md-sys-color-outline)] h-3.5 truncate leading-none">Sales & Services</div>
         </div>
 
-        <div className="p-3.5 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)]">
-          <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-medium flex items-center gap-1">
-            <Layers className="w-3.5 h-3.5 text-amber-500" /> Expenses (5000-6000s)
+        <div className="p-3.5 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] flex flex-col justify-between h-[104px]">
+          <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-medium flex items-center gap-1.5 h-4 truncate">
+            <Layers className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+            <span className="truncate">Expenses (5000s)</span>
           </div>
-          <div className="text-xl font-mono font-bold text-[var(--md-sys-color-on-surface)] mt-1">{metrics.expenseCount}</div>
-          <div className="text-[11px] text-[var(--md-sys-color-outline)] mt-0.5">COGS & Operating OPEX</div>
+          <div className="text-2xl font-mono font-bold text-[var(--md-sys-color-on-surface)] leading-none my-auto">{metrics.expenseCount}</div>
+          <div className="text-[11px] text-[var(--md-sys-color-outline)] h-3.5 truncate leading-none">COGS & Operating</div>
         </div>
       </div>
 
