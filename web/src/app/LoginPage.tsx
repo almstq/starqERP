@@ -30,7 +30,7 @@ declare global {
 }
 
 const GOOGLE_CLIENT_ID = (
-  import.meta.env.VITE_GOOGLE_CLIENT_ID || '901212915429-starq-erp-web.apps.googleusercontent.com'
+  import.meta.env.VITE_GOOGLE_CLIENT_ID || '901212915429-l7i347so1avnr0dnaq50hfi91fm0d0o4.apps.googleusercontent.com'
 ).trim();
 
 function sanitizeErrorMessage(code: string): string {
