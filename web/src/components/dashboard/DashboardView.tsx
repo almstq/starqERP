@@ -32,7 +32,7 @@ import {
 } from 'recharts';
 import { useERP } from '../../context/ERPContext';
 import { MONTHLY_SALES_CHART_DATA, SERVICE_BREAKDOWN_DATA } from '../../data/mockData';
-import { StarqHQView } from '../platform/StarqHQView';
+import { StarqHQShell } from '../platform/StarqHQShell';
 import {
   Button,
   Surface,
@@ -68,7 +68,7 @@ export const DashboardView: React.FC = () => {
   } = useERP();
 
   if (activePlane === 'platform') {
-    return <StarqHQView />;
+    return <StarqHQShell />;
   }
 
   const activeJobs = jobs.filter((j) => !['Completed', 'Paid'].includes(j.status));
