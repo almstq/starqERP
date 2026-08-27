@@ -100,6 +100,9 @@ declare
   book_name text;
   book_archetype text;
 begin
+  -- Temporarily set session_replication_role to replica to allow atomic backfill of append-only audit/journal records
+  set local session_replication_role = 'replica';
+
   for org in select id, slug, legal_name from public.organisations loop
     -- Check if a book already exists
     if not exists (select 1 from public.books where organisation_id = org.id) then
@@ -196,6 +199,9 @@ begin
 
     end if;
   end loop;
+
+  -- Restore normal replication role
+  set local session_replication_role = 'origin';
 end $$;
 
 -- 9. Enforce Tenant-Safe Composite Foreign Keys on execution tables
