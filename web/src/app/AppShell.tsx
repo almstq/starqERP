@@ -41,7 +41,11 @@ import {
   LifeBuoy,
   Info,
   Plus,
+  ClipboardList,
+  Layers,
+  Activity,
 } from 'lucide-react';
+import { StarqHQShell, PlatformTabId } from '../components/platform/StarqHQShell';
 
 export type MaterialWindowClass = 'compact' | 'medium' | 'expanded' | 'large' | 'extra-large';
 
@@ -87,6 +91,24 @@ const NAV = [
   { to: '/settings',    label: 'Settings',         Icon: SettingsIcon },
 ];
 
+export const PLATFORM_NAV: Array<{
+  id: PlatformTabId;
+  label: string;
+  Icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+  badgeKey?: string;
+}> = [
+  { id: 'overview',      label: 'Overview',              Icon: LayoutDashboard },
+  { id: 'applications',  label: 'Applications',          Icon: ClipboardList, badgeKey: 'pendingApplications' },
+  { id: 'tenants',       label: 'Tenants',               Icon: Building2 },
+  { id: 'provisioning',  label: 'Provisioning',          Icon: Layers },
+  { id: 'subscriptions', label: 'Subscriptions & Plans', Icon: Sparkles },
+  { id: 'billing',       label: 'Billing',               Icon: CreditCard },
+  { id: 'health',        label: 'Usage & Health',        Icon: Activity },
+  { id: 'support',       label: 'Support',               Icon: LifeBuoy },
+  { id: 'audit',         label: 'Audit & Security',      Icon: ShieldCheck },
+  { id: 'settings',      label: 'Platform Settings',     Icon: SettingsIcon },
+];
+
 export const SETTINGS_SUBNAV = [
   { id: 'profile',   label: 'Profile & Tax',       Icon: Building2 },
   { id: 'branding',  label: 'Branding & Logo',     Icon: ImageIcon },
@@ -114,6 +136,8 @@ export const AppShell: React.FC = () => {
   const { themeMode, setThemeMode, resolvedTheme } = useTheme();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [tenantMenuOpen, setTenantMenuOpen] = useState(false);
+  const [platformTab, setPlatformTab] = useState<PlatformTabId>('overview');
+  const { pendingApplications } = useERP();
 
   const isPlatformOperator = Boolean(
     session?.platform_entitlement ||
@@ -135,7 +159,7 @@ export const AppShell: React.FC = () => {
 
   useEffect(() => {
     setMobileDrawerOpen(false);
-  }, [location.pathname]);
+  }, [location.pathname, activePlane, platformTab]);
 
   const isMoreActive = [
     '/inventory',
@@ -175,8 +199,8 @@ export const AppShell: React.FC = () => {
           <div
             className="flex h-8 w-8 items-center justify-center rounded-[var(--md-sys-shape-corner-medium)] shrink-0"
             style={{
-              backgroundColor: 'var(--md-sys-color-primary)',
-              color: 'var(--md-sys-color-on-primary)',
+              backgroundColor: activePlane === 'platform' ? '#4338ca' : 'var(--md-sys-color-primary)',
+              color: '#ffffff',
             }}
           >
             <StarqLogomark size={18} />
@@ -187,11 +211,11 @@ export const AppShell: React.FC = () => {
               <span
                 className="mono-num text-[11px] font-bold ml-1 px-1.5 py-0.5 rounded-[var(--md-sys-shape-corner-small)]"
                 style={{
-                  backgroundColor: 'var(--md-sys-color-primary-container)',
-                  color: 'var(--md-sys-color-on-primary-container)',
+                  backgroundColor: activePlane === 'platform' ? '#4338ca' : 'var(--md-sys-color-primary-container)',
+                  color: activePlane === 'platform' ? '#ffffff' : 'var(--md-sys-color-on-primary-container)',
                 }}
               >
-                ERP
+                {activePlane === 'platform' ? 'HQ' : 'ERP'}
               </span>
             </div>
           </div>
@@ -199,23 +223,23 @@ export const AppShell: React.FC = () => {
 
         {/* Navigation Links */}
         <nav className="flex flex-1 flex-col gap-0.5 px-3 py-2 overflow-y-auto" aria-label="Modules">
-          {NAV.map(({ to, label, Icon, end }) => {
-            const isSettings = to === '/settings';
-            const inSettings = location.pathname.startsWith('/settings');
-            const searchParams = new URLSearchParams(location.search);
-            const currentTab = searchParams.get('tab') || 'profile';
+          {activePlane === 'platform' ? (
+            PLATFORM_NAV.map(({ id, label, Icon, badgeKey }) => {
+              const isActive = platformTab === id;
+              const badgeCount =
+                badgeKey === 'pendingApplications'
+                  ? pendingApplications.filter((a) => a.status === 'pending_approval').length
+                  : 0;
 
-            return (
-              <div key={to} className="flex flex-col">
-                <NavLink
-                  to={to}
-                  end={end}
-                  className={({ isActive }) =>
-                    `group relative overflow-hidden flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--md-sys-shape-corner-full)] text-xs font-medium transition-all duration-150 ${
-                      isActive ? 'font-semibold' : ''
-                    }`
-                  }
-                  style={({ isActive }) =>
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setPlatformTab(id)}
+                  className={`group relative overflow-hidden flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--md-sys-shape-corner-full)] text-xs font-medium transition-all duration-150 text-left w-full cursor-pointer ${
+                    isActive ? 'font-semibold' : ''
+                  }`}
+                  style={
                     isActive
                       ? {
                           backgroundColor: 'var(--md-sys-color-secondary-container)',
@@ -226,50 +250,93 @@ export const AppShell: React.FC = () => {
                         }
                   }
                 >
-                  {/* State Layer */}
                   <span
                     className="absolute inset-0 pointer-events-none rounded-[inherit] transition-opacity duration-150 opacity-0 group-hover:opacity-[var(--md-sys-state-hover-opacity)] group-active:opacity-[var(--md-sys-state-pressed-opacity)] bg-current"
                     aria-hidden="true"
                   />
                   <Icon size={17} strokeWidth={1.9} aria-hidden="true" className="relative z-10 shrink-0" />
                   <span className="relative z-10 truncate flex-1">{label}</span>
-                  {isSettings && (
-                    <ChevronDown
-                      size={14}
-                      className={`relative z-10 transition-transform duration-200 ${
-                        inSettings
-                          ? 'rotate-180 text-[var(--md-sys-color-primary)]'
-                          : 'text-[var(--md-sys-color-on-surface-variant)]/60'
-                      }`}
-                    />
+                  {badgeCount > 0 && (
+                    <span className="relative z-10 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white">
+                      {badgeCount}
+                    </span>
                   )}
-                </NavLink>
+                </button>
+              );
+            })
+          ) : (
+            NAV.map(({ to, label, Icon, end }) => {
+              const isSettings = to === '/settings';
+              const inSettings = location.pathname.startsWith('/settings');
+              const searchParams = new URLSearchParams(location.search);
+              const currentTab = searchParams.get('tab') || 'profile';
 
-                {/* Sub-Navigation nested under Settings */}
-                {isSettings && inSettings && (
-                  <div className="ml-5 pl-2.5 my-1 flex flex-col gap-0.5 border-l border-[var(--md-sys-color-outline-variant)]/60 animate-in fade-in duration-150">
-                    {SETTINGS_SUBNAV.map((sub) => {
-                      const isSubActive = currentTab === sub.id;
-                      return (
-                        <NavLink
-                          key={sub.id}
-                          to={`/settings?tab=${sub.id}`}
-                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--md-sys-shape-corner-small)] text-[11px] transition-colors ${
-                            isSubActive
-                              ? 'font-bold bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
-                              : 'text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:text-[var(--md-sys-color-on-surface)]'
-                          }`}
-                        >
-                          <sub.Icon size={13} strokeWidth={1.8} className="shrink-0" />
-                          <span className="truncate">{sub.label}</span>
-                        </NavLink>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              return (
+                <div key={to} className="flex flex-col">
+                  <NavLink
+                    to={to}
+                    end={end}
+                    className={({ isActive }) =>
+                      `group relative overflow-hidden flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--md-sys-shape-corner-full)] text-xs font-medium transition-all duration-150 ${
+                        isActive ? 'font-semibold' : ''
+                      }`
+                    }
+                    style={({ isActive }) =>
+                      isActive
+                        ? {
+                            backgroundColor: 'var(--md-sys-color-secondary-container)',
+                            color: 'var(--md-sys-color-on-secondary-container)',
+                          }
+                        : {
+                            color: 'var(--md-sys-color-on-surface-variant)',
+                          }
+                    }
+                  >
+                    {/* State Layer */}
+                    <span
+                      className="absolute inset-0 pointer-events-none rounded-[inherit] transition-opacity duration-150 opacity-0 group-hover:opacity-[var(--md-sys-state-hover-opacity)] group-active:opacity-[var(--md-sys-state-pressed-opacity)] bg-current"
+                      aria-hidden="true"
+                    />
+                    <Icon size={17} strokeWidth={1.9} aria-hidden="true" className="relative z-10 shrink-0" />
+                    <span className="relative z-10 truncate flex-1">{label}</span>
+                    {isSettings && (
+                      <ChevronDown
+                        size={14}
+                        className={`relative z-10 transition-transform duration-200 ${
+                          inSettings
+                            ? 'rotate-180 text-[var(--md-sys-color-primary)]'
+                            : 'text-[var(--md-sys-color-on-surface-variant)]/60'
+                        }`}
+                      />
+                    )}
+                  </NavLink>
+
+                  {/* Sub-Navigation nested under Settings */}
+                  {isSettings && inSettings && (
+                    <div className="ml-5 pl-2.5 my-1 flex flex-col gap-0.5 border-l border-[var(--md-sys-color-outline-variant)]/60 animate-in fade-in duration-150">
+                      {SETTINGS_SUBNAV.map((sub) => {
+                        const isSubActive = currentTab === sub.id;
+                        return (
+                          <NavLink
+                            key={sub.id}
+                            to={`/settings?tab=${sub.id}`}
+                            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--md-sys-shape-corner-small)] text-[11px] transition-colors ${
+                              isSubActive
+                                ? 'font-bold bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
+                                : 'text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:text-[var(--md-sys-color-on-surface)]'
+                            }`}
+                          >
+                            <sub.Icon size={13} strokeWidth={1.8} className="shrink-0" />
+                            <span className="truncate">{sub.label}</span>
+                          </NavLink>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </nav>
 
         {/* System Footer */}
@@ -281,10 +348,12 @@ export const AppShell: React.FC = () => {
             className="flex items-center justify-between text-[11px]"
             style={{ color: 'var(--md-sys-color-on-surface-variant)' }}
           >
-            <span className="mono-num font-medium">starqERP v1.0</span>
+            <span className="mono-num font-medium">
+              {activePlane === 'platform' ? 'Starq HQ v2026.08' : 'starqERP v1.0'}
+            </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--positive)' }} />
-              <span>Online</span>
+              <span>{activePlane === 'platform' ? 'Control Plane' : 'Online'}</span>
             </span>
           </div>
         </div>
@@ -310,8 +379,8 @@ export const AppShell: React.FC = () => {
                 <div
                   className="flex h-7 w-7 items-center justify-center rounded-[var(--md-sys-shape-corner-small)] shrink-0"
                   style={{
-                    backgroundColor: 'var(--md-sys-color-primary)',
-                    color: 'var(--md-sys-color-on-primary)',
+                    backgroundColor: activePlane === 'platform' ? '#4338ca' : 'var(--md-sys-color-primary)',
+                    color: '#ffffff',
                   }}
                 >
                   <StarqLogomark size={16} />
@@ -321,11 +390,11 @@ export const AppShell: React.FC = () => {
                   <span
                     className="mono-num text-[10px] font-bold ml-1 px-1.5 py-0.5 rounded-[var(--md-sys-shape-corner-small)]"
                     style={{
-                      backgroundColor: 'var(--md-sys-color-primary-container)',
-                      color: 'var(--md-sys-color-on-primary-container)',
+                      backgroundColor: activePlane === 'platform' ? '#4338ca' : 'var(--md-sys-color-primary-container)',
+                      color: activePlane === 'platform' ? '#ffffff' : 'var(--md-sys-color-on-primary-container)',
                     }}
                   >
-                    ERP
+                    {activePlane === 'platform' ? 'HQ' : 'ERP'}
                   </span>
                 </div>
               </div>
@@ -340,25 +409,26 @@ export const AppShell: React.FC = () => {
             </div>
 
             <nav className="flex flex-1 flex-col gap-0.5 px-3 py-2 overflow-y-auto" aria-label="Modules">
-              {NAV.map(({ to, label, Icon, end }) => {
-                const isSettings = to === '/settings';
-                const inSettings = location.pathname.startsWith('/settings');
-                const searchParams = new URLSearchParams(location.search);
-                const currentTab = searchParams.get('tab') || 'profile';
+              {activePlane === 'platform' ? (
+                PLATFORM_NAV.map(({ id, label, Icon, badgeKey }) => {
+                  const isActive = platformTab === id;
+                  const badgeCount =
+                    badgeKey === 'pendingApplications'
+                      ? pendingApplications.filter((a) => a.status === 'pending_approval').length
+                      : 0;
 
-                return (
-                  <div key={to} className="flex flex-col">
-                    <NavLink
-                      key={to}
-                      to={to}
-                      end={end}
-                      onClick={() => setMobileDrawerOpen(false)}
-                      className={({ isActive }) =>
-                        `group relative overflow-hidden flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--md-sys-shape-corner-full)] text-xs font-medium transition-all duration-150 ${
-                          isActive ? 'font-semibold' : ''
-                        }`
-                      }
-                      style={({ isActive }) =>
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => {
+                        setPlatformTab(id);
+                        setMobileDrawerOpen(false);
+                      }}
+                      className={`group relative overflow-hidden flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--md-sys-shape-corner-full)] text-xs font-medium transition-all duration-150 text-left w-full cursor-pointer ${
+                        isActive ? 'font-semibold' : ''
+                      }`}
+                      style={
                         isActive
                           ? {
                               backgroundColor: 'var(--md-sys-color-secondary-container)',
@@ -369,51 +439,96 @@ export const AppShell: React.FC = () => {
                             }
                       }
                     >
-                      {/* State Layer */}
                       <span
                         className="absolute inset-0 pointer-events-none rounded-[inherit] transition-opacity duration-150 opacity-0 group-hover:opacity-[var(--md-sys-state-hover-opacity)] group-active:opacity-[var(--md-sys-state-pressed-opacity)] bg-current"
                         aria-hidden="true"
                       />
                       <Icon size={17} strokeWidth={1.9} aria-hidden="true" className="relative z-10 shrink-0" />
                       <span className="relative z-10 truncate flex-1">{label}</span>
-                      {isSettings && (
-                        <ChevronDown
-                          size={14}
-                          className={`relative z-10 transition-transform duration-200 ${
-                            inSettings
-                              ? 'rotate-180 text-[var(--md-sys-color-primary)]'
-                              : 'text-[var(--md-sys-color-on-surface-variant)]/60'
-                          }`}
-                        />
+                      {badgeCount > 0 && (
+                        <span className="relative z-10 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white">
+                          {badgeCount}
+                        </span>
                       )}
-                    </NavLink>
+                    </button>
+                  );
+                })
+              ) : (
+                NAV.map(({ to, label, Icon, end }) => {
+                  const isSettings = to === '/settings';
+                  const inSettings = location.pathname.startsWith('/settings');
+                  const searchParams = new URLSearchParams(location.search);
+                  const currentTab = searchParams.get('tab') || 'profile';
 
-                    {/* Sub-Navigation nested under Settings in mobile drawer */}
-                    {isSettings && inSettings && (
-                      <div className="ml-5 pl-2.5 my-1 flex flex-col gap-0.5 border-l border-[var(--md-sys-color-outline-variant)]/60 animate-in fade-in duration-150">
-                        {SETTINGS_SUBNAV.map((sub) => {
-                          const isSubActive = currentTab === sub.id;
-                          return (
-                            <NavLink
-                              key={sub.id}
-                              to={`/settings?tab=${sub.id}`}
-                              onClick={() => setMobileDrawerOpen(false)}
-                              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--md-sys-shape-corner-small)] text-[11px] transition-colors ${
-                                isSubActive
-                                  ? 'font-bold bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
-                                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:text-[var(--md-sys-color-on-surface)]'
-                              }`}
-                            >
-                              <sub.Icon size={13} strokeWidth={1.8} className="shrink-0" />
-                              <span className="truncate">{sub.label}</span>
-                            </NavLink>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                  return (
+                    <div key={to} className="flex flex-col">
+                      <NavLink
+                        key={to}
+                        to={to}
+                        end={end}
+                        onClick={() => setMobileDrawerOpen(false)}
+                        className={({ isActive }) =>
+                          `group relative overflow-hidden flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--md-sys-shape-corner-full)] text-xs font-medium transition-all duration-150 ${
+                            isActive ? 'font-semibold' : ''
+                          }`
+                        }
+                        style={({ isActive }) =>
+                          isActive
+                            ? {
+                                backgroundColor: 'var(--md-sys-color-secondary-container)',
+                                color: 'var(--md-sys-color-on-secondary-container)',
+                              }
+                            : {
+                                color: 'var(--md-sys-color-on-surface-variant)',
+                              }
+                        }
+                      >
+                        {/* State Layer */}
+                        <span
+                          className="absolute inset-0 pointer-events-none rounded-[inherit] transition-opacity duration-150 opacity-0 group-hover:opacity-[var(--md-sys-state-hover-opacity)] group-active:opacity-[var(--md-sys-state-pressed-opacity)] bg-current"
+                          aria-hidden="true"
+                        />
+                        <Icon size={17} strokeWidth={1.9} aria-hidden="true" className="relative z-10 shrink-0" />
+                        <span className="relative z-10 truncate flex-1">{label}</span>
+                        {isSettings && (
+                          <ChevronDown
+                            size={14}
+                            className={`relative z-10 transition-transform duration-200 ${
+                              inSettings
+                                ? 'rotate-180 text-[var(--md-sys-color-primary)]'
+                                : 'text-[var(--md-sys-color-on-surface-variant)]/60'
+                            }`}
+                          />
+                        )}
+                      </NavLink>
+
+                      {/* Sub-Navigation nested under Settings in mobile drawer */}
+                      {isSettings && inSettings && (
+                        <div className="ml-5 pl-2.5 my-1 flex flex-col gap-0.5 border-l border-[var(--md-sys-color-outline-variant)]/60 animate-in fade-in duration-150">
+                          {SETTINGS_SUBNAV.map((sub) => {
+                            const isSubActive = currentTab === sub.id;
+                            return (
+                              <NavLink
+                                key={sub.id}
+                                to={`/settings?tab=${sub.id}`}
+                                onClick={() => setMobileDrawerOpen(false)}
+                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--md-sys-shape-corner-small)] text-[11px] transition-colors ${
+                                  isSubActive
+                                    ? 'font-bold bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
+                                    : 'text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:text-[var(--md-sys-color-on-surface)]'
+                                }`}
+                              >
+                                <sub.Icon size={13} strokeWidth={1.8} className="shrink-0" />
+                                <span className="truncate">{sub.label}</span>
+                              </NavLink>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </nav>
 
             <div
@@ -762,7 +877,11 @@ export const AppShell: React.FC = () => {
           style={{ backgroundColor: 'var(--md-sys-color-surface)' }}
         >
           <div className="w-full max-w-7xl mx-auto min-w-0">
-            <Outlet />
+            {activePlane === 'platform' ? (
+              <StarqHQShell activeTab={platformTab} onSelectTab={setPlatformTab} />
+            ) : (
+              <Outlet />
+            )}
           </div>
         </main>
       </div>
@@ -776,131 +895,186 @@ export const AppShell: React.FC = () => {
         }}
         aria-label="Mobile Bottom Navigation"
       >
-        <NavLink
-          to="/"
-          end
-          className={({ isActive }) =>
-            `flex flex-col items-center justify-center flex-1 py-1 text-center transition-colors group cursor-pointer ${
-              isActive ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-on-surface-variant)]'
-            }`
-          }
-        >
-          {({ isActive }) => (
-            <>
+        {activePlane === 'platform' ? (
+          <>
+            {PLATFORM_NAV.slice(0, 4).map(({ id, label, Icon, badgeKey }) => {
+              const isActive = platformTab === id;
+              const badgeCount =
+                badgeKey === 'pendingApplications'
+                  ? pendingApplications.filter((a) => a.status === 'pending_approval').length
+                  : 0;
+
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setPlatformTab(id)}
+                  className={`flex flex-col items-center justify-center flex-1 py-1 text-center transition-colors group cursor-pointer relative ${
+                    isActive ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-on-surface-variant)]'
+                  }`}
+                >
+                  <div
+                    className={`w-12 h-7 rounded-full flex items-center justify-center transition-all ${
+                      isActive
+                        ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
+                        : 'group-hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]'
+                    }`}
+                  >
+                    <Icon size={18} strokeWidth={isActive ? 2.4 : 1.9} />
+                  </div>
+                  <span className={`text-[10px] tracking-tight mt-0.5 ${isActive ? 'font-bold' : 'font-medium'}`}>
+                    {label.split(' ')[0]}
+                  </span>
+                  {badgeCount > 0 && (
+                    <span className="absolute top-1 right-2 px-1 py-0.2 rounded-full text-[9px] font-bold bg-amber-500 text-white">
+                      {badgeCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => setMobileDrawerOpen(true)}
+              className="flex flex-col items-center justify-center flex-1 py-1 text-center transition-colors group cursor-pointer text-[var(--md-sys-color-on-surface-variant)]"
+            >
+              <div className="w-12 h-7 rounded-full flex items-center justify-center group-hover:bg-[var(--md-sys-color-surface-container-high)]">
+                <Menu size={18} strokeWidth={1.9} />
+              </div>
+              <span className="text-[10px] tracking-tight mt-0.5 font-medium">
+                More
+              </span>
+            </button>
+          </>
+        ) : (
+          <>
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center flex-1 py-1 text-center transition-colors group cursor-pointer ${
+                  isActive ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-on-surface-variant)]'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <div
+                    className={`w-12 h-7 rounded-full flex items-center justify-center transition-all ${
+                      isActive
+                        ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
+                        : 'group-hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]'
+                    }`}
+                  >
+                    <LayoutDashboard size={18} strokeWidth={isActive ? 2.4 : 1.9} />
+                  </div>
+                  <span className={`text-[10px] tracking-tight mt-0.5 ${isActive ? 'font-bold' : 'font-medium'}`}>
+                    Dashboard
+                  </span>
+                </>
+              )}
+            </NavLink>
+
+            <NavLink
+              to="/jobs"
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center flex-1 py-1 text-center transition-colors group cursor-pointer ${
+                  isActive ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-on-surface-variant)]'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <div
+                    className={`w-12 h-7 rounded-full flex items-center justify-center transition-all ${
+                      isActive
+                        ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
+                        : 'group-hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]'
+                    }`}
+                  >
+                    <Wrench size={18} strokeWidth={isActive ? 2.4 : 1.9} />
+                  </div>
+                  <span className={`text-[10px] tracking-tight mt-0.5 ${isActive ? 'font-bold' : 'font-medium'}`}>
+                    Orders
+                  </span>
+                </>
+              )}
+            </NavLink>
+
+            <NavLink
+              to="/invoices"
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center flex-1 py-1 text-center transition-colors group cursor-pointer ${
+                  isActive ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-on-surface-variant)]'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <div
+                    className={`w-12 h-7 rounded-full flex items-center justify-center transition-all ${
+                      isActive
+                        ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
+                        : 'group-hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]'
+                    }`}
+                  >
+                    <FileText size={18} strokeWidth={isActive ? 2.4 : 1.9} />
+                  </div>
+                  <span className={`text-[10px] tracking-tight mt-0.5 ${isActive ? 'font-bold' : 'font-medium'}`}>
+                    Invoices
+                  </span>
+                </>
+              )}
+            </NavLink>
+
+            <NavLink
+              to="/customers"
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center flex-1 py-1 text-center transition-colors group cursor-pointer ${
+                  isActive ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-on-surface-variant)]'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <div
+                    className={`w-12 h-7 rounded-full flex items-center justify-center transition-all ${
+                      isActive
+                        ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
+                        : 'group-hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]'
+                    }`}
+                  >
+                    <Users size={18} strokeWidth={isActive ? 2.4 : 1.9} />
+                  </div>
+                  <span className={`text-[10px] tracking-tight mt-0.5 ${isActive ? 'font-bold' : 'font-medium'}`}>
+                    Customers
+                  </span>
+                </>
+              )}
+            </NavLink>
+
+            <button
+              type="button"
+              onClick={() => setMobileDrawerOpen(true)}
+              className={`flex flex-col items-center justify-center flex-1 py-1 text-center transition-colors group cursor-pointer ${
+                isMoreActive ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-on-surface-variant)]'
+              }`}
+            >
               <div
                 className={`w-12 h-7 rounded-full flex items-center justify-center transition-all ${
-                  isActive
+                  isMoreActive
                     ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
                     : 'group-hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]'
                 }`}
               >
-                <LayoutDashboard size={18} strokeWidth={isActive ? 2.4 : 1.9} />
+                <Menu size={18} strokeWidth={isMoreActive ? 2.4 : 1.9} />
               </div>
-              <span className={`text-[10px] tracking-tight mt-0.5 ${isActive ? 'font-bold' : 'font-medium'}`}>
-                Dashboard
+              <span className={`text-[10px] tracking-tight mt-0.5 ${isMoreActive ? 'font-bold' : 'font-medium'}`}>
+                More
               </span>
-            </>
-          )}
-        </NavLink>
-
-        <NavLink
-          to="/jobs"
-          className={({ isActive }) =>
-            `flex flex-col items-center justify-center flex-1 py-1 text-center transition-colors group cursor-pointer ${
-              isActive ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-on-surface-variant)]'
-            }`
-          }
-        >
-          {({ isActive }) => (
-            <>
-              <div
-                className={`w-12 h-7 rounded-full flex items-center justify-center transition-all ${
-                  isActive
-                    ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
-                    : 'group-hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]'
-                }`}
-              >
-                <Wrench size={18} strokeWidth={isActive ? 2.4 : 1.9} />
-              </div>
-              <span className={`text-[10px] tracking-tight mt-0.5 ${isActive ? 'font-bold' : 'font-medium'}`}>
-                Orders
-              </span>
-            </>
-          )}
-        </NavLink>
-
-        <NavLink
-          to="/invoices"
-          className={({ isActive }) =>
-            `flex flex-col items-center justify-center flex-1 py-1 text-center transition-colors group cursor-pointer ${
-              isActive ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-on-surface-variant)]'
-            }`
-          }
-        >
-          {({ isActive }) => (
-            <>
-              <div
-                className={`w-12 h-7 rounded-full flex items-center justify-center transition-all ${
-                  isActive
-                    ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
-                    : 'group-hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]'
-                }`}
-              >
-                <FileText size={18} strokeWidth={isActive ? 2.4 : 1.9} />
-              </div>
-              <span className={`text-[10px] tracking-tight mt-0.5 ${isActive ? 'font-bold' : 'font-medium'}`}>
-                Invoices
-              </span>
-            </>
-          )}
-        </NavLink>
-
-        <NavLink
-          to="/customers"
-          className={({ isActive }) =>
-            `flex flex-col items-center justify-center flex-1 py-1 text-center transition-colors group cursor-pointer ${
-              isActive ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-on-surface-variant)]'
-            }`
-          }
-        >
-          {({ isActive }) => (
-            <>
-              <div
-                className={`w-12 h-7 rounded-full flex items-center justify-center transition-all ${
-                  isActive
-                    ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
-                    : 'group-hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]'
-                }`}
-              >
-                <Users size={18} strokeWidth={isActive ? 2.4 : 1.9} />
-              </div>
-              <span className={`text-[10px] tracking-tight mt-0.5 ${isActive ? 'font-bold' : 'font-medium'}`}>
-                Customers
-              </span>
-            </>
-          )}
-        </NavLink>
-
-        <button
-          type="button"
-          onClick={() => setMobileDrawerOpen(true)}
-          className={`flex flex-col items-center justify-center flex-1 py-1 text-center transition-colors group cursor-pointer ${
-            isMoreActive ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-on-surface-variant)]'
-          }`}
-        >
-          <div
-            className={`w-12 h-7 rounded-full flex items-center justify-center transition-all ${
-              isMoreActive
-                ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
-                : 'group-hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]'
-            }`}
-          >
-            <Menu size={18} strokeWidth={isMoreActive ? 2.4 : 1.9} />
-          </div>
-          <span className={`text-[10px] tracking-tight mt-0.5 ${isMoreActive ? 'font-bold' : 'font-medium'}`}>
-            More
-          </span>
-        </button>
+            </button>
+          </>
+        )}
       </nav>
 
       {/* Global Modals & Operational Drawers */}
