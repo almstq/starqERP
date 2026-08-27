@@ -265,8 +265,6 @@ export const PaymentsView: React.FC = () => {
         onRowClick={(p) => navigate(`/payments/${p.id}`)}
         emptyMessage="No payment transactions matching search criteria."
       />
-
-      <RecordPaymentModal />
     </div>
   );
 };

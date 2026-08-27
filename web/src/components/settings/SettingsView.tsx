@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Building2,
   ShieldCheck,
@@ -14,7 +15,7 @@ import {
   MapPin,
   LifeBuoy,
   Image as ImageIcon,
-  Info
+  Info,
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { GstRegistrationStatus } from '../../types/erp';
@@ -28,9 +29,70 @@ import { AboutTab } from './AboutTab';
 
 type SettingsSubTab = 'profile' | 'branding' | 'roles' | 'users' | 'workflows' | 'support' | 'about';
 
+interface TabConfig {
+  id: SettingsSubTab;
+  label: string;
+  shortLabel: string;
+  desc: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+}
+
+const SETTINGS_TABS: TabConfig[] = [
+  {
+    id: 'profile',
+    label: 'Organisation Profile & Tax',
+    shortLabel: 'Profile & Tax',
+    desc: 'Business identity, MIRA TIN, GST status & bank settlement',
+    icon: Building2,
+  },
+  {
+    id: 'branding',
+    label: 'Branding & Logo',
+    shortLabel: 'Branding & Logo',
+    desc: 'Official company logo for invoices, quotations & top chrome',
+    icon: ImageIcon,
+  },
+  {
+    id: 'roles',
+    label: 'Roles & Permissions',
+    shortLabel: 'Roles & Permissions',
+    desc: 'Segregation of duties, capabilities & access matrix',
+    icon: ShieldCheck,
+  },
+  {
+    id: 'users',
+    label: 'Users & Authorizations',
+    shortLabel: 'Users & Staff',
+    desc: 'Active team members, seats & authentication credentials',
+    icon: Users,
+  },
+  {
+    id: 'workflows',
+    label: 'Configurable Workflows',
+    shortLabel: 'Workflows',
+    desc: 'Multi-stage approval gates & garage workflow automation',
+    icon: GitBranch,
+  },
+  {
+    id: 'support',
+    label: 'Support & Escalation',
+    shortLabel: 'Support & Help',
+    desc: 'Technical escalation paths & starqERP support contacts',
+    icon: LifeBuoy,
+  },
+  {
+    id: 'about',
+    label: 'About starqERP',
+    shortLabel: 'About starqERP',
+    desc: 'System architecture, platform manifest & software release info',
+    icon: Info,
+  },
+];
+
 export const SettingsView: React.FC = () => {
   const { currentTenant, updateTenant, updateTenantLogo, setIsSetupModalOpen } = useERP();
-  const [activeSubTab, setActiveSubTab] = useState<SettingsSubTab>('profile');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeSubTab = (searchParams.get('tab') as SettingsSubTab) || 'profile';
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   // Local state for current tenant editing
@@ -45,8 +107,7 @@ export const SettingsView: React.FC = () => {
   const [email, setEmail] = useState(currentTenant.email);
   const [island, setIsland] = useState(currentTenant.island);
 
-  // Synchronize local form state if currentTenant changes
-  React.useEffect(() => {
+  useEffect(() => {
     setName(currentTenant.name);
     setLegalName(currentTenant.legalName);
     setTinNumber(currentTenant.tinNumber);
@@ -71,297 +132,349 @@ export const SettingsView: React.FC = () => {
       address,
       phone,
       email,
-      island
+      island,
     });
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };
 
+  const currentTab = SETTINGS_TABS.find((t) => t.id === activeSubTab) || SETTINGS_TABS[0];
+
   return (
-    <div className="space-y-6 max-w-5xl pb-12">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-7xl pb-12 w-full min-w-0">
+      {/* Top Header & Breadcrumb */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--md-sys-color-outline-variant)]/60 pb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-bold text-[var(--md-sys-color-on-surface)] tracking-tight">
               Tenant & System Settings
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[11px] font-bold">
+            <span className="text-[var(--md-sys-color-outline-variant)] font-light">/</span>
+            <span
+              className="px-2.5 py-0.5 rounded-full text-xs font-bold"
+              style={{
+                backgroundColor: 'var(--md-sys-color-secondary-container)',
+                color: 'var(--md-sys-color-on-secondary-container)',
+              }}
+            >
+              {currentTab.label}
+            </span>
+            <span
+              className="px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-[var(--md-sys-color-outline-variant)]"
+              style={{
+                backgroundColor: 'var(--md-sys-color-primary-container)',
+                color: 'var(--md-sys-color-on-primary-container)',
+              }}
+            >
               {currentTenant.name}
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Configure multi-tenant business identity, MIRA GST compliance, custom role capabilities, and shop floor workflows.
+          <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1">
+            {currentTab.desc}
           </p>
         </div>
 
         <button
+          type="button"
           onClick={() => setIsSetupModalOpen(true)}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all self-start sm:self-auto"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all self-start sm:self-auto cursor-pointer border border-[var(--md-sys-color-outline-variant)]"
+          style={{
+            backgroundColor: 'var(--md-sys-color-surface-container-high)',
+            color: 'var(--md-sys-color-on-surface)',
+          }}
         >
-          <Plus className="w-4 h-4 text-blue-600" />
+          <Plus className="w-4 h-4 text-[var(--md-sys-color-primary)]" />
           <span>New Client Onboarding</span>
         </button>
       </div>
 
-      {/* Settings Navigation Subtabs */}
-      <div className="flex items-center gap-2 border-b border-[var(--md-sys-color-outline-variant)] pb-2 overflow-x-auto scrollbar-none">
-        {[
-          { id: 'profile', label: 'Organisation Profile & Tax', icon: Building2 },
-          { id: 'branding', label: 'Branding & Logo', icon: ImageIcon },
-          { id: 'roles', label: 'Roles & Permissions', icon: ShieldCheck },
-          { id: 'users', label: 'Users & Authorizations', icon: Users },
-          { id: 'workflows', label: 'Configurable Workflows', icon: GitBranch },
-          { id: 'support', label: 'Support & Escalation', icon: LifeBuoy },
-          { id: 'about', label: 'About starqERP', icon: Info }
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeSubTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveSubTab(tab.id as SettingsSubTab)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-[var(--md-sys-shape-corner-full)] text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                isActive
-                  ? 'shadow-xs'
-                  : 'hover:bg-[var(--md-sys-color-surface-container-high)]'
-              }`}
-              style={
-                isActive
-                  ? {
-                      backgroundColor: 'var(--md-sys-color-primary)',
-                      color: 'var(--md-sys-color-on-primary)',
-                    }
-                  : {
+      {/* Main Content Area: 100% Full Width */}
+      <div className="w-full min-w-0">
+        {activeSubTab === 'profile' && (
+          <form onSubmit={handleSaveProfile} className="space-y-6 animate-in fade-in">
+            {savedSuccess && (
+              <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Organisation Settings Saved & Audited Successfully!</span>
+              </div>
+            )}
+
+            {/* Legal & Invoicing Identity */}
+            <div
+              className="p-5 sm:p-6 rounded-[var(--md-sys-shape-corner-large)] border space-y-5"
+              style={{
+                backgroundColor: 'var(--md-sys-color-surface)',
+                borderColor: 'var(--md-sys-color-outline-variant)',
+              }}
+            >
+              <div className="flex items-center gap-2 text-xs font-bold text-[var(--md-sys-color-primary)] uppercase tracking-wider">
+                <Building2 size={16} />
+                <span>Organisation Identity & Invoicing Details</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
+                    Tenant Display Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)]"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                      color: 'var(--md-sys-color-on-surface)',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
+                    Registered Legal Entity Name
+                  </label>
+                  <input
+                    type="text"
+                    value={legalName}
+                    onChange={(e) => setLegalName(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)]"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                      color: 'var(--md-sys-color-on-surface)',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
+                    SME Industry Archetype
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value="Automotive & Body Repair"
+                    className="w-full px-3.5 py-2 text-xs border rounded-xl opacity-80 cursor-not-allowed"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                      borderColor: 'var(--md-sys-color-outline-variant)',
                       color: 'var(--md-sys-color-on-surface-variant)',
-                    }
-              }
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
+                    Registered Island
+                  </label>
+                  <select
+                    value={island}
+                    onChange={(e) => setIsland(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)]"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                      color: 'var(--md-sys-color-on-surface)',
+                    }}
+                  >
+                    <option value="Male'">Male'</option>
+                    <option value="Hulhumale' (Phase 1 / Phase 2)">Hulhumale' (Phase 1 / Phase 2)</option>
+                    <option value="Vilimale'">Vilimale'</option>
+                    <option value="Addu City">Addu City</option>
+                    <option value="Fuvahmulah">Fuvahmulah</option>
+                    <option value="Kulhudhuffushi">Kulhudhuffushi</option>
+                    <option value="Other / Atoll Site">Other / Atoll Site</option>
+                  </select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
+                    Physical Registered Address
+                  </label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)]"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                      color: 'var(--md-sys-color-on-surface)',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
+                    Official Contact Phone
+                  </label>
+                  <input
+                    type="text"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)]"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                      color: 'var(--md-sys-color-on-surface)',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
+                    Accounts & Tax Inquiries Email
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)]"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                      color: 'var(--md-sys-color-on-surface)',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* MIRA & Statutory Compliance */}
+            <div
+              className="p-5 sm:p-6 rounded-[var(--md-sys-shape-corner-large)] border space-y-5"
+              style={{
+                backgroundColor: 'var(--md-sys-color-surface)',
+                borderColor: 'var(--md-sys-color-outline-variant)',
+              }}
             >
-              <Icon className="w-3.5 h-3.5" />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
+              <div className="flex items-center gap-2 text-xs font-bold text-[var(--md-sys-color-primary)] uppercase tracking-wider">
+                <Landmark size={16} />
+                <span>MIRA Tax Compliance & Banking Settlement</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
+                    MIRA GST Statutory Registration Status
+                  </label>
+                  <select
+                    value={gstStatus}
+                    onChange={(e) => setGstStatus(e.target.value as GstRegistrationStatus)}
+                    className="w-full px-3.5 py-2 text-xs border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)]"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                      color: 'var(--md-sys-color-on-surface)',
+                    }}
+                  >
+                    <option value="registered">Registered with MIRA (Statutory GST filing enabled)</option>
+                    <option value="not_registered">Not Registered with MIRA (Exempt from GST filing)</option>
+                    <option value="pending">Pending Application with MIRA</option>
+                  </select>
+                  <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-1">
+                    TIN entry alone does not automatically make the business registered; explicit registration status controls the MIRA GST statutory schedule and Reports view.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
+                    MIRA GST TIN Registration Number
+                  </label>
+                  <input
+                    type="text"
+                    value={tinNumber}
+                    onChange={(e) => setTinNumber(e.target.value)}
+                    placeholder="e.g. 1004829GST001"
+                    className="w-full px-3.5 py-2 text-xs font-mono font-bold text-blue-600 border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)]"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
+                    Applicable GST Rate (%)
+                  </label>
+                  <select
+                    value={gstRate}
+                    onChange={(e) => setGstRate(Number(e.target.value))}
+                    className="w-full px-3.5 py-2 text-xs border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)]"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                      color: 'var(--md-sys-color-on-surface)',
+                    }}
+                  >
+                    <option value={8}>8% General Goods & Services Tax (GGST)</option>
+                    <option value={0}>0% Zero-Rated / Exempt</option>
+                    <option value={16}>16% Tourism Sector (TGST)</option>
+                  </select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
+                    Primary Settlement Bank Account
+                  </label>
+                  <input
+                    type="text"
+                    value={bmlAccount}
+                    onChange={(e) => setBmlAccount(e.target.value)}
+                    placeholder="e.g. 7730000189201 (BML MVR Main Account)"
+                    className="w-full px-3.5 py-2 text-xs font-mono border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)]"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                      color: 'var(--md-sys-color-on-surface)',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer hover:shadow-lg"
+                style={{
+                  backgroundColor: 'var(--md-sys-color-primary)',
+                  color: 'var(--md-sys-color-on-primary)',
+                }}
+              >
+                <Save className="w-4 h-4" />
+                <span>Save Tenant Profile</span>
+              </button>
+            </div>
+          </form>
+        )}
+
+        {activeSubTab === 'branding' && (
+          <div className="space-y-6 animate-in fade-in">
+            <LogoUpload
+              currentLogoUrl={currentTenant.logoUrl}
+              entityName={currentTenant.name}
+              onSaveLogo={(url) => updateTenantLogo(url)}
+              title="Organisation / Business Logo"
+              description="Upload an official business logo for invoices, quotations, top chrome, and client headers. Supports PNG, WebP, JPEG, and SVG up to 2MB."
+              defaultLogoUrl="/club-ignition-logo.png"
+            />
+          </div>
+        )}
+
+        {activeSubTab === 'roles' && <RolesPermissionsTab />}
+
+        {activeSubTab === 'users' && <UsersManagementTab />}
+
+        {activeSubTab === 'workflows' && <WorkflowsConfigTab />}
+
+        {activeSubTab === 'support' && <SupportTab />}
+
+        {activeSubTab === 'about' && <AboutTab />}
       </div>
-
-      {/* SUBTAB CONTENT */}
-      {activeSubTab === 'profile' && (
-        <form onSubmit={handleSaveProfile} className="space-y-6 animate-in fade-in">
-          {savedSuccess && (
-            <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Organisation Settings Saved & Audited Successfully!</span>
-            </div>
-          )}
-
-          {/* Business Profile */}
-          <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
-              <Building2 className="w-4 h-4 text-blue-600" />
-              <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-                Organisation Identity & Invoicing Details
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Tenant Display Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Registered Legal Entity Name
-                </label>
-                <input
-                  type="text"
-                  value={legalName}
-                  onChange={(e) => setLegalName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  SME Industry Archetype
-                </label>
-                <input
-                  type="text"
-                  readOnly
-                  value={currentTenant.industry}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-semibold"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Registered Island
-                </label>
-                <select
-                  value={island}
-                  onChange={(e) => setIsland(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="Male'">Male' (Capital)</option>
-                  <option value="Hulhumale'">Hulhumale' (Phase 1 / Phase 2)</option>
-                  <option value="Thilafushi">Thilafushi Industrial Island</option>
-                  <option value="Villimale'">Villimale'</option>
-                  <option value="Addu City">Addu City</option>
-                  <option value="Fuvahmulah City">Fuvahmulah City</option>
-                  <option value="Kulhudhuffushi City">Kulhudhuffushi City</option>
-                </select>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Physical Registered Address
-                </label>
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Official Contact Phone
-                </label>
-                <input
-                  type="text"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Accounts & Tax Inquiries Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Tax & Banking Localization */}
-          <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
-              <Landmark className="w-4 h-4 text-emerald-600" />
-              <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-                MIRA Tax Compliance & Banking Settlement
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  MIRA GST Statutory Registration Status
-                </label>
-                <select
-                  value={gstStatus}
-                  onChange={(e) => setGstStatus(e.target.value as GstRegistrationStatus)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 font-bold"
-                >
-                  <option value="not_registered">Not Registered with MIRA (0% statutory filing / exempt)</option>
-                  <option value="registered">Registered with MIRA (Statutory GST filing enabled)</option>
-                </select>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  TIN entry alone does not automatically make the business registered; explicit registration status controls the MIRA GST statutory schedule and Reports view.
-                </p>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  MIRA GST TIN Registration Number
-                </label>
-                <input
-                  type="text"
-                  value={tinNumber}
-                  onChange={(e) => setTinNumber(e.target.value)}
-                  placeholder="e.g. 1004829GST001"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 font-mono font-bold focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Applicable GST Rate (%)
-                </label>
-                <select
-                  value={gstRate}
-                  onChange={(e) => setGstRate(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 font-bold"
-                >
-                  <option value={8}>8% General Goods & Services Tax (GGST)</option>
-                  <option value={16}>16% Tourism Sector GST (TGST)</option>
-                  <option value={0}>0% Zero-rated / Medical Healthcare Exempt</option>
-                </select>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Primary Settlement Bank Account
-                </label>
-                <input
-                  type="text"
-                  value={bmlAccount}
-                  onChange={(e) => setBmlAccount(e.target.value)}
-                  placeholder="e.g. 7730000189201 (BML MVR) or 9901004829101 (MIB)"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 font-mono font-bold"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all active:scale-95"
-            >
-              <Save className="w-4 h-4" />
-              <span>Save Tenant Profile</span>
-            </button>
-          </div>
-        </form>
-      )}
-
-      {activeSubTab === 'branding' && (
-        <div className="space-y-6 animate-in fade-in">
-          <LogoUpload
-            currentLogoUrl={currentTenant.logoUrl}
-            entityName={currentTenant.name}
-            onSaveLogo={(url) => updateTenantLogo(url)}
-            title="Organisation / Business Logo"
-            description="Upload an official business logo for invoices, quotations, top chrome, and client headers. Supports PNG, WebP, JPEG, and SVG up to 2MB."
-            defaultLogoUrl="/club-ignition-logo.png"
-          />
-        </div>
-      )}
-
-      {activeSubTab === 'roles' && <RolesPermissionsTab />}
-
-      {activeSubTab === 'users' && <UsersManagementTab />}
-
-      {activeSubTab === 'workflows' && <WorkflowsConfigTab />}
-      
-      {activeSubTab === 'support' && <SupportTab />}
-
-      {activeSubTab === 'about' && <AboutTab />}
     </div>
   );
 };

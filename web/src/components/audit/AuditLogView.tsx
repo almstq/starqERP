@@ -46,25 +46,25 @@ export const AuditLogView: React.FC = () => {
   const getActionBadge = (action: AuditLogEntry['action']) => {
     switch (action) {
       case 'USER_AUTHORIZED':
-        return <Badge variant="success" size="sm">User Authorized</Badge>;
+        return <Badge variant="positive" size="sm">User Authorized</Badge>;
       case 'USER_INVITED':
-        return <Badge variant="blue" size="sm">User Invited</Badge>;
+        return <Badge variant="info" size="sm">User Invited</Badge>;
       case 'USER_SUSPENDED':
-        return <Badge variant="danger" size="sm">Suspended</Badge>;
+        return <Badge variant="destructive" size="sm">Suspended</Badge>;
       case 'ROLE_UPDATED':
-        return <Badge variant="purple" size="sm">Role Modified</Badge>;
+        return <Badge variant="info" size="sm">Role Modified</Badge>;
       case 'STAGE_TRANSITIONED':
         return <Badge variant="info" size="sm">Stage Changed</Badge>;
       case 'INVOICE_ISSUED':
-        return <Badge variant="blue" size="sm">Invoice Issued</Badge>;
+        return <Badge variant="info" size="sm">Invoice Issued</Badge>;
       case 'PAYMENT_RECORDED':
-        return <Badge variant="success" size="sm">Payment Logged</Badge>;
+        return <Badge variant="positive" size="sm">Payment Logged</Badge>;
       case 'STOCK_ADJUSTED':
         return <Badge variant="warning" size="sm">Stock Movement</Badge>;
       case 'ORG_CONFIG_SAVED':
-        return <Badge variant="blue" size="sm">Tenant Config</Badge>;
+        return <Badge variant="info" size="sm">Tenant Config</Badge>;
       case 'WORKFLOW_MODIFIED':
-        return <Badge variant="purple" size="sm">Workflow Edit</Badge>;
+        return <Badge variant="info" size="sm">Workflow Edit</Badge>;
       default:
         return <Badge variant="neutral" size="sm">{action}</Badge>;
     }
@@ -177,8 +177,8 @@ export const AuditLogView: React.FC = () => {
 
       {/* Audit Log Table */}
       <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse min-w-[780px]">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400">
                 <th className="py-3 px-4 font-bold">Timestamp & Location</th>

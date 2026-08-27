@@ -177,34 +177,37 @@ export const RolesPermissionsTab: React.FC = () => {
       </div>
 
       {/* Role Picker Pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-        {roles.map((role) => {
-          const isSelected = role.id === selectedRole.id;
-          const userCount = users.filter((u) => u.roleId === role.id).length;
-          return (
-            <button
-              key={role.id}
-              onClick={() => setSelectedRoleId(role.id)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
-                isSelected
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-500/20'
-                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-              }`}
-            >
-              {role.isSystemAdmin && <Lock className="w-3.5 h-3.5" />}
-              <span>{role.name}</span>
-              <span
-                className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+      <div className="w-full max-w-full overflow-x-auto no-scrollbar scrollbar-none pb-2 pt-1">
+        <div className="flex items-center gap-2 min-w-max">
+          {roles.map((role) => {
+            const isSelected = role.id === selectedRole.id;
+            const userCount = users.filter((u) => u.roleId === role.id).length;
+            return (
+              <button
+                key={role.id}
+                type="button"
+                onClick={() => setSelectedRoleId(role.id)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all border cursor-pointer ${
                   isSelected
-                    ? 'bg-white/20 text-white'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-500/20'
+                    : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                 }`}
               >
-                {userCount}
-              </span>
-            </button>
-          );
-        })}
+                {role.isSystemAdmin && <Lock className="w-3.5 h-3.5" />}
+                <span>{role.name}</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                    isSelected
+                      ? 'bg-white/20 text-white'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                  }`}
+                >
+                  {userCount}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Role Definition & Permissions Card */}

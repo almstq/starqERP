@@ -2,116 +2,204 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShoppingCart,
-  Search,
   Plus,
+  Search,
   Filter,
-  Building2,
-  Phone,
-  Mail,
-  MapPin,
-  Clock,
+  Package,
+  Truck,
   CheckCircle2,
-  AlertCircle,
-  FileText,
-  Truck
+  Clock,
+  ArrowUpDown,
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
+import { Surface, Button, Badge, DataTable, ColumnDef, ResponsiveGrid } from '../ui';
 import { CreatePOModal } from './CreatePOModal';
+import { PurchaseOrder } from '../../types/erp';
 
 export const PurchasingView: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    suppliers,
-    purchaseOrders,
-    setIsCreatePOOpen,
-    formatMVR,
-    totalAccountsPayable
-  } = useERP();
+  const { purchaseOrders, suppliers, formatMVR, setIsCreatePOOpen } = useERP();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState<string>('All');
 
   const filteredPOs = purchaseOrders.filter((po) => {
     const matchesSearch =
+      searchQuery === '' ||
       po.poNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
       po.supplierName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       po.items.some((i) => i.itemName.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesStatus = statusFilter === 'All' || po.status === statusFilter;
+
     return matchesSearch && matchesStatus;
   });
 
+  const totalAccountsPayable = suppliers.reduce((sum, s) => sum + s.outstandingPayable, 0);
+
+  const columns: ColumnDef<PurchaseOrder>[] = [
+    {
+      key: 'poNumber',
+      header: 'PO #',
+      render: (po) => <span className="font-mono font-bold text-[var(--md-sys-color-primary)]">{po.poNumber}</span>,
+    },
+    {
+      key: 'supplierName',
+      header: 'Supplier / Vendor',
+      render: (po) => <span className="font-bold text-xs text-[var(--md-sys-color-on-surface)]">{po.supplierName}</span>,
+    },
+    {
+      key: 'orderDate',
+      header: 'Order Date',
+      render: (po) => <span className="text-xs text-[var(--md-sys-color-on-surface)]">{po.orderDate}</span>,
+    },
+    {
+      key: 'expectedDeliveryDate',
+      header: 'Expected Delivery',
+      render: (po) => <span className="text-xs text-[var(--md-sys-color-on-surface-variant)]">{po.expectedDeliveryDate}</span>,
+    },
+    {
+      key: 'items',
+      header: 'Items Ordered',
+      render: (po) => (
+        <div>
+          <div className="font-semibold text-xs text-[var(--md-sys-color-on-surface)]">{po.items.length} line items</div>
+          <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] truncate max-w-xs">
+            {po.items.map((i) => `${i.itemName} (${i.quantity})`).join(', ')}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'totalAmount',
+      header: 'Total Amount',
+      align: 'right',
+      render: (po) => (
+        <span className="font-mono font-bold mono-num text-[var(--md-sys-color-on-surface)]">
+          {formatMVR(po.totalAmount)}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      render: (po) => (
+        <Badge
+          variant={
+            po.status === 'Received & Stocked'
+              ? 'positive'
+              : po.status === 'Sent'
+              ? 'warning'
+              : 'neutral'
+          }
+          size="sm"
+        >
+          {po.status}
+        </Badge>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6 pb-12">
-      {/* Header */}
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="erp-h1 text-2xl">Purchasing & Material Procurement</h1>
-            <span className="erp-pill erp-pill-neutral text-xs">
-              {purchaseOrders.length} Orders
-            </span>
-          </div>
-          <p className="erp-muted mt-0.5 text-xs">
-            Purchase orders, material delivery receipts, and supplier accounts payable
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)]">
+            Purchasing & Material Procurement
+          </h1>
+          <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
+            Procure raw paint, clearcoat, and workshop supplies from accredited suppliers
           </p>
         </div>
 
-        <button
+        <Button
+          variant="filled"
+          size="sm"
           onClick={() => setIsCreatePOOpen(true)}
-          className="erp-btn-primary flex items-center gap-2 self-start sm:self-auto"
+          icon={<Plus size={15} />}
         >
-          <Plus size={16} />
           <span>New Purchase Order</span>
-        </button>
+        </Button>
       </div>
 
       {/* Summary KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="erp-card p-4">
-          <span className="erp-muted block text-xs font-semibold">Total Accounts Payable</span>
-          <div className={`erp-figure text-2xl font-bold mt-1 ${totalAccountsPayable > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <Surface variant="outlined" padding="sm" className="space-y-1">
+          <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] block">
+            Total Accounts Payable
+          </span>
+          <div
+            className={`text-2xl font-bold font-mono mono-num mt-1 ${
+              totalAccountsPayable > 0
+                ? 'text-[var(--md-sys-color-error)]'
+                : 'text-[var(--md-sys-color-primary)]'
+            }`}
+          >
             {formatMVR(totalAccountsPayable, false)}
           </div>
-          <span className="text-[11px] erp-muted">Unpaid supplier dues</span>
-        </div>
+          <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
+            Unpaid supplier dues
+          </span>
+        </Surface>
 
-        <div className="erp-card p-4">
-          <span className="erp-muted block text-xs font-semibold">Open Purchase Orders</span>
-          <div className="erp-figure text-2xl font-bold mt-1" style={{ color: 'var(--accent)' }}>
+        <Surface variant="outlined" padding="sm" className="space-y-1">
+          <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] block">
+            Open Purchase Orders
+          </span>
+          <div className="text-2xl font-bold font-mono mono-num mt-1 text-[var(--md-sys-color-primary)]">
             {purchaseOrders.filter((p) => p.status === 'Sent').length} Active
           </div>
-          <span className="text-[11px] erp-muted">Awaiting delivery & check-in</span>
-        </div>
+          <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
+            Awaiting delivery & check-in
+          </span>
+        </Surface>
 
-        <div className="erp-card p-4">
-          <span className="erp-muted block text-xs font-semibold">Approved Suppliers</span>
-          <div className="erp-figure text-2xl font-bold mt-1">
+        <Surface variant="outlined" padding="sm" className="space-y-1">
+          <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] block">
+            Approved Suppliers
+          </span>
+          <div className="text-2xl font-bold font-mono mono-num mt-1 text-[var(--md-sys-color-on-surface)]">
             {suppliers.length} Vendors
           </div>
-          <span className="text-[11px] erp-muted">Paints, vinyls, abrasives</span>
-        </div>
+          <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
+            Paints, vinyls, abrasives
+          </span>
+        </Surface>
       </div>
 
       {/* Toolbar & Filter */}
-      <div className="erp-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <Surface variant="outlined" padding="sm" className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="relative flex-1 max-w-md">
-          <Search size={15} className="erp-muted absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search size={15} className="text-[var(--md-sys-color-on-surface-variant)] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by PO #, supplier name, item..."
-            className="erp-input w-full pl-9 text-xs"
+            style={{
+              backgroundColor: 'var(--md-sys-color-surface-container-high)',
+              color: 'var(--md-sys-color-on-surface)',
+              borderColor: 'var(--md-sys-color-outline-variant)',
+              borderRadius: 'var(--md-sys-shape-corner-small)',
+            }}
+            className="w-full pl-9 pr-3 py-1.5 text-xs border outline-none focus:border-[var(--md-sys-color-primary)]"
           />
         </div>
 
         <div className="flex items-center gap-2 text-xs">
-          <span className="erp-muted">Status:</span>
+          <span className="text-[var(--md-sys-color-on-surface-variant)]">Status:</span>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="erp-input py-1 text-xs"
+            style={{
+              backgroundColor: 'var(--md-sys-color-surface-container-high)',
+              color: 'var(--md-sys-color-on-surface)',
+              borderColor: 'var(--md-sys-color-outline-variant)',
+              borderRadius: 'var(--md-sys-shape-corner-small)',
+            }}
+            className="h-8 px-2.5 text-xs border outline-none cursor-pointer"
           >
             <option value="All">All Statuses</option>
             <option value="Sent">Sent (In Transit)</option>
@@ -119,78 +207,16 @@ export const PurchasingView: React.FC = () => {
             <option value="Draft">Draft</option>
           </select>
         </div>
-      </div>
+      </Surface>
 
       {/* Orders Table */}
-      <div className="erp-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="erp-table">
-            <thead>
-              <tr>
-                <th>PO #</th>
-                <th>Supplier / Vendor</th>
-                <th>Order Date</th>
-                <th>Expected Delivery</th>
-                <th>Items Ordered</th>
-                <th className="text-right">Total Amount</th>
-                <th className="text-center">Status</th>
-                <th className="text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPOs.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center erp-muted py-8">
-                    No purchase orders found matching criteria.
-                  </td>
-                </tr>
-              ) : (
-                filteredPOs.map((po) => (
-                  <tr
-                    key={po.id}
-                    data-clickable="true"
-                    onClick={() => navigate(`/purchasing/${po.id}`)}
-                  >
-                    <td>
-                      <div className="font-mono font-bold" style={{ color: 'var(--accent)' }}>{po.poNumber}</div>
-                    </td>
-                    <td>
-                      <div className="font-bold text-xs">{po.supplierName}</div>
-                    </td>
-                    <td className="text-xs">{po.orderDate}</td>
-                    <td className="text-xs erp-muted">{po.expectedDeliveryDate}</td>
-                    <td className="text-xs">
-                      <div className="font-semibold">{po.items.length} line items</div>
-                      <div className="text-[11px] erp-muted truncate max-w-xs">
-                        {po.items.map((i) => `${i.itemName} (${i.quantity})`).join(', ')}
-                      </div>
-                    </td>
-                    <td className="text-right font-mono font-bold erp-money-out">
-                      {formatMVR(po.totalAmount)}
-                    </td>
-                    <td className="text-center">
-                      <span className={`erp-pill ${
-                        po.status === 'Received & Stocked'
-                          ? 'erp-pill-positive'
-                          : po.status === 'Sent'
-                          ? 'erp-pill-warning'
-                          : 'erp-pill-neutral'
-                      } text-[11px]`}>
-                        {po.status}
-                      </span>
-                    </td>
-                    <td className="text-right">
-                      <span className="text-xs font-semibold hover:underline" style={{ color: 'var(--accent)' }}>
-                        Inspect →
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable
+        data={filteredPOs}
+        columns={columns}
+        keyExtractor={(po) => po.id}
+        onRowClick={(po) => navigate(`/purchasing/${po.id}`)}
+        emptyMessage="No purchase orders found matching criteria."
+      />
 
       <CreatePOModal />
     </div>

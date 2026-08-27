@@ -5,15 +5,7 @@ import {
   Send,
   Bot,
   ArrowRight,
-  TrendingUp,
-  AlertCircle,
-  Package,
-  FileSpreadsheet,
-  CheckCircle2,
-  Receipt,
-  Wrench,
-  HelpCircle,
-  RefreshCw
+  RefreshCw,
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { Badge } from '../common/Badge';
@@ -24,13 +16,8 @@ export const StarqAICopilot: React.FC = () => {
     setIsAICopilotOpen,
     aiInsights,
     triggerAIInsightAction,
-    formatMVR,
-    jobs,
-    invoices,
-    inventory,
     setIsCreatePOOpen,
-    setActiveTab,
-    setSelectedJobId
+    setSelectedJobId,
   } = useERP();
 
   const [chatInput, setChatInput] = useState('');
@@ -39,8 +26,8 @@ export const StarqAICopilot: React.FC = () => {
   >([
     {
       sender: 'ai',
-      text: 'Salaam! I am starqAI, your embedded Maldives business copilot. I monitor your cash flow, job profitability, MIRA GST deadlines, and inventory in real-time. How can I assist you today?'
-    }
+      text: 'Salaam! I am starqAI, your embedded Maldives operational intelligence assistant. I monitor your cash flow, work order efficiency, GST obligations, and inventory in real-time. How can I assist your operations today?',
+    },
   ]);
   const [isTyping, setIsTyping] = useState(false);
 
@@ -60,98 +47,122 @@ export const StarqAICopilot: React.FC = () => {
       let action: { label: string; onClick: () => void } | undefined = undefined;
 
       const lower = q.toLowerCase();
-      if (lower.includes('overdue') || lower.includes('unpaid') || lower.includes('tma')) {
+      if (lower.includes('po') || lower.includes('clearcoat') || lower.includes('stock')) {
         responseText =
-          'You currently have 1 overdue invoice (INV-2026-081) totaling MVR 42,700 from Trans Maldivian Transfers (Fleet). It is 13 days past the agreed net-30 terms. Would you like me to open the invoice to review payment slips or send a statement?';
+          'Identified stock risk: PPG High-Gloss Polyurethane Clearcoat (SKU: PNT-CLR-001) is down to 2 cans (reorder threshold is 5). Would you like me to open a draft Purchase Order for 10 cans from Male Paint Centre?';
         action = {
-          label: 'View Overdue Invoice',
+          label: 'Create Draft Purchase Order',
           onClick: () => {
-            setActiveTab('invoices');
-            setIsAICopilotOpen(false);
-          }
-        };
-      } else if (lower.includes('stock') || lower.includes('clearcoat') || lower.includes('po') || lower.includes('reorder')) {
-        responseText =
-          'Critical stock alert: PPG 2K Clearcoat is down to 2 tins (min: 5) and Avery Satin Black Wrap is down to 1 roll (min: 3). With Job IGN-0234 and upcoming Prado respray, you risk bay idle time in 4 days. I can prepare a draft PO to ColorCraft Maldives for MVR 15,444.';
-        action = {
-          label: 'Open Pre-filled Purchase Order',
-          onClick: () => {
-            setActiveTab('purchasing');
             setIsCreatePOOpen(true);
             setIsAICopilotOpen(false);
-          }
+          },
         };
       } else if (lower.includes('profit') || lower.includes('margin') || lower.includes('ign-0234')) {
         responseText =
-          'Job IGN-0234 (Ahmed Rauf - Prado Repaint) quoted at MVR 48,500 has accrued MVR 9,970 in paint/clearcoat materials (+17.3% over estimate). However, due to solid labor efficiency, the job still maintains a 50.6% gross margin with MVR 24,530 net profit.';
+          'Work Order IGN-0234 (Ahmed Rauf - Prado Repaint) quoted at MVR 48,500 has accrued MVR 9,970 in paint and clearcoat materials (+17.3% over estimate). However, due to solid labor efficiency, the job still maintains a 50.6% gross margin with MVR 24,530 net profit.';
         action = {
-          label: 'Inspect IGN-0234 Profit Breakdown',
+          label: 'Inspect Work Order Details',
           onClick: () => {
-            setActiveTab('jobs');
             setSelectedJobId('job-1');
             setIsAICopilotOpen(false);
-          }
+          },
         };
       } else if (lower.includes('cash') || lower.includes('revenue') || lower.includes('today')) {
         responseText =
-          'Today you logged MVR 38,500 in sales. Total month-to-date revenue stands at MVR 173,700 against MVR 88,400 expenses, generating MVR 85,300 net operating surplus in May.';
+          'Today your team logged MVR 38,500 in sales. Total month-to-date revenue stands at MVR 173,700 against MVR 88,400 expenses, generating MVR 85,300 net operating surplus.';
       } else {
-        responseText = `Analyzed your request for "${q}". Everything is running smoothly across your 5 garage bays. 4 active jobs are on track for handover by Saturday, expecting MVR 38,500 cash collections upon customer collection.`;
+        responseText = `Analyzed your request for "${q}". Across your operational workspace, 4 active work orders are on track for customer handover this week, expecting MVR 38,500 cash collections.`;
       }
 
       setMessages((prev) => [...prev, { sender: 'ai', text: responseText, action }]);
       setIsTyping(false);
-    }, 600);
+    }, 500);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Backdrop */}
+      {/* Scrim Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity animate-in fade-in"
+        className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
         onClick={() => setIsAICopilotOpen(false)}
+        aria-hidden="true"
       />
 
-      {/* Drawer Panel */}
+      {/* Drawer Surface */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label="starqAI Copilot"
-        className="relative w-full max-w-lg bg-white border-l border-slate-200 shadow-2xl flex flex-col h-full z-10 animate-in slide-in-from-right duration-300"
+        className="relative w-full max-w-lg shadow-2xl flex flex-col h-full z-10 border-l animate-in slide-in-from-right duration-300"
+        style={{
+          backgroundColor: 'var(--md-sys-color-surface-container-high)',
+          borderColor: 'var(--md-sys-color-outline-variant)',
+          color: 'var(--md-sys-color-on-surface)',
+        }}
       >
         {/* Drawer Header */}
-        <div className="p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+        <div
+          className="p-5 border-b flex items-center justify-between"
+          style={{
+            backgroundColor: 'var(--md-sys-color-surface-container)',
+            borderColor: 'var(--md-sys-color-outline-variant)',
+          }}
+        >
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs">
-              <Sparkles className="w-5 h-5" aria-hidden="true" />
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center shadow-xs"
+              style={{
+                backgroundColor: 'var(--md-sys-color-primary)',
+                color: 'var(--md-sys-color-on-primary)',
+              }}
+            >
+              <Sparkles size={18} aria-hidden="true" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-900">starqAI Copilot</h2>
+                <h2 className="text-base font-bold text-[var(--md-sys-color-on-surface)]">
+                  starqAI Copilot
+                </h2>
                 <Badge variant="info" size="sm">
                   Active
                 </Badge>
               </div>
-              <p className="text-xs text-slate-500">Embedded ERP Assistant (starqAI)</p>
+              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
+                Maldives ERP Intelligence Assistant
+              </p>
             </div>
           </div>
           <button
             type="button"
             onClick={() => setIsAICopilotOpen(false)}
             aria-label="Close starqAI Copilot"
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            className="p-2 rounded-full hover:bg-[var(--md-sys-color-surface-container-highest)] transition-colors cursor-pointer text-[var(--md-sys-color-on-surface-variant)]"
           >
-            <X className="w-5 h-5" aria-hidden="true" />
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
 
         {/* Proactive Insights Banner */}
-        <div className="p-4 bg-slate-50/70 border-b border-slate-200 space-y-2">
+        <div
+          className="p-4 border-b space-y-2.5"
+          style={{
+            backgroundColor: 'var(--md-sys-color-surface-container-low)',
+            borderColor: 'var(--md-sys-color-outline-variant)',
+          }}
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Automated Business Intelligence
+            <span
+              className="text-[11px] font-bold uppercase tracking-wider"
+              style={{ color: 'var(--md-sys-color-on-surface-variant)' }}
+            >
+              Automated Operations Intelligence
             </span>
-            <span className="text-[11px] text-blue-600 font-medium">4 Key Insights</span>
+            <span
+              className="text-[11px] font-medium"
+              style={{ color: 'var(--md-sys-color-primary)' }}
+            >
+              {aiInsights.length} Key Insights
+            </span>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
@@ -159,16 +170,30 @@ export const StarqAICopilot: React.FC = () => {
               <div
                 key={insight.id}
                 onClick={() => triggerAIInsightAction(insight)}
-                className="p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-400 cursor-pointer transition-all text-left group shadow-2xs"
+                className="p-2.5 rounded-[var(--md-sys-shape-corner-medium)] border cursor-pointer transition-all text-left group"
+                style={{
+                  backgroundColor: 'var(--md-sys-color-surface)',
+                  borderColor: 'var(--md-sys-color-outline-variant)',
+                }}
               >
-                <div className="flex items-center justify-between text-[10px] text-slate-500">
-                  <span className="font-semibold text-blue-600">{insight.category}</span>
-                  <span className="text-rose-600 font-medium">{insight.impact}</span>
+                <div className="flex items-center justify-between text-[10px]">
+                  <span
+                    className="font-semibold"
+                    style={{ color: 'var(--md-sys-color-primary)' }}
+                  >
+                    {insight.category}
+                  </span>
+                  <span
+                    className="font-medium"
+                    style={{ color: 'var(--md-sys-color-error)' }}
+                  >
+                    {insight.impact}
+                  </span>
                 </div>
-                <p className="text-xs font-bold text-slate-900 mt-1 line-clamp-1 group-hover:text-blue-600">
+                <p className="text-xs font-bold text-[var(--md-sys-color-on-surface)] mt-1 line-clamp-1 group-hover:text-[var(--md-sys-color-primary)]">
                   {insight.title}
                 </p>
-                <span className="text-[10px] text-slate-500 flex items-center gap-1 mt-1 font-medium">
+                <span className="text-[10px] flex items-center gap-1 mt-1 font-medium text-[var(--md-sys-color-on-surface-variant)]">
                   {insight.actionButtonLabel} →
                 </span>
               </div>
@@ -184,25 +209,45 @@ export const StarqAICopilot: React.FC = () => {
               className={`flex gap-2.5 ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {m.sender === 'ai' && (
-                <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center shrink-0 mt-0.5">
-                  <Bot className="w-4 h-4" />
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                  style={{
+                    backgroundColor: 'var(--md-sys-color-primary-container)',
+                    color: 'var(--md-sys-color-on-primary-container)',
+                  }}
+                >
+                  <Bot size={15} />
                 </div>
               )}
               <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 leading-relaxed ${
-                  m.sender === 'user'
-                    ? 'bg-blue-600 text-white font-medium rounded-tr-none shadow-xs'
-                    : 'bg-slate-100 text-slate-800 border border-slate-200 rounded-tl-none'
+                className={`max-w-[85%] rounded-[var(--md-sys-shape-corner-large)] px-4 py-3 leading-relaxed ${
+                  m.sender === 'user' ? 'rounded-tr-none shadow-xs' : 'rounded-tl-none border'
                 }`}
+                style={
+                  m.sender === 'user'
+                    ? {
+                        backgroundColor: 'var(--md-sys-color-primary)',
+                        color: 'var(--md-sys-color-on-primary)',
+                      }
+                    : {
+                        backgroundColor: 'var(--md-sys-color-surface)',
+                        color: 'var(--md-sys-color-on-surface)',
+                        borderColor: 'var(--md-sys-color-outline-variant)',
+                      }
+                }
               >
                 <p>{m.text}</p>
                 {m.action && (
                   <button
                     onClick={m.action.onClick}
-                    className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white font-semibold text-[11px] shadow-xs hover:bg-blue-700 transition-colors"
+                    className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--md-sys-shape-corner-small)] font-semibold text-[11px] transition-colors cursor-pointer"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-primary-container)',
+                      color: 'var(--md-sys-color-on-primary-container)',
+                    }}
                   >
                     <span>{m.action.label}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight size={13} />
                   </button>
                 )}
               </div>
@@ -210,33 +255,54 @@ export const StarqAICopilot: React.FC = () => {
           ))}
 
           {isTyping && (
-            <div className="flex gap-2.5 items-center text-slate-500">
-              <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center shrink-0">
-                <Bot className="w-4 h-4" />
+            <div className="flex gap-2.5 items-center text-[var(--md-sys-color-on-surface-variant)]">
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                style={{
+                  backgroundColor: 'var(--md-sys-color-primary-container)',
+                  color: 'var(--md-sys-color-on-primary-container)',
+                }}
+              >
+                <Bot size={15} />
               </div>
-              <div className="px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl flex items-center gap-1 text-[11px]">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" />
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce delay-100" />
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce delay-200" />
-                <span className="ml-1 text-slate-500">Analyzing ERP data...</span>
+              <div
+                className="px-3 py-2 border rounded-xl flex items-center gap-1.5 text-[11px]"
+                style={{
+                  backgroundColor: 'var(--md-sys-color-surface)',
+                  borderColor: 'var(--md-sys-color-outline-variant)',
+                }}
+              >
+                <RefreshCw size={12} className="animate-spin text-[var(--md-sys-color-primary)]" />
+                <span>Analyzing ERP data...</span>
               </div>
             </div>
           )}
         </div>
 
         {/* Quick Suggested Prompts */}
-        <div className="px-4 py-2 border-t border-slate-200 bg-slate-50">
+        <div
+          className="px-4 py-2 border-t"
+          style={{
+            backgroundColor: 'var(--md-sys-color-surface-container)',
+            borderColor: 'var(--md-sys-color-outline-variant)',
+          }}
+        >
           <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
             {[
               'Draft PO for low clearcoat',
-              'Check overdue TMA invoices',
+              'Check overdue invoices',
               'Analyze IGN-0234 margin',
-              'Summarize May P&L'
+              'Summarize month revenue',
             ].map((p, i) => (
               <button
                 key={i}
                 onClick={() => handleSendMessage(p)}
-                className="whitespace-nowrap px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-[11px] text-slate-700 border border-slate-200 transition-colors shrink-0 shadow-2xs"
+                className="whitespace-nowrap px-2.5 py-1 rounded-[var(--md-sys-shape-corner-small)] text-[11px] border transition-colors shrink-0 cursor-pointer"
+                style={{
+                  backgroundColor: 'var(--md-sys-color-surface)',
+                  borderColor: 'var(--md-sys-color-outline-variant)',
+                  color: 'var(--md-sys-color-on-surface)',
+                }}
               >
                 {p}
               </button>
@@ -245,7 +311,13 @@ export const StarqAICopilot: React.FC = () => {
         </div>
 
         {/* Input Bar */}
-        <div className="p-4 flex gap-2" style={{ borderTop: '1px solid var(--border-subtle)', backgroundColor: 'var(--surface-2)' }}>
+        <div
+          className="p-4 flex gap-2 border-t"
+          style={{
+            backgroundColor: 'var(--md-sys-color-surface-container-high)',
+            borderColor: 'var(--md-sys-color-outline-variant)',
+          }}
+        >
           <input
             type="text"
             value={chatInput}
@@ -253,23 +325,24 @@ export const StarqAICopilot: React.FC = () => {
             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
             placeholder="Ask starqAI (e.g. 'Show margin on Prado repaint')..."
             style={{
-              backgroundColor: 'var(--surface-inset)',
-              color: 'var(--text-primary)',
-              borderColor: 'var(--border-strong)',
-              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'var(--md-sys-color-surface)',
+              color: 'var(--md-sys-color-on-surface)',
+              borderColor: 'var(--md-sys-color-outline-variant)',
+              borderRadius: 'var(--md-sys-shape-corner-full)',
             }}
-            className="flex-1 px-3.5 py-2 text-xs border outline-none focus:border-[var(--border-focus)]"
+            className="flex-1 px-4 py-2 text-xs border outline-none focus:border-[var(--md-sys-color-primary)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
           />
           <button
             onClick={() => handleSendMessage()}
             style={{
-              backgroundColor: 'var(--accent-primary)',
-              color: 'var(--text-inverse)',
-              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'var(--md-sys-color-primary)',
+              color: 'var(--md-sys-color-on-primary)',
+              borderRadius: 'var(--md-sys-shape-corner-full)',
             }}
-            className="px-3.5 py-2 font-semibold transition-colors shrink-0 cursor-pointer flex items-center justify-center"
+            className="px-4 py-2 font-semibold transition-colors shrink-0 cursor-pointer flex items-center justify-center"
+            aria-label="Send query"
           >
-            <Send className="w-4 h-4" />
+            <Send size={15} />
           </button>
         </div>
       </div>

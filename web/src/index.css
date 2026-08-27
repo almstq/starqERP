@@ -122,3 +122,37 @@ select {
 .skip-link:focus {
   top: 1rem;
 }
+
+/* ── Print Media Optimization (SERP-PRINT) ─────────────────────────────────── */
+@media print {
+  aside,
+  header,
+  nav,
+  .skip-link,
+  button:not(.print-preserve),
+  [role="navigation"],
+  [aria-label="Mobile Bottom Navigation"],
+  #starq-copilot-trigger,
+  .fixed,
+  .sticky {
+    display: none !important;
+  }
+
+  body,
+  html,
+  #root,
+  main {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    overflow: visible !important;
+  }
+
+  .print-page-break {
+    page-break-after: always;
+    break-after: page;
+  }
+}
