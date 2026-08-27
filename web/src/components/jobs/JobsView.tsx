@@ -32,6 +32,7 @@ export const JobsView: React.FC = () => {
     formatMVR,
     activeJobsCount,
     workflowStages,
+    currentTerms,
   } = useERP();
 
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
@@ -67,7 +68,7 @@ export const JobsView: React.FC = () => {
   const jobColumns: ColumnDef<JobOrder>[] = [
     {
       key: 'jobId',
-      header: 'Job ID',
+      header: `${currentTerms.order} ID`,
       width: '14%',
       render: (job) => (
         <span
@@ -81,7 +82,7 @@ export const JobsView: React.FC = () => {
     },
     {
       key: 'customerName',
-      header: 'Customer & Vehicle',
+      header: `${currentTerms.customer} & ${currentTerms.primaryAsset}`,
       width: '28%',
       render: (job) => (
         <div className="min-w-0">
@@ -89,14 +90,14 @@ export const JobsView: React.FC = () => {
             {job.customerName}
           </div>
           <div className="text-[11px] mono-num truncate text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
-            {job.vehicle?.plateNumber} ({job.vehicle?.model})
+            {job.vehicle?.plateNumber ? `${job.vehicle.plateNumber} (${job.vehicle.model})` : (job.projectRef || job.serviceType || 'Standard Scope')}
           </div>
         </div>
       ),
     },
     {
       key: 'serviceType',
-      header: 'Service',
+      header: 'Scope / Service',
       width: '16%',
       hideOn: 'compact',
       render: (job) => (
@@ -107,12 +108,12 @@ export const JobsView: React.FC = () => {
     },
     {
       key: 'bayNumber',
-      header: 'Bay',
+      header: currentTerms.facility,
       width: '12%',
       hideOn: 'medium',
       render: (job) => (
         <span className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
-          {job.bayNumber || 'Main Bay'}
+          {job.bayNumber || job.location || currentTerms.facility}
         </span>
       ),
     },
@@ -172,14 +173,14 @@ export const JobsView: React.FC = () => {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
             <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[var(--md-sys-color-on-surface)] truncate">
-              Work Orders & Floor Pipeline
+              {currentTerms.orders} & Delivery Pipeline
             </h1>
             <Badge variant="accent" size="sm">
               {activeJobsCount} Active
             </Badge>
           </div>
           <p className="mt-0.5 text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">
-            Dynamic pipeline stages ({workflowStages.length} phases), bay allocations & material tracking
+            Dynamic pipeline ({workflowStages.length} stages), {currentTerms.facility.toLowerCase()} allocation & deliverable tracking
           </p>
         </div>
 
@@ -201,7 +202,7 @@ export const JobsView: React.FC = () => {
             onClick={() => setIsCreateJobOpen(true)}
             icon={<Plus size={15} />}
           >
-            <span>New Job</span>
+            <span>New {currentTerms.order}</span>
           </Button>
         </ActionGroup>
       </div>
@@ -212,7 +213,7 @@ export const JobsView: React.FC = () => {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by job ID, customer, plate, model…"
+            placeholder={`Search by ${currentTerms.order.toLowerCase()} ID, ${currentTerms.customer.toLowerCase()}, ${currentTerms.primaryAsset.toLowerCase()}…`}
             icon={<Search size={14} />}
           />
         </div>

@@ -48,6 +48,7 @@ export const DashboardView: React.FC = () => {
   const {
     activePlane,
     currentTenant,
+    currentTerms,
     totalSalesToday,
     totalCashReceived,
     totalOutstandingInvoices,
@@ -76,7 +77,7 @@ export const DashboardView: React.FC = () => {
   const recentJobColumns: ColumnDef<any>[] = [
     {
       key: 'jobId',
-      header: 'Job ID / Bay',
+      header: `${currentTerms.order} / ${currentTerms.facility}`,
       width: '16%',
       render: (job) => (
         <div className="min-w-0">
@@ -84,27 +85,27 @@ export const DashboardView: React.FC = () => {
             {job.jobId}
           </div>
           <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] truncate mt-0.5">
-            {job.bayNumber || 'Main Bay'}
+            {job.bayNumber || job.location || currentTerms.facility}
           </div>
         </div>
       ),
     },
     {
       key: 'customerName',
-      header: 'Customer & Asset',
+      header: `${currentTerms.customer} & ${currentTerms.primaryAsset}`,
       width: '26%',
       render: (job) => (
         <div className="min-w-0">
           <div className="font-semibold text-xs text-[var(--md-sys-color-on-surface)] truncate">{job.customerName}</div>
           <div className="text-[11px] mono-num truncate text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
-            {job.vehicle?.plateNumber} ({job.vehicle?.model})
+            {job.vehicle?.plateNumber ? `${job.vehicle.plateNumber} (${job.vehicle.model})` : (job.projectRef || job.serviceType || 'Standard Scope')}
           </div>
         </div>
       ),
     },
     {
       key: 'serviceType',
-      header: 'Service',
+      header: 'Scope / Service',
       width: '16%',
       hideOn: 'compact',
       render: (job) => (
@@ -593,9 +594,9 @@ export const DashboardView: React.FC = () => {
         >
           <div className="min-w-0">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface)] truncate">
-              Active Work Orders & Floor Bays
+              {currentTerms.activeOrdersHeader}
             </h2>
-            <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">Live floor progress for service and repair packages</p>
+            <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">{currentTerms.activeOrdersSubtitle}</p>
           </div>
 
           <Link
@@ -603,7 +604,7 @@ export const DashboardView: React.FC = () => {
             className="text-xs font-semibold hover:underline flex items-center gap-1 shrink-0"
             style={{ color: 'var(--md-sys-color-primary)' }}
           >
-            <span>View All Jobs</span>
+            <span>View All {currentTerms.orders}</span>
             <ChevronRight size={14} />
           </Link>
         </div>
@@ -614,7 +615,7 @@ export const DashboardView: React.FC = () => {
           columns={recentJobColumns}
           keyExtractor={(j) => j.id}
           onRowClick={(j) => navigate(`/jobs/${j.id}`)}
-          emptyMessage="No active work orders on floor."
+          emptyMessage={`No active ${currentTerms.orders.toLowerCase()} in progress.`}
         />
       </Surface>
 

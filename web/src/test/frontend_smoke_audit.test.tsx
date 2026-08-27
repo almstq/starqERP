@@ -72,7 +72,7 @@ describe('Systematic Frontend Smoke Audit (SERP-197)', () => {
 
   it('Surface 3: Jobs Pipeline renders without throwing', () => {
     expect(() => renderSurface('/jobs')).not.toThrow();
-    expect(screen.getByRole('heading', { name: /Work Orders & Floor Pipeline/i })).toBeDefined();
+    expect(screen.getByRole('heading', { name: /Delivery Pipeline/i })).toBeDefined();
   });
 
   it('Surface 4: Invoices list renders without throwing', () => {

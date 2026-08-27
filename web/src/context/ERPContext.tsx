@@ -48,6 +48,7 @@ import {
 import { telemetry } from '../services/telemetry';
 import { dispatchCommand, apiGet } from '../services/apiGateway';
 import { useAuth } from './AuthContext';
+import { getArchetype, ArchetypeDefinition, ArchetypeTerminology } from '../domain/archetypes';
 import { switchContext as apiSwitchContext, fetchCurrentUser } from '../services/auth';
 import { ARCHETYPES } from '../domain/archetypes';
 import {
@@ -86,6 +87,8 @@ export interface ERPContextType {
   currentTenant: OrganisationTenant;
   currentBookId?: string;
   currentBook?: import('../types/erp').OrganisationBook;
+  currentArchetype: ArchetypeDefinition;
+  currentTerms: ArchetypeTerminology;
   tenants: OrganisationTenant[];
   switchTenant: (tenantId: string) => void;
   switchBook?: (bookId: string) => void;
@@ -662,6 +665,15 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!currentTenant.books || currentTenant.books.length === 0) return undefined;
     return currentTenant.books.find((b) => b.id === currentBookId) || currentTenant.books[0];
   }, [currentTenant, currentBookId]);
+
+  // Current Archetype computation (SERP-288)
+  const currentArchetype = useMemo(() => {
+    return getArchetype(currentBook?.archetypeId || (currentTenant as any)?.industry);
+  }, [currentBook, currentTenant]);
+
+  const currentTerms = useMemo(() => {
+    return currentArchetype.terminology;
+  }, [currentArchetype]);
 
   // Current User computation
   const currentUser = useMemo(() => {
@@ -2299,6 +2311,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         currentTenant,
         currentBookId,
         currentBook,
+        currentArchetype,
+        currentTerms,
         tenants,
         switchTenant,
         switchBook,

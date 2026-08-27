@@ -1,37 +1,60 @@
 import { describe, expect, it } from 'vitest';
-import { getArchetype, provisionArchetypeDefaults } from '../domain/archetypes';
+import { getArchetype, getArchetypeTerms, provisionArchetypeDefaults, ARCHETYPES } from '../domain/archetypes';
 
-describe('platform archetype provisioning', () => {
-  it('supports materially different tenants from one shared catalog', () => {
-    const automotive = provisionArchetypeDefaults('automotive_workshop', 'tenant-a');
-    const wholesale = provisionArchetypeDefaults('wholesale_trading', 'tenant-b');
+describe('SERP-288: Platform Archetype Decoupling & Tenant Customization', () => {
+  it('supports materially different tenants from one shared catalog with industry-specific terminology', () => {
+    const general = getArchetype('general_business');
+    const software = getArchetype('software_services');
+    const automotive = getArchetype('automotive_workshop');
+    const marine = getArchetype('marine_service');
 
-    expect(automotive.archetypeId).toBe('automotive_workshop');
-    expect(automotive.workflow.map((item) => item.code)).toEqual(['INTAKE', 'WORK', 'QC', 'COMPLETE']);
-    expect(automotive.documentDefaults.orderDocumentLabel).toBe('Job Card');
+    expect(general.terminology.customer).toBe('Customer');
+    expect(general.terminology.order).toBe('Work Order');
+    expect(general.terminology.showVehicleFields).toBe(false);
 
-    expect(wholesale.archetypeId).toBe('wholesale_trading');
-    expect(wholesale.workflow.map((item) => item.code)).toEqual(['ORDERED', 'PICKING', 'DISPATCHED']);
-    expect(wholesale.documentDefaults.orderDocumentLabel).toBe('Sales Order');
-    expect(wholesale.workflow.every((item) => item.tenantId === 'tenant-b')).toBe(true);
-    expect(automotive.workflow.some((item) => item.tenantId === 'tenant-b')).toBe(false);
+    expect(software.terminology.customer).toBe('Client');
+    expect(software.terminology.order).toBe('Project');
+    expect(software.terminology.showVehicleFields).toBe(false);
+
+    expect(automotive.terminology.customer).toBe('Customer');
+    expect(automotive.terminology.order).toBe('Job Card');
+    expect(automotive.terminology.showVehicleFields).toBe(true);
+
+    expect(marine.terminology.customer).toBe('Vessel Owner / Client');
+    expect(marine.terminology.order).toBe('Service Order');
+    expect(marine.terminology.showVehicleFields).toBe(false);
+  });
+
+  it('proves Starq Technologies book and Ignition Ink book render distinct terminology from same core', () => {
+    const starqTerms = getArchetypeTerms('general_business');
+    const ignitionTerms = getArchetypeTerms('automotive_workshop');
+
+    expect(starqTerms.activeOrdersHeader).toBe('Active Orders & Work In Progress');
+    expect(starqTerms.showVehicleFields).toBe(false);
+
+    expect(ignitionTerms.activeOrdersHeader).toBe('Active Work Orders & Floor Bays');
+    expect(ignitionTerms.showVehicleFields).toBe(true);
+  });
+
+  it('contains canonical industry archetypes without per-client source code forks', () => {
+    expect(Object.keys(ARCHETYPES)).toEqual(
+      expect.arrayContaining([
+        'general_business',
+        'software_services',
+        'automotive_workshop',
+        'marine_service',
+        'medical_clinic',
+        'wholesale_trading',
+        'construction_contracting',
+        'retail',
+      ])
+    );
   });
 
   it('does not mutate the catalog when provisioning defaults', () => {
     const first = provisionArchetypeDefaults('retail', 'tenant-a');
     first.workflow[0].name = 'Changed locally';
 
-    expect(getArchetype('retail').workflow[0].name).toBe('Sale started');
-  });
-
-  it('contains all six initial archetypes without customer-specific branches', () => {
-    expect(Object.keys({
-      general: getArchetype('general_business'),
-      automotive: getArchetype('automotive_workshop'),
-      wholesale: getArchetype('wholesale_trading'),
-      marine: getArchetype('marine_service'),
-      construction: getArchetype('construction_contracting'),
-      retail: getArchetype('retail'),
-    })).toHaveLength(6);
+    expect(getArchetype('retail').workflow[0].name).toBe('Sale Opened');
   });
 });

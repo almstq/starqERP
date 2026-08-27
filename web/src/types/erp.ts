@@ -119,6 +119,8 @@ export interface JobOrder {
   actualProfit: number;
   linkedInvoiceId?: string;
   bayNumber: string;
+  projectRef?: string;
+  location?: string;
 }
 
 export type InvoiceStatus = 'Draft' | 'Sent' | 'Partially Paid' | 'Paid' | 'Overdue';
