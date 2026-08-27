@@ -117,7 +117,7 @@ export const CreatePOModal: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsCreatePOOpen(false)}
-            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200"
+            className="px-4 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface)] text-xs font-semibold border border-[var(--md-sys-color-outline-variant)]"
           >
             Cancel
           </button>
@@ -134,12 +134,12 @@ export const CreatePOModal: React.FC = () => {
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier / Vendor *</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Supplier / Vendor *</label>
             <select
               required
               value={supplierId}
               onChange={(e) => setSupplierId(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             >
               {suppliers.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -150,13 +150,13 @@ export const CreatePOModal: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Expected Delivery Date</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Expected Delivery Date</label>
             <input
               type="date"
               required
               value={expectedDeliveryDate}
               onChange={(e) => setExpectedDeliveryDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>
@@ -164,7 +164,7 @@ export const CreatePOModal: React.FC = () => {
         {/* PO Line Items */}
         <div className="space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider">
+            <span className="font-bold text-[var(--md-sys-color-on-surface)] uppercase text-[10px] tracking-wider">
               Items to Order
             </span>
             <button
@@ -181,13 +181,13 @@ export const CreatePOModal: React.FC = () => {
             {items.map((item, idx) => (
               <div
                 key={idx}
-                className="p-3 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-12 gap-2 items-center"
+                className="p-3 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] grid grid-cols-12 gap-2 items-center"
               >
                 <div className="col-span-12 sm:col-span-6">
                   <select
                     value={item.inventoryId}
                     onChange={(e) => handleItemChange(idx, e.target.value)}
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
                   >
                     {inventory.map((inv) => (
                       <option key={inv.id} value={inv.id}>
@@ -204,11 +204,11 @@ export const CreatePOModal: React.FC = () => {
                     required
                     value={item.quantity}
                     onChange={(e) => handleQuantityChange(idx, Number(e.target.value))}
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 font-mono text-center focus:outline-none focus:border-blue-500"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] font-mono text-center focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
-                <div className="col-span-4 sm:col-span-3 text-right font-bold text-slate-900 mono-num">
+                <div className="col-span-4 sm:col-span-3 text-right font-bold text-[var(--md-sys-color-on-surface)] mono-num">
                   {formatMVR(item.totalCost)}
                 </div>
 
@@ -216,7 +216,7 @@ export const CreatePOModal: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleRemoveItem(idx)}
-                    className="p-1 rounded text-slate-400 hover:text-rose-600 transition-colors"
+                    className="p-1 rounded text-[var(--md-sys-color-outline)] hover:text-rose-600 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -227,20 +227,20 @@ export const CreatePOModal: React.FC = () => {
         </div>
 
         {/* PO Total */}
-        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center">
-          <span className="font-bold text-slate-700">Total Purchase Order Value:</span>
+        <div className="p-4 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] flex justify-between items-center">
+          <span className="font-bold text-[var(--md-sys-color-on-surface)]">Total Purchase Order Value:</span>
           <span className="text-base font-extrabold text-blue-600 mono-num">
             {formatMVR(totalAmount)}
           </span>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">Delivery Instructions & Notes</label>
+          <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Delivery Instructions & Notes</label>
           <input
             type="text"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+            className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
           />
         </div>
       </form>

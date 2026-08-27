@@ -63,26 +63,26 @@ export const MfaSetupModal: React.FC = () => {
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
       data-testid="mfa-setup-modal"
     >
-      <div className="relative w-full max-w-lg overflow-hidden bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div className="relative w-full max-w-lg overflow-hidden bg-[var(--md-sys-color-surface-container)] rounded-2xl shadow-2xl border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)]/50 bg-[var(--md-sys-color-surface-container-high)]/50">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <h3 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] flex items-center gap-2">
                 <span>Admin Demo PIN Setup</span>
                 <Badge variant="blue" size="sm">SERP-268</Badge>
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)]">
                 Demo environment — multi-factor authentication is not enabled. This simulates a PIN challenge.
               </p>
             </div>
           </div>
           <button
             onClick={closeMfaEnrollment}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+            className="p-1.5 rounded-lg text-[var(--md-sys-color-outline)] hover:text-[var(--md-sys-color-on-surface-variant)] dark:hover:text-slate-200 hover:bg-[var(--md-sys-color-surface-container-high)] dark:hover:bg-slate-800 transition-all"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -90,13 +90,13 @@ export const MfaSetupModal: React.FC = () => {
         </div>
 
         {/* Stepper Progress */}
-        <div className="grid grid-cols-3 border-b border-slate-100 dark:border-slate-800 text-xs font-semibold">
+        <div className="grid grid-cols-3 border-b border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-xs font-semibold">
           <button
             onClick={() => setStep(1)}
             className={`py-2.5 text-center border-b-2 transition-all ${
               step === 1
                 ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/30 dark:bg-blue-950/20'
-                : 'border-transparent text-slate-400'
+                : 'border-transparent text-[var(--md-sys-color-outline)]'
             }`}
           >
             1. Authenticator App
@@ -106,7 +106,7 @@ export const MfaSetupModal: React.FC = () => {
             className={`py-2.5 text-center border-b-2 transition-all ${
               step === 2
                 ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/30 dark:bg-blue-950/20'
-                : 'border-transparent text-slate-400'
+                : 'border-transparent text-[var(--md-sys-color-outline)]'
             }`}
           >
             2. Recovery Codes
@@ -116,7 +116,7 @@ export const MfaSetupModal: React.FC = () => {
             className={`py-2.5 text-center border-b-2 transition-all ${
               step === 3
                 ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/30 dark:bg-blue-950/20'
-                : 'border-transparent text-slate-400'
+                : 'border-transparent text-[var(--md-sys-color-outline)]'
             }`}
           >
             3. Verify Token
@@ -134,19 +134,19 @@ export const MfaSetupModal: React.FC = () => {
                 </p>
               </div>
 
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-3">
-                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+              <div className="p-4 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/80 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] space-y-3">
+                <div className="flex items-center justify-between text-xs text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)]">
                   <span className="font-medium">Secret Setup Key (Base32)</span>
                   <span className="text-[11px] font-mono">Time-based (TOTP 30s)</span>
                 </div>
-                <div className="flex items-center justify-between gap-3 p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
-                  <code className="font-mono text-sm font-bold tracking-wider text-slate-800 dark:text-slate-100 select-all">
+                <div className="flex items-center justify-between gap-3 p-2.5 bg-[var(--md-sys-color-surface-container)] rounded-lg border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)]">
+                  <code className="font-mono text-sm font-bold tracking-wider text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] select-all">
                     {secret}
                   </code>
                   <button
                     type="button"
                     onClick={handleCopyKey}
-                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-all"
+                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-surface-container-highest)] bg-[var(--md-sys-color-surface-container-high)] dark:hover:bg-slate-700 text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] transition-all"
                   >
                     {copiedKey ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copiedKey ? 'Copied' : 'Copy'}</span>
@@ -178,8 +178,8 @@ export const MfaSetupModal: React.FC = () => {
                 </p>
               </div>
 
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-3">
-                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+              <div className="p-4 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/80 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] space-y-3">
+                <div className="flex items-center justify-between text-xs text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)]">
                   <span className="font-medium">8 Single-Use Recovery Keys</span>
                   <button
                     type="button"
@@ -190,9 +190,9 @@ export const MfaSetupModal: React.FC = () => {
                     <span>{copiedRecovery ? 'Copied to Clipboard' : 'Copy All Keys'}</span>
                   </button>
                 </div>
-                <div className="grid grid-cols-2 gap-2 p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                <div className="grid grid-cols-2 gap-2 p-2 bg-[var(--md-sys-color-surface-container)] rounded-lg border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] font-mono text-xs font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)]">
                   {recoveryCodes.map((code, idx) => (
-                    <div key={idx} className="p-1.5 rounded bg-slate-50 dark:bg-slate-800/50 text-center border border-slate-100 dark:border-slate-700">
+                    <div key={idx} className="p-1.5 rounded bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/50 text-center border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)]">
                       {code}
                     </div>
                   ))}
@@ -203,7 +203,7 @@ export const MfaSetupModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="px-3 py-2 rounded-xl text-slate-600 dark:text-slate-400 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                  className="px-3 py-2 rounded-xl text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] text-xs font-semibold hover:bg-[var(--md-sys-color-surface-container-high)] dark:hover:bg-slate-800 transition-all"
                 >
                   ← Back
                 </button>
@@ -235,7 +235,7 @@ export const MfaSetupModal: React.FC = () => {
               )}
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)]">
                   6-Digit Verification Code
                 </label>
                 <input
@@ -245,10 +245,10 @@ export const MfaSetupModal: React.FC = () => {
                   placeholder="e.g. 123456"
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
-                  className="w-full px-4 py-3 text-center tracking-widest font-mono text-xl font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+                  className="w-full px-4 py-3 text-center tracking-widest font-mono text-xl font-bold rounded-xl border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
                   data-testid="mfa-verification-input"
                 />
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center">
+                <p className="text-[11px] text-[var(--md-sys-color-outline)] dark:text-[var(--md-sys-color-on-surface-variant)] text-center">
                   Tip: In simulation mode, code <strong>123456</strong> is valid.
                 </p>
               </div>
@@ -257,7 +257,7 @@ export const MfaSetupModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setStep(2)}
-                  className="px-3 py-2 rounded-xl text-slate-600 dark:text-slate-400 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                  className="px-3 py-2 rounded-xl text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] text-xs font-semibold hover:bg-[var(--md-sys-color-surface-container-high)] dark:hover:bg-slate-800 transition-all"
                 >
                   ← Back
                 </button>

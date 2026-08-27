@@ -358,18 +358,18 @@ export const AccountsView: React.FC = () => {
 
       {/* Account Tree Table View */}
       <div className="rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+        <div className="erp-scroll-region overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs min-w-[760px]">
             <thead>
-              <tr className="border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider font-semibold">
-                <th className="py-3 px-4 w-32">Code</th>
-                <th className="py-3 px-4">Account Name</th>
-                <th className="py-3 px-4 w-32">Class</th>
-                <th className="py-3 px-4 w-44 hidden md:table-cell">Subtype</th>
-                <th className="py-3 px-4 w-24 text-center">Currency</th>
-                <th className="py-3 px-4 w-28 text-right">Balance</th>
-                <th className="py-3 px-4 w-24 text-center">Status</th>
-                <th className="py-3 px-4 w-28 text-right">Actions</th>
+              <tr className="border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider font-semibold whitespace-nowrap">
+                <th className="py-3 px-4 w-28 shrink-0">Code</th>
+                <th className="py-3 px-4 min-w-[280px]">Account Name</th>
+                <th className="py-3 px-4 w-28 shrink-0">Class</th>
+                <th className="py-3 px-4 w-44 shrink-0 hidden md:table-cell">Subtype</th>
+                <th className="py-3 px-4 w-24 shrink-0 text-center">Currency</th>
+                <th className="py-3 px-4 w-32 shrink-0 text-right">Balance</th>
+                <th className="py-3 px-4 w-24 shrink-0 text-center">Status</th>
+                <th className="py-3 px-4 w-28 shrink-0 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--md-sys-color-outline-variant)]">
@@ -396,18 +396,18 @@ export const AccountsView: React.FC = () => {
                       data-testid={`account-row-${node.code}`}
                     >
                       {/* Code */}
-                      <td className="py-2.5 px-4 font-mono font-bold text-[var(--md-sys-color-primary)]">
+                      <td className="py-2.5 px-4 font-mono font-bold text-[var(--md-sys-color-primary)] whitespace-nowrap">
                         {node.code}
                       </td>
 
                       {/* Name with indentation & Expand chevron */}
-                      <td className="py-2.5 px-4">
-                        <div className="flex items-center gap-1.5" style={{ paddingLeft: `${indentPx}px` }}>
+                      <td className="py-2.5 px-4 min-w-[280px]">
+                        <div className="flex items-center gap-1.5 whitespace-nowrap" style={{ paddingLeft: `${indentPx}px` }}>
                           {hasChildren ? (
                             <button
                               type="button"
                               onClick={() => toggleExpand(node.id)}
-                              className="p-1 rounded hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]"
+                              className="p-1 rounded hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] shrink-0"
                               title={isExpanded ? 'Collapse' : 'Expand'}
                             >
                               {isExpanded ? (
@@ -417,7 +417,7 @@ export const AccountsView: React.FC = () => {
                               )}
                             </button>
                           ) : (
-                            <span className="w-5" />
+                            <span className="w-5 shrink-0" />
                           )}
 
                           {hasChildren ? (
@@ -430,7 +430,7 @@ export const AccountsView: React.FC = () => {
                             <FileText className="w-3.5 h-3.5 text-[var(--md-sys-color-outline)] shrink-0" />
                           )}
 
-                          <span className={`font-medium ${node.level === 0 ? 'font-bold text-sm text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-on-surface)]'}`}>
+                          <span className={`font-medium whitespace-nowrap ${node.level === 0 ? 'font-bold text-sm text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-on-surface)]'}`}>
                             {node.name}
                           </span>
 
@@ -443,31 +443,31 @@ export const AccountsView: React.FC = () => {
                       </td>
 
                       {/* Class */}
-                      <td className="py-2.5 px-4">
+                      <td className="py-2.5 px-4 whitespace-nowrap">
                         <span className="font-semibold text-[var(--md-sys-color-on-surface-variant)]">
                           {CLASS_LABELS[node.accountClass]}
                         </span>
                       </td>
 
                       {/* Subtype */}
-                      <td className="py-2.5 px-4 hidden md:table-cell text-[var(--md-sys-color-on-surface-variant)] truncate max-w-xs">
+                      <td className="py-2.5 px-4 hidden md:table-cell text-[var(--md-sys-color-on-surface-variant)] whitespace-nowrap">
                         {SUBTYPE_LABELS[node.subtype]}
                       </td>
 
                       {/* Currency */}
-                      <td className="py-2.5 px-4 text-center">
+                      <td className="py-2.5 px-4 text-center whitespace-nowrap">
                         <span className="font-mono px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)]">
                           {node.currency}
                         </span>
                       </td>
 
                       {/* Balance */}
-                      <td className="py-2.5 px-4 text-right font-mono font-semibold text-[var(--md-sys-color-on-surface)]">
+                      <td className="py-2.5 px-4 text-right font-mono font-semibold text-[var(--md-sys-color-on-surface)] whitespace-nowrap">
                         {node.currency === 'USD' ? '$' : 'MVR '} {node.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
 
                       {/* Status */}
-                      <td className="py-2.5 px-4 text-center">
+                      <td className="py-2.5 px-4 text-center whitespace-nowrap">
                         <Badge variant={node.status === 'ACTIVE' ? 'success' : 'neutral'}>
                           {node.status}
                         </Badge>

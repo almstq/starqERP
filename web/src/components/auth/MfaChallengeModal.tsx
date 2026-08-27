@@ -38,26 +38,26 @@ export const MfaChallengeModal: React.FC = () => {
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
       data-testid="mfa-challenge-modal"
     >
-      <div className="relative w-full max-w-md overflow-hidden bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div className="relative w-full max-w-md overflow-hidden bg-[var(--md-sys-color-surface-container)] rounded-2xl shadow-2xl border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)]/50 bg-[var(--md-sys-color-surface-container-high)]/50">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400">
               <Lock className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <h3 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] flex items-center gap-2">
                 <span>Elevated Privileges Required</span>
                 <Badge variant="warning" size="sm">Demo PIN</Badge>
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)]">
                 Demo environment — this is a simulated PIN challenge, not real MFA.
               </p>
             </div>
           </div>
           <button
             onClick={closeMfaChallenge}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+            className="p-1.5 rounded-lg text-[var(--md-sys-color-outline)] hover:text-[var(--md-sys-color-on-surface-variant)] dark:hover:text-slate-200 hover:bg-[var(--md-sys-color-surface-container-high)] dark:hover:bg-slate-800 transition-all"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -66,12 +66,12 @@ export const MfaChallengeModal: React.FC = () => {
 
         {/* Content Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 space-y-1">
-            <div className="flex items-center justify-between font-semibold text-slate-800 dark:text-slate-200">
+          <div className="p-3.5 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface-variant)] text-[var(--md-sys-color-on-surface-variant)] space-y-1">
+            <div className="flex items-center justify-between font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)]">
               <span>Account: {currentUser.name}</span>
               <span className="text-[11px] font-mono text-blue-600 dark:text-blue-400">{currentUser.roleName}</span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)]">
               {isRecoveryMode
                 ? 'Enter one of your 8-character single-use emergency recovery codes (e.g. REC1-9921).'
                 : 'Enter the 6-digit verification code from your authenticator app to authorize this action.'}
@@ -86,7 +86,7 @@ export const MfaChallengeModal: React.FC = () => {
           )}
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)]">
               {isRecoveryMode ? 'Emergency Recovery Key' : '6-Digit Authenticator Token'}
             </label>
             <input
@@ -96,7 +96,7 @@ export const MfaChallengeModal: React.FC = () => {
               placeholder={isRecoveryMode ? 'e.g. REC1-9921' : 'e.g. 123456'}
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className="w-full px-4 py-3 text-center tracking-widest font-mono text-xl font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
+              className="w-full px-4 py-3 text-center tracking-widest font-mono text-xl font-bold rounded-xl border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
               data-testid="mfa-challenge-input"
             />
           </div>
@@ -115,11 +115,11 @@ export const MfaChallengeModal: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex justify-end gap-2.5 pt-3 border-t border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)]">
             <button
               type="button"
               onClick={closeMfaChallenge}
-              className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+              className="px-4 py-2 rounded-xl text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] text-xs font-semibold hover:bg-[var(--md-sys-color-surface-container-high)] dark:hover:bg-slate-800 transition-all"
             >
               Cancel
             </button>

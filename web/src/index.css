@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 @import "./theme.css";
 
@@ -15,8 +15,17 @@
     min-height: 100dvh;
     margin: 0;
     padding: 0;
-    /* Defensive clipping boundary only; never relied upon to mask uncontained overflow */
     overflow-x: clip;
+  }
+
+  /* Quantum Ambient Lighting (Dark Mode) */
+  html.dark body,
+  .dark body {
+    background: 
+      radial-gradient(circle at 12% 10%, rgba(56, 189, 248, 0.05) 0%, transparent 45%),
+      radial-gradient(circle at 88% 85%, rgba(37, 99, 235, 0.05) 0%, transparent 45%),
+      var(--md-sys-color-surface);
+    background-attachment: fixed;
   }
 
   * {
@@ -24,9 +33,9 @@
     min-width: 0;
   }
 
-  /* Safe content wrapping by default */
-  h1, h2, h3, h4, h5, h6, p, span, a, button, input, select, textarea {
-    overflow-wrap: anywhere;
+  /* Defensive content wrapping: never break words mid-character unless strictly necessary */
+  h1, h2, h3, h4, h5, h6, p, a, button, input, select, textarea {
+    overflow-wrap: break-word;
   }
 }
 
@@ -78,8 +87,27 @@
   font-feature-settings: "tnum" 1, "zero" 1;
 }
 
-/* ── Accessibility Baseline (SERP-035) ─────────────────────────────────────── */
+/* ── M3 Quantum Card Elevation with Specular Glare ─────────────────────────── */
+.dark [style*="var(--md-sys-color-surface-container)"],
+.dark [style*="var(--md-sys-color-surface-container-low)"],
+.dark [style*="var(--md-sys-color-surface-container-lowest)"] {
+  transition: border-color 0.25s var(--md-sys-motion-easing-emphasized),
+              box-shadow 0.25s var(--md-sys-motion-easing-emphasized),
+              transform 0.25s var(--md-sys-motion-easing-emphasized);
+}
 
+.dark [style*="var(--md-sys-color-surface-container)"]:hover,
+.dark [style*="var(--md-sys-color-surface-container-low)"]:hover {
+  border-color: rgba(56, 189, 248, 0.28) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(56, 189, 248, 0.08);
+}
+
+.dark nav a[aria-current="page"],
+.dark nav a.active {
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.18);
+}
+
+/* ── Accessibility Baseline (SERP-035) ─────────────────────────────────────── */
 *:focus-visible {
   outline: 2px solid var(--md-sys-color-primary);
   outline-offset: 2px;
@@ -123,7 +151,12 @@ select {
   top: 1rem;
 }
 
-/* ── Print Media Optimization (SERP-PRINT) ─────────────────────────────────── */
+/* ── STARQ EXECUTIVE DOCUMENT & PRINT OUTPUT STANDARDS ────────────────────── */
+@page {
+  size: A4 portrait;
+  margin: 15mm 15mm 20mm 15mm;
+}
+
 @media print {
   aside,
   header,
@@ -134,7 +167,9 @@ select {
   [aria-label="Mobile Bottom Navigation"],
   #starq-copilot-trigger,
   .fixed,
-  .sticky {
+  .sticky,
+  .print\:hidden,
+  .starq-theme-widget {
     display: none !important;
   }
 
@@ -143,16 +178,60 @@ select {
   #root,
   main {
     background-color: #ffffff !important;
-    color: #000000 !important;
+    color: #0f172a !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
     min-width: 100% !important;
     overflow: visible !important;
+    font-size: 11pt !important;
+  }
+
+  /* Prevent awkward page cuts */
+  .statement-section,
+  .print-avoid-break,
+  .cq-card,
+  table,
+  tr,
+  tbody {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 
   .print-page-break {
-    page-break-after: always;
-    break-after: page;
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  /* Clean Executive Document Borders */
+  .print-doc-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  .print-doc-table th {
+    border-bottom: 2px solid #000000 !important;
+    color: #000000 !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    font-size: 9pt !important;
+    padding: 6pt 4pt !important;
+  }
+  .print-doc-table td {
+    border-bottom: 1px solid #e2e8f0 !important;
+    color: #0f172a !important;
+    padding: 5pt 4pt !important;
+    font-size: 9.5pt !important;
+  }
+  .print-doc-table tfoot td {
+    border-top: 2px solid #000000 !important;
+    border-bottom: 4px double #000000 !important;
+    font-weight: 800 !important;
+    color: #000000 !important;
+    padding: 6pt 4pt !important;
+  }
+
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
   }
 }
