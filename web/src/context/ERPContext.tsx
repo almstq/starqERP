@@ -44,7 +44,6 @@ import {
   CLINIC_WORKFLOW_PRESET,
   BOATYARD_WORKFLOW_PRESET,
   OrganisationApplication,
-  INITIAL_APPLICATIONS
 } from '../data/mockData';
 import { telemetry } from '../services/telemetry';
 import { dispatchCommand, apiGet } from '../services/apiGateway';
@@ -416,7 +415,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [tenants]);
 
   // Organisation Applications & Platform Approval State (Authoritative Server Persistence)
-  const [pendingApplications, setPendingApplications] = useState<OrganisationApplication[]>(INITIAL_APPLICATIONS);
+  const [pendingApplications, setPendingApplications] = useState<OrganisationApplication[]>([]);
   const [isRegisterOrgModalOpen, setIsRegisterOrgModalOpen] = useState(false);
 
   const mapPlatformAppToClient = useCallback((record: PlatformApplicationRecord): OrganisationApplication => {

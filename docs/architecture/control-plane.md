@@ -7,10 +7,13 @@ The Starq HQ Control Plane is the multi-tenant SaaS operational console used by 
 ## 1. Physical & Logical Isolation
 
 The Control Plane lives in a dedicated PostgreSQL schema (`platform`) isolated from the tenant execution schema (`public`):
+- `platform.tenant_applications` — Server-authoritative business intake queue with applicant identity binding and review status.
 - `platform.tenant_registry` — Master tenant registry, domain mapping, subscription tier, and onboarding status.
 - `platform.operator_principals` — Whitelist of authorized platform operators and required MFA policies.
 - `platform.provisioning_runs` — Automated provisioning logs, blueprint configuration, and seed backfill history.
 - `platform.usage_daily` — Daily telemetry capturing active seats, storage utilization, and transaction volume.
+
+Atomic tenant provisioning is executed via stored procedure `platform.provision_approved_application(p_application_id, p_reviewer_person_id)`.
 
 Access to the `platform` schema is revoked from all public and authenticated client roles, and granted strictly to `service_role`.
 

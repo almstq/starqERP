@@ -2,7 +2,7 @@
 
 **Document Status**: Authoritative Commercial Milestone Roadmap  
 **Date**: 2026-08-27  
-**SSOT Board Tasks**: 318 Canonical Tasks (117 Done = 36.79%)  
+**SSOT Board Tasks**: 318 Canonical Tasks (120 Done = 37.74%)  
 
 ---
 
@@ -31,10 +31,10 @@
 
 **Objective**: Ensure the first external paying client (Club Ignition & initial design partner) can operate with 100% data safety, real double-entry accounting, self-service staff invitation, and zero demo contamination.
 
-* **`SERP-283`** [P0 / NEXT]: Platform realignment PR #10 CI resolution and branch merge.
-* **`SERP-284`** [P0]: Live database deployment and verification of Migrations 0024 & 0025.
-* **`SERP-285`** [P0]: Gateway full authorization graph resolution on Google sign-in.
-* **`SERP-286`** [P0]: Tenant-admin self-service staff invitation and lifecycle workflow (`public.invitations`).
+* **`SERP-283`** [P0 / DONE]: Platform realignment PR #10 CI resolution and branch merge.
+* **`SERP-284`** [P0 / DONE]: Live database deployment and verification of Migrations 0024 & 0025.
+* **`SERP-285`** [P0 / DONE]: Gateway full authorization graph resolution on Google sign-in.
+* **`SERP-286`** [P0 / IN PROGRESS]: Tenant-admin self-service staff invitation and lifecycle workflow (`public.invitations`).
 * **`SERP-287`** [P0]: Removal of hardcoded backend staff allowlist dependency.
 * **`SERP-288`** [P0]: Clean production workspace hygiene and zero demo data contamination.
 * **`SERP-289`** [P0]: Removal of browser/mock business authority & pure Edge RPC routing.

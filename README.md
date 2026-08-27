@@ -64,7 +64,7 @@ $$\text{Identity} \longrightarrow \begin{matrix} \text{Platform Entitlement} \\ 
 - **Frontend**: React 19, TypeScript, Tailwind CSS v4, Material 3 Adaptive Layout System, Lucide Icons, Vite.
 - **Backend & API Gateway**: Supabase Edge Functions (Deno runtime), TypeScript Shared Command Contracts, HMAC Session Security.
 - **Database & Storage**: PostgreSQL 15+ with strict Row-Level Security (RLS), Composite Foreign Keys, Immutable Append-Only Audit & Ledger Triggers.
-- **Identity & Access**: Google Identity Services (OAuth 2.0 / OpenID Connect), Platform-Audience Verification, Time-based OTP Multi-Factor Authentication (MFA).
+- **Identity & Access**: Google Identity Services (OAuth 2.0 / OpenID Connect), Platform-Audience Verification, Cryptographic Session Boundaries, and Segregated Platform/Tenant Authorization.
 
 ---
 
@@ -80,7 +80,7 @@ $$\text{Identity} \longrightarrow \begin{matrix} \text{Platform Entitlement} \\ 
 | **Gate 3 (G3)** | **Maldives Competitive Advantage** — Native MIRA GST filing integration, Dhivehi localization, BML payment gateway, offline sync resilience. | **Planned** |
 | **Gate 4 (G4)** | **Enterprise Scale & Governance** — Multi-region replication, automated continuous compliance, high-availability tenancy failover. | **Planned** |
 
-*Canonical Board Progress: **117 of 318 tasks completed (36.79%)** across G1–G4.*
+*Canonical Board Progress: **120 of 318 tasks completed (37.74%)** across G1–G4.*
 
 ---
 
