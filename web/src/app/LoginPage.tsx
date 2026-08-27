@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { loginWithGoogle } from '../services/auth';
-import { StarqBrandLockup } from '../components/brand/StarqLogo';
+import { StarqBrandLockup, StarqCorporateBrand } from '../components/brand/StarqLogo';
 import { ThemeSelector } from '../components/ui/ThemeSelector';
+import { getFormattedProductVersion } from '../../../contracts/commands';
 import {
   ShieldCheck,
   Building2,
@@ -356,13 +357,13 @@ export const LoginPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {[
                   {
-                    title: 'MIRA GST Invoicing',
-                    desc: 'Instant BML banking settlement details & automated 8% GGST calculation.',
+                    title: 'Maldives-Ready Finance',
+                    desc: 'Configurable invoicing, accounting and tax foundations for Maldivian businesses.',
                     icon: Building2,
                   },
                   {
-                    title: 'Workshop Shop-Floor',
-                    desc: 'Real-time job stages, paint technician tracking, and vehicle timelines.',
+                    title: 'Operations & Workflows',
+                    desc: 'Configurable work, service and operational workflows across different business types.',
                     icon: ShieldCheck,
                   },
                 ].map((item, idx) => {
@@ -391,13 +392,11 @@ export const LoginPage: React.FC = () => {
 
             {/* Bottom Tenant Verification Badge */}
             <div className="pt-6 sm:pt-8 border-t border-[var(--md-sys-color-outline-variant)]/50 mt-6 relative z-10 flex flex-wrap items-center justify-between gap-3 text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="font-semibold text-[var(--md-sys-color-on-surface)]">
-                  Starq Technologies Private Limited
-                </span>
-              </div>
-              <span className="mono-num text-[10px] font-mono">starqERP v1.0 • Maldives</span>
+              <StarqCorporateBrand
+                variant="compact"
+                size="sm"
+              />
+              <span className="mono-num text-[10px] font-mono">starqERP {getFormattedProductVersion()} • Maldives</span>
             </div>
           </div>
         </div>
@@ -406,7 +405,12 @@ export const LoginPage: React.FC = () => {
       {/* ── Footer ── */}
       <footer className="w-full px-3 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--md-sys-color-outline-variant)]/40 text-[11px] text-[var(--md-sys-color-on-surface-variant)] shrink-0">
         <div className="flex items-center gap-2">
-          <span>&copy; {new Date().getFullYear()} Starq Technologies Pvt Ltd.</span>
+          <StarqCorporateBrand
+            variant="inline"
+            size="xs"
+            prefixText={`© ${new Date().getFullYear()}`}
+            legalSuffix
+          />
           <span className="hidden sm:inline">&bull;</span>
           <span className="hidden sm:inline">Republic of Maldives</span>
         </div>

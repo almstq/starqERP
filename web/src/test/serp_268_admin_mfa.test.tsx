@@ -10,6 +10,7 @@ const MfaTestHarness: React.FC = () => {
   const {
     currentUser,
     users,
+    setUsers,
     switchCurrentUser,
     authorizeUser,
     isMfaElevated,
@@ -19,6 +20,26 @@ const MfaTestHarness: React.FC = () => {
     verifyMfaChallenge,
     requireMfaElevation,
   } = useERP();
+
+  React.useEffect(() => {
+    if (!users.some((u) => u.id === 'user-2')) {
+      setUsers((prev) => [
+        ...prev,
+        {
+          id: 'user-2',
+          tenantId: 'tenant-starq',
+          name: 'Test Staff',
+          email: 'staff@starq.test',
+          roleId: 'role-accountant',
+          roleName: 'Staff Accountant',
+          status: 'Active',
+          mfaEnabled: false,
+          mfaRequired: false,
+          permissions: ['accounting.read', 'accounting.write'],
+        } as any,
+      ]);
+    }
+  }, [users, setUsers]);
 
   const [privilegedActionExecuted, setPrivilegedActionExecuted] = React.useState(false);
 

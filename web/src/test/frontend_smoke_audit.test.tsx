@@ -62,7 +62,7 @@ const renderSurface = (initialEntry: string) => {
 describe('Systematic Frontend Smoke Audit (SERP-197)', () => {
   it('Surface 1: Dashboard renders without runtime exceptions', () => {
     expect(() => renderSurface('/')).not.toThrow();
-    expect(screen.getByRole('heading', { name: /Operations Overview/i })).toBeDefined();
+    expect(screen.getByText(/Live Book/i)).toBeDefined();
   });
 
   it('Surface 2: Customers list renders without throwing', () => {

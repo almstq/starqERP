@@ -31,6 +31,7 @@ import {
   CartesianGrid
 } from 'recharts';
 import { useERP } from '../../context/ERPContext';
+import { useAuth } from '../../context/AuthContext';
 import { MONTHLY_SALES_CHART_DATA, SERVICE_BREAKDOWN_DATA } from '../../data/mockData';
 import { StarqHQShell } from '../platform/StarqHQShell';
 import {
@@ -45,9 +46,13 @@ import {
 
 export const DashboardView: React.FC = () => {
   const navigate = useNavigate();
+  const { session } = useAuth();
   const {
     activePlane,
+    currentUser,
     currentTenant,
+    currentBook,
+    currentArchetype,
     currentTerms,
     totalSalesToday,
     totalCashReceived,
@@ -170,22 +175,66 @@ export const DashboardView: React.FC = () => {
     },
   ];
 
+  const greeting = (() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  })();
+
+  const rawUserName = session?.name || currentUser?.name || 'User';
+  const preferredName = rawUserName.includes(' ') ? rawUserName.split(' ')[1] : rawUserName;
+
+  const companyName = currentTenant.legalName || currentTenant.name || 'Enterprise';
+  const bookCode = currentBook?.code || (currentTenant.name ? currentTenant.name.slice(0, 3).toUpperCase() : 'STQ');
+  const attentionCount = alerts.length;
+
   return (
     <div className="space-y-4 sm:space-y-6 pb-12 w-full min-w-0">
-      {/* Top Banner / Welcome with Quick Actions */}
+      {/* Top Banner / Welcome with Tenant Identity, Personalized Welcome & Quick Actions */}
       <Surface variant="filled" level={1} padding="md" className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
-        <div className="space-y-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] truncate">
-              Operations Overview
-            </h1>
-            <Badge variant="positive" size="sm">
-              Live System
-            </Badge>
+        <div className="flex items-center gap-3.5 min-w-0">
+          {currentTenant.logoUrl ? (
+            <img
+              src={currentTenant.logoUrl}
+              alt={currentTenant.name}
+              className="w-12 h-12 rounded-xl object-contain p-1 border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] shrink-0"
+            />
+          ) : (
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border border-[var(--md-sys-color-outline-variant)]"
+              style={{
+                backgroundColor: 'var(--md-sys-color-primary-container)',
+                color: 'var(--md-sys-color-on-primary-container)',
+              }}
+            >
+              {(currentBook?.code || currentTenant.name.slice(0, 2)).toUpperCase()}
+            </div>
+          )}
+          <div className="space-y-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] truncate">
+                {greeting}, {preferredName}
+              </h1>
+              <Badge variant="neutral" size="sm">
+                {currentBook?.name ? `${currentBook.name} · ${currentArchetype.name}` : currentArchetype.name}
+              </Badge>
+              <Badge variant="positive" size="sm">
+                Live Book
+              </Badge>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--md-sys-color-on-surface-variant)]">
+              <span className="font-semibold text-[var(--md-sys-color-on-surface)] truncate">
+                {companyName} · {bookCode}
+              </span>
+              <span className="hidden sm:inline text-[var(--md-sys-color-outline)]">•</span>
+              <span className={attentionCount > 0 ? "font-medium text-[var(--md-sys-color-error)]" : "text-[var(--md-sys-color-on-surface-variant)]"}>
+                {attentionCount === 0
+                  ? 'No items require your attention right now.'
+                  : `${attentionCount} ${attentionCount === 1 ? 'item requires' : 'items require'} your attention today.`}
+              </span>
+            </div>
           </div>
-          <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] max-w-2xl">
-            Real-time operations dashboard. Monitor work orders, bay scheduling, cash settlements, invoice balances, and material inventory.
-          </p>
         </div>
 
         <ActionGroup align="right" className="shrink-0">
@@ -195,7 +244,7 @@ export const DashboardView: React.FC = () => {
             onClick={() => setIsCreateJobOpen(true)}
             icon={<Plus size={15} />}
           >
-            <span>New Work Order</span>
+            <span>New {currentTerms.order}</span>
           </Button>
           <Button
             variant="tonal"
@@ -296,37 +345,40 @@ export const DashboardView: React.FC = () => {
           className="space-y-1 min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
         >
           <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
-            Active Jobs
+            {currentTerms.orders}
           </span>
           <div className="text-base sm:text-lg font-bold mono-num truncate" style={{ color: 'var(--md-sys-color-primary)' }}>
-            {activeJobsCount} In Bay
+            {activeJobsCount} {currentArchetype.id === 'automotive_workshop' ? 'In Bay' : 'Active'}
           </div>
           <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
-            Floor work orders
+            {currentArchetype.id === 'automotive_workshop' ? 'Floor work orders' : 'In progress'}
           </span>
         </Surface>
 
-        <Surface
-          variant="filled"
-          level={2}
-          padding="sm"
-          container
-          onClick={() => navigate('/inventory')}
-          className="space-y-1 min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
-        >
-          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
-            Low Stock Items
-          </span>
-          <div
-            className="text-base sm:text-lg font-bold mono-num truncate"
-            style={{ color: lowStockItemsCount > 0 ? 'var(--md-sys-color-error)' : 'var(--positive)' }}
+        {/* Capability-driven KPI: Only show Inventory if physical stock is enabled / applicable */}
+        {currentArchetype.id !== 'software_services' && currentArchetype.id !== 'professional_services' && (
+          <Surface
+            variant="filled"
+            level={2}
+            padding="sm"
+            container
+            onClick={() => navigate('/inventory')}
+            className="space-y-1 min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
           >
-            {lowStockItemsCount} Items
-          </div>
-          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
-            Reorder required
-          </span>
-        </Surface>
+            <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+              Low Stock Items
+            </span>
+            <div
+              className="text-base sm:text-lg font-bold mono-num truncate"
+              style={{ color: lowStockItemsCount > 0 ? 'var(--md-sys-color-error)' : 'var(--positive)' }}
+            >
+              {lowStockItemsCount} Items
+            </div>
+            <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
+              Reorder required
+            </span>
+          </Surface>
+        )}
       </ResponsiveGrid>
 
       {/* 2-Column Section: Needs Attention + starqAI Assistant Layer */}
@@ -498,10 +550,10 @@ export const DashboardView: React.FC = () => {
                 </div>
                 <div className="space-y-1 max-w-xs">
                   <p className="text-xs font-semibold text-[var(--md-sys-color-on-surface)]">
-                    Ready for Live Analysis
+                    starqAI (Preview / Standby)
                   </p>
                   <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">
-                    starqAI continuously monitors your floor workflows, margin trends, and receivable aging. Operational recommendations will appear as activity is recorded.
+                    Contextual recommendations and cash-flow insights will appear here when connected to active business activity.
                   </p>
                 </div>
                 <Button
@@ -510,7 +562,7 @@ export const DashboardView: React.FC = () => {
                   onClick={() => setIsAICopilotOpen(true)}
                   icon={<Sparkles size={12} />}
                 >
-                  <span>Open Copilot</span>
+                  <span>Open starqAI</span>
                 </Button>
               </div>
             ) : (

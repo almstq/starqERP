@@ -15,7 +15,10 @@ import {
   Sparkles,
   Info,
   Check,
-  X
+  X,
+  Code2,
+  Briefcase,
+  Layers,
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { WorkflowStage, UserRole } from '../../types/erp';
@@ -29,7 +32,10 @@ export const WorkflowsConfigTab: React.FC = () => {
     updateWorkflowStage,
     deleteWorkflowStage,
     resetWorkflowToPreset,
-    currentTenant
+    currentTenant,
+    currentBook,
+    currentArchetype,
+    currentTerms
   } = useERP();
 
   const [isAddStageOpen, setIsAddStageOpen] = useState(false);
@@ -108,14 +114,14 @@ export const WorkflowsConfigTab: React.FC = () => {
             </Badge>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-2xl">
-            Job stages in StarqERP are <strong>per-tenant, not hardcoded</strong>. An auto garage, a speedboat slipway, and a medical clinic use the exact same underlying ERP engine with their own operational pipeline stages.
+            Operational pipeline stages in starqERP are <strong>per-book and per-tenant configurable</strong>. Software services, commercial workshops, boatyards, and clinics use the exact same underlying ERP spine with their own domain stages.
           </p>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
             onClick={() => setIsAddStageOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Custom Stage</span>
@@ -130,32 +136,58 @@ export const WorkflowsConfigTab: React.FC = () => {
             <Sliders className="w-3.5 h-3.5 text-blue-600" />
             <span>Load Standard Industry Workflow Template:</span>
           </span>
-          <span className="text-[11px] text-slate-400">Current: {currentTenant.industry}</span>
+          <span className="text-[11px] text-slate-400 font-medium">
+            Active: {currentBook?.name ? `${currentBook.name} (${currentArchetype.name})` : currentArchetype.name}
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
           <button
-            onClick={() => resetWorkflowToPreset('automotive')}
-            className="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-500 bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-all group"
+            onClick={() => resetWorkflowToPreset('software_services')}
+            className="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-all group cursor-pointer"
           >
-            <Flame className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
-            <span>Auto Spray & Detailing (6 Stages)</span>
+            <Code2 className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
+            <span>Software & Engineering (4 Stages)</span>
           </button>
 
           <button
-            onClick={() => resetWorkflowToPreset('clinic')}
-            className="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500 bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-all group"
+            onClick={() => resetWorkflowToPreset('general_business')}
+            className="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-500 bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-all group cursor-pointer"
+          >
+            <Layers className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
+            <span>General Business (4 Stages)</span>
+          </button>
+
+          <button
+            onClick={() => resetWorkflowToPreset('professional_services')}
+            className="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-purple-500 bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-all group cursor-pointer"
+          >
+            <Briefcase className="w-4 h-4 text-purple-600 group-hover:scale-110 transition-transform" />
+            <span>Professional Services (4 Stages)</span>
+          </button>
+
+          <button
+            onClick={() => resetWorkflowToPreset('automotive_workshop')}
+            className="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-amber-500 bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-all group cursor-pointer"
+          >
+            <Flame className="w-4 h-4 text-amber-600 group-hover:scale-110 transition-transform" />
+            <span>Auto Workshop & Prep (5 Stages)</span>
+          </button>
+
+          <button
+            onClick={() => resetWorkflowToPreset('medical_clinic')}
+            className="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500 bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-all group cursor-pointer"
           >
             <Activity className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" />
-            <span>Medical Clinic & Care (5 Stages)</span>
+            <span>Medical Clinic & Care (3 Stages)</span>
           </button>
 
           <button
-            onClick={() => resetWorkflowToPreset('marine')}
-            className="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-cyan-500 bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-all group"
+            onClick={() => resetWorkflowToPreset('marine_service')}
+            className="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-cyan-500 bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-all group cursor-pointer"
           >
             <Ship className="w-4 h-4 text-cyan-600 group-hover:scale-110 transition-transform" />
-            <span>Marine & Boatyard (5 Stages)</span>
+            <span>Marine & Slipway (4 Stages)</span>
           </button>
         </div>
       </div>
@@ -170,7 +202,7 @@ export const WorkflowsConfigTab: React.FC = () => {
             </h3>
           </div>
           <span className="text-xs text-slate-400">
-            Jobs transition left to right across shop floor
+            {currentTerms.orders} transition sequentially across lifecycle stages
           </span>
         </div>
 

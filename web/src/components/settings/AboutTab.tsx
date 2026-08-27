@@ -12,9 +12,9 @@ import {
   Mail,
   Scale
 } from 'lucide-react';
-import { STARQ_ERP_CANONICAL_METADATA } from '../../../../contracts/commands';
+import { STARQ_ERP_CANONICAL_METADATA, getFormattedProductVersion } from '../../../../contracts/commands';
 import { Button, Surface, Badge } from '../ui';
-import { StarqBrandLockup } from '../brand/StarqLogo';
+import { StarqERPBrand, StarqCorporateBrand } from '../brand/StarqLogo';
 import { useTheme } from '../../context/ThemeContext';
 
 export const AboutTab: React.FC = () => {
@@ -23,20 +23,26 @@ export const AboutTab: React.FC = () => {
   const [activeDialog, setActiveDialog] = useState<'privacy' | 'terms' | 'licenses' | null>(null);
 
   const meta = STARQ_ERP_CANONICAL_METADATA;
+  const buildSha = typeof __BUILD_COMMIT__ !== 'undefined' ? __BUILD_COMMIT__ : '7c05723';
+  const buildTime = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : '2026-08-27T22:00:00Z';
+  const environment = (import.meta as unknown as { env?: { MODE?: string } }).env?.MODE || 'development';
 
   const getSystemInfo = () => {
     return JSON.stringify(
       {
         product: meta.productName,
-        version: meta.version,
+        version: getFormattedProductVersion(meta),
+        semver: meta.version,
         releaseTrack: meta.releaseTrack,
+        build: buildSha,
+        buildTime,
+        environment,
         embeddedAi: meta.embeddedAiName,
         company: meta.companyName,
         jurisdiction: meta.legalJurisdiction,
         contact: meta.contactEmail,
         themeMode,
         resolvedTheme,
-        environment: (import.meta as unknown as { env?: { MODE?: string } }).env?.MODE || 'production',
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown',
         timestamp: new Date().toISOString(),
       },
@@ -61,19 +67,19 @@ export const AboutTab: React.FC = () => {
       <Surface variant="filled" level={1} padding="lg" className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--md-sys-color-outline-variant)] pb-6">
           <div className="space-y-3 min-w-0">
-            <StarqBrandLockup size="lg" />
+            <StarqERPBrand size="lg" />
             <p className="text-xs sm:text-sm text-[var(--md-sys-color-on-surface-variant)] leading-relaxed max-w-xl">
               Commercial operating system & multi-tenant enterprise resource platform engineered for
-              Maldivian SMEs across automotive workshops, boatyards, logistics, and trading operations.
+              Maldivian SMEs across diverse operational industries.
             </p>
           </div>
 
           <div className="flex flex-col items-start sm:items-end gap-1.5 shrink-0">
             <Badge variant="accent" size="md">
-              v{meta.version}
+              {getFormattedProductVersion(meta)}
             </Badge>
             <span className="text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
-              {meta.releaseTrack}
+              Build: {buildSha} · {environment}
             </span>
           </div>
         </div>
@@ -81,18 +87,21 @@ export const AboutTab: React.FC = () => {
         {/* Core Attributes Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           <div
-            className="p-4 rounded-[var(--md-sys-shape-corner-medium)] space-y-1.5"
+            className="p-4 rounded-[var(--md-sys-shape-corner-medium)] space-y-2.5"
             style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)' }}
           >
             <div className="flex items-center gap-2 text-[var(--md-sys-color-primary)] font-semibold">
               <Scale size={15} />
-              <span>Corporate Entity</span>
+              <span>Corporate Entity & Platform Builder</span>
             </div>
-            <div className="font-bold text-sm text-[var(--md-sys-color-on-surface)]">
-              {meta.companyName}
-            </div>
+            <StarqCorporateBrand
+              variant="compact"
+              size="md"
+              legalSuffix
+              subtitle="Platform Builder · Republic of Maldives"
+            />
             <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
-              Registered under Companies Act 7/2023 · Reg No: C29552026 · UEI 2026PV02930B
+              Built and maintained by Starq Technologies Pvt Ltd under the Maldivian legal jurisdiction.
             </p>
           </div>
 

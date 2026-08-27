@@ -13,6 +13,7 @@ import { CreateInvoiceModal } from '../components/invoices/CreateInvoiceModal';
 import { RecordPaymentModal } from '../components/payments/RecordPaymentModal';
 import { RegisterOrganisationModal } from '../components/onboarding/RegisterOrganisationModal';
 import { Badge } from '../components/common/Badge';
+import { getFormattedProductVersion } from '../../../contracts/commands';
 import {
   LayoutDashboard,
   Users,
@@ -350,7 +351,7 @@ export const AppShell: React.FC = () => {
             style={{ color: 'var(--md-sys-color-on-surface-variant)' }}
           >
             <span className="mono-num font-medium">
-              {activePlane === 'platform' ? 'Starq HQ v2026.08' : 'starqERP v1.0'}
+              {activePlane === 'platform' ? 'Starq HQ v2026.08' : `starqERP ${getFormattedProductVersion()}`}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--positive)' }} />
@@ -539,7 +540,7 @@ export const AppShell: React.FC = () => {
                 className="flex items-center justify-between text-[11px]"
                 style={{ color: 'var(--md-sys-color-on-surface-variant)' }}
               >
-                <span className="mono-num font-medium">starqERP v1.0</span>
+                <span className="mono-num font-medium">starqERP {getFormattedProductVersion()}</span>
                 <span className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--positive)' }} />
                   <span>Online</span>

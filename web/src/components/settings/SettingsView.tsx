@@ -89,7 +89,7 @@ const SETTINGS_TABS: TabConfig[] = [
 ];
 
 export const SettingsView: React.FC = () => {
-  const { currentTenant, updateTenant, updateTenantLogo } = useERP();
+  const { currentTenant, updateTenant, updateTenantLogo, currentBook, currentArchetype } = useERP();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeSubTab = (searchParams.get('tab') as SettingsSubTab) || 'profile';
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -236,19 +236,24 @@ export const SettingsView: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
-                    SME Industry Archetype
+                    Active Book & Operating Archetype
                   </label>
                   <input
                     type="text"
                     disabled
-                    value="Automotive & Body Repair"
-                    className="w-full px-3.5 py-2 text-xs border rounded-xl opacity-80 cursor-not-allowed"
+                    value={`${currentBook ? `[${currentBook.code}] ${currentBook.name}` : currentTenant.name} — ${currentArchetype.name}`}
+                    className="w-full px-3.5 py-2 text-xs border rounded-xl opacity-90 cursor-not-allowed font-medium"
                     style={{
                       backgroundColor: 'var(--md-sys-color-surface-container-high)',
                       borderColor: 'var(--md-sys-color-outline-variant)',
-                      color: 'var(--md-sys-color-on-surface-variant)',
+                      color: 'var(--md-sys-color-on-surface)',
                     }}
                   />
+                  <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] mt-1">
+                    {currentTenant.books && currentTenant.books.length > 0
+                      ? `Operating books: ${currentTenant.books.map((b) => `[${b.code}] ${b.name}`).join(' · ')}`
+                      : `Archetype: ${currentArchetype.name}`}
+                  </p>
                 </div>
 
                 <div>
@@ -348,7 +353,15 @@ export const SettingsView: React.FC = () => {
                   </label>
                   <select
                     value={gstStatus}
-                    onChange={(e) => setGstStatus(e.target.value as GstRegistrationStatus)}
+                    onChange={(e) => {
+                      const newStatus = e.target.value as GstRegistrationStatus;
+                      setGstStatus(newStatus);
+                      if (newStatus === 'not_registered') {
+                        setGstRate(0);
+                      } else if (newStatus === 'registered' && gstRate === 0) {
+                        setGstRate(8);
+                      }
+                    }}
                     className="w-full px-3.5 py-2 text-xs border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)]"
                     style={{
                       backgroundColor: 'var(--md-sys-color-surface-container-high)',
@@ -357,11 +370,13 @@ export const SettingsView: React.FC = () => {
                     }}
                   >
                     <option value="registered">Registered with MIRA (Statutory GST filing enabled)</option>
-                    <option value="not_registered">Not Registered with MIRA (Exempt from GST filing)</option>
+                    <option value="not_registered">Not Registered (0% GST · Threshold monitoring)</option>
                     <option value="pending">Pending Application with MIRA</option>
                   </select>
                   <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-1">
-                    TIN entry alone does not automatically make the business registered; explicit registration status controls the MIRA GST statutory schedule and Reports view.
+                    {gstStatus === 'not_registered'
+                      ? 'Organisation is not registered with MIRA. All transactions are assessed at 0% GST until statutory registration threshold is reached.'
+                      : 'Statutory MIRA GST returns and tax invoice sequencing active.'}
                   </p>
                 </div>
 
@@ -387,18 +402,25 @@ export const SettingsView: React.FC = () => {
                     Applicable GST Rate (%)
                   </label>
                   <select
-                    value={gstRate}
+                    value={gstStatus === 'not_registered' ? 0 : gstRate}
+                    disabled={gstStatus === 'not_registered'}
                     onChange={(e) => setGstRate(Number(e.target.value))}
-                    className="w-full px-3.5 py-2 text-xs border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)]"
+                    className="w-full px-3.5 py-2 text-xs border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)] disabled:opacity-75 disabled:cursor-not-allowed"
                     style={{
                       backgroundColor: 'var(--md-sys-color-surface-container-high)',
                       borderColor: 'var(--md-sys-color-outline-variant)',
                       color: 'var(--md-sys-color-on-surface)',
                     }}
                   >
-                    <option value={8}>8% General Goods & Services Tax (GGST)</option>
-                    <option value={0}>0% Zero-Rated / Exempt</option>
-                    <option value={16}>16% Tourism Sector (TGST)</option>
+                    {gstStatus === 'not_registered' ? (
+                      <option value={0}>0% (Non-Registered with MIRA)</option>
+                    ) : (
+                      <>
+                        <option value={8}>8% General Goods & Services Tax (GGST)</option>
+                        <option value={0}>0% Zero-Rated / Exempt</option>
+                        <option value={16}>16% Tourism Sector (TGST)</option>
+                      </>
+                    )}
                   </select>
                 </div>
 

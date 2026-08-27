@@ -69,11 +69,23 @@ describe('SERP-197 / SERP-145: Jobs Runtime & CreateJobModal Permission Contract
   it('SERP-151: displays administrator role assignment guidance and removes misleading self-switch instructions', () => {
     // Non-admin harness testing WorkflowStepRail for an intake step where user with role-member is logged in
     const NonAdminHarness: React.FC = () => {
-      const { switchCurrentUser } = useERP();
+      const { switchCurrentUser, setUsers } = useERP();
       React.useEffect(() => {
-        // Switch to user-7 (Member with no jobs.create permission)
+        setUsers((prev) => [
+          ...prev,
+          {
+            id: 'user-7',
+            tenantId: 'tenant-starq',
+            name: 'Test Member',
+            email: 'member@starq.test',
+            roleId: 'role-member',
+            roleName: 'Member',
+            status: 'Active',
+            permissions: [],
+          } as any,
+        ]);
         switchCurrentUser('user-7');
-      }, [switchCurrentUser]);
+      }, [switchCurrentUser, setUsers]);
 
       return <WorkflowStepRail currentStatus="Vehicle Intake & Inspection" />;
     };

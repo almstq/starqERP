@@ -48,9 +48,10 @@ export const UsersManagementTab: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const activeUsers = users.filter((u) => u.status === 'Active');
-  const suspendedUsers = users.filter((u) => u.status === 'Suspended');
-  const pendingInvitations = invitations.filter((i) => i.status === 'pending');
+  const tenantUsers = users.filter((u) => u.tenantId === currentTenant.id || !u.tenantId);
+  const activeUsers = tenantUsers.filter((u) => u.status === 'Active');
+  const suspendedUsers = tenantUsers.filter((u) => u.status === 'Suspended');
+  const pendingInvitations = invitations.filter((i) => (i.organisation_id === currentTenant.id || !i.organisation_id) && i.status === 'pending');
 
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -304,14 +305,16 @@ export const UsersManagementTab: React.FC = () => {
 
                     <td className="py-3 px-3 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2 whitespace-nowrap">
-                        <button
-                          onClick={() => switchCurrentUser(user.id)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-[11px] transition-colors whitespace-nowrap cursor-pointer"
-                          title="Switch active user session to test role UI gating"
-                        >
-                          Simulate User
-                        </button>
-                        {user.id !== 'user-1' && (
+                        {Boolean(import.meta.env.DEV) && (
+                          <button
+                            onClick={() => switchCurrentUser(user.id)}
+                            className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-[11px] transition-colors whitespace-nowrap cursor-pointer"
+                            title="[DEV ONLY] Switch active user session to test role UI gating"
+                          >
+                            Simulate User
+                          </button>
+                        )}
+                        {user.id !== 'user-1' && user.id !== 'user-ignition-owner' && (
                           <button
                             onClick={() => suspendUser(user.id)}
                             className="p-1 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shrink-0 cursor-pointer"

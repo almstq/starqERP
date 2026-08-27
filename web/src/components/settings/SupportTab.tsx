@@ -24,7 +24,7 @@ export const SupportTab: React.FC = () => {
               Technical Support & SLA Matrix
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Grounded, transparent operational capacity with deterministic escalation and response guarantees.
+              Transparent operational support with direct executive escalation and business-hour response targets.
             </p>
           </div>
         </div>
@@ -38,7 +38,7 @@ export const SupportTab: React.FC = () => {
             </span>
           </div>
           <div className="text-slate-500 dark:text-slate-400 text-[11px]">
-            Friday (Jumu'ah) & Weekend off-hours queued for next business day.
+            Friday (Jumu'ah) & Weekend off-hours triaged next business day.
           </div>
         </div>
       </div>
@@ -56,7 +56,7 @@ export const SupportTab: React.FC = () => {
               <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold">
                 <th className="pb-3 pr-4">Tier</th>
                 <th className="pb-3 pr-4">Client Impact Definition</th>
-                <th className="pb-3 pr-4">Initial Response SLA</th>
+                <th className="pb-3 pr-4">Target Initial Triage</th>
                 <th className="pb-3">Coverage</th>
               </tr>
             </thead>
@@ -70,10 +70,10 @@ export const SupportTab: React.FC = () => {
                   <strong>System Down</strong> or <strong>Financial / Ledger Inaccuracy</strong> (invoices/settlements corrupt).
                 </td>
                 <td className="py-3 pr-4 font-bold text-slate-900 dark:text-slate-100">
-                  &le; 4 Hours
+                  &le; 4 Business Hours
                 </td>
                 <td className="py-3 text-slate-500 dark:text-slate-400">
-                  24/7 Automated Paging
+                  Standard Hours + Founder Escalation
                 </td>
               </tr>
               <tr>
@@ -82,7 +82,7 @@ export const SupportTab: React.FC = () => {
                   Sev-2 (High)
                 </td>
                 <td className="py-3 pr-4 text-slate-700 dark:text-slate-300">
-                  Core business workflow blocked with no viable workaround (POS payment lock, job checkout failure).
+                  Core business workflow blocked with no viable workaround (POS payment lock, checkout failure).
                 </td>
                 <td className="py-3 pr-4 font-bold text-slate-900 dark:text-slate-100">
                   &le; 12 Business Hours
@@ -149,8 +149,8 @@ export const SupportTab: React.FC = () => {
             </div>
             <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/40 flex items-center justify-between">
               <div>
-                <div className="font-bold text-rose-900 dark:text-rose-200">Critical Outage Pager (Sev-1)</div>
-                <div className="text-rose-700 dark:text-rose-300 text-[11px]">24/7 priority incident routing</div>
+                <div className="font-bold text-rose-900 dark:text-rose-200">Critical Incident Escalation (Sev-1)</div>
+                <div className="text-rose-700 dark:text-rose-300 text-[11px]">Direct executive triage</div>
               </div>
               <a
                 href="mailto:urgent@starq.mv"

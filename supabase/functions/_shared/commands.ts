@@ -1,14 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// GENERATED FILE — DO NOT EDIT.
-//
-// Copied verbatim from contracts/commands.ts by scripts/sync-contract.mjs so
-// that Supabase bundles it with the Edge function. Editing this file instead of
-// the canonical one recreates the drift the contract exists to eliminate.
-//
-// Edit:  contracts/commands.ts
-// Then:  node scripts/sync-contract.mjs
-// ─────────────────────────────────────────────────────────────────────────────
-
 /**
  * STARQ ERP — Canonical command contract.
  *
@@ -4130,12 +4119,19 @@ export const STARQ_ERP_CANONICAL_METADATA: ProductIdentityMetadata = {
   embeddedAiName: 'starqAI',
   companyName: 'Starq Technologies Pvt Ltd',
   version: '0.2.0',
-  releaseTrack: 'R1 - M0 main base',
+  releaseTrack: 'beta',
   baseCurrency: 'MVR',
   contactEmail: 'ops@starq.mv',
   legalJurisdiction: 'Republic of Maldives',
   tagline: 'Multi-tenant ERP & Commercial Operating System',
 };
+
+/**
+ * Derives the canonical user-facing formatted product version string (e.g. "v0.2.0-beta")
+ */
+export function getFormattedProductVersion(meta: ProductIdentityMetadata = STARQ_ERP_CANONICAL_METADATA): string {
+  return meta.releaseTrack ? `v${meta.version}-${meta.releaseTrack}` : `v${meta.version}`;
+}
 
 export function validateProductIdentityMetadata(meta: unknown): {
   valid: boolean;

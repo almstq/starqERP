@@ -1,8 +1,9 @@
-import type { IndustryType, PermissionModule, WorkflowStage, UserRole } from '../types/erp';
+import type { IndustryType, PermissionModule, WorkflowStage } from '../types/erp';
 
 export type ArchetypeId =
   | 'general_business'
   | 'software_services'
+  | 'professional_services'
   | 'automotive_workshop'
   | 'marine_service'
   | 'medical_clinic'
@@ -107,31 +108,31 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
     ],
     rolePresets: [
       { id: 'role-superadmin', name: 'Managing Director / Super Admin', description: 'Full administrative authority within this organization.', color: 'purple', isSystemAdmin: true, jobTitle: 'Managing Director' },
-      { id: 'role-manager', name: 'Operations Manager', description: 'Supervises operations, reviews stock, and manages staff.', color: 'blue', jobTitle: 'Operations Manager' },
+      { id: 'role-manager', name: 'Operations Manager', description: 'Supervises service operations, reviews stock, manages schedules, and staff.', color: 'blue', jobTitle: 'Operations Manager' },
       { id: 'role-accountant', name: 'Financial Controller / Accountant', description: 'Manages Tax Invoices, BML bank slips, MIRA GST reporting, and vendor payouts.', color: 'emerald', jobTitle: 'Finance Officer' },
-      { id: 'role-sales', name: 'Sales & Customer Officer', description: 'Handles customer requests, creates estimates, and issues receipts.', color: 'rose', jobTitle: 'Sales Officer' },
-      { id: 'role-member', name: 'Team Member', description: 'Assigned task execution and general operations.', color: 'slate', jobTitle: 'Associate' },
+      { id: 'role-sales', name: 'Sales & Customer Officer', description: 'Handles client proposals, contract orders, invoices, and payment receipts.', color: 'rose', jobTitle: 'Sales Officer' },
+      { id: 'role-member', name: 'Team Member', description: 'General task execution and deliverable fulfillment.', color: 'slate', jobTitle: 'Associate' },
     ],
   },
 
   software_services: {
     id: 'software_services',
-    name: 'Software & Professional Services',
+    name: 'Software & Engineering Services',
     industry: 'Software & Engineering Services',
     terminology: {
       customer: 'Client',
       customers: 'Clients',
       order: 'Project',
       orders: 'Projects & Deliverables',
-      primaryAsset: 'Engagement / Milestone',
+      primaryAsset: 'Milestone / Module',
       primaryAssetLabel: 'Project Code / Milestone',
       facility: 'Office / Unit',
-      worker: 'Engineer / Consultant',
+      worker: 'Engineer / Specialist',
       workers: 'Engineering & Delivery',
       inventory: 'Services & Subscriptions',
-      purchasing: 'Procurement & Subscriptions',
+      purchasing: 'Procurement & Vendor Subscriptions',
       activeOrdersHeader: 'Active Projects & Client Deliverables',
-      activeOrdersSubtitle: 'Live status for engineering milestones and professional engagements',
+      activeOrdersSubtitle: 'Live status for engineering milestones and technical engagements',
       showVehicleFields: false,
     },
     enabledModules: [...coreModules, 'customers', 'jobs', 'workflows'],
@@ -140,7 +141,7 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
     workflow: [
       stage('Scoping & Intake', 'SCOPING', 1, 'Client requirements analyzed and scoped.', true),
       stage('Development / Delivery', 'DELIVERY', 2, 'Active engineering and milestone execution.'),
-      stage('UAT & Verification', 'UAT', 3, 'Client acceptance and verification.'),
+      stage('UAT & Verification', 'UAT', 3, 'Client acceptance and quality verification.'),
       stage('Completed / Deployed', 'DEPLOYED', 4, 'Project signed off and deployed.', false, true),
     ],
     rolePresets: [
@@ -149,6 +150,43 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
       { id: 'role-accountant', name: 'Finance & Billing Specialist', description: 'Manages client billing, retainer invoicing, and financial compliance.', color: 'emerald', jobTitle: 'Finance Specialist' },
       { id: 'role-lead-tech', name: 'Lead Engineer / Consultant', description: 'Owns architecture, code delivery, and technical milestones.', color: 'amber', jobTitle: 'Lead Engineer' },
       { id: 'role-member', name: 'Associate Engineer', description: 'Engineering and client task delivery.', color: 'slate', jobTitle: 'Software Engineer' },
+    ],
+  },
+
+  professional_services: {
+    id: 'professional_services',
+    name: 'Professional Services & Consulting',
+    industry: 'Software & Engineering Services',
+    terminology: {
+      customer: 'Client',
+      customers: 'Clients',
+      order: 'Engagement',
+      orders: 'Client Engagements',
+      primaryAsset: 'Milestone / Retainer',
+      primaryAssetLabel: 'Engagement Ref / Account',
+      facility: 'Consulting Suite',
+      worker: 'Consultant / Advisor',
+      workers: 'Consultants & Associates',
+      inventory: 'Services & Retainers',
+      purchasing: 'Vendor Bills & Requisitions',
+      activeOrdersHeader: 'Active Engagements & Retainers',
+      activeOrdersSubtitle: 'Live status for professional advisory milestones and deliverables',
+      showVehicleFields: false,
+    },
+    enabledModules: [...coreModules, 'customers', 'jobs', 'workflows'],
+    inventoryDefaults: { unit: 'retainer', reorderLevel: 0 },
+    documentDefaults: { salesDocumentLabel: 'Professional Fee Invoice', orderDocumentLabel: 'Engagement Letter' },
+    workflow: [
+      stage('Client Intake & Scope', 'INTAKE', 1, 'Engagement agreement scoped and executed.', true),
+      stage('Advisory Execution', 'EXECUTION', 2, 'Professional advisory work in progress.'),
+      stage('Partner Review & QC', 'REVIEW', 3, 'Partner inspection and deliverable review.'),
+      stage('Deliverable Signoff', 'SIGNOFF', 4, 'Deliverable signed off and closed.', false, true),
+    ],
+    rolePresets: [
+      { id: 'role-superadmin', name: 'Managing Partner / Super Admin', description: 'Full administrative authority within this professional firm.', color: 'purple', isSystemAdmin: true, jobTitle: 'Managing Partner' },
+      { id: 'role-manager', name: 'Engagement Director', description: 'Supervises consulting engagements and client deliverables.', color: 'blue', jobTitle: 'Engagement Director' },
+      { id: 'role-accountant', name: 'Practice Financial Controller', description: 'Manages billing, time accounting, and client payouts.', color: 'emerald', jobTitle: 'Financial Controller' },
+      { id: 'role-member', name: 'Senior Associate', description: 'Consulting execution and advisory deliverable production.', color: 'slate', jobTitle: 'Consultant' },
     ],
   },
 
@@ -188,7 +226,6 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
       { id: 'role-accountant', name: 'Financial Controller / Accountant', description: 'Manages Tax Invoices, BML bank slip reconciliation, and MIRA GST reporting.', color: 'emerald', jobTitle: 'Accountant' },
       { id: 'role-lead-tech', name: 'Lead Technician / Spray Specialist', description: 'Logs job progress, records paint usage, and executes vehicle repairs.', color: 'amber', jobTitle: 'Lead Technician' },
       { id: 'role-sales', name: 'Service Advisor / Front Desk', description: 'Intakes customer vehicles, books job estimates, and collects deposits.', color: 'rose', jobTitle: 'Service Advisor' },
-      { id: 'role-apprentice', name: 'Apprentice / Shop Assistant', description: 'Read-only access to assigned jobs and basic material requests.', color: 'slate', jobTitle: 'Shop Assistant' },
     ],
   },
 
@@ -216,10 +253,11 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
     inventoryDefaults: { unit: 'each', reorderLevel: 5 },
     documentDefaults: { salesDocumentLabel: 'Service Invoice', orderDocumentLabel: 'Service Order' },
     workflow: [
-      stage('Docking & Inspection', 'DOCKING', 1, 'Vessel hauled on slipway and surveyed.', true),
-      stage('Engine & Hull Overhaul', 'OVERHAUL', 2, 'Fiberglass repairs, antifouling, mechanical work.'),
-      stage('Sea Trial & QC', 'TRIAL', 3, 'Sea trials and engine diagnostic check.'),
-      stage('Handover', 'HANDOVER', 4, 'Vessel cleared for departure.', false, true),
+      stage('Slipway Haul-Out & Survey', 'HAUL_OUT', 1, 'Vessel hauled onto slipway cradle, underwater hull inspected.', true),
+      stage('Hull Prep & Antifouling', 'HULL_PREP', 2, 'High-pressure wash, barnacle scraping, primer coat and antifouling application.'),
+      stage('Engine & Mechanical Overhaul', 'ENGINE_OVERHAUL', 3, 'Inboard/Outboard servicing, shaft alignment, propeller balancing.'),
+      stage('Sea Trial & Diagnostics', 'SEA_TRIAL', 4, 'Vessel launched for full throttle RPM test, bilge & cooling verification.'),
+      stage('Launch Clearance & Handover', 'LAUNCH_SETTLED', 5, 'Harbor master departure clearance, port fee settled, client signoff.', false, true),
     ],
     rolePresets: [
       { id: 'role-superadmin', name: 'Managing Director / Super Admin', description: 'Full administrative authority within this organization.', color: 'purple', isSystemAdmin: true, jobTitle: 'Managing Director' },
@@ -253,9 +291,11 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
     inventoryDefaults: { unit: 'box', reorderLevel: 10 },
     documentDefaults: { salesDocumentLabel: 'Medical Bill / Invoice', orderDocumentLabel: 'Clinical Order' },
     workflow: [
-      stage('Check-in & Triage', 'TRIAGE', 1, 'Patient check-in and vitals recorded.', true),
-      stage('Consultation / Lab', 'CONSULT', 2, 'Doctor examination or diagnostic sample testing.'),
-      stage('Prescription / Billing', 'BILLING', 3, 'Medicine dispensed and billing processed.', false, true),
+      stage('Patient Triage & Registration', 'TRIAGE', 1, 'Vitals logged, national ID/Passport verified, primary symptom triage.', true),
+      stage('Doctor Consultation', 'CONSULT', 2, 'Physician physical examination, prescription notes and diagnosis entry.'),
+      stage('Diagnostic Lab / X-Ray', 'LAB_WORK', 3, 'Blood draw, specimen analysis, ultrasound/radiology scans.'),
+      stage('Pharmacy & Treatment', 'PHARMACY', 4, 'Prescriptions dispensed, injections administered, care instruction.'),
+      stage('Patient Discharged & Settled', 'DISCHARGED', 5, 'Aasandha/Allied insurance claimed, co-pay settled, follow-up scheduled.', false, true),
     ],
     rolePresets: [
       { id: 'role-superadmin', name: 'Medical Director / Super Admin', description: 'Full administrative authority within this healthcare organization.', color: 'purple', isSystemAdmin: true, jobTitle: 'Medical Director' },
@@ -373,8 +413,34 @@ export const ARCHETYPES: Record<ArchetypeId, ArchetypeDefinition> = {
 };
 
 export function getArchetype(id?: string): ArchetypeDefinition {
-  if (id && id in ARCHETYPES) {
+  if (!id) return ARCHETYPES.general_business;
+  if (id in ARCHETYPES) {
     return ARCHETYPES[id as ArchetypeId];
+  }
+  const normalized = id.toLowerCase();
+  if (normalized.includes('clinic') || normalized.includes('medical') || normalized.includes('health')) {
+    return ARCHETYPES.medical_clinic;
+  }
+  if (normalized.includes('marine') || normalized.includes('boatyard') || normalized.includes('vessel')) {
+    return ARCHETYPES.marine_service;
+  }
+  if (normalized.includes('automotive') || normalized.includes('garage') || normalized.includes('auto') || normalized.includes('repair')) {
+    return ARCHETYPES.automotive_workshop;
+  }
+  if (normalized.includes('software') || normalized.includes('tech') || normalized.includes('engineering')) {
+    return ARCHETYPES.software_services;
+  }
+  if (normalized.includes('consult') || normalized.includes('professional') || normalized.includes('legal')) {
+    return ARCHETYPES.professional_services;
+  }
+  if (normalized.includes('wholesale') || normalized.includes('distribution') || normalized.includes('trading')) {
+    return ARCHETYPES.wholesale_trading;
+  }
+  if (normalized.includes('construct') || normalized.includes('contract')) {
+    return ARCHETYPES.construction_contracting;
+  }
+  if (normalized.includes('retail') || normalized.includes('pos') || normalized.includes('store') || normalized.includes('shop')) {
+    return ARCHETYPES.retail;
   }
   return ARCHETYPES.general_business;
 }

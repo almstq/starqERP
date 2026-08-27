@@ -48,9 +48,8 @@ import {
 import { telemetry } from '../services/telemetry';
 import { dispatchCommand, apiGet } from '../services/apiGateway';
 import { useAuth } from './AuthContext';
-import { getArchetype, ArchetypeDefinition, ArchetypeTerminology } from '../domain/archetypes';
+import { getArchetype, ArchetypeDefinition, ArchetypeTerminology, ArchetypeId, ARCHETYPES } from '../domain/archetypes';
 import { switchContext as apiSwitchContext, fetchCurrentUser } from '../services/auth';
-import { ARCHETYPES } from '../domain/archetypes';
 import {
   submitOrganisationApplication as apiSubmitApplication,
   getPlatformApplications as apiGetPlatformApplications,
@@ -110,6 +109,7 @@ export interface ERPContextType {
   // RBAC & User Management State
   currentUser: AppUser;
   users: AppUser[];
+  setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>;
   roles: UserRole[];
   invitations: StaffInvitationRecord[];
   switchCurrentUser: (userId: string) => void;
@@ -145,7 +145,7 @@ export interface ERPContextType {
   addWorkflowStage: (stage: Omit<WorkflowStage, 'id' | 'tenantId' | 'order'>) => WorkflowStage;
   updateWorkflowStage: (stageId: string, stageData: Partial<WorkflowStage>) => void;
   deleteWorkflowStage: (stageId: string) => void;
-  resetWorkflowToPreset: (presetType: 'automotive' | 'clinic' | 'marine', targetTenantId?: string) => void;
+  resetWorkflowToPreset: (presetType: string, targetTenantId?: string) => void;
 
   // Activity / Audit Logs (The Owner's Evidence)
   auditLogs: AuditLogEntry[];
@@ -674,6 +674,19 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const currentTerms = useMemo(() => {
     return currentArchetype.terminology;
   }, [currentArchetype]);
+
+  // Synchronize default workflow stages with current archetype
+  useEffect(() => {
+    if (currentArchetype) {
+      const defaultStages = currentArchetype.workflow.map((p, idx) => ({
+        ...p,
+        id: `stage-${currentArchetype.id}-${idx + 1}`,
+        tenantId: currentTenant.id,
+        order: idx + 1
+      }));
+      setWorkflowStages(defaultStages);
+    }
+  }, [currentArchetype.id, currentTenant.id]);
 
   // Current User computation
   const currentUser = useMemo(() => {
@@ -1491,39 +1504,36 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   };
 
-  const resetWorkflowToPreset = (presetType: 'automotive' | 'clinic' | 'marine', targetTenantId?: string) => {
+  const resetWorkflowToPreset = (presetType: string, targetTenantId?: string) => {
     const orgId = targetTenantId || currentTenant.id;
-    let preset: WorkflowStage[] = [];
-    if (presetType === 'clinic') {
-      preset = CLINIC_WORKFLOW_PRESET.map((p, idx) => ({
-        ...p,
-        id: `stage-clinic-${idx + 1}`,
-        tenantId: orgId,
-        order: idx + 1
-      }));
-    } else if (presetType === 'marine') {
-      preset = BOATYARD_WORKFLOW_PRESET.map((p, idx) => ({
-        ...p,
-        id: `stage-marine-${idx + 1}`,
-        tenantId: orgId,
-        order: idx + 1
-      }));
-    } else {
-      preset = INITIAL_WORKFLOW_STAGES.map((p, idx) => ({
-        ...p,
-        tenantId: orgId,
-        order: idx + 1
-      }));
+    let archetypeKey: ArchetypeId = 'general_business';
+    if (presetType === 'clinic' || presetType === 'medical_clinic') {
+      archetypeKey = 'medical_clinic';
+    } else if (presetType === 'marine' || presetType === 'marine_service') {
+      archetypeKey = 'marine_service';
+    } else if (presetType === 'automotive' || presetType === 'automotive_workshop') {
+      archetypeKey = 'automotive_workshop';
+    } else if (presetType in ARCHETYPES) {
+      archetypeKey = presetType as ArchetypeId;
     }
+
+    const archetypeDef = getArchetype(archetypeKey);
+    const preset: WorkflowStage[] = archetypeDef.workflow.map((p, idx) => ({
+      ...p,
+      id: `stage-${archetypeKey}-${idx + 1}`,
+      tenantId: orgId,
+      order: idx + 1
+    }));
+
     setWorkflowStages(preset);
 
     logAuditEvent({
       action: 'WORKFLOW_MODIFIED',
       module: 'workflows',
       entityType: 'WorkflowStage',
-      entityId: `preset-${presetType}`,
-      entityName: `${presetType.toUpperCase()} Workflow Template`,
-      summary: `Loaded standard workflow pipeline template for industry: ${presetType}.`
+      entityId: `preset-${archetypeKey}`,
+      entityName: `${archetypeDef.name} Workflow Template`,
+      summary: `Loaded standard workflow pipeline template for: ${archetypeDef.name}.`
     });
   };
 
@@ -2334,6 +2344,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         // RBAC & User Management
         currentUser,
         users,
+        setUsers,
         roles,
         invitations,
         switchCurrentUser,

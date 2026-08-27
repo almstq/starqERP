@@ -20,7 +20,7 @@ import { UserRole, PermissionModule, PermissionAction } from '../../types/erp';
 import { Badge } from '../common/Badge';
 
 export const RolesPermissionsTab: React.FC = () => {
-  const { roles, users, createRole, updateRolePermissions, deleteRole, currentUser, switchCurrentUser } = useERP();
+  const { roles, users, createRole, updateRolePermissions, deleteRole, currentUser, currentTerms, currentArchetype } = useERP();
   const [selectedRoleId, setSelectedRoleId] = useState<string>(roles[0]?.id || 'role-superadmin');
   const [isCreatingRole, setIsCreatingRole] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
@@ -37,14 +37,14 @@ export const RolesPermissionsTab: React.FC = () => {
   }[] = [
     {
       key: 'jobs',
-      label: 'Jobs & Work Orders',
-      description: 'Manage bay work orders, quotes, stages, assign technicians, and log materials.',
+      label: currentTerms.orders,
+      description: `Manage ${currentTerms.orders.toLowerCase()}, scopes, milestones, assign ${currentTerms.workers.toLowerCase()}, and track deliverables.`,
       supportedActions: ['view', 'create', 'edit', 'delete', 'approve', 'export']
     },
     {
       key: 'invoices',
       label: 'Invoices & Billing',
-      description: 'Create GST tax invoices, apply discounts, issue official MIRA invoices.',
+      description: 'Create GST tax invoices, apply discounts, issue official MIRA compliant billing.',
       supportedActions: ['view', 'create', 'edit', 'delete', 'approve', 'export']
     },
     {
@@ -56,19 +56,19 @@ export const RolesPermissionsTab: React.FC = () => {
     {
       key: 'expenses',
       label: 'Operating Expenses',
-      description: 'Log workshop rent, electricity, freight, and tools expenditure.',
+      description: 'Log rent, utilities, freight, subcontractor services, and operational expenditure.',
       supportedActions: ['view', 'create', 'edit', 'delete', 'approve', 'export']
     },
     {
       key: 'inventory',
-      label: 'Inventory & Stock Control',
-      description: 'Adjust physical stock, receive orders, view unit cost prices, manage SKUs.',
+      label: currentTerms.inventory,
+      description: 'Adjust stock levels, receive inventory orders, view unit cost valuations, manage item SKUs.',
       supportedActions: ['view', 'create', 'edit', 'delete', 'manage', 'export']
     },
     {
       key: 'purchasing',
-      label: 'Purchasing & POs',
-      description: 'Draft purchase orders to paint and part suppliers, approve vendor POs.',
+      label: currentTerms.purchasing,
+      description: 'Draft purchase orders and vendor bills, approve supplier requisitions.',
       supportedActions: ['view', 'create', 'edit', 'delete', 'approve', 'export']
     },
     {
@@ -80,7 +80,7 @@ export const RolesPermissionsTab: React.FC = () => {
     {
       key: 'workflows',
       label: 'Configurable Workflows',
-      description: 'Define shop floor stages, customize pipeline turnaround SLAs.',
+      description: 'Define operational pipeline stages, customize turnaround SLAs.',
       supportedActions: ['view', 'edit', 'manage']
     },
     {
@@ -92,7 +92,7 @@ export const RolesPermissionsTab: React.FC = () => {
     {
       key: 'users',
       label: 'User Authorizations',
-      description: 'Authorize new users landing in PENDING status, suspend or invite members.',
+      description: 'Authorize new staff invitations, manage member access and role assignments.',
       supportedActions: ['view', 'create', 'edit', 'delete', 'approve', 'manage']
     },
     {
