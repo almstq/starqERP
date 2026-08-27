@@ -45,6 +45,7 @@ import {
   ClipboardList,
   Layers,
   Activity,
+  Landmark,
 } from 'lucide-react';
 import { StarqHQShell, PlatformTabId } from '../components/platform/StarqHQShell';
 
@@ -84,6 +85,7 @@ const NAV = [
   { to: '/invoices',    label: 'Invoices',         Icon: FileText },
   { to: '/payments',    label: 'Payments',         Icon: CreditCard },
   { to: '/expenses',    label: 'Expenses',         Icon: Receipt },
+  { to: '/accounts',    label: 'Chart of Accounts', Icon: Landmark },
   { to: '/inventory',   label: 'Inventory',        Icon: Package },
   { to: '/purchasing',  label: 'Purchasing',       Icon: ShoppingCart },
   { to: '/suppliers',   label: 'Suppliers',        Icon: Truck },
