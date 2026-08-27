@@ -1349,9 +1349,9 @@ export const INITIAL_TENANTS: import('../types/erp').OrganisationTenant[] = [
   },
   {
     id: 'tenant-ignition',
-    name: 'Club Ignition Garage Pvt Ltd',
+    name: 'Club Ignition Pvt Ltd',
     slug: 'club-ignition',
-    legalName: 'Club Ignition Garage Private Limited',
+    legalName: 'Club Ignition Private Limited',
     industry: 'Automotive & Body Repair',
     currency: 'MVR',
     currencySymbol: 'Rf',
@@ -1496,8 +1496,8 @@ export const PLATFORM_CLIENTS_REGISTRY: PlatformClientRecord[] = [
   },
   {
     id: 'tenant-ignition',
-    name: 'Club Ignition Garage Pvt Ltd (Tenant #1)',
-    legalName: 'Club Ignition Garage Private Limited',
+    name: 'Club Ignition Pvt Ltd (Tenant #1)',
+    legalName: 'Club Ignition Private Limited',
     archetype: 'Automotive & Workshop',
     island: "Hulhumale'",
     booksCount: 1,

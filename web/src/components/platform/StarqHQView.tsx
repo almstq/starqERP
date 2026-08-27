@@ -85,20 +85,22 @@ export const StarqHQView: React.FC = () => {
               <ShieldCheck size={12} />
               Starq Platform Operator Plane
             </span>
-            <span className="text-xs text-[var(--md-sys-color-on-surface-variant)]">· Tier 3 Governance</span>
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 border border-amber-500/20 font-mono">
+              UI Prototype · Not Yet Authoritative
+            </span>
           </div>
           <h1 className="text-2xl font-black tracking-tight text-[var(--md-sys-color-on-surface)]">
             Starq HQ Platform Console & Client Analytics
           </h1>
           <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
-            Superadmin management of all customer tenants, industry archetypes, provisioning pipelines, and multi-tenant telemetry.
+            Superadmin management of customer tenants, industry archetypes, provisioning pipelines, and multi-tenant telemetry.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsRegisterOrgModalOpen(true)}
-            className="px-3.5 py-2 rounded-[var(--md-sys-shape-corner-small)] text-xs font-bold flex items-center gap-1.5 shadow-sm transition-transform active:scale-95"
+            className="px-3.5 py-2 rounded-[var(--md-sys-shape-corner-small)] text-xs font-bold flex items-center gap-1.5 shadow-sm transition-transform active:scale-95 cursor-pointer"
             style={{
               backgroundColor: 'var(--md-sys-color-primary)',
               color: 'var(--md-sys-color-on-primary)',
@@ -120,14 +122,14 @@ export const StarqHQView: React.FC = () => {
           }}
         >
           <div className="flex items-center justify-between text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)]">
-            <span>Active Client Tenants</span>
+            <span>Local Active Tenants</span>
             <Building2 size={16} className="text-[var(--md-sys-color-primary)]" />
           </div>
           <div className="text-2xl font-black mono-num text-[var(--md-sys-color-on-surface)] mt-2">
             {tenants.length}
           </div>
           <div className="text-[10px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
-            <span>Across Male', Hulhumale', Outer Atolls</span>
+            <span>Starq Tech & Club Ignition</span>
           </div>
         </div>
 
@@ -177,14 +179,14 @@ export const StarqHQView: React.FC = () => {
           }}
         >
           <div className="flex items-center justify-between text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)]">
-            <span>Platform Status</span>
-            <Activity size={16} className="text-emerald-500" />
+            <span>Platform Telemetry</span>
+            <Activity size={16} className="text-amber-500" />
           </div>
-          <div className="text-2xl font-black mono-num text-emerald-600 mt-2">
-            99.98%
+          <div className="text-sm font-bold text-[var(--md-sys-color-on-surface)] mt-2">
+            Not Connected Yet
           </div>
-          <div className="text-[10px] text-emerald-600 font-semibold mt-1">
-            Edge API & PostgreSQL Live
+          <div className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] mt-1">
+            Telemetry daemon pending deployment
           </div>
         </div>
       </div>
@@ -452,21 +454,21 @@ export const StarqHQView: React.FC = () => {
             }}
           >
             <div className="flex items-center gap-2 font-bold text-sm text-[var(--md-sys-color-on-surface)]">
-              <Server size={18} className="text-emerald-500" />
-              <span>Live Database & Migration State</span>
+              <Server size={18} className="text-amber-500" />
+              <span>Migration & Backend Contract Status</span>
             </div>
             <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] space-y-1.5 font-mono">
               <div className="flex items-center justify-between p-2 rounded bg-black/5 dark:bg-white/5">
                 <span>Migration 0024: platform schema & registry</span>
-                <Badge variant="accent" size="sm">READY</Badge>
+                <Badge variant="warning" size="sm">Pending Deployment</Badge>
               </div>
               <div className="flex items-center justify-between p-2 rounded bg-black/5 dark:bg-white/5">
                 <span>Migration 0025: public.books & composite FKs</span>
-                <Badge variant="accent" size="sm">READY</Badge>
+                <Badge variant="warning" size="sm">Pending Deployment</Badge>
               </div>
               <div className="flex items-center justify-between p-2 rounded bg-black/5 dark:bg-white/5">
-                <span>PostgreSQL RLS Multi-Tenant Policies</span>
-                <Badge variant="accent" size="sm">ENFORCED</Badge>
+                <span>Server Provisioning RPC (SERP-284/285)</span>
+                <Badge variant="neutral" size="sm">Prototype State</Badge>
               </div>
             </div>
           </div>

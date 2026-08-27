@@ -15,7 +15,7 @@ describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)
     expect(starqTenant.gstRate).toBe(0);
 
     expect(ignitionTenant).toBeDefined();
-    expect(ignitionTenant.name).toBe('Club Ignition Garage Pvt Ltd');
+    expect(ignitionTenant.name).toBe('Club Ignition Pvt Ltd');
     expect(ignitionTenant.gstStatus).toBe('registered');
     expect(ignitionTenant.gstRate).toBe(8);
   });

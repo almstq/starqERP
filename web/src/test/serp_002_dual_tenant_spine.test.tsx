@@ -44,8 +44,8 @@ describe('SERP-002: Dual-Tenant Organisation, Outlet & Module Spine', () => {
     expect(starq?.industry).toBe('Software & Engineering Services');
 
     expect(ignition).toBeDefined();
-    expect(ignition?.name).toBe('Club Ignition Garage Pvt Ltd');
-    expect(ignition?.legalName).toBe('Club Ignition Garage Private Limited');
+    expect(ignition?.name).toBe('Club Ignition Pvt Ltd');
+    expect(ignition?.legalName).toBe('Club Ignition Private Limited');
     expect(ignition?.industry).toBe('Automotive & Body Repair');
   });
 
@@ -85,7 +85,7 @@ describe('SERP-002: Dual-Tenant Organisation, Outlet & Module Spine', () => {
     });
 
     expect(screen.getByTestId('current-tenant-id').textContent).toBe('tenant-ignition');
-    expect(screen.getByTestId('current-tenant-name').textContent).toBe('Club Ignition Garage Pvt Ltd');
+    expect(screen.getByTestId('current-tenant-name').textContent).toBe('Club Ignition Pvt Ltd');
     expect(screen.getByTestId('current-tenant-outlets-count').textContent).toBe('1');
   });
 });
