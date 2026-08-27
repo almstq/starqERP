@@ -179,10 +179,8 @@ describe('Adaptive Viewport & Layout Acceptance (SERP-ADAPTIVE)', () => {
       // Verify production auth gate badge is preserved on compact screens
       expect(screen.getByText(/Auth Gate/i)).toBeInTheDocument();
 
-      // Verify Founder Quick Launch card is visible
-      expect(screen.getByText(/Ali Musthaq/i)).toBeInTheDocument();
-      expect(screen.getByText(/Founder/i)).toBeInTheDocument();
-      expect(screen.getByText(/a.musthaq@gmail.com/i)).toBeInTheDocument();
+      // Verify sign-in heading is visible
+      expect(screen.getByRole('heading', { name: /Sign in to your workspace/i })).toBeInTheDocument();
     });
   });
 

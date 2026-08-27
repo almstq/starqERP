@@ -1,10 +1,11 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LoginPage } from '../app/LoginPage';
 import { ThemeProvider } from '../context/ThemeContext';
 import { AuthProvider } from '../context/AuthContext';
+import * as authService from '../services/auth';
 
 // Mock useNavigate
 const mockNavigate = vi.fn();
@@ -24,7 +25,7 @@ vi.mock('../services/auth', () => ({
   switchSeat: vi.fn().mockResolvedValue(null),
 }));
 
-describe('LoginPage Material 3 Surface', () => {
+describe('LoginPage Material 3 Real Google Auth Surface', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -75,23 +76,6 @@ describe('LoginPage Material 3 Surface', () => {
     expect(screen.getByText(/Appearance/i)).toBeInTheDocument();
   });
 
-  it('renders the Maldives SME operational narrative and core architecture badges', () => {
-    render(
-      <MemoryRouter>
-        <ThemeProvider>
-          <AuthProvider>
-            <LoginPage />
-          </AuthProvider>
-        </ThemeProvider>
-      </MemoryRouter>
-    );
-
-    expect(screen.getByText(/Maldives SME Operating Record/i)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Tenant Isolation/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Authoritative Ledger/i })).toBeInTheDocument();
-    expect(screen.getByText(/Club Ignition/i)).toBeInTheDocument();
-  });
-
   it('preserves production authentication gate badge on mobile viewports', () => {
     render(
       <MemoryRouter>
@@ -106,49 +90,11 @@ describe('LoginPage Material 3 Surface', () => {
     expect(screen.getByText(/Auth Gate/i)).toBeInTheDocument();
   });
 
-  it('allows one-click Quick Launch for Founder Ali Musthaq (a.musthaq@gmail.com)', () => {
-    render(
-      <MemoryRouter>
-        <ThemeProvider>
-          <AuthProvider>
-            <LoginPage />
-          </AuthProvider>
-        </ThemeProvider>
-      </MemoryRouter>
-    );
-
-    const founderButton = screen.getByRole('button', { name: /Ali Musthaq/i });
-    expect(founderButton).toBeInTheDocument();
-    expect(screen.getByText('a.musthaq@gmail.com')).toBeInTheDocument();
-
-    fireEvent.click(founderButton);
-
-    expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
-  });
-
-  it('rejects unauthorized non-allowlisted email with appropriate error message', () => {
-    render(
-      <MemoryRouter>
-        <ThemeProvider>
-          <AuthProvider>
-            <LoginPage />
-          </AuthProvider>
-        </ThemeProvider>
-      </MemoryRouter>
-    );
-
-    const emailInput = screen.getByLabelText(/Authorized email address/i);
-    fireEvent.change(emailInput, { target: { value: 'unauthorized-user@random.com' } });
-
-    const submitButton = screen.getByRole('button', { name: /Sign In with Email/i });
-    fireEvent.click(submitButton);
-
-    expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.getByText(/not allowlisted/i)).toBeInTheDocument();
-  });
-
   it('renders Google Sign-In button container and handles GIS initialization', async () => {
-    const mockInitialize = vi.fn();
+    let callbackHandler: ((res: { credential?: string }) => void) | undefined;
+    const mockInitialize = vi.fn().mockImplementation((config) => {
+      callbackHandler = config.callback;
+    });
     const mockRenderButton = vi.fn();
 
     window.google = {
@@ -175,5 +121,99 @@ describe('LoginPage Material 3 Surface', () => {
       expect(mockInitialize).toHaveBeenCalled();
       expect(mockRenderButton).toHaveBeenCalled();
     });
+  });
+
+  it('processes real Google identity credential through backend and logs in', async () => {
+    let callbackHandler: ((res: { credential?: string }) => Promise<void>) | undefined;
+    const mockInitialize = vi.fn().mockImplementation((config) => {
+      callbackHandler = config.callback;
+    });
+    const mockRenderButton = vi.fn();
+
+    window.google = {
+      accounts: {
+        id: {
+          initialize: mockInitialize,
+          renderButton: mockRenderButton,
+          prompt: vi.fn(),
+        },
+      },
+    };
+
+    const mockUserSession = {
+      person_id: 'person-ali',
+      name: 'Ali Musthaq',
+      seats: ['seat-super-admin'],
+      acting_as: 'seat-super-admin',
+      seat_label: 'Super Administrator',
+      csrf: 'test-csrf-token',
+      allowed_entities: ['starq', 'club-ignition', 'group', 'CI'],
+    };
+
+    vi.mocked(authService.loginWithGoogle).mockResolvedValueOnce(mockUserSession);
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <AuthProvider>
+            <LoginPage />
+          </AuthProvider>
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(mockInitialize).toHaveBeenCalled();
+      expect(callbackHandler).toBeDefined();
+    });
+
+    // Simulate Google Identity Services returning credential
+    await act(async () => {
+      await callbackHandler?.({ credential: 'mock-google-id-token-xyz' });
+    });
+
+    expect(authService.loginWithGoogle).toHaveBeenCalledWith('mock-google-id-token-xyz');
+    expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+  });
+
+  it('displays error banner when Google authentication fails closed on unauthorized user', async () => {
+    let callbackHandler: ((res: { credential?: string }) => Promise<void>) | undefined;
+    const mockInitialize = vi.fn().mockImplementation((config) => {
+      callbackHandler = config.callback;
+    });
+
+    window.google = {
+      accounts: {
+        id: {
+          initialize: mockInitialize,
+          renderButton: vi.fn(),
+          prompt: vi.fn(),
+        },
+      },
+    };
+
+    vi.mocked(authService.loginWithGoogle).mockRejectedValueOnce(new Error('not_allowlisted'));
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <AuthProvider>
+            <LoginPage />
+          </AuthProvider>
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(mockInitialize).toHaveBeenCalled();
+    });
+
+    // Simulate Google Identity Services returning credential for non-allowlisted email
+    await act(async () => {
+      await callbackHandler?.({ credential: 'mock-unauthorized-id-token' });
+    });
+
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText(/not allowlisted for this starqERP tenant/i)).toBeInTheDocument();
   });
 });

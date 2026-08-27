@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { loginWithGoogle } from '../services/auth';
-import { lookupAllowlistEmail } from '../services/allowlist';
 import { StarqBrandLockup } from '../components/brand/StarqLogo';
 import { ThemeSelector } from '../components/ui/ThemeSelector';
 import {
@@ -12,8 +11,6 @@ import {
   Lock,
   AlertCircle,
   CheckCircle2,
-  Mail,
-  ArrowRight,
   Sparkles,
 } from 'lucide-react';
 
@@ -32,7 +29,6 @@ declare global {
 }
 
 const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '').trim();
-const IS_DEV = import.meta.env.DEV;
 
 function sanitizeErrorMessage(code: string): string {
   switch (code) {
@@ -61,20 +57,19 @@ export const LoginPage: React.FC = () => {
   const { resolvedTheme } = useTheme();
   const navigate = useNavigate();
 
-  const [emailInput, setEmailInput] = useState('a.musthaq@gmail.com');
   const [error, setError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [gisLoaded, setGisLoaded] = useState(false);
   const [buttonWidth, setButtonWidth] = useState<number>(() =>
-    typeof window !== 'undefined' ? Math.min(320, Math.max(220, window.innerWidth - 64)) : 320,
+    typeof window !== 'undefined' ? Math.min(320, Math.max(240, window.innerWidth - 64)) : 300,
   );
   const buttonContainerRef = useRef<HTMLDivElement>(null);
 
-  // Dynamically observe container width for Google Button responsiveness
+  // Dynamically calculate Google button width based on container
   useEffect(() => {
     const handleResize = () => {
       const width = typeof window !== 'undefined' ? window.innerWidth : 360;
-      const target = Math.min(320, Math.max(220, width - 48));
+      const target = Math.min(320, Math.max(240, width - 48));
       setButtonWidth(target);
     };
 
@@ -89,36 +84,6 @@ export const LoginPage: React.FC = () => {
       navigate('/', { replace: true });
     }
   }, [session, navigate]);
-
-  // Handle direct allowlist email authentication
-  const handleEmailLogin = useCallback(
-    (emailToUse?: string) => {
-      const targetEmail = (emailToUse || emailInput).trim().toLowerCase();
-      if (!targetEmail) {
-        setError('Please enter your authorized email address.');
-        return;
-      }
-
-      setIsLoggingIn(true);
-      setError(null);
-
-      try {
-        const allowlisted = lookupAllowlistEmail(targetEmail);
-        if (!allowlisted) {
-          setError(sanitizeErrorMessage('not_allowlisted'));
-          setIsLoggingIn(false);
-          return;
-        }
-
-        login(allowlisted);
-        navigate('/', { replace: true });
-      } catch (err) {
-        setError('Sign in failed. Please try again.');
-        setIsLoggingIn(false);
-      }
-    },
-    [emailInput, login, navigate],
-  );
 
   // Handle Google Identity Services credential response
   const handleCredentialResponse = useCallback(
@@ -183,7 +148,7 @@ export const LoginPage: React.FC = () => {
         cancel_on_tap_outside: true,
       });
 
-      // Clear any prior rendered button children
+      // Clear previous container content before rendering
       buttonContainerRef.current.innerHTML = '';
 
       window.google.accounts.id.renderButton(buttonContainerRef.current, {
@@ -198,7 +163,7 @@ export const LoginPage: React.FC = () => {
     } catch (renderError) {
       console.error('[starqERP] Failed to render Google Sign-In button:', renderError);
     }
-  }, [gisLoaded, resolvedTheme, buttonWidth, handleCredentialResponse]);
+  }, [GOOGLE_CLIENT_ID, gisLoaded, resolvedTheme, buttonWidth, handleCredentialResponse]);
 
   return (
     <div
@@ -209,7 +174,7 @@ export const LoginPage: React.FC = () => {
         fontFamily: 'var(--font-sans)',
       }}
     >
-      {/* ── Top App Bar Utility Strip ── */}
+      {/* ── Top Bar / Header ── */}
       <header className="w-full px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)]/40 shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <StarqBrandLockup size="sm" />
@@ -233,11 +198,11 @@ export const LoginPage: React.FC = () => {
           >
             Appearance
           </span>
-          <ThemeSelector align="right" />
+          <ThemeSelector />
         </div>
       </header>
 
-      {/* ── Main Content Responsive Unified Surface ── */}
+      {/* ── Main Content Responsive Surface ── */}
       <main className="flex-1 w-full max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 lg:py-12 flex items-center justify-center">
         <div
           className="w-full grid grid-cols-1 lg:grid-cols-12 rounded-[var(--md-sys-shape-corner-extra-large)] border border-[var(--md-sys-color-outline-variant)] shadow-xl overflow-hidden"
@@ -245,19 +210,15 @@ export const LoginPage: React.FC = () => {
             backgroundColor: 'var(--md-sys-color-surface-container-lowest)',
           }}
         >
-          {/* 
-            ── Primary Sign-In Pane ──
-            Order on mobile: 1 (top of stack)
-            Order on desktop: 2 (right 5 columns)
-          */}
+          {/* Primary Sign-In Pane */}
           <div
-            className="order-1 lg:order-2 col-span-1 lg:col-span-5 flex flex-col justify-center p-5 sm:p-8 lg:p-12 relative border-b lg:border-b-0 lg:border-l border-[var(--md-sys-color-outline-variant)]/60"
+            className="order-1 lg:order-2 col-span-1 lg:col-span-5 flex flex-col justify-center p-6 sm:p-8 lg:p-12 relative border-b lg:border-b-0 lg:border-l border-[var(--md-sys-color-outline-variant)]/60"
             style={{
               backgroundColor: 'var(--md-sys-color-surface)',
             }}
           >
             <div className="w-full max-w-sm mx-auto space-y-5 sm:space-y-6">
-              {/* Header & Canonical Logo Lockup */}
+              {/* Brand Lockup & Title */}
               <div className="space-y-2 sm:space-y-3 text-center sm:text-left">
                 <div className="flex justify-center sm:justify-start">
                   <StarqBrandLockup size="lg" />
@@ -267,7 +228,7 @@ export const LoginPage: React.FC = () => {
                     Sign in to your workspace
                   </h2>
                   <p className="text-xs sm:text-sm text-[var(--md-sys-color-on-surface-variant)] mt-1">
-                    Continue with your verified organization account to access your business operations.
+                    Continue with your verified Google account to access your organization workspace.
                   </p>
                 </div>
               </div>
@@ -291,267 +252,187 @@ export const LoginPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Active Sign-In Action Area */}
-              <div className="pt-1 sm:pt-2 space-y-4">
-                {/* 1. Quick Launch for Founder (Instant Login) */}
-                <button
-                  type="button"
-                  onClick={() => handleEmailLogin('a.musthaq@gmail.com')}
-                  disabled={isLoggingIn}
-                  className="w-full p-3 rounded-[var(--md-sys-shape-corner-medium)] border flex items-center justify-between transition-all cursor-pointer text-left group hover:shadow-md"
-                  style={{
-                    backgroundColor: 'var(--md-sys-color-primary-container)',
-                    borderColor: 'var(--md-sys-color-primary)',
-                    color: 'var(--md-sys-color-on-primary-container)',
-                  }}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
+              {/* Primary Action: Continue with Google */}
+              <div className="pt-2 space-y-4">
+                {GOOGLE_CLIENT_ID ? (
+                  <div className="flex flex-col items-center justify-center min-h-[48px] w-full">
                     <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0"
-                      style={{
-                        backgroundColor: 'var(--md-sys-color-primary)',
-                        color: 'var(--md-sys-color-on-primary)',
-                      }}
-                    >
-                      AM
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-xs truncate">Ali Musthaq</span>
-                        <span className="text-[10px] font-mono uppercase px-1.5 py-0.2 rounded bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] font-semibold">
-                          Founder
-                        </span>
+                      ref={buttonContainerRef}
+                      className={`flex justify-center w-full overflow-hidden transition-opacity duration-200 ${
+                        isLoggingIn ? 'opacity-40 pointer-events-none' : 'opacity-100'
+                      }`}
+                    />
+
+                    {!gisLoaded && !isLoggingIn && (
+                      <div className="flex items-center gap-2 text-xs text-[var(--md-sys-color-on-surface-variant)] py-2">
+                        <div
+                          className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"
+                          aria-hidden="true"
+                        />
+                        <span className="text-[11px]">Connecting Google Identity Services...</span>
                       </div>
-                      <p className="text-[11px] opacity-85 truncate">
-                        a.musthaq@gmail.com
-                      </p>
-                    </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0 font-bold text-xs">
-                    <span>Enter</span>
-                    <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </button>
-
-                {/* 2. Direct Authorized Email Form */}
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleEmailLogin();
-                  }}
-                  className="space-y-2 pt-1"
-                >
-                  <div className="relative">
-                    <Mail
-                      size={15}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--md-sys-color-on-surface-variant)]"
-                      aria-hidden="true"
-                    />
-                    <input
-                      type="email"
-                      value={emailInput}
-                      onChange={(e) => setEmailInput(e.target.value)}
-                      placeholder="Enter authorized email..."
-                      aria-label="Authorized email address"
-                      style={{
-                        backgroundColor: 'var(--md-sys-color-surface-container-high)',
-                        color: 'var(--md-sys-color-on-surface)',
-                        borderColor: 'var(--md-sys-color-outline-variant)',
-                        borderRadius: 'var(--md-sys-shape-corner-medium)',
-                      }}
-                      className="w-full h-10 pl-9 pr-3 text-xs border outline-none focus:border-[var(--md-sys-color-primary)] focus:ring-1 focus:ring-[var(--md-sys-color-primary)]"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isLoggingIn}
-                    className="w-full h-10 rounded-[var(--md-sys-shape-corner-medium)] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                ) : (
+                  <div
+                    className="p-3.5 rounded-[var(--md-sys-shape-corner-medium)] text-xs border"
                     style={{
-                      backgroundColor: 'var(--md-sys-color-primary)',
-                      color: 'var(--md-sys-color-on-primary)',
+                      backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                      color: 'var(--md-sys-color-on-surface-variant)',
                     }}
                   >
-                    <span>Sign In with Email</span>
-                    <ArrowRight size={14} />
-                  </button>
-                </form>
-
-                {/* 3. Google Sign-In Button Container */}
-                {GOOGLE_CLIENT_ID && (
-                  <div className="pt-2">
-                    <div className="relative flex py-2 items-center">
-                      <div
-                        className="flex-grow border-t"
-                        style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}
-                      />
-                      <span
-                        className="flex-shrink mx-3 text-[10px] uppercase font-bold tracking-wider text-[var(--md-sys-color-on-surface-variant)]"
-                      >
-                        or Google Sign-In
-                      </span>
-                      <div
-                        className="flex-grow border-t"
-                        style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}
-                      />
+                    <div className="flex items-center gap-2 font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
+                      <Lock size={14} />
+                      <span>Google OAuth Configuration Required</span>
                     </div>
-
-                    <div className="flex flex-col items-center justify-center min-h-[44px] w-full pt-1">
-                      <div
-                        ref={buttonContainerRef}
-                        className={`flex justify-center w-full max-w-[320px] overflow-hidden transition-opacity duration-200 ${
-                          isLoggingIn ? 'opacity-40 pointer-events-none' : 'opacity-100'
-                        }`}
-                      />
-
-                      {!gisLoaded && !isLoggingIn && (
-                        <div className="flex items-center gap-2 text-xs text-[var(--md-sys-color-on-surface-variant)] py-1">
-                          <div
-                            className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"
-                            aria-hidden="true"
-                          />
-                          <span className="text-[11px]">Connecting Google Identity Services...</span>
-                        </div>
-                      )}
-                    </div>
+                    <p className="text-[11px] leading-relaxed">
+                      Set <code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10">VITE_GOOGLE_CLIENT_ID</code> in <code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10">web/.env.local</code> to enable Google Sign-In.
+                    </p>
                   </div>
                 )}
 
                 {isLoggingIn && (
-                  <div
-                    className="flex items-center justify-center gap-2 text-xs font-medium py-2"
-                    style={{ color: 'var(--md-sys-color-primary)' }}
-                    aria-live="polite"
-                  >
+                  <div className="flex items-center justify-center gap-2 text-xs font-medium text-[var(--md-sys-color-primary)] pt-1">
                     <div
-                      className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"
+                      className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"
                       aria-hidden="true"
                     />
-                    <span>Verifying organization credentials...</span>
+                    <span>Validating credentials with starqERP gateway...</span>
                   </div>
                 )}
               </div>
 
-              {/* Security & Regulatory Footprint */}
-              <div className="pt-3 sm:pt-4 border-t border-[var(--md-sys-color-outline-variant)]/60 space-y-2 sm:space-y-3">
-                <div className="flex items-center gap-2 text-xs text-[var(--md-sys-color-on-surface-variant)]">
-                  <Lock size={13} className="shrink-0 text-[var(--md-sys-color-primary)]" />
-                  <span className="font-medium">Secure 256-bit encrypted operational session</span>
+              {/* Security Protocol Notice */}
+              <div
+                className="p-3 rounded-[var(--md-sys-shape-corner-medium)] text-[11px] leading-relaxed border space-y-1"
+                style={{
+                  backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                  borderColor: 'var(--md-sys-color-outline-variant)',
+                  color: 'var(--md-sys-color-on-surface-variant)',
+                }}
+              >
+                <div className="flex items-center gap-1.5 font-semibold text-[var(--md-sys-color-on-surface)]">
+                  <ShieldCheck size={14} className="text-emerald-500 shrink-0" />
+                  <span>Enterprise Zero-Trust Access</span>
                 </div>
-                <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]/80 leading-relaxed">
-                  Only authorized personnel listed in tenant memberships can sign in. Revoked credentials and seats terminate immediately.
+                <p className="text-[10px]">
+                  All access is verified against authorized seat mappings. Single Sign-On sessions are signed with cryptographic tokens and isolated by tenant boundary.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* 
-            ── Product & Architectural Trust Context ──
-            Order on mobile: 2 (cleanly below sign-in action)
-            Order on desktop: 1 (left 7 columns)
-          */}
+          {/* Left / Desktop Brand Context Panel */}
           <div
-            className="order-2 lg:order-1 col-span-1 lg:col-span-7 flex flex-col justify-between p-6 sm:p-8 lg:p-12 relative overflow-hidden"
+            className="order-2 lg:order-1 col-span-1 lg:col-span-7 p-6 sm:p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden"
             style={{
               backgroundColor: 'var(--md-sys-color-surface-container-low)',
             }}
           >
-            {/* Background Decorative Accent Ring */}
-            <div
-              className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full blur-3xl opacity-15 pointer-events-none"
-              style={{ backgroundColor: 'var(--md-sys-color-primary)' }}
-              aria-hidden="true"
-            />
-
-            <div className="relative z-10 space-y-5 sm:space-y-6">
-              <div
-                className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide"
-                style={{
-                  backgroundColor: 'var(--md-sys-color-primary-container)',
-                  color: 'var(--md-sys-color-on-primary-container)',
-                }}
-              >
-                <ShieldCheck size={14} className="shrink-0" />
-                <span>Maldives SME Operating Record</span>
-              </div>
-
-              <div className="space-y-2 sm:space-y-3 max-w-lg">
-                <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] leading-snug">
-                  Operations, procurement, and ledger settlement in one single truth.
+            <div className="space-y-6 sm:space-y-8 relative z-10">
+              <div>
+                <span
+                  className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-3 border border-[var(--md-sys-color-outline-variant)]"
+                  style={{
+                    backgroundColor: 'var(--md-sys-color-primary-container)',
+                    color: 'var(--md-sys-color-on-primary-container)',
+                  }}
+                >
+                  <Sparkles size={12} />
+                  <span>Maldives SME Operating System</span>
+                </span>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] leading-tight">
+                  One Operational Record for Your Enterprise
                 </h1>
-                <p className="text-xs sm:text-sm lg:text-base text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">
-                  Designed specifically for Maldivian enterprises. Authoritative persistence, strict tenant isolation, GST-compliant invoicing, and atomic document numbering.
+                <p className="text-xs sm:text-sm text-[var(--md-sys-color-on-surface-variant)] mt-2 sm:mt-3 leading-relaxed max-w-lg">
+                  Unified customers, job work orders, MIRA GST statutory compliance, warehouse inventory, and ledger settlement in a single multi-tenant workspace.
                 </p>
               </div>
 
-              {/* Architecture Core Badges */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 pt-2 sm:pt-4 max-w-lg">
-                <div
-                  className="p-3 sm:p-3.5 rounded-[var(--md-sys-shape-corner-medium)] border border-[var(--md-sys-color-outline-variant)]/60 flex items-start gap-3"
-                  style={{ backgroundColor: 'var(--md-sys-color-surface)' }}
-                >
-                  <div
-                    className="p-2 rounded-lg shrink-0 mt-0.5"
-                    style={{
-                      backgroundColor: 'var(--md-sys-color-secondary-container)',
-                      color: 'var(--md-sys-color-on-secondary-container)',
-                    }}
-                  >
-                    <Building2 size={16} />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-xs font-bold text-[var(--md-sys-color-on-surface)]">
-                      Tenant Isolation
-                    </h3>
-                    <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-0.5 leading-relaxed">
-                      Row-level security enforcement across organisations.
-                    </p>
-                  </div>
-                </div>
-
-                <div
-                  className="p-3 sm:p-3.5 rounded-[var(--md-sys-shape-corner-medium)] border border-[var(--md-sys-color-outline-variant)]/60 flex items-start gap-3"
-                  style={{ backgroundColor: 'var(--md-sys-color-surface)' }}
-                >
-                  <div
-                    className="p-2 rounded-lg shrink-0 mt-0.5"
-                    style={{
-                      backgroundColor: 'var(--md-sys-color-primary-container)',
-                      color: 'var(--md-sys-color-on-primary-container)',
-                    }}
-                  >
-                    <CheckCircle2 size={16} />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-xs font-bold text-[var(--md-sys-color-on-surface)]">
-                      Authoritative Ledger
-                    </h3>
-                    <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-0.5 leading-relaxed">
-                      Append-only audit events and durable idempotency.
-                    </p>
-                  </div>
-                </div>
+              {/* Value Proposition Pills */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                {[
+                  {
+                    title: 'MIRA GST Invoicing',
+                    desc: 'Instant BML banking settlement details & automated 8% GGST calculation.',
+                    icon: Building2,
+                  },
+                  {
+                    title: 'Workshop Shop-Floor',
+                    desc: 'Real-time job stages, paint technician tracking, and vehicle timelines.',
+                    icon: ShieldCheck,
+                  },
+                ].map((item, idx) => {
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={idx}
+                      className="p-3.5 rounded-[var(--md-sys-shape-corner-medium)] border space-y-1.5"
+                      style={{
+                        backgroundColor: 'var(--md-sys-color-surface)',
+                        borderColor: 'var(--md-sys-color-outline-variant)',
+                      }}
+                    >
+                      <div className="flex items-center gap-2 font-bold text-xs text-[var(--md-sys-color-on-surface)]">
+                        <Icon size={15} className="text-[var(--md-sys-color-primary)]" />
+                        <span>{item.title}</span>
+                      </div>
+                      <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">
+                        {item.desc}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Bottom Proof Quote */}
-            <div className="relative z-10 pt-5 sm:pt-8 mt-4 sm:mt-6 border-t border-[var(--md-sys-color-outline-variant)]/60 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--md-sys-color-on-surface-variant)]">
-              <span>First Production Tenant: <strong className="font-semibold text-[var(--md-sys-color-on-surface)]">Club Ignition</strong></span>
-              <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-[var(--md-sys-color-surface-container-high)]">v0.2.0-cloud</span>
+            {/* Bottom Tenant Verification Badge */}
+            <div className="pt-6 sm:pt-8 border-t border-[var(--md-sys-color-outline-variant)]/50 mt-6 relative z-10 flex flex-wrap items-center justify-between gap-3 text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="font-semibold text-[var(--md-sys-color-on-surface)]">
+                  Starq Technologies Private Limited
+                </span>
+              </div>
+              <span className="mono-num text-[10px] font-mono">starqERP v1.0 • Maldives</span>
             </div>
           </div>
         </div>
       </main>
 
-      {/* ── Minimalist Corporate Attribution Footer ── */}
-      <footer className="w-full px-4 sm:px-8 py-3.5 sm:py-4 border-t border-[var(--md-sys-color-outline-variant)]/40 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left text-xs text-[var(--md-sys-color-on-surface-variant)] shrink-0">
-        <div>
-          <span>&copy; 2026 <strong>Starq Technologies Pvt Ltd</strong>. All rights reserved.</span>
+      {/* ── Footer ── */}
+      <footer className="w-full px-3 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--md-sys-color-outline-variant)]/40 text-[11px] text-[var(--md-sys-color-on-surface-variant)] shrink-0">
+        <div className="flex items-center gap-2">
+          <span>&copy; {new Date().getFullYear()} Starq Technologies Pvt Ltd.</span>
+          <span className="hidden sm:inline">&bull;</span>
+          <span className="hidden sm:inline">Republic of Maldives</span>
         </div>
-        <div className="flex items-center gap-4 text-[11px]">
-          <span className="text-[var(--md-sys-color-on-surface-variant)]/70">
-            Maldives SME Operational Operating System
-          </span>
+        <div className="flex items-center gap-4">
+          <a
+            href="/docs/PRIVACY.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline hover:text-[var(--md-sys-color-on-surface)]"
+          >
+            Privacy
+          </a>
+          <a
+            href="/docs/TERMS.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline hover:text-[var(--md-sys-color-on-surface)]"
+          >
+            Terms
+          </a>
+          <a
+            href="/docs/SUPPORT.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline hover:text-[var(--md-sys-color-on-surface)]"
+          >
+            Support
+          </a>
         </div>
       </footer>
     </div>
