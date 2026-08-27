@@ -139,13 +139,14 @@ export const AppShell: React.FC = () => {
   const [platformTab, setPlatformTab] = useState<PlatformTabId>('overview');
   const { pendingApplications } = useERP();
 
-  const isPlatformOperator = Boolean(
-    session?.platform_entitlement ||
-    session?.person_id === 'user-1' ||
-    session?.name?.toLowerCase().includes('musthaq') ||
-    session?.seats?.includes('managing_director') ||
-    session?.seats?.includes('super_admin')
-  );
+  const isPlatformOperator = Boolean(session?.platform_entitlement);
+
+  // Safeguard: Automatically fallback to tenant plane if active user lacks platform entitlement
+  useEffect(() => {
+    if (!isPlatformOperator && activePlane === 'platform') {
+      switchActiveContext({ plane: 'tenant' });
+    }
+  }, [isPlatformOperator, activePlane, switchActiveContext]);
 
   const workspace = activePlane === 'platform'
     ? 'Starq HQ'

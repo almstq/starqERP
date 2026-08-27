@@ -75,12 +75,17 @@ export const StarqHQSubscriptions: React.FC = () => {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="pb-3 border-b" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}>
-        <h2 className="text-base font-bold text-[var(--md-sys-color-on-surface)]">
-          SaaS Subscription Tiers & Feature Matrix
-        </h2>
-        <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
-          Standardized pricing tiers, seat quotas, and book allowances for starqERP customer tenants.
+      <div className="pb-3 border-b space-y-2" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-bold text-[var(--md-sys-color-on-surface)]">
+            SaaS Subscription Tiers & Feature Matrix
+          </h2>
+          <Badge variant="warning" size="sm">
+            Draft Plan Configuration · Pricing Not Finalized
+          </Badge>
+        </div>
+        <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
+          Indicative plan model for starqERP tenant quotas. Commercial pricing requires formal founder approval.
         </p>
       </div>
 
