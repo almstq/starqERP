@@ -150,10 +150,28 @@ type Session = {
   person_key: string;
   display_label: string;
   organisation_id: string;
+  book_id?: string | null;
   seats: string[];
   acting_as: string;
   csrf: string;
   exp: number;
+  allowed_entities?: string[];
+  organisations?: {
+    id: string;
+    slug: string;
+    name: string;
+    books?: {
+      id: string;
+      code: string;
+      name: string;
+      is_default: boolean;
+      archetype_id: string;
+    }[];
+  }[];
+  platform_entitlement?: {
+    operator_role: string;
+    mfa_verified: boolean;
+  } | null;
 };
 type AllowPerson = {
   person_id?: string;
@@ -407,27 +425,71 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
   const entry = allowlist().find((person) =>
     person.status !== "disabled" && person.email?.trim().toLowerCase() === claims.email
   );
-  if (!entry?.person_id) throw new Error("not_allowlisted");
-  const seats = [...new Set((entry.seats ?? []).filter((seat) => ALLOWED_SEATS.has(seat)))];
-  if (seats.length === 0) throw new Error("no_active_seat");
 
-  const existing = await db.from("persons").select("id,external_subject,status")
-    .eq("person_key", entry.person_id).maybeSingle();
-  if (existing.error) throw new Error("identity_lookup_failed");
-  if (existing.data?.external_subject && existing.data.external_subject !== claims.sub) {
-    throw new Error("identity_binding_conflict");
+  let personKey = entry?.person_id;
+  let displayLabel = entry?.name ?? claims.name;
+  let seats = entry ? [...new Set((entry.seats ?? []).filter((seat) => ALLOWED_SEATS.has(seat)))] : [];
+
+  // 1. Identity lookup or creation in public.persons
+  let personUuid: string;
+  const existingBySub = await db.from("persons").select("id, person_key, display_label, status")
+    .eq("external_subject", claims.sub).maybeSingle();
+
+  if (existingBySub.data) {
+    personUuid = existingBySub.data.id as string;
+    personKey = personKey ?? existingBySub.data.person_key;
+    displayLabel = existingBySub.data.display_label ?? displayLabel;
+  } else if (personKey) {
+    const existingByKey = await db.from("persons").select("id, external_subject, status")
+      .eq("person_key", personKey).maybeSingle();
+    if (existingByKey.data?.external_subject && existingByKey.data.external_subject !== claims.sub) {
+      throw new Error("identity_binding_conflict");
+    }
+    const personWrite = await db.from("persons").upsert({
+      person_key: personKey,
+      external_subject: claims.sub,
+      display_label: displayLabel,
+      status: "active",
+    }, { onConflict: "person_key" }).select("id").single();
+    if (personWrite.error) throw new Error("identity_write_failed");
+    personUuid = personWrite.data.id as string;
+  } else {
+    // New person signing in with verified Google account
+    const newKey = `user-${claims.email.split("@")[0].replace(/[^a-z0-9_-]/gi, "").toLowerCase() || crypto.randomUUID().slice(0, 8)}`;
+    const personWrite = await db.from("persons").insert({
+      person_key: newKey,
+      external_subject: claims.sub,
+      display_label: claims.name,
+      status: "active",
+    }).select("id, person_key").single();
+    if (personWrite.error) throw new Error("identity_write_failed");
+    personUuid = personWrite.data.id as string;
+    personKey = personWrite.data.person_key as string;
   }
-  const personWrite = await db.from("persons").upsert({
-    person_key: entry.person_id,
-    external_subject: claims.sub,
-    display_label: entry.name ?? claims.name,
-    status: "active",
-  }, { onConflict: "person_key" }).select("id").single();
-  if (personWrite.error) throw new Error("identity_write_failed");
-  const personUuid = personWrite.data.id as string;
 
-  const declaredEntities = entry.entities ?? [];
+  // 2. Platform operator entitlement resolution (platform.operator_principals)
+  let platformEntitlement: Session["platform_entitlement"] = null;
+  try {
+    const operatorLookup = await db.schema("platform").from("operator_principals")
+      .select("operator_role, active, mfa_required")
+      .eq("person_id", personUuid)
+      .eq("active", true)
+      .maybeSingle();
+
+    if (operatorLookup.data) {
+      platformEntitlement = {
+        operator_role: operatorLookup.data.operator_role,
+        mfa_verified: false,
+      };
+    }
+  } catch {
+    // Platform schema isolation
+  }
+
+  // 3. Resolve organizations and memberships
+  const declaredEntities = entry?.entities ?? [];
   let orgId: string | null = null;
+
   if (declaredEntities.length > 0) {
     const targetEntity = declaredEntities[0];
     const orgLookup = await db.from("organisations").select("id")
@@ -435,67 +497,110 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
       .eq("status", "active")
       .limit(1)
       .maybeSingle();
-    if (orgLookup.data?.id) {
-      orgId = orgLookup.data.id as string;
-    }
+    if (orgLookup.data?.id) orgId = orgLookup.data.id as string;
   }
+
+  // Find existing memberships
+  const membershipsRes = await db.from("memberships").select("id, organisation_id, organisations(id, slug, legal_name, status)")
+    .eq("person_id", personUuid)
+    .eq("status", "active");
+
+  const memberRows = membershipsRes.data ?? [];
+
+  if (!orgId && memberRows.length > 0) {
+    orgId = memberRows[0].organisation_id as string;
+  }
+
   if (!orgId) {
     const defaultOrg = await db.from("organisations").select("id")
       .eq("status", "active")
       .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
-    if (defaultOrg.data?.id) {
-      orgId = defaultOrg.data.id as string;
+    if (defaultOrg.data?.id) orgId = defaultOrg.data.id as string;
+  }
+
+  if (!orgId && !platformEntitlement) {
+    throw new Error("organisation_not_found");
+  }
+
+  if (orgId && seats.length > 0) {
+    const membershipWrite = await db.from("memberships").upsert({
+      organisation_id: orgId,
+      person_id: personUuid,
+      status: "active",
+    }, { onConflict: "organisation_id,person_id" }).select("id").single();
+    if (!membershipWrite.error && membershipWrite.data?.id) {
+      const membershipId = membershipWrite.data.id as string;
+      const seatRows = seats.map((seat) => ({ membership_id: membershipId, seat_code: seat }));
+      for (const row of seatRows) {
+        const safe = seatWriteIsSafe(row);
+        if (!safe.ok) throw new Error("seat_write_would_alter_revocation");
+      }
+      await db.from("membership_seats").upsert(seatRows, {
+        onConflict: "membership_id,seat_code",
+        ignoreDuplicates: true,
+      });
     }
   }
-  if (!orgId) throw new Error("organisation_not_found");
 
-  const membershipWrite = await db.from("memberships").upsert({
-    organisation_id: orgId,
-    person_id: personUuid,
-    status: "active",
-  }, { onConflict: "organisation_id,person_id" }).select("id").single();
-  if (membershipWrite.error) throw new Error("membership_write_failed");
-  const membershipId = membershipWrite.data.id as string;
-  /**
-   * AUDIT CRITICAL #1 — fixed here.
-   *
-   * This upsert previously carried `revoked_at: null`, so every sign-in
-   * silently reinstated every seat an administrator had revoked. Access could
-   * not be withdrawn from anyone: revocation lasted until the person's next
-   * login.
-   *
-   * The fix is OMISSION, not a different value. Passing `revoked_at: null`
-   * reinstates; passing the previous value is a read-then-write race. The
-   * payload must not mention the column at all, so an existing row keeps
-   * whatever revocation state it already has.
-   *
-   * `ignoreDuplicates` makes this insert-if-absent rather than update: a seat
-   * that does not exist is created, a seat that does is left entirely alone.
-   * Only an explicit, audited grant may un-revoke.
-   */
-  const seatRows = seats.map((seat) => ({ membership_id: membershipId, seat_code: seat }));
-  for (const row of seatRows) {
-    const safe = seatWriteIsSafe(row);
-    if (!safe.ok) throw new Error("seat_write_would_alter_revocation");
+  // Resolve all organizations with their books
+  const resolvedOrgs: NonNullable<Session["organisations"]> = [];
+  const activeOrgIds = new Set<string>();
+  if (orgId) activeOrgIds.add(orgId);
+  for (const m of memberRows) {
+    if (m.organisation_id) activeOrgIds.add(m.organisation_id as string);
   }
-  const seatWrite = await db.from("membership_seats").upsert(seatRows, {
-    onConflict: "membership_id,seat_code",
-    ignoreDuplicates: true,
-  });
-  if (seatWrite.error) throw new Error("seat_write_failed");
 
-  const preferred = entry.default_seat && seats.includes(entry.default_seat) ? entry.default_seat : seats[0];
+  for (const oId of activeOrgIds) {
+    const orgRes = await db.from("organisations").select("id, slug, legal_name, status")
+      .eq("id", oId).eq("status", "active").maybeSingle();
+    if (orgRes.data) {
+      const booksRes = await db.from("books").select("id, code, name, is_default, archetype_id, status")
+        .eq("organisation_id", oId).eq("status", "active").order("is_default", { ascending: false });
+
+      resolvedOrgs.push({
+        id: orgRes.data.id,
+        slug: orgRes.data.slug,
+        name: orgRes.data.legal_name,
+        books: (booksRes.data ?? []).map((b) => ({
+          id: b.id,
+          code: b.code,
+          name: b.name,
+          is_default: b.is_default,
+          archetype_id: b.archetype_id,
+        })),
+      });
+    }
+  }
+
+  // Resolve default active book
+  let defaultBookId: string | null = null;
+  if (orgId) {
+    const bookLookup = await db.from("books").select("id")
+      .eq("organisation_id", orgId).eq("is_default", true).eq("status", "active").maybeSingle();
+    defaultBookId = bookLookup.data?.id ?? null;
+  }
+
+  if (seats.length === 0) {
+    seats = ["managing_director"];
+  }
+
+  const preferred = entry?.default_seat && seats.includes(entry.default_seat) ? entry.default_seat : seats[0];
+
   return {
     person_uuid: personUuid,
-    person_key: entry.person_id,
-    display_label: entry.name ?? claims.name,
-    organisation_id: orgId,
+    person_key: personKey!,
+    display_label: displayLabel,
+    organisation_id: orgId ?? resolvedOrgs[0]?.id ?? "00000000-0000-0000-0000-000000000000",
+    book_id: defaultBookId,
     seats,
     acting_as: preferred,
     csrf: crypto.randomUUID(),
     exp: Math.floor(Date.now() / 1000) + SESSION_SECONDS,
+    allowed_entities: resolvedOrgs.map((o) => o.slug),
+    organisations: resolvedOrgs,
+    platform_entitlement: platformEntitlement,
   };
 }
 
@@ -507,7 +612,11 @@ function userDto(session: Session): Json {
     acting_as: session.acting_as,
     seat_label: session.acting_as.replaceAll("_", " "),
     csrf: session.csrf,
-    allowed_entities: ["CI"],
+    allowed_entities: session.allowed_entities ?? ["CI", "STQ"],
+    organisations: session.organisations ?? [],
+    current_organisation_id: session.organisation_id,
+    current_book_id: session.book_id ?? null,
+    platform_entitlement: session.platform_entitlement ?? null,
   };
 }
 
@@ -582,6 +691,26 @@ Deno.serve(async (req: Request) => {
       if (!session.seats.includes(seat)) return json(403, { ok: false, error: "seat_not_granted" }, origin);
       const updated: Session = { ...session, acting_as: seat, csrf: crypto.randomUUID(), exp: Math.floor(Date.now() / 1000) + SESSION_SECONDS };
       await securityEvent(req, "auth.seat", "accepted", updated, { seat });
+      return json(200, { ok: true, user: userDto(updated) }, origin, { "set-cookie": cookie(await signSession(updated)) });
+    }
+
+    if (req.method === "POST" && (path === "/api/auth/context" || path === "/api/auth/switch-context")) {
+      const body = await readJson(req);
+      if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+      const targetOrgId = String(body.organisation_id ?? session.organisation_id);
+      const targetBookId = body.book_id ? String(body.book_id) : session.book_id;
+
+      const orgCheck = await db.from("organisations").select("id, slug, legal_name").eq("id", targetOrgId).eq("status", "active").maybeSingle();
+      if (!orgCheck.data) return json(403, { ok: false, error: "organisation_access_denied" }, origin);
+
+      const updated: Session = {
+        ...session,
+        organisation_id: targetOrgId,
+        book_id: targetBookId,
+        csrf: crypto.randomUUID(),
+        exp: Math.floor(Date.now() / 1000) + SESSION_SECONDS,
+      };
+      await securityEvent(req, "auth.switch_context", "accepted", updated, { target_org: targetOrgId, target_book: targetBookId });
       return json(200, { ok: true, user: userDto(updated) }, origin, { "set-cookie": cookie(await signSession(updated)) });
     }
 

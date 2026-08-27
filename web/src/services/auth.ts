@@ -1,3 +1,18 @@
+export interface OperableBook {
+  id: string;
+  code: string;
+  name: string;
+  is_default: boolean;
+  archetype_id: string;
+}
+
+export interface OperableOrganisation {
+  id: string;
+  slug: string;
+  name: string;
+  books?: OperableBook[];
+}
+
 export interface UserSession {
   person_id: string;
   name: string;
@@ -6,8 +21,9 @@ export interface UserSession {
   seat_label: string;
   csrf: string;
   allowed_entities: string[];
-  organisations?: { id: string; name: string }[];
+  organisations?: OperableOrganisation[];
   current_organisation_id?: string;
+  current_book_id?: string | null;
   platform_entitlement?: {
     operator_role: string;
     mfa_verified: boolean;
@@ -89,3 +105,29 @@ export async function switchSeat(seat: string, csrf: string): Promise<UserSessio
 
   return data.user as UserSession;
 }
+
+export async function switchContext(
+  organisationId: string,
+  bookId: string | null | undefined,
+  csrf: string,
+): Promise<UserSession> {
+  const response = await fetch('/api/auth/context', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'x-csrf-token': csrf,
+    },
+    body: JSON.stringify({ organisation_id: organisationId, book_id: bookId, csrf }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !data.ok) {
+    throw new Error(data.error ?? 'context_switch_failed');
+  }
+
+  return data.user as UserSession;
+}
+
