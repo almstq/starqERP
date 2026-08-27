@@ -3,13 +3,13 @@
 **Prepared For**: Project Leadership & Elder Council  
 **Date**: 2026-08-28 (Updated 2026-08-27 14:00)  
 **System**: starqERP Multi-Tenant SaaS Solution  
-**Release Readiness**: Release Candidate 1 (RC1) — 100% Production Ready  
+**Release Readiness**: RC1 foundation verified; platform realignment is in progress and is not yet live-production complete.
 
 ---
 
 ## 1. Executive Summary & Verification Matrix
 
-The AG Final Takeover, Qoder Foundation Remediation, Authentication Surface Hardening, and Material 3 Design System Migration are **100% COMPLETE & VERIFIED**.
+The AG Final Takeover, Qoder Foundation Remediation, Authentication Surface Hardening, and Material 3 Design System Migration are complete for their recorded scope. The next correction is architectural: Club Ignition is Tenant #1, not the product boundary.
 
 | Verification Dimension | Metric / Output | Result |
 | :--- | :--- | :---: |
@@ -52,6 +52,16 @@ The AG Final Takeover, Qoder Foundation Remediation, Authentication Surface Hard
 ---
 
 ## 3. Durability & Handoff Artifacts
+
+## 3A. Platform Realignment Handoff — 2026-08-27
+
+The requested `SERP-290` through `SERP-293` IDs were checked against the authoritative Nexus board (`264` records) and are absent, so none was fabricated or marked complete. The implemented foundation is documented in [`docs/architecture/2026-08-27_PLATFORM_REALIGNMENT.md`](docs/architecture/2026-08-27_PLATFORM_REALIGNMENT.md).
+
+- The shared archetype catalog supports General Business, Automotive / Workshop, Wholesale / Trading, Marine / Service, Construction / Contracting, and Retail without application forks.
+- Migration `202608270024_platform_control_plane.sql` adds service-boundary-only platform metadata for tenant registry, plans, provisioning, aggregate usage, operator principals, and health/version state.
+- Onboarding now persists an archetype identity; existing backend/API names and fixture data remain compatibility debt, not evidence of a live production migration.
+- Structural tests prove automotive and wholesale configurations remain distinct and tenant-stamped. No live Supabase adversarial isolation test was run; do not report live proof.
+- Production tenant creation is intended to be clean by default. Demo/sample provisioning is a separate mode, and no generic destructive reset exists.
 
 - **Master Audit Reconciliation**: [`docs/qa/ag-final/MASTER_AUDIT_RECONCILIATION.md`](file:///D:/StarqTech/starqERP/docs/qa/ag-final/MASTER_AUDIT_RECONCILIATION.md)
 - **M3 Final Acceptance**: [`docs/qa/ag-final/M3_FINAL_ACCEPTANCE.md`](file:///D:/StarqTech/starqERP/docs/qa/ag-final/M3_FINAL_ACCEPTANCE.md)
