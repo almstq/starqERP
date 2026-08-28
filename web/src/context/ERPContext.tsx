@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useTheme } from './ThemeContext';
 import {
   NavigationTab,
@@ -1179,16 +1179,20 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return { ok: true };
   };
 
+  const usersRef = useRef(users);
+  usersRef.current = users;
+  const rolesRef = useRef(roles);
+  rolesRef.current = roles;
+
   // Switch Current User Persona (to showcase RBAC gating)
-  const switchCurrentUser = (userId: string) => {
-    const user = users.find((u) => u.id === userId);
-    if (!user) return;
+  const switchCurrentUser = useCallback((userId: string) => {
     setCurrentUserId(userId);
+    const user = usersRef.current.find((u) => u.id === userId);
     // If switching to a privileged account, reset session elevation to require challenge
-    const userRole = roles.find((r) => r.id === user.roleId);
-    const isPrivileged = user.roleName === 'Super Administrator' || !!userRole?.isSystemAdmin || !!user.mfaRequired;
+    const userRole = rolesRef.current.find((r) => r.id === user?.roleId);
+    const isPrivileged = user?.roleName === 'Super Administrator' || !!userRole?.isSystemAdmin || !!user?.mfaRequired;
     setIsMfaElevated(!isPrivileged);
-  };
+  }, []);
 
   // Authorize Pending User (Admin Capability)
   const authorizeUser = (userId: string, roleId?: string) => {
