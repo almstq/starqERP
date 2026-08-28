@@ -20,7 +20,8 @@ import {
   Layers,
   BookOpen,
   Sparkles,
-  Landmark
+  Landmark,
+  Globe
 } from 'lucide-react';
 import {
   AccountRecord,
@@ -41,6 +42,7 @@ import { ManualJournalModal } from './ManualJournalModal';
 import { GeneralLedgerView } from './GeneralLedgerView';
 import { PeriodManagementView } from './PeriodManagementView';
 import { BankReconciliationView } from './BankReconciliationView';
+import { MultiCurrencyView } from './MultiCurrencyView';
 import { AccountingPeriod, generateFiscalPeriods, assertPeriodNotLocked } from '../../domain/periods';
 import { Badge, Surface, Button } from '../ui';
 import { useERP } from '../../context/ERPContext';
@@ -52,7 +54,7 @@ import {
 export const AccountsView: React.FC = () => {
   const { invoices, payments, expenses, purchaseOrders, currentTenant, isGstRegistered, formatMVR } = useERP();
 
-  const [activeTab, setActiveTab] = useState<'chart_of_accounts' | 'general_ledger' | 'periods' | 'bank_reconciliation'>('chart_of_accounts');
+  const [activeTab, setActiveTab] = useState<'chart_of_accounts' | 'general_ledger' | 'periods' | 'bank_reconciliation' | 'multi_currency'>('chart_of_accounts');
 
   // Accounting Periods State
   const [periods, setPeriods] = useState<AccountingPeriod[]>(() => {
@@ -348,6 +350,21 @@ export const AccountsView: React.FC = () => {
               <Landmark size={14} />
               <span>Bank Reconciliation</span>
             </button>
+            <button
+              type="button"
+              data-testid="multi-currency-tab-btn"
+              onClick={() => {
+                setActiveTab('multi_currency');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                activeTab === 'multi_currency'
+                  ? 'bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-primary)] shadow-sm'
+                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+              }`}
+            >
+              <Globe size={14} />
+              <span>Multi-Currency & FX</span>
+            </button>
           </div>
 
           <Button
@@ -415,6 +432,13 @@ export const AccountsView: React.FC = () => {
           journals={allJournals}
           onAddAdjustmentJournal={(adjJe) => {
             const updated = [adjJe, ...manualJournals];
+            saveManualJournals(updated);
+          }}
+        />
+      ) : activeTab === 'multi_currency' ? (
+        <MultiCurrencyView
+          onAddJournalEntry={(fxJe) => {
+            const updated = [fxJe, ...manualJournals];
             saveManualJournals(updated);
           }}
         />
