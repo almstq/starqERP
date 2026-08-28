@@ -23,10 +23,11 @@ values
   ('30000000-0000-4000-8000-000000000011', '30000000-0000-4000-8000-000000000001', 'SERP-300 A Trading'),
   ('30000000-0000-4000-8000-000000000012', '30000000-0000-4000-8000-000000000002', 'SERP-300 B Trading');
 
-insert into public.persons (id, person_key, external_subject, display_label)
+insert into public.persons (id, person_key, external_subject, verified_email, display_label)
 values
-  ('30000000-0000-4000-8000-000000000101', 'serp300-attacker', 'synthetic:serp300-attacker', 'SERP-300 Attacker'),
-  ('30000000-0000-4000-8000-000000000102', 'serp300-invitee', 'synthetic:serp300-invitee', 'SERP-300 Invitee');
+  ('30000000-0000-4000-8000-000000000101', 'serp300-attacker', 'synthetic:serp300-attacker', 'attacker@example.invalid', 'SERP-300 Attacker'),
+  ('30000000-0000-4000-8000-000000000102', 'serp300-invitee', 'synthetic:serp300-invitee', 'invitee-a@example.invalid', 'SERP-300 Invitee'),
+  ('30000000-0000-4000-8000-000000000103', 'serp300-mismatch', 'synthetic:serp300-mismatch', 'other@example.invalid', 'SERP-300 Mismatched Identity');
 
 select app_private.seed_default_organisation_roles('30000000-0000-4000-8000-000000000001');
 select app_private.seed_default_organisation_roles('30000000-0000-4000-8000-000000000002');
@@ -83,6 +84,21 @@ from public.roles r
 where r.organisation_id = '30000000-0000-4000-8000-000000000001'
   and r.code = 'counter_operator';
 
+insert into public.invitations
+  (id, organisation_id, email, name, role_id, book_ids, status, invited_by)
+select
+  '30000000-0000-4000-8000-000000000602',
+  '30000000-0000-4000-8000-000000000001',
+  'target@example.invalid',
+  'Tenant A Identity-Mismatch Target',
+  r.id::text,
+  array['30000000-0000-4000-8000-000000000301'::uuid],
+  'pending',
+  '30000000-0000-4000-8000-000000000101'
+from public.roles r
+where r.organisation_id = '30000000-0000-4000-8000-000000000001'
+  and r.code = 'counter_operator';
+
 insert into platform.tenant_applications (
   id,
   applicant_person_id,
@@ -109,6 +125,9 @@ insert into platform.tenant_applications (
   'Synthetic Atoll'
 );
 
+insert into platform.operator_principals (person_id, operator_role, active, mfa_required)
+values ('30000000-0000-4000-8000-000000000101', 'platform_admin', true, true);
+
 insert into serp300_results
 select
   'accept_rpc_security_definer',
@@ -118,7 +137,8 @@ select
 from pg_proc p
 join pg_namespace n on n.oid = p.pronamespace
 where n.nspname = 'public'
-  and p.proname = 'accept_staff_invitation';
+  and p.proname = 'accept_staff_invitation'
+  and p.pronargs = 2;
 
 insert into serp300_results
 select
@@ -142,13 +162,12 @@ where n.nspname = 'platform'
 
 with required(table_name, column_name) as (
   values
-    ('memberships', 'role'),
-    ('memberships', 'updated_at'),
-    ('membership_seats', 'created_at'),
-    ('book_memberships', 'created_at'),
-    ('audit_events', 'person_id'),
-    ('audit_events', 'event_type'),
-    ('audit_events', 'details')
+    ('persons', 'verified_email'),
+    ('memberships', 'role_id'),
+    ('book_memberships', 'granted_at'),
+    ('audit_events', 'actor_person_id'),
+    ('audit_events', 'action'),
+    ('audit_events', 'metadata')
 ), missing as (
   select r.table_name, r.column_name
   from required r
@@ -162,24 +181,26 @@ insert into serp300_results
 select
   'invitation_rpc_schema_contract',
   '0 missing canonical columns',
-  count(*) || ' missing: ' || string_agg(table_name || '.' || column_name, ', ' order by table_name, column_name),
+  case when count(*) = 0 then '0 missing canonical columns'
+       else count(*) || ' missing: ' || string_agg(table_name || '.' || column_name, ', ' order by table_name, column_name)
+  end,
   count(*) = 0
 from missing;
 
 with required(table_name, column_name) as (
   values
-    ('organisations', 'name'),
-    ('business_names', 'is_primary'),
-    ('locations', 'island'),
-    ('locations', 'atoll'),
-    ('locations', 'is_headquarters'),
-    ('locations', 'status'),
-    ('memberships', 'role'),
-    ('workflow_templates', 'is_active'),
-    ('workflow_stages', 'template_id'),
-    ('workflow_stages', 'name'),
-    ('workflow_stages', 'required_role'),
-    ('workflow_stages', 'is_mandatory')
+    ('organisations', 'legal_name'),
+    ('business_names', 'status'),
+    ('locations', 'code'),
+    ('locations', 'kind'),
+    ('locations', 'active'),
+    ('memberships', 'role_id'),
+    ('workflow_templates', 'workflow_code'),
+    ('workflow_templates', 'active'),
+    ('workflow_stages', 'workflow_template_id'),
+    ('workflow_stages', 'stage_name'),
+    ('workflow_stages', 'required_seat'),
+    ('workflow_stages', 'active')
 ), missing as (
   select r.table_name, r.column_name
   from required r
@@ -193,7 +214,9 @@ insert into serp300_results
 select
   'provision_rpc_schema_contract',
   '0 missing canonical columns',
-  count(*) || ' missing: ' || string_agg(table_name || '.' || column_name, ', ' order by table_name, column_name),
+  case when count(*) = 0 then '0 missing canonical columns'
+       else count(*) || ' missing: ' || string_agg(table_name || '.' || column_name, ', ' order by table_name, column_name)
+  end,
   count(*) = 0
 from missing;
 
@@ -260,8 +283,7 @@ begin
   begin
     perform public.accept_staff_invitation(
       '30000000-0000-4000-8000-000000000601',
-      '30000000-0000-4000-8000-000000000102',
-      'invitee-a@example.invalid'
+      '30000000-0000-4000-8000-000000000102'
     );
     insert into serp300_results values (
       'direct_invitation_rpc_execution',
@@ -285,6 +307,34 @@ begin
         false
       );
   end;
+
+  begin
+    perform platform.provision_approved_application(
+      '30000000-0000-4000-8000-000000000701',
+      '30000000-0000-4000-8000-000000000101'
+    );
+    insert into serp300_results values (
+      'direct_provision_rpc_execution',
+      'authenticated EXECUTE denied',
+      'authenticated entered and completed SECURITY DEFINER body',
+      false
+    );
+  exception
+    when insufficient_privilege then
+      insert into serp300_results values (
+        'direct_provision_rpc_execution',
+        'authenticated EXECUTE denied',
+        'authenticated EXECUTE denied',
+        true
+      );
+    when others then
+      insert into serp300_results values (
+        'direct_provision_rpc_execution',
+        'authenticated EXECUTE denied',
+        'authenticated entered SECURITY DEFINER body: ' || sqlstate || ': ' || sqlerrm,
+        false
+      );
+  end;
 end
 $$;
 reset role;
@@ -293,41 +343,116 @@ set local role service_role;
 do $$
 declare
   rpc_error text := null;
+  rpc_result jsonb := null;
+  verified boolean;
 begin
   begin
-    perform public.accept_staff_invitation(
+    select public.accept_staff_invitation(
       '30000000-0000-4000-8000-000000000601',
-      '30000000-0000-4000-8000-000000000102',
-      'invitee-a@example.invalid'
-    );
+      '30000000-0000-4000-8000-000000000102'
+    ) into rpc_result;
   exception when others then
     rpc_error := sqlstate || ': ' || sqlerrm;
   end;
+
+  verified := rpc_error is null and rpc_result->>'ok' = 'true';
   insert into serp300_results values (
     'invitation_rpc_runtime',
-    'service path executes canonical schema only',
-    coalesce(rpc_error, 'RPC executed'),
-    rpc_error is null
+    'service path accepts bound identity and writes canonical membership/book/audit rows',
+    coalesce(rpc_error, rpc_result::text),
+    verified
+  );
+
+  rpc_result := public.accept_staff_invitation(
+    '30000000-0000-4000-8000-000000000602',
+    '30000000-0000-4000-8000-000000000103'
+  );
+  insert into serp300_results values (
+    'invitation_identity_mismatch',
+    'mismatched verified identity rejected without mutation',
+    rpc_result::text,
+    rpc_result->>'error' = 'invitation_identity_mismatch'
   );
 
   rpc_error := null;
+  rpc_result := null;
   begin
-    perform platform.provision_approved_application(
+    select platform.provision_approved_application(
       '30000000-0000-4000-8000-000000000701',
       '30000000-0000-4000-8000-000000000101'
-    );
+    ) into rpc_result;
   exception when others then
     rpc_error := sqlstate || ': ' || sqlerrm;
   end;
+
+  verified := rpc_error is null and rpc_result->>'ok' = 'true';
   insert into serp300_results values (
     'provision_rpc_runtime',
-    'service path executes canonical schema only',
-    coalesce(rpc_error, 'RPC executed'),
-    rpc_error is null
+    'service path provisions canonical organisation spine',
+    coalesce(rpc_error, rpc_result::text),
+    verified
   );
 end
 $$;
 reset role;
+
+-- Verify durable effects as the fixture owner, not by broadening service_role.
+update serp300_results
+   set passed = passed
+     and exists (
+       select 1
+       from public.memberships m
+       join public.book_memberships bm on bm.membership_id = m.id
+       where m.person_id = '30000000-0000-4000-8000-000000000102'
+         and m.organisation_id = '30000000-0000-4000-8000-000000000001'
+         and m.role_id is not null
+         and bm.book_id = '30000000-0000-4000-8000-000000000301'
+     )
+     and exists (
+       select 1 from public.audit_events
+       where object_id = '30000000-0000-4000-8000-000000000601'
+         and action = 'invitation.accepted'
+         and actor_person_id = '30000000-0000-4000-8000-000000000102'
+     ),
+       actual = actual || '; canonical membership/book/audit rows verified'
+ where attack = 'invitation_rpc_runtime';
+
+update serp300_results
+   set passed = passed
+     and exists (
+       select 1 from public.invitations
+       where id = '30000000-0000-4000-8000-000000000602'
+         and status = 'pending'
+         and accepted_by is null
+     )
+     and not exists (
+       select 1 from public.memberships
+       where person_id = '30000000-0000-4000-8000-000000000103'
+         and organisation_id = '30000000-0000-4000-8000-000000000001'
+     ),
+       actual = actual || '; invitation remained pending and membership absent'
+ where attack = 'invitation_identity_mismatch';
+
+update serp300_results
+   set passed = passed
+     and exists (
+       select 1
+       from public.organisations o
+       join public.memberships m on m.organisation_id = o.id
+       join public.book_memberships bm on bm.membership_id = m.id
+       join public.workflow_templates wt on wt.organisation_id = o.id
+       join platform.tenant_registry tr on tr.organisation_id = o.id
+       join platform.tenant_applications ta on ta.provisioned_organisation_id = o.id
+       join public.books b on b.id = bm.book_id and b.organisation_id = o.id
+       where ta.id = '30000000-0000-4000-8000-000000000701'
+         and m.person_id = '30000000-0000-4000-8000-000000000102'
+         and m.role_id is not null
+         and b.is_default = true
+         and wt.workflow_code = 'general_business_default'
+         and tr.provisioning_status = 'ready'
+     ),
+       actual = actual || '; canonical organisation spine verified'
+ where attack = 'provision_rpc_runtime';
 
 table serp300_results;
 

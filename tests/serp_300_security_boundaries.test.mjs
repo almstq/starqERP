@@ -19,7 +19,7 @@ const edge = fs.readFileSync(
 function lastFunctionDefinition(qualifiedName) {
   const escaped = qualifiedName.replaceAll('.', '\\.');
   const pattern = new RegExp(
-    `create\\s+or\\s+replace\\s+function\\s+${escaped}\\s*\\([\\s\\S]*?\\$\\$;`,
+    `create\\s+(?:or\\s+replace\\s+)?function\\s+${escaped}\\s*\\([\\s\\S]*?\\$\\$;`,
     'gi',
   );
   const definitions = [...combinedMigrations.matchAll(pattern)];
@@ -32,12 +32,12 @@ test('SERP-300: invitation SECURITY DEFINER RPC is service-role only', () => {
   assert.match(invitationRpc, /\bSECURITY\s+DEFINER\b/i);
   assert.match(
     combinedMigrations,
-    /revoke\s+all\s+on\s+function\s+public\.accept_staff_invitation\s*\(\s*uuid\s*,\s*uuid\s*,\s*text\s*\)\s+from\s+public\s*,\s*anon\s*,\s*authenticated\s*;/i,
+    /revoke\s+all\s+on\s+function\s+public\.accept_staff_invitation\s*\(\s*uuid\s*,\s*uuid\s*\)\s+from\s+public\s*,\s*anon\s*,\s*authenticated\s*;/i,
     'accept_staff_invitation must explicitly revoke PUBLIC, anon, and authenticated execution',
   );
   assert.match(
     combinedMigrations,
-    /grant\s+execute\s+on\s+function\s+public\.accept_staff_invitation\s*\(\s*uuid\s*,\s*uuid\s*,\s*text\s*\)\s+to\s+service_role\s*;/i,
+    /grant\s+execute\s+on\s+function\s+public\.accept_staff_invitation\s*\(\s*uuid\s*,\s*uuid\s*\)\s+to\s+service_role\s*;/i,
     'accept_staff_invitation must be callable only through the server-authoritative service role path',
   );
 });
@@ -59,6 +59,9 @@ test('SERP-300: provisioning SECURITY DEFINER RPC is service-role only', () => {
 
 test('SERP-300: invitation migration targets the canonical membership and audit schema', () => {
   const invitationRpc = lastFunctionDefinition('public.accept_staff_invitation');
+  assert.doesNotMatch(invitationRpc, /p_verified_email/i);
+  assert.match(invitationRpc, /verified_email/is);
+  assert.match(invitationRpc, /external_subject\s+is\s+not\s+null/is);
   assert.doesNotMatch(invitationRpc, /\bmemberships\s*\([^)]*\brole\b/is);
   assert.doesNotMatch(invitationRpc, /\bmemberships\s*\([^)]*\bupdated_at\b/is);
   assert.doesNotMatch(invitationRpc, /\bmembership_seats\s*\([^)]*\bcreated_at\b/is);

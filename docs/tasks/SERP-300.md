@@ -1,6 +1,6 @@
 # SERP-300 — Adversarial RLS and multi-tenant isolation suite
 
-Status: Classification complete; security regressions red; patch not started  
+Status: Remediation checkpoint green; independent review pending
 Owner: Codex  
 Branch: `codex/serp-300-adversarial-isolation`
 
@@ -37,6 +37,8 @@ All fixtures are synthetic and created inside a rolled-back transaction.
 - `tests/serp_300_adversarial_isolation_probe.sql` is the behavioral PostgreSQL probe.
 - `tests/evidence/SERP-300/remote-db-lint-before.txt` is a read-only linked Alpha lint result.
 - `tests/evidence/SERP-300/classification-2026-08-28.md` records the exact clean-room catalogue, role-execution, runtime, and schema-contract results at HEAD `fda71811cdb77dea5e0f39eac9d09231ee1845bf`.
+- `tests/evidence/SERP-300/green-static-boundaries.txt` records the eight focused Edge/RPC boundary tests passing after remediation.
+- `tests/evidence/SERP-300/green-postgres-boundaries.txt` records the clean 0001–0028 replay and all sixteen adversarial/runtime checks passing after remediation.
 - No live tenant rows are read and no live writes are performed by these local probes.
 
 ## Classification result — 2026-08-28
@@ -55,4 +57,33 @@ All migrations `0001–0027` replay successfully into a newly recreated syntheti
 
 No listed finding is a false positive. The pre-existing SERP-124 catalogue-count failure in `legacy-rls-coverage-drift.txt` is a separate harness-maintenance artifact and does not affect the behavioral results.
 
-Classification is complete, so patching is now safe to begin only within the implicated migration/RLS/RPC surfaces and with the red SERP-300 regressions as gates. The security freeze remains in force until those tests turn green; Gate 1 external-friend acceptance remains out of scope.
+Classification constrained remediation to the implicated migration/RLS/RPC surfaces and preserved the original red regressions as executable gates. Gate 1 external-friend acceptance remains out of scope.
+
+## Remediation checkpoint — 2026-08-28
+
+Migration `202608280028_serp_300_security_boundary_remediation.sql` and the Edge API changes repair the classified boundaries without modifying the historical 0001–0027 chain:
+
+- `commercial_documents` now requires active book membership, not only organisation membership.
+- the invitation RPC is service-role-only, binds acceptance to the persisted verified identity, validates role/book/location scope, and writes canonical membership/book/audit rows.
+- the provisioning RPC now targets the canonical organisation, role, location, workflow, registry, and audit schema.
+- context switching and operational reads enforce the active organisation/book assignment.
+- invitation administration requires the `managing_director` seat and rejects foreign scope identifiers.
+- removal of the empty-seat managing-director fallback prevents database seat revocation from becoming elevated authority.
+
+Current executable evidence:
+
+| Gate | Result |
+|---|---|
+| Focused static boundary suite | 8/8 pass |
+| Clean PostgreSQL migration replay | 0001–0028 pass |
+| Tenant A vs Tenant B read/write/delete/insert probes | pass |
+| Book A1 member vs unassigned Book A2 probes | pass |
+| Authenticated direct RPC execution denial | pass |
+| Valid invitation runtime and identity-mismatch red case | pass |
+| Canonical tenant provisioning runtime | pass |
+| Deno type check for `starq-api/index.ts` | pass |
+| Full frontend Vitest suite after rebase | 75 files / 272 tests pass |
+| Vite production build after rebase | pass |
+| Frontend TypeScript check after rebase | red on inherited active-head model/UI errors; no SERP-300 file appears in the diagnostics |
+
+This is a tested implementation checkpoint, not independent acceptance. The security freeze and SERP-286 dependency remain in force until a separate reviewer reproduces the evidence and records acceptance.
