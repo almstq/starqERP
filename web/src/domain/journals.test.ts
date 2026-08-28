@@ -109,11 +109,14 @@ describe('General Ledger Derivation & Running Balance (SERP-291)', () => {
         id: 'pay-1',
         invoiceId: 'inv-1',
         invoiceNumber: 'INV-2026-0001',
+        customerId: 'cust-1',
+        referenceNumber: 'REF-INV-2026-0001',
+        status: 'Verified',
         customerName: 'Apex Marine',
         amount: 10800,
         paymentDate: '2026-08-05',
         method: 'BML Transfer',
-        receiptNumber: 'RCT-0001',
+        paymentNumber: 'RCT-0001',
       },
     ];
 

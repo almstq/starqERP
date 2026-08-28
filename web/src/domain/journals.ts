@@ -26,6 +26,7 @@ export type JournalEntrySource =
   | 'JOB_COMPLETION'
   | 'FX_REALIZATION'
   | 'PAYROLL_PROVISION'
+  | 'BANK_RECONCILIATION'
   | 'STOCK_ADJUSTMENT'
   | 'OPENING_BALANCE';
 

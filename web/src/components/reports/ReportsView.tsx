@@ -679,7 +679,19 @@ export const ReportsView: React.FC = () => {
       )}
 
       {activeReportTab === 'mira_tgst_16' && (
-        <MiraTgstView onAddJournalEntry={(je) => { setManualJournals((prev) => [je, ...prev]); }} />
+        <MiraTgstView
+          onAddJournalEntry={(je) => {
+            // manualJournals above is a useMemo over localStorage, not state, so
+            // there is no setter. Write back to the same key it reads from.
+            try {
+              const saved = localStorage.getItem('starq:manual_journals:v1');
+              const existing: JournalEntry[] = saved ? JSON.parse(saved) : [];
+              localStorage.setItem('starq:manual_journals:v1', JSON.stringify([je, ...existing]));
+            } catch {
+              /* storage unavailable; the entry is not persisted */
+            }
+          }}
+        />
       )}
 
       {activeReportTab === 'cash_flow' && (

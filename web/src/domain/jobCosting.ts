@@ -1,10 +1,11 @@
+import { accountClassForCode } from './accounts';
 import { JournalEntry } from './journals';
 
 export interface MaterialCostItem {
   id: string;
   itemId: string;
   itemCode: string;
-  narration: string;
+  description: string;
   quantity: number;
   unitCostMvr: number;
   totalCostMvr: number;
@@ -24,7 +25,7 @@ export interface LaborCostItem {
 
 export interface ExpenseCostItem {
   id: string;
-  narration: string;
+  description: string;
   vendorName: string;
   amountMvr: number;
   category: 'SUBCONTRACTOR' | 'EQUIPMENT_HIRE' | 'PERMITS_LOGISTICS' | 'OTHER';
@@ -154,6 +155,8 @@ export function createJobCompletionCogsJournal(sheet: JobCostSheet, tenantId: st
     {
       id: 'cogs-01',
       accountCode: '5000',
+      accountId: 'acc-5000',
+      accountClass: accountClassForCode('5000'),
       accountName: 'Cost of Goods & Services Sold (COGS)',
       debit: sheet.totalActualCost,
       credit: 0,
@@ -163,6 +166,8 @@ export function createJobCompletionCogsJournal(sheet: JobCostSheet, tenantId: st
     {
       id: 'cogs-02',
       accountCode: '1400',
+      accountId: 'acc-1400',
+      accountClass: accountClassForCode('1400'),
       accountName: 'Work-in-Progress (WIP Inventory)',
       debit: 0,
       credit: sheet.totalActualCost,

@@ -19,6 +19,12 @@ describe('SERP-294: Credit Notes, Customer Advances & Settlement Engine', () => 
     linkedJobId: 'job-101',
     customerId: 'cust-crown',
     customerName: 'Crown Resorts Maldives',
+    customerPhone: '7777777',
+    customerIsland: 'Male',
+    gstRate: 8,
+    amountPaid: 0,
+    balanceDue: 0,
+    bankDetails: 'BML 7701192837101',
     date: '2026-08-10',
     dueDate: '2026-08-25',
     items: [],
@@ -28,7 +34,6 @@ describe('SERP-294: Credit Notes, Customer Advances & Settlement Engine', () => 
     status: 'Sent',
     paymentStatus: 'Unpaid',
     payments: [],
-    currency: 'MVR',
   };
 
   it('issues credit notes linked to invoices or standalone credits', () => {
@@ -37,7 +42,7 @@ describe('SERP-294: Credit Notes, Customer Advances & Settlement Engine', () => 
       customerName: 'Crown Resorts Maldives',
       invoiceId: mockInvoice.id,
       invoiceNumber: mockInvoice.invoiceNumber,
-      date: '2026-08-15',
+      issueDate: '2026-08-15',
       reason: 'Damaged Paint Allowance',
       items: [
         {
@@ -62,7 +67,7 @@ describe('SERP-294: Credit Notes, Customer Advances & Settlement Engine', () => 
     const creditNote = issueCreditNote({
       customerId: 'cust-crown',
       customerName: 'Crown Resorts Maldives',
-      date: '2026-08-15',
+      issueDate: '2026-08-15',
       reason: 'Rate concession',
       items: [
         {

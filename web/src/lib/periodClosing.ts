@@ -199,6 +199,14 @@ export function executeYearEndClose(params: {
     source: 'YEAR_END_CLOSE',
     reference: `fy-${fiscalYear}`,
     lines: preview.closingLines,
+    totalDebit: Math.round(preview.closingLines.reduce((sum, l) => sum + l.debit, 0) * 100) / 100,
+    totalCredit: Math.round(preview.closingLines.reduce((sum, l) => sum + l.credit, 0) * 100) / 100,
+    isBalanced:
+      Math.abs(
+        preview.closingLines.reduce((sum, l) => sum + l.debit, 0) -
+          preview.closingLines.reduce((sum, l) => sum + l.credit, 0),
+      ) < 0.005,
+    tenantId: params.journals[0]?.tenantId || '',
     status: 'POSTED',
     postedAt: new Date().toISOString(),
     postedBy: closedBy,

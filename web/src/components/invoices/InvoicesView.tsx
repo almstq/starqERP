@@ -506,7 +506,7 @@ export const InvoicesView: React.FC = () => {
                           )}
                         </td>
                         <td className="py-2 px-4 font-mono text-slate-400">
-                          {cn.date}
+                          {cn.issueDate}
                         </td>
                         <td className="py-2 px-4 text-right font-mono font-bold text-[var(--md-sys-color-on-surface)]">
                           {formatMVR(cn.totalAmount)}

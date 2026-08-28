@@ -85,7 +85,7 @@ export interface SettlementAllocation {
   allocationNumber: string;
   tenantId?: string;
   sourceType: 'CREDIT_NOTE' | 'CUSTOMER_ADVANCE';
-  reference: string;
+  sourceId: string;
   sourceNumber: string;
   targetInvoiceId: string;
   targetInvoiceNumber: string;

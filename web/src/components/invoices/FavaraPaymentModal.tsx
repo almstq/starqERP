@@ -47,7 +47,9 @@ export const FavaraPaymentModal: React.FC<FavaraPaymentModalProps> = ({
   const qrConfig = {
     merchantName: currentTenant.name || 'Starq Marine & Tech',
     merchantCity: 'Male',
-    accountNumber: currentTenant.bmlAccount || '7701192837101',
+    // bmlAccount is stored formatted, e.g. '7730000189201 (BML MVR Main Account)'.
+    // A Favara identifier is the bare account number, so take the leading digits.
+    accountNumber: (currentTenant.bmlAccount || '').match(/[0-9]+/)?.[0] || '7701192837101',
     bankName: ('BML') as any,
     currency: invoice.currency || 'MVR',
     amount: invoice.totalAmount,

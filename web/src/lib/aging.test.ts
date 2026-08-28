@@ -129,12 +129,14 @@ describe('Authoritative AR & AP Aging Matrix Engine (SERP-293)', () => {
       id: 'pay-1',
       invoiceId: 'inv-2',
       invoiceNumber: 'INV-002',
+      customerId: 'cust-1',
+      paymentNumber: 'PAY-INV-002',
+      status: 'Verified',
       amount: 6600,
       paymentDate: '2026-08-12',
       method: 'BML Bank Transfer',
       referenceNumber: 'BML-REF-001',
       customerName: 'Crown Resorts Maldives',
-      recordedBy: 'Admin',
     },
   ];
 
@@ -176,9 +178,10 @@ describe('Authoritative AR & AP Aging Matrix Engine (SERP-293)', () => {
         expectedDeliveryDate: '2026-08-30',
         items: [],
         totalAmount: 18500,
+        subtotal: 17129.63,
+        gstAmount: 1370.37,
         status: 'Sent',
         paymentStatus: 'Unpaid',
-        balanceDue: 18500,
       },
       {
         id: 'po-2',
@@ -189,9 +192,10 @@ describe('Authoritative AR & AP Aging Matrix Engine (SERP-293)', () => {
         expectedDeliveryDate: '2026-07-15',
         items: [],
         totalAmount: 45000,
+        subtotal: 41666.67,
+        gstAmount: 3333.33,
         status: 'Received & Stocked',
         paymentStatus: 'Unpaid',
-        balanceDue: 45000,
       },
     ];
 

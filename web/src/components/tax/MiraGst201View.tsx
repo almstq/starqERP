@@ -25,7 +25,9 @@ import { useERP } from '../../context/ERPContext';
 import { Badge, Surface, Button } from '../ui';
 
 export const MiraGst201View: React.FC = () => {
-  const { invoices, expenses, purchaseOrders, currentTenant, isGstRegistered, formatMVR } = useERP();
+  const { invoices, expenses, purchaseOrders, currentTenant, formatMVR } = useERP();
+  // ERPContext exposes no isGstRegistered; derive it from the tenant's real status.
+  const isGstRegistered = currentTenant?.gstStatus === 'registered';
 
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedMonth, setSelectedMonth] = useState<number>(8); // August
@@ -36,7 +38,15 @@ export const MiraGst201View: React.FC = () => {
     return calculateMiraGst201Return({
       invoices,
       expenses,
-      purchaseOrders,
+      purchaseOrders: purchaseOrders.map((po) => ({
+        id: po.id,
+        orderNumber: po.poNumber,
+        date: po.orderDate,
+        supplierName: po.supplierName,
+        subtotal: po.subtotal,
+        taxAmount: po.gstAmount,
+        totalAmount: po.totalAmount,
+      })),
       periodYear: selectedYear,
       periodMonth: selectedMonth,
       tin: currentTenant.tinNumber || (isGstRegistered ? '1002345GST501' : ''),
