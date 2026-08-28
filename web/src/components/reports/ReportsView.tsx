@@ -53,6 +53,7 @@ import { DrilldownDrawer, DrilldownAccountDetails } from './DrilldownDrawer';
 import { AgingMatricesView } from './AgingMatricesView';
 import { MiraGst201View } from '../tax/MiraGst201View';
 import { MiraTgstView } from '../tax/MiraTgstView';
+import { CashFlowStatementView } from './CashFlowStatementView';
 
 export const ReportsView: React.FC = () => {
   const navigate = useNavigate();
@@ -60,7 +61,7 @@ export const ReportsView: React.FC = () => {
 
   const [dateRange, setDateRange] = useState('This Year (2026)');
   const [selectedBookFilter, setSelectedBookFilter] = useState<'CONSOLIDATED' | 'CURRENT_BOOK'>('CONSOLIDATED');
-  const [activeReportTab, setActiveReportTab] = useState<'statements' | 'aging' | 'analytics' | 'mira_gst_201' | 'mira_tgst_16'>('statements');
+  const [activeReportTab, setActiveReportTab] = useState<'statements' | 'aging' | 'analytics' | 'mira_gst_201' | 'mira_tgst_16' | 'cash_flow'>('statements');
   const [drilldownAccount, setDrilldownAccount] = useState<DrilldownAccountDetails | null>(null);
 
   const isGstRegistered = currentTenant.gstStatus === 'registered';
@@ -258,6 +259,19 @@ export const ReportsView: React.FC = () => {
             >
               <Palmtree className="w-3.5 h-3.5" />
               <span>16% TGST & Green Tax</span>
+            </button>
+
+            <button
+              data-testid="cash-flow-tab-btn"
+              onClick={() => setActiveReportTab('cash_flow')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeReportTab === 'cash_flow'
+                  ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] shadow-xs border border-[var(--md-sys-color-primary)]'
+                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>Cash Flow (IFRS)</span>
             </button>
           </div>
 
@@ -666,6 +680,10 @@ export const ReportsView: React.FC = () => {
 
       {activeReportTab === 'mira_tgst_16' && (
         <MiraTgstView onAddJournalEntry={(je) => { setManualJournals((prev) => [je, ...prev]); }} />
+      )}
+
+      {activeReportTab === 'cash_flow' && (
+        <CashFlowStatementView journals={allJournals} />
       )}
 
       {/* Interactive P&L Drilldown Drawer */}
