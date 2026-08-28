@@ -152,3 +152,42 @@ export function flattenAccountTree(nodes: AccountHierarchyNode[], expandedIds: S
   traverse(nodes);
   return result;
 }
+
+export function filterAccountTree(
+  nodes: AccountHierarchyNode[],
+  filters: {
+    accountClass?: AccountClass | 'ALL';
+    currency?: AccountCurrency | 'ALL';
+    status?: AccountStatus | 'ALL';
+    query?: string;
+  }
+): AccountHierarchyNode[] {
+  const q = filters.query?.toLowerCase().trim() || '';
+
+  function filterNodes(list: AccountHierarchyNode[]): AccountHierarchyNode[] {
+    const result: AccountHierarchyNode[] = [];
+
+    for (const node of list) {
+      const filteredChildren = filterNodes(node.children);
+
+      const matchesClass = !filters.accountClass || filters.accountClass === 'ALL' || node.accountClass === filters.accountClass;
+      const matchesCurrency = !filters.currency || filters.currency === 'ALL' || node.currency === filters.currency;
+      const matchesStatus = !filters.status || filters.status === 'ALL' || node.status === filters.status;
+      const matchesQuery = !q || node.name.toLowerCase().includes(q) || node.code.toLowerCase().includes(q);
+
+      const selfMatches = matchesClass && matchesCurrency && matchesStatus && matchesQuery;
+
+      if (selfMatches || filteredChildren.length > 0) {
+        result.push({
+          ...node,
+          children: filteredChildren,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  return filterNodes(nodes);
+}
+

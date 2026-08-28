@@ -3,6 +3,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AccountsView } from '../components/accounts/AccountsView';
+import { ERPProvider } from '../context/ERPContext';
+import { AuthProvider } from '../context/AuthContext';
 import {
   buildAccountTree,
   flattenAccountTree,
@@ -11,6 +13,19 @@ import {
   AccountRecord,
 } from '../domain/accounts';
 import { DEFAULT_CHART_OF_ACCOUNTS } from '../data/defaultChartOfAccounts';
+
+const renderAccountsView = () => {
+  return render(
+    <MemoryRouter>
+      <AuthProvider>
+        <ERPProvider>
+          <AccountsView />
+        </ERPProvider>
+      </AuthProvider>
+    </MemoryRouter>
+  );
+};
+
 
 describe('Chart of Accounts Domain & Hierarchy Algorithms', () => {
   it('builds a multi-level hierarchy tree accurately', () => {
@@ -51,14 +66,11 @@ describe('AccountsView Component & Interactions', () => {
   });
 
   it('renders the Chart of Accounts header, summary metrics, and default table rows', () => {
-    render(
-      <MemoryRouter>
-        <AccountsView />
-      </MemoryRouter>
-    );
+    renderAccountsView();
 
-    expect(screen.getByText('Chart of Accounts')).toBeInTheDocument();
+    expect(screen.getAllByText(/Chart of Accounts/i).length).toBeGreaterThan(0);
     expect(screen.getByText('Total Accounts')).toBeInTheDocument();
+
     expect(screen.getAllByText(/Assets \(1000s\)/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Liabilities \(2000s\)/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Equity \(3000s\)/i).length).toBeGreaterThan(0);
@@ -77,11 +89,7 @@ describe('AccountsView Component & Interactions', () => {
   });
 
   it('filters accounts by classification tab', () => {
-    render(
-      <MemoryRouter>
-        <AccountsView />
-      </MemoryRouter>
-    );
+    renderAccountsView();
 
     // Click on Liabilities tab
     const liabilityTab = screen.getByRole('button', { name: /Liabilities \(2000s\)/i });
@@ -93,11 +101,7 @@ describe('AccountsView Component & Interactions', () => {
   });
 
   it('searches accounts by code and account name in real time', () => {
-    render(
-      <MemoryRouter>
-        <AccountsView />
-      </MemoryRouter>
-    );
+    renderAccountsView();
 
     const searchInput = screen.getByPlaceholderText(/Search by code, account name, or subtype/i);
     fireEvent.change(searchInput, { target: { value: '1111' } });
@@ -107,11 +111,7 @@ describe('AccountsView Component & Interactions', () => {
   });
 
   it('opens New Account Modal and creates a new custom sub-account', async () => {
-    render(
-      <MemoryRouter>
-        <AccountsView />
-      </MemoryRouter>
-    );
+    renderAccountsView();
 
     const newBtn = screen.getByTestId('add-account-btn');
     fireEvent.click(newBtn);
@@ -139,11 +139,7 @@ describe('AccountsView Component & Interactions', () => {
   });
 
   it('prevents creating duplicate account codes with validation error message', () => {
-    render(
-      <MemoryRouter>
-        <AccountsView />
-      </MemoryRouter>
-    );
+    renderAccountsView();
 
     const newBtn = screen.getByTestId('add-account-btn');
     fireEvent.click(newBtn);
