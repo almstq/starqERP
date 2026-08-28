@@ -136,7 +136,7 @@ export const CreditDunningView: React.FC = () => {
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-white">{p.customerName}</span>
-                    <Badge variant={p.enforcementMode === 'HARD_BLOCK' ? 'danger' : p.enforcementMode === 'SOFT_WARNING' ? 'warning' : 'neutral'}>
+                    <Badge variant={p.enforcementMode === 'HARD_BLOCK' ? 'destructive' : p.enforcementMode === 'SOFT_WARNING' ? 'warning' : 'neutral'}>
                       {p.enforcementMode}
                     </Badge>
                   </div>
@@ -265,7 +265,7 @@ export const CreditDunningView: React.FC = () => {
                   <td className="py-2.5 px-3 text-slate-400">{n.noticeId}</td>
                   <td className="py-2.5 px-3 font-sans font-medium text-white">{n.customerName}</td>
                   <td className="py-2.5 px-3">
-                    <Badge variant={n.tier === 'TIER_3_FINAL_LEGAL' ? 'danger' : n.tier === 'TIER_2_FORMAL_DEMAND' ? 'warning' : 'neutral'}>
+                    <Badge variant={n.tier === 'TIER_3_FINAL_LEGAL' ? 'destructive' : n.tier === 'TIER_2_FORMAL_DEMAND' ? 'warning' : 'neutral'}>
                       {n.tierLabel}
                     </Badge>
                   </td>

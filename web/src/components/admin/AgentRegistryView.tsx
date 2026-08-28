@@ -145,7 +145,7 @@ export const AgentRegistryView: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-white">AI Agent Governance & Master Kill Switch</h2>
-                <Badge variant="success">Controlled Execution</Badge>
+                <Badge variant="positive">Controlled Execution</Badge>
               </div>
               <p className="text-xs text-slate-400">
                 Grant management, action proposals gate, immutable audit trail, and emergency safety isolation.
@@ -206,7 +206,7 @@ export const AgentRegistryView: React.FC = () => {
                 </div>
               </div>
 
-              <Badge variant={ag.status === 'ACTIVE' ? 'success' : 'danger'}>
+              <Badge variant={ag.status === 'ACTIVE' ? 'positive' : 'destructive'}>
                 {ag.status}
               </Badge>
             </div>
@@ -266,11 +266,11 @@ export const AgentRegistryView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-indigo-400">{p.agentHandle}</span>
                   <span className="text-slate-400 font-sans font-bold">· {p.actionType}</span>
-                  <Badge variant={p.riskLevel === 'HIGH' ? 'danger' : p.riskLevel === 'MEDIUM' ? 'warning' : 'neutral'}>
+                  <Badge variant={p.riskLevel === 'HIGH' ? 'destructive' : p.riskLevel === 'MEDIUM' ? 'warning' : 'neutral'}>
                     {p.riskLevel} RISK
                   </Badge>
                 </div>
-                <Badge variant={p.status === 'EXECUTED' ? 'success' : p.status === 'REJECTED' ? 'danger' : 'warning'}>
+                <Badge variant={p.status === 'EXECUTED' ? 'positive' : p.status === 'REJECTED' ? 'destructive' : 'warning'}>
                   {p.status}
                 </Badge>
               </div>

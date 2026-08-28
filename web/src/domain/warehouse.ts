@@ -240,7 +240,7 @@ export function receiveStockTransfer(
 
   return {
     ...order,
-    status: 'POSTED',
+    status: 'RECEIVED',
     receivedDate: receiveDate,
     receiptJournal,
   };

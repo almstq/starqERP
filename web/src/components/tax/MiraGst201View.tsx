@@ -85,7 +85,7 @@ export const MiraGst201View: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-white">MIRA GST-201 Tax Return</h2>
-                <Badge variant={isGstRegistered ? 'success' : 'neutral'}>
+                <Badge variant={isGstRegistered ? 'positive' : 'neutral'}>
                   {isGstRegistered ? 'GST Registered' : 'Not Registered'}
                 </Badge>
               </div>

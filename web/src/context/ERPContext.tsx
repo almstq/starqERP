@@ -113,6 +113,22 @@ export interface ERPContextType {
   roles: UserRole[];
   invitations: StaffInvitationRecord[];
   switchCurrentUser: (userId: string) => void;
+  /**
+   * OPTIONAL AND CURRENTLY NEVER PROVIDED.
+   *
+   * MultiWarehouseView, PayrollManagementView and JobCostingView all call this
+   * to post a generated journal, and each already guards with
+   * `typeof addJournalEntry === 'function'` because no provider supplies it.
+   * Declaring it optional makes the type state that fact rather than implying a
+   * method that does not exist.
+   *
+   * Consequence, recorded deliberately: journal posting from those three
+   * modules is INERT. The entries are computed and then dropped. Wiring this to
+   * real journal state is a feature change, not a typecheck fix, so it is
+   * reported rather than invented here.
+   */
+  addJournalEntry?: (entry: import('../domain/journals').JournalEntry) => void;
+
   authorizeUser: (userId: string, roleId?: string) => void;
   suspendUser: (userId: string) => void;
   inviteUser: (userData: { name: string; email: string; phone: string; roleId: string; jobTitle?: string }) => AppUser;

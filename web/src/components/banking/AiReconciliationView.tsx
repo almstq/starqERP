@@ -112,7 +112,7 @@ TOTAL:    MVR 27,000.00
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-white">AI-Assisted Reconciliation & OCR Extraction</h2>
-                <Badge variant="success">Confidence Scored</Badge>
+                <Badge variant="positive">Confidence Scored</Badge>
               </div>
               <p className="text-xs text-slate-400">
                 Automated transaction pattern recognition, Maldives OCR parsing (TIN/BML Ref), and 1-click ledger reconciliation.
@@ -147,7 +147,7 @@ TOTAL:    MVR 27,000.00
             <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs font-mono">
               <div className="flex justify-between items-center border-b border-slate-800 pb-2">
                 <span className="text-slate-400">Extraction Confidence:</span>
-                <Badge variant={extractedData.confidenceScore >= 80 ? 'success' : 'warning'}>
+                <Badge variant={extractedData.confidenceScore >= 80 ? 'positive' : 'warning'}>
                   {extractedData.confidenceScore}% Confidence
                 </Badge>
               </div>
@@ -196,7 +196,7 @@ TOTAL:    MVR 27,000.00
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-white">{s.matchedInvoiceNumber}</span>
-                    <Badge variant={s.confidenceScore >= 95 ? 'success' : 'warning'}>
+                    <Badge variant={s.confidenceScore >= 95 ? 'positive' : 'warning'}>
                       {s.confidenceScore}% Match
                     </Badge>
                   </div>

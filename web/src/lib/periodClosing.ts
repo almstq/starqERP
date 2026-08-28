@@ -197,7 +197,7 @@ export function executeYearEndClose(params: {
     date: closingDate,
     narration: `Fiscal Year-End Closing & Roll-Forward for FY${fiscalYear} into Retained Earnings`,
     source: 'YEAR_END_CLOSE',
-    sourceId: `fy-${fiscalYear}`,
+    reference: `fy-${fiscalYear}`,
     lines: preview.closingLines,
     status: 'POSTED',
     postedAt: new Date().toISOString(),

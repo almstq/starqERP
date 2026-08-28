@@ -16,10 +16,10 @@ describe('SERP-294: Credit Notes, Customer Advances & Settlement Engine', () => 
   const mockInvoice: Invoice = {
     id: 'inv-101',
     invoiceNumber: 'INV-2026-101',
-    jobId: 'job-101',
+    linkedJobId: 'job-101',
     customerId: 'cust-crown',
     customerName: 'Crown Resorts Maldives',
-    issueDate: '2026-08-10',
+    date: '2026-08-10',
     dueDate: '2026-08-25',
     items: [],
     subtotal: 10000,
@@ -37,7 +37,7 @@ describe('SERP-294: Credit Notes, Customer Advances & Settlement Engine', () => 
       customerName: 'Crown Resorts Maldives',
       invoiceId: mockInvoice.id,
       invoiceNumber: mockInvoice.invoiceNumber,
-      issueDate: '2026-08-15',
+      date: '2026-08-15',
       reason: 'Damaged Paint Allowance',
       items: [
         {
@@ -62,7 +62,7 @@ describe('SERP-294: Credit Notes, Customer Advances & Settlement Engine', () => 
     const creditNote = issueCreditNote({
       customerId: 'cust-crown',
       customerName: 'Crown Resorts Maldives',
-      issueDate: '2026-08-15',
+      date: '2026-08-15',
       reason: 'Rate concession',
       items: [
         {

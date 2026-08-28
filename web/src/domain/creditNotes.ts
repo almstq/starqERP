@@ -5,6 +5,23 @@
 import { JournalEntry, JournalLine } from './journals';
 import { AccountRecord, accountClassForCode } from './accounts';
 
+/**
+ * Double-entry totals for a journal entry, computed rather than asserted.
+ *
+ * isBalanced is DERIVED from the lines. Hardcoding it to true would make the
+ * field a statement of intent instead of a fact, and an unbalanced entry would
+ * then be reported as balanced — which defeats the point of carrying the flag.
+ */
+function journalTotals(lines: JournalLine[]): {
+  totalDebit: number;
+  totalCredit: number;
+  isBalanced: boolean;
+} {
+  const totalDebit = Math.round(lines.reduce((sum, l) => sum + l.debit, 0) * 100) / 100;
+  const totalCredit = Math.round(lines.reduce((sum, l) => sum + l.credit, 0) * 100) / 100;
+  return { totalDebit, totalCredit, isBalanced: Math.abs(totalDebit - totalCredit) < 0.005 };
+}
+
 export interface CreditNoteItem {
   id: string;
   description: string;
@@ -151,6 +168,8 @@ export function generateCreditNoteJournals(params: {
       source: 'CREDIT_NOTE',
       reference: cn.id,
       lines,
+      ...journalTotals(lines),
+      tenantId: cn.tenantId || '',
       status: 'POSTED',
       postedAt: cn.createdAt,
       postedBy: cn.createdBy || 'System',
@@ -209,6 +228,8 @@ export function generateCustomerAdvanceJournals(params: {
       source: 'ADVANCE_DEPOSIT',
       reference: adv.id,
       lines,
+      ...journalTotals(lines),
+      tenantId: adv.tenantId || '',
       status: 'POSTED',
       postedAt: adv.createdAt,
       postedBy: adv.createdBy || 'System',
@@ -269,6 +290,8 @@ export function generateSettlementAllocationJournals(params: {
       source: 'SETTLEMENT_ALLOCATION',
       reference: alloc.id,
       lines,
+      ...journalTotals(lines),
+      tenantId: alloc.tenantId || '',
       status: 'POSTED',
       postedAt: alloc.createdAt,
       postedBy: alloc.createdBy || 'System',

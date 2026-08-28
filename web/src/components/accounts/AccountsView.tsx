@@ -52,7 +52,11 @@ import {
 } from '../../domain/journals';
 
 export const AccountsView: React.FC = () => {
-  const { invoices, payments, expenses, purchaseOrders, currentTenant, isGstRegistered, formatMVR } = useERP();
+  const { invoices, payments, expenses, purchaseOrders, currentTenant, formatMVR } = useERP();
+  // Derived from the tenant's real registration status. ERPContext exposes no
+  // isGstRegistered field, so reading one returned undefined and every caller
+  // silently behaved as 'not registered'.
+  const isGstRegistered = currentTenant?.gstStatus === 'registered';
 
   const [activeTab, setActiveTab] = useState<'chart_of_accounts' | 'general_ledger' | 'periods' | 'bank_reconciliation' | 'multi_currency'>('chart_of_accounts');
 
@@ -423,7 +427,7 @@ export const AccountsView: React.FC = () => {
           accounts={accounts}
           onClosingJournalPosted={(closingJe) => {
             const updated = [closingJe, ...manualJournals];
-            saveManualJournals(updated);
+            setManualJournals(updated);
           }}
           formatMVR={formatMVR}
         />
@@ -432,14 +436,14 @@ export const AccountsView: React.FC = () => {
           journals={allJournals}
           onAddAdjustmentJournal={(adjJe) => {
             const updated = [adjJe, ...manualJournals];
-            saveManualJournals(updated);
+            setManualJournals(updated);
           }}
         />
       ) : activeTab === 'multi_currency' ? (
         <MultiCurrencyView
           onAddJournalEntry={(fxJe) => {
             const updated = [fxJe, ...manualJournals];
-            saveManualJournals(updated);
+            setManualJournals(updated);
           }}
         />
       ) : (

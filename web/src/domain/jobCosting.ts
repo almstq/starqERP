@@ -4,7 +4,7 @@ export interface MaterialCostItem {
   id: string;
   itemId: string;
   itemCode: string;
-  description: string;
+  narration: string;
   quantity: number;
   unitCostMvr: number;
   totalCostMvr: number;
@@ -24,7 +24,7 @@ export interface LaborCostItem {
 
 export interface ExpenseCostItem {
   id: string;
-  description: string;
+  narration: string;
   vendorName: string;
   amountMvr: number;
   category: 'SUBCONTRACTOR' | 'EQUIPMENT_HIRE' | 'PERMITS_LOGISTICS' | 'OTHER';
@@ -157,7 +157,7 @@ export function createJobCompletionCogsJournal(sheet: JobCostSheet, tenantId: st
       accountName: 'Cost of Goods & Services Sold (COGS)',
       debit: sheet.totalActualCost,
       credit: 0,
-      description: `Capitalized Job Cost Realization for ${sheet.jobCode} (${sheet.projectName})`,
+      narration: `Capitalized Job Cost Realization for ${sheet.jobCode} (${sheet.projectName})`,
     },
     // 2. Credit Work-in-Progress WIP (Account 1400)
     {
@@ -166,7 +166,7 @@ export function createJobCompletionCogsJournal(sheet: JobCostSheet, tenantId: st
       accountName: 'Work-in-Progress (WIP Inventory)',
       debit: 0,
       credit: sheet.totalActualCost,
-      description: `Clear WIP Asset upon job completion for ${sheet.jobCode}`,
+      narration: `Clear WIP Asset upon job completion for ${sheet.jobCode}`,
     },
   ];
 

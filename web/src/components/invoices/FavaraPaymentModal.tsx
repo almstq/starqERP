@@ -93,7 +93,7 @@ export const FavaraPaymentModal: React.FC<FavaraPaymentModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-white">MMA Favara Instant Pay</h3>
-                <Badge variant="success">Interoperable</Badge>
+                <Badge variant="positive">Interoperable</Badge>
               </div>
               <p className="text-[11px] text-slate-400">
                 Scan with BML Mobile Banking, MIB FaisaMobile, or any Favara App

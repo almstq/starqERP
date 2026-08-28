@@ -178,7 +178,7 @@ export const MultiWarehouseView: React.FC = () => {
             >
               <div className="flex items-center justify-between">
                 <span className="font-mono text-[11px] font-bold text-cyan-400">{wh.code}</span>
-                {wh.isMainHub && <Badge variant="success">Central Hub</Badge>}
+                {wh.isMainHub && <Badge variant="positive">Central Hub</Badge>}
               </div>
 
               <div className="mt-2">
@@ -274,7 +274,7 @@ export const MultiWarehouseView: React.FC = () => {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-white">{t.transferNumber}</span>
-                  <Badge variant={t.status === 'RECEIVED' ? 'success' : t.status === 'DISPATCHED' ? 'warning' : 'neutral'}>
+                  <Badge variant={t.status === 'RECEIVED' ? 'positive' : t.status === 'DISPATCHED' ? 'warning' : 'neutral'}>
                     {t.status}
                   </Badge>
                 </div>

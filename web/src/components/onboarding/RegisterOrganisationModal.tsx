@@ -20,7 +20,7 @@ const ARCHETYPES = [
 export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const { submitOrganisationApplication } = useERP();
   const { session } = useAuth();
-  const [step, setStep] = useState<'form' | 'success'>('form');
+  const [step, setStep] = useState<'form' | 'positive'>('form');
 
   const applicantName = session?.name || 'Authenticated Applicant';
   const applicantEmail = session?.email || 'applicant@example.com';
@@ -56,7 +56,7 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
       phone: formData.phone,
     });
 
-    setStep('success');
+    setStep('positive');
   };
 
   const handleDone = () => {
