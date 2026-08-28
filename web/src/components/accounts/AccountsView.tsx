@@ -38,6 +38,8 @@ import { NewAccountModal } from './NewAccountModal';
 import { AccountDetailModal } from './AccountDetailModal';
 import { ManualJournalModal } from './ManualJournalModal';
 import { GeneralLedgerView } from './GeneralLedgerView';
+import { PeriodManagementView } from './PeriodManagementView';
+import { AccountingPeriod, generateFiscalPeriods, assertPeriodNotLocked } from '../../domain/periods';
 import { Badge, Surface, Button } from '../ui';
 import { useERP } from '../../context/ERPContext';
 import {
@@ -46,9 +48,27 @@ import {
 } from '../../domain/journals';
 
 export const AccountsView: React.FC = () => {
-  const { invoices, payments, expenses, purchaseOrders, currentTenant, isGstRegistered } = useERP();
+  const { invoices, payments, expenses, purchaseOrders, currentTenant, isGstRegistered, formatMVR } = useERP();
 
-  const [activeTab, setActiveTab] = useState<'chart_of_accounts' | 'general_ledger'>('chart_of_accounts');
+  const [activeTab, setActiveTab] = useState<'chart_of_accounts' | 'general_ledger' | 'periods'>('chart_of_accounts');
+
+  // Accounting Periods State
+  const [periods, setPeriods] = useState<AccountingPeriod[]>(() => {
+    const saved = localStorage.getItem('starq:accounting_periods:v1');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return generateFiscalPeriods(2026);
+      }
+    }
+    return generateFiscalPeriods(2026);
+  });
+
+  const savePeriods = (updated: AccountingPeriod[]) => {
+    setPeriods(updated);
+    localStorage.setItem('starq:accounting_periods:v1', JSON.stringify(updated));
+  };
   const [selectedLedgerAccountId, setSelectedLedgerAccountId] = useState<string | null>(null);
 
   const [accounts, setAccounts] = useState<AccountRecord[]>(() => {
@@ -296,6 +316,21 @@ export const AccountsView: React.FC = () => {
               <BookOpen size={14} />
               <span>General Ledger</span>
             </button>
+            <button
+              type="button"
+              data-testid="periods-tab-btn"
+              onClick={() => {
+                setActiveTab('periods');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                activeTab === 'periods'
+                  ? 'bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-primary)] shadow-sm'
+                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+              }`}
+            >
+              <Lock size={14} />
+              <span>Period Lock & Year-End</span>
+            </button>
           </div>
 
           <Button
@@ -346,6 +381,18 @@ export const AccountsView: React.FC = () => {
           selectedAccountId={selectedLedgerAccountId}
           onSelectAccount={(accId) => setSelectedLedgerAccountId(accId)}
           onOpenNewJournalModal={() => setIsManualJournalOpen(true)}
+        />
+      ) : activeTab === 'periods' ? (
+        <PeriodManagementView
+          periods={periods}
+          onPeriodsUpdated={savePeriods}
+          journals={allJournals}
+          accounts={accounts}
+          onClosingJournalPosted={(closingJe) => {
+            const updated = [closingJe, ...manualJournals];
+            saveManualJournals(updated);
+          }}
+          formatMVR={formatMVR}
         />
       ) : (
         <div className="space-y-6">
