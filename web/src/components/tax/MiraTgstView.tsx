@@ -93,7 +93,7 @@ export const MiraTgstView: React.FC<{
       greenTaxStays,
       periodYear: selectedYear,
       periodMonth: selectedMonth,
-      tin: currentTenant.tin || '1002345GST501',
+      tin: currentTenant.tinNumber || '1002345GST501',
       legalEntityName: currentTenant.name || 'Maldives Safari & Resort Services Pvt Ltd',
       usdToMvrRate: 15.42,
     });

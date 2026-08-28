@@ -39,7 +39,7 @@ export const MiraGst201View: React.FC = () => {
       purchaseOrders,
       periodYear: selectedYear,
       periodMonth: selectedMonth,
-      tin: currentTenant.tin || (isGstRegistered ? '1002345GST501' : ''),
+      tin: currentTenant.tinNumber || (isGstRegistered ? '1002345GST501' : ''),
       legalEntityName: currentTenant.name || 'Commercial Legal Entity Pvt Ltd',
       isGstRegistered,
     });

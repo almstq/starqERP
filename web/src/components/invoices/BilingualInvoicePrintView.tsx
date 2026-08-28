@@ -89,8 +89,8 @@ export const BilingualInvoicePrintView: React.FC<{
   const favaraPayload = generateFavaraPaymentPayload({
     merchantName: currentTenant.name || 'Starq Marine Services',
     merchantCity: 'Male',
-    accountNumber: currentTenant.bankAccountNumber || '7701192837101',
-    bankName: (currentTenant.bankName || 'BML') as any,
+    accountNumber: currentTenant.bmlAccount || '7701192837101',
+    bankName: ('BML') as any,
     currency: inv.currency,
     amount: inv.totalAmount,
     invoiceNumber: inv.invoiceNumber,
@@ -161,7 +161,7 @@ export const BilingualInvoicePrintView: React.FC<{
               H. Starq Tower, Boduthakurufaanu Magu, Male 20026, Maldives
             </div>
             <div className="text-[11px] font-mono font-bold text-slate-800">
-              TIN / ޓީ.އައި.އެން: {currentTenant.tin || '1002345GST501'}
+              TIN / ޓީ.އައި.އެން: {currentTenant.tinNumber || '1002345GST501'}
             </div>
           </div>
 
@@ -272,7 +272,7 @@ export const BilingualInvoicePrintView: React.FC<{
                 Scan with BML Mobile Banking or any Favara app to pay instantly.
               </div>
               <div className="font-mono text-[10px] text-slate-500">
-                Favara ID: {currentTenant.bankAccountNumber || '7701192837101'}@BML
+                Favara ID: {currentTenant.bmlAccount || '7701192837101'}@BML
               </div>
             </div>
           </div>

@@ -8,7 +8,7 @@
  */
 
 import { JournalEntry, JournalLine } from '../domain/journals';
-import { AccountRecord } from '../domain/accounts';
+import { AccountRecord, accountClassForCode } from '../domain/accounts';
 import { AccountingPeriod } from '../domain/periods';
 
 export interface YearEndClosePreview {
@@ -103,6 +103,8 @@ export function previewYearEndClose(params: {
     closingLines.push({
       id: `close-rev-${idx}`,
       accountCode: r.code,
+      accountId: `acc-${r.code}`,
+      accountClass: accountClassForCode(r.code),
       accountName: `${r.name} (Year-End Zeroing)`,
       debit: r.balance,
       credit: 0,
@@ -115,6 +117,8 @@ export function previewYearEndClose(params: {
     closingLines.push({
       id: `close-exp-${idx}`,
       accountCode: e.code,
+      accountId: `acc-${e.code}`,
+      accountClass: accountClassForCode(e.code),
       accountName: `${e.name} (Year-End Zeroing)`,
       debit: 0,
       credit: e.balance,
@@ -128,6 +132,8 @@ export function previewYearEndClose(params: {
     closingLines.push({
       id: 'close-retained-earnings',
       accountCode: '3200',
+      accountId: 'acc-3200',
+      accountClass: accountClassForCode('3200'),
       accountName: 'Retained Earnings',
       debit: 0,
       credit: netIncome,
@@ -138,6 +144,8 @@ export function previewYearEndClose(params: {
     closingLines.push({
       id: 'close-retained-earnings',
       accountCode: '3200',
+      accountId: 'acc-3200',
+      accountClass: accountClassForCode('3200'),
       accountName: 'Retained Earnings',
       debit: Math.abs(netIncome),
       credit: 0,

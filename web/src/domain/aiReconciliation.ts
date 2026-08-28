@@ -1,4 +1,19 @@
-import { BankTransaction } from './bankReconciliation';
+/**
+ * Normalised bank statement transaction consumed by the AI matching engine.
+ * Local to this module: the reconciliation parser works on
+ * `BankStatementLine` (separate debit/credit columns), whereas the matcher
+ * operates on a single signed `amount` plus an explicit direction.
+ */
+export interface BankTransaction {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  type: 'DEBIT' | 'CREDIT';
+  isReconciled: boolean;
+  reference?: string;
+}
+
 import { AgentActionProposal, RegisteredAgent, proposeAgentAction } from './agentRegistry';
 
 export interface ExtractedReceiptData {

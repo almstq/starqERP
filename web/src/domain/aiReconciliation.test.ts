@@ -3,8 +3,8 @@ import {
   parseReceiptOcr,
   generateAiMatchSuggestions,
   convertMatchToReconciliationProposal,
+  BankTransaction,
 } from './aiReconciliation';
-import { BankTransaction } from './bankReconciliation';
 import { DEFAULT_AI_AGENTS } from './agentRegistry';
 
 describe('SERP-016: AI-Assisted Reconciliation & OCR Extraction Engine', () => {

@@ -3,7 +3,7 @@
  */
 
 import { JournalEntry, JournalLine } from './journals';
-import { AccountRecord } from './accounts';
+import { AccountRecord, accountClassForCode } from './accounts';
 
 export interface CreditNoteItem {
   id: string;
@@ -68,7 +68,7 @@ export interface SettlementAllocation {
   allocationNumber: string;
   tenantId?: string;
   sourceType: 'CREDIT_NOTE' | 'CUSTOMER_ADVANCE';
-  sourceId: string;
+  reference: string;
   sourceNumber: string;
   targetInvoiceId: string;
   targetInvoiceNumber: string;
@@ -108,6 +108,8 @@ export function generateCreditNoteJournals(params: {
       lines.push({
         id: `${cn.id}-rev`,
         accountCode: '4000',
+        accountId: 'acc-4000',
+        accountClass: accountClassForCode('4000'),
         accountName: 'Operating & Service Revenue (Reversal)',
         debit: Math.round(cn.subtotal * 100) / 100,
         credit: 0,
@@ -120,6 +122,8 @@ export function generateCreditNoteJournals(params: {
       lines.push({
         id: `${cn.id}-gst`,
         accountCode: '2200',
+        accountId: 'acc-2200',
+        accountClass: accountClassForCode('2200'),
         accountName: 'Output GST Payable (Reversal)',
         debit: Math.round(cn.taxAmount * 100) / 100,
         credit: 0,
@@ -131,6 +135,8 @@ export function generateCreditNoteJournals(params: {
     lines.push({
       id: `${cn.id}-ar`,
       accountCode: '1200',
+      accountId: 'acc-1200',
+      accountClass: accountClassForCode('1200'),
       accountName: 'Accounts Receivable',
       debit: 0,
       credit: Math.round(cn.totalAmount * 100) / 100,
@@ -143,7 +149,7 @@ export function generateCreditNoteJournals(params: {
       date: cn.issueDate,
       narration: `Credit Note ${cn.creditNoteNumber} issued to ${cn.customerName}: ${cn.reason || 'Sales Allowance'}`,
       source: 'CREDIT_NOTE',
-      sourceId: cn.id,
+      reference: cn.id,
       lines,
       status: 'POSTED',
       postedAt: cn.createdAt,
@@ -175,6 +181,8 @@ export function generateCustomerAdvanceJournals(params: {
       {
         id: `${adv.id}-bank`,
         accountCode: adv.paymentMethod === 'Cash' ? '1000' : '1010',
+        accountId: `acc-${adv.paymentMethod === 'Cash' ? '1000' : '1010'}`,
+        accountClass: accountClassForCode(adv.paymentMethod === 'Cash' ? '1000' : '1010'),
         accountName: adv.paymentMethod === 'Cash' ? 'Petty Cash' : 'BML Operations Account',
         debit: Math.round(adv.amount * 100) / 100,
         credit: 0,
@@ -184,6 +192,8 @@ export function generateCustomerAdvanceJournals(params: {
       {
         id: `${adv.id}-adv-liab`,
         accountCode: '2300',
+        accountId: 'acc-2300',
+        accountClass: accountClassForCode('2300'),
         accountName: 'Customer Advances & Deposits',
         debit: 0,
         credit: Math.round(adv.amount * 100) / 100,
@@ -197,7 +207,7 @@ export function generateCustomerAdvanceJournals(params: {
       date: adv.paymentDate,
       narration: `Customer Advance Deposit ${adv.receiptNumber} from ${adv.customerName} via ${adv.paymentMethod}`,
       source: 'ADVANCE_DEPOSIT',
-      sourceId: adv.id,
+      reference: adv.id,
       lines,
       status: 'POSTED',
       postedAt: adv.createdAt,
@@ -231,6 +241,8 @@ export function generateSettlementAllocationJournals(params: {
       {
         id: `${alloc.id}-dr-adv`,
         accountCode: '2300',
+        accountId: 'acc-2300',
+        accountClass: accountClassForCode('2300'),
         accountName: 'Customer Advances & Deposits',
         debit: Math.round(alloc.allocatedAmount * 100) / 100,
         credit: 0,
@@ -240,6 +252,8 @@ export function generateSettlementAllocationJournals(params: {
       {
         id: `${alloc.id}-cr-ar`,
         accountCode: '1200',
+        accountId: 'acc-1200',
+        accountClass: accountClassForCode('1200'),
         accountName: 'Accounts Receivable',
         debit: 0,
         credit: Math.round(alloc.allocatedAmount * 100) / 100,
@@ -253,7 +267,7 @@ export function generateSettlementAllocationJournals(params: {
       date: alloc.allocationDate,
       narration: `Settlement Allocation: ${alloc.sourceNumber} applied to ${alloc.targetInvoiceNumber} (${alloc.customerName})`,
       source: 'SETTLEMENT_ALLOCATION',
-      sourceId: alloc.id,
+      reference: alloc.id,
       lines,
       status: 'POSTED',
       postedAt: alloc.createdAt,

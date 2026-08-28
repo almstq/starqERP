@@ -47,8 +47,8 @@ export const FavaraPaymentModal: React.FC<FavaraPaymentModalProps> = ({
   const qrConfig = {
     merchantName: currentTenant.name || 'Starq Marine & Tech',
     merchantCity: 'Male',
-    accountNumber: currentTenant.bankAccountNumber || '7701192837101',
-    bankName: (currentTenant.bankName || 'BML') as any,
+    accountNumber: currentTenant.bmlAccount || '7701192837101',
+    bankName: ('BML') as any,
     currency: invoice.currency || 'MVR',
     amount: invoice.totalAmount,
     invoiceNumber: invoice.invoiceNumber,

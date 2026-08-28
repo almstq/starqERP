@@ -95,7 +95,6 @@ describe('General Ledger Derivation & Running Balance (SERP-291)', () => {
         gstAmount: 800,
         totalAmount: 10800,
         status: 'Paid',
-        paymentMethod: 'BML Transfer',
         items: [],
       },
     ];
