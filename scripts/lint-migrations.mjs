@@ -34,6 +34,10 @@ const MIGRATION_STATUS_MAP = {
     status: 'UNAPPLIED_FORWARD_ONLY',
     notes: 'Transactional outbox and immutable audit foundation migration (SERP-034)',
   },
+  '202608280029_fix_accept_staff_invitation.sql': {
+    status: 'UNAPPLIED_FORWARD_ONLY',
+    notes: 'Fix accept_staff_invitation function defects (SERP-286): role column, granted_at, audit_event columns, semantic mapping',
+  },
 };
 
 const classifications = {
