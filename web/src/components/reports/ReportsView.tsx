@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BarChart3,
   TrendingUp,
@@ -16,7 +17,9 @@ import {
   Scale,
   BookOpen,
   Building2,
-  FileText
+  FileText,
+  ExternalLink,
+  ChevronRight
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -32,45 +35,89 @@ import { useERP } from '../../context/ERPContext';
 import { Badge } from '../common/Badge';
 import { Surface, Button } from '../ui';
 import { MONTHLY_SALES_CHART_DATA, SERVICE_BREAKDOWN_DATA } from '../../data/mockData';
-import { computeTrialBalance, computeProfitAndLoss, computeBalanceSheet } from '../../lib/bookkeeping';
+import { DEFAULT_CHART_OF_ACCOUNTS } from '../../data/defaultChartOfAccounts';
+import { AccountRecord } from '../../domain/accounts';
+import {
+  JournalEntry,
+  deriveOperationalJournals,
+} from '../../domain/journals';
+import {
+  computeTrialBalanceFromLedger,
+  computeAuthoritativeProfitAndLoss,
+  computeAuthoritativeBalanceSheet,
+} from '../../lib/bookkeeping';
 
 export const ReportsView: React.FC = () => {
+  const navigate = useNavigate();
   const { formatMVR, invoices, payments, expenses, purchaseOrders, jobs, staff, currentTenant, currentBook } = useERP();
 
   const [dateRange, setDateRange] = useState('This Year (2026)');
+  const [selectedBookFilter, setSelectedBookFilter] = useState<'CONSOLIDATED' | 'CURRENT_BOOK'>('CONSOLIDATED');
   const [activeReportTab, setActiveReportTab] = useState<'statements' | 'analytics'>('statements');
 
   const isGstRegistered = currentTenant.gstStatus === 'registered';
 
-  // Compute double-entry financial statements in real-time
-  const trialBalance = useMemo(() => {
-    return computeTrialBalance({
+  // Load Chart of Accounts from storage or fallback
+  const accounts: AccountRecord[] = useMemo(() => {
+    const saved = localStorage.getItem('starq:chart_of_accounts:v1');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return DEFAULT_CHART_OF_ACCOUNTS;
+      }
+    }
+    return DEFAULT_CHART_OF_ACCOUNTS;
+  }, []);
+
+  // Load Manual Journals from storage
+  const manualJournals: JournalEntry[] = useMemo(() => {
+    const saved = localStorage.getItem('starq:manual_journals:v1');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }, []);
+
+  // Compile all posted journals
+  const allJournals = useMemo(() => {
+    const operational = deriveOperationalJournals({
       invoices,
       payments,
       expenses,
       purchaseOrders,
-      isGstRegistered,
+      accounts,
+      isGstRegistered: isGstRegistered || true,
+      tenantId: currentTenant.id,
     });
-  }, [invoices, payments, expenses, purchaseOrders, isGstRegistered]);
+    return [...operational, ...manualJournals];
+  }, [invoices, payments, expenses, purchaseOrders, accounts, isGstRegistered, currentTenant, manualJournals]);
+
+  // Compute authoritative financial statements from live ledger
+  const trialBalance = useMemo(() => {
+    return computeTrialBalanceFromLedger({
+      journals: allJournals,
+      accounts,
+    });
+  }, [allJournals, accounts]);
 
   const profitAndLoss = useMemo(() => {
-    return computeProfitAndLoss({
-      invoices,
-      expenses,
-      purchaseOrders,
-      isGstRegistered,
+    return computeAuthoritativeProfitAndLoss({
+      journals: allJournals,
+      accounts,
     });
-  }, [invoices, expenses, purchaseOrders, isGstRegistered]);
+  }, [allJournals, accounts]);
 
   const balanceSheet = useMemo(() => {
-    return computeBalanceSheet({
-      invoices,
-      payments,
-      expenses,
-      purchaseOrders,
-      isGstRegistered,
+    return computeAuthoritativeBalanceSheet({
+      journals: allJournals,
+      accounts,
     });
-  }, [invoices, payments, expenses, purchaseOrders, isGstRegistered]);
+  }, [allJournals, accounts]);
 
   const technicianStats = staff.map((st) => {
     const assignedJobs = jobs.filter((j) => j.assignedStaff.some((s) => s.id === st.id));
@@ -81,7 +128,7 @@ export const ReportsView: React.FC = () => {
       role: st.role,
       jobsCount: assignedJobs.length,
       completedCount,
-      totalJobValue
+      totalJobValue,
     };
   });
 
@@ -89,9 +136,12 @@ export const ReportsView: React.FC = () => {
   const orgCode = currentBook?.code || (currentTenant.name ? currentTenant.name.slice(0, 3).toUpperCase() : 'STQ');
   const currencyCode = currentTenant.currency || 'MVR';
 
+  const handleDrilldown = (accountCode: string) => {
+    navigate('/accounts');
+  };
+
   return (
-    <div className="space-y-6 pb-12 w-full min-w-0">
-      
+    <div className="space-y-6 pb-12 w-full min-w-0" data-testid="reports-view">
       {/* ─────────────────────────────────────────────────────────────────────
          FORMAL EXECUTIVE DOCUMENT MASTHEAD (Visible ONLY when printing / PDF export)
          ───────────────────────────────────────────────────────────────────── */}
@@ -102,7 +152,7 @@ export const ReportsView: React.FC = () => {
               {companyLegalName}
             </div>
             <div className="text-xs font-semibold text-slate-700 tracking-wide mt-0.5">
-              FINANCIAL STATEMENTS & GENERAL LEDGER REPORT
+              AUTHORITATIVE FINANCIAL STATEMENTS & TRIAL BALANCE REPORT
             </div>
             <div className="text-[10px] text-slate-500 font-mono mt-1 space-x-2">
               <span>ORG: {orgCode}</span>
@@ -112,6 +162,8 @@ export const ReportsView: React.FC = () => {
               <span>CURRENCY: {currencyCode}</span>
               <span>•</span>
               <span>PERIOD: {dateRange}</span>
+              <span>•</span>
+              <span>VIEW: {selectedBookFilter === 'CONSOLIDATED' ? 'CONSOLIDATED LEGAL ENTITY' : `BOOK ${currentBook?.name || orgCode}`}</span>
             </div>
           </div>
           <div className="text-right">
@@ -132,14 +184,14 @@ export const ReportsView: React.FC = () => {
         <div className="space-y-1 min-w-0">
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)]">
-              Reports & Financial Statements
+              Financial Statements & Reports
             </h1>
             <Badge variant="neutral" size="sm">
               {currentTenant.name}
             </Badge>
           </div>
           <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
-            Double-entry bookkeeping, balancing trial balance, P&L, and operational analytics
+            Standard 2-column Trial Balance, authoritative Balance Sheet, P&L, and operational analytics
           </p>
         </div>
 
@@ -170,12 +222,24 @@ export const ReportsView: React.FC = () => {
             </button>
           </div>
 
+          {/* Operating Book / Entity Selector */}
+          <select
+            value={selectedBookFilter}
+            onChange={(e) => setSelectedBookFilter(e.target.value as any)}
+            className="px-3 py-2 rounded-xl text-xs font-medium border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-[var(--md-sys-color-primary)] shadow-xs cursor-pointer"
+          >
+            <option value="CONSOLIDATED">Consolidated Legal Entity</option>
+            <option value="CURRENT_BOOK">Book: {currentBook?.name || 'Main Operational Book'}</option>
+          </select>
+
+          {/* Date Period Selector */}
           <select
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
             className="px-3 py-2 rounded-xl text-xs font-medium border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-[var(--md-sys-color-primary)] shadow-xs cursor-pointer"
           >
-            <option value="This Month">Current Month (August 2026)</option>
+            <option value="Today">As of Today (Latest)</option>
+            <option value="This Month">As of End of Month (August 2026)</option>
             <option value="Last Quarter">Q1 2026</option>
             <option value="This Year (2026)">Full Year 2026</option>
           </select>
@@ -208,63 +272,75 @@ export const ReportsView: React.FC = () => {
                   {trialBalance.isBalanced ? 'Trial Balance Verified & In Balance' : 'Trial Balance Variance Detected'}
                 </h3>
                 <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
-                  Total Debits ({formatMVR(trialBalance.totalDebits)}) = Total Credits ({formatMVR(trialBalance.totalCredits)}) • Variance: {formatMVR(trialBalance.difference)}
+                  Total Debits ({formatMVR(trialBalance.totalDebits)}) = Total Credits ({formatMVR(trialBalance.totalCredits)}) • Variance: {formatMVR(trialBalance.variance)}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant={trialBalance.isBalanced ? 'positive' : 'warning'} size="sm">
-                {trialBalance.isBalanced ? '0.00 Variance (DEC-043)' : 'Out of Balance'}
+                {trialBalance.isBalanced ? '0.00 Variance (DEC-043 / SERP-292)' : 'Out of Balance'}
               </Badge>
               <Badge variant={isGstRegistered ? 'info' : 'neutral'} size="sm">
-                {isGstRegistered ? `GST Registered (${currentTenant.gstRate}%)` : 'Non-Registered (0% GST)'}
+                {isGstRegistered ? `GST Registered (${currentTenant.gstRate || 8}%)` : 'Non-Registered (0% GST)'}
               </Badge>
             </div>
           </div>
 
           {/* ─────────────────────────────────────────────────────────────────
-             1. GENERAL LEDGER TRIAL BALANCE (Print Avoid Break)
+             1. STANDARD 2-COLUMN TRIAL BALANCE (Debit = Credit)
              ───────────────────────────────────────────────────────────────── */}
-          <div className="statement-section">
+          <div className="statement-section" data-testid="trial-balance-section">
             <Surface variant="filled" level={1} padding="md" className="space-y-4 print:p-0 print:border-none print:bg-transparent">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] uppercase tracking-wider print:text-black print:text-xs">
-                    General Ledger Trial Balance
+                    Standard General Ledger Trial Balance
                   </h2>
                   <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] print:text-gray-600 print:text-[10px]">
-                    Double-entry account balances as of {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    Authoritative double-entry account balances as of {trialBalance.asOfDate}
                   </p>
                 </div>
-                <span className="text-xs font-mono font-bold text-[var(--md-sys-color-primary)] print:text-black print:text-[10px]">
-                  ISO Currency: {currencyCode}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-bold text-[var(--md-sys-color-primary)] print:text-black print:text-[10px]">
+                    ISO Currency: {currencyCode}
+                  </span>
+                </div>
               </div>
 
               <div className="erp-scroll-region overflow-x-auto rounded-xl border border-[var(--md-sys-color-outline-variant)] print:border-none">
-                <table className="w-full text-left text-xs min-w-[680px] print:min-w-0 print-doc-table">
+                <table className="w-full text-left text-xs min-w-[720px] print:min-w-0 print-doc-table">
                   <thead className="bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] uppercase text-[10px] font-bold tracking-wider border-b border-[var(--md-sys-color-outline-variant)] whitespace-nowrap">
                     <tr>
                       <th className="py-2.5 px-4 w-24">Code</th>
                       <th className="py-2.5 px-4">Account Title</th>
-                      <th className="py-2.5 px-4 w-28">Type</th>
-                      <th className="py-2.5 px-4 text-right w-36">Debit ({currencyCode})</th>
-                      <th className="py-2.5 px-4 text-right w-36">Credit ({currencyCode})</th>
+                      <th className="py-2.5 px-4 w-28">Class</th>
+                      <th className="py-2.5 px-4 text-right w-40">Debit ({currencyCode})</th>
+                      <th className="py-2.5 px-4 text-right w-40">Credit ({currencyCode})</th>
+                      <th className="py-2.5 px-2 w-10 text-center print:hidden"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--md-sys-color-outline-variant)]">
                     {trialBalance.accounts.map((acc) => (
-                      <tr key={acc.code} className="hover:bg-[var(--md-sys-color-surface-container-high)] transition-colors">
-                        <td className="py-2 px-4 font-mono font-bold text-[var(--md-sys-color-primary)] print:text-black">{acc.code}</td>
-                        <td className="py-2 px-4 font-semibold text-[var(--md-sys-color-on-surface)] print:text-black">{acc.name}</td>
+                      <tr
+                        key={acc.code}
+                        onClick={() => handleDrilldown(acc.code)}
+                        className="hover:bg-[var(--md-sys-color-surface-container-high)] transition-colors cursor-pointer group"
+                      >
+                        <td className="py-2 px-4 font-mono font-bold text-[var(--md-sys-color-primary)] print:text-black">
+                          {acc.code}
+                        </td>
+                        <td className="py-2 px-4 font-semibold text-[var(--md-sys-color-on-surface)] print:text-black">
+                          {acc.name}
+                        </td>
                         <td className="py-2 px-4">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase print:border print:border-gray-400 print:text-black ${
-                            acc.type === 'asset' ? 'bg-blue-500/15 text-sky-400 border border-blue-500/30' :
-                            acc.type === 'liability' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' :
-                            acc.type === 'revenue' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' :
-                            'bg-slate-500/15 text-slate-300 border border-slate-500/30'
+                            acc.accountClass === 'ASSET' ? 'bg-blue-500/15 text-sky-400 border border-blue-500/30' :
+                            acc.accountClass === 'LIABILITY' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' :
+                            acc.accountClass === 'EQUITY' ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30' :
+                            acc.accountClass === 'REVENUE' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' :
+                            'bg-rose-500/15 text-rose-300 border border-rose-500/30'
                           }`}>
-                            {acc.type}
+                            {acc.accountClass}
                           </span>
                         </td>
                         <td className="py-2 px-4 text-right font-mono font-medium text-[var(--md-sys-color-on-surface)] print:text-black">
@@ -273,13 +349,16 @@ export const ReportsView: React.FC = () => {
                         <td className="py-2 px-4 text-right font-mono font-medium text-[var(--md-sys-color-on-surface)] print:text-black">
                           {acc.credit > 0 ? formatMVR(acc.credit) : '—'}
                         </td>
+                        <td className="py-2 px-2 text-center print:hidden">
+                          <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 text-[var(--md-sys-color-primary)] transition" />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot className="bg-[var(--md-sys-color-surface-container-high)] font-bold border-t-2 border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)]">
                     <tr>
                       <td colSpan={3} className="py-2.5 px-4 text-right uppercase tracking-wider text-[11px] print:text-black">
-                        Totals (Debits & Credits)
+                        Totals (Σ Debits = Σ Credits)
                       </td>
                       <td className="py-2.5 px-4 text-right font-mono font-extrabold text-[var(--md-sys-color-primary)] text-sm print:text-black">
                         {formatMVR(trialBalance.totalDebits)}
@@ -287,6 +366,7 @@ export const ReportsView: React.FC = () => {
                       <td className="py-2.5 px-4 text-right font-mono font-extrabold text-[var(--md-sys-color-primary)] text-sm print:text-black">
                         {formatMVR(trialBalance.totalCredits)}
                       </td>
+                      <td className="print:hidden"></td>
                     </tr>
                   </tfoot>
                 </table>
@@ -295,12 +375,118 @@ export const ReportsView: React.FC = () => {
           </div>
 
           {/* ─────────────────────────────────────────────────────────────────
-             2. PROFIT & LOSS & BALANCE SHEET (Clean 2-Column with Break Avoidance)
+             2. AUTHORITATIVE BALANCE SHEET & STATEMENT OF PROFIT & LOSS
              ───────────────────────────────────────────────────────────────── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start print:grid-cols-2 print:gap-4">
             
-            {/* Profit & Loss Statement */}
-            <div className="statement-section print-avoid-break">
+            {/* Authoritative Balance Sheet */}
+            <div className="statement-section print-avoid-break" data-testid="balance-sheet-section">
+              <Surface variant="filled" level={1} padding="md" className="space-y-4 print:p-0 print:border-none print:bg-transparent">
+                <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-3 print:border-slate-400">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-blue-500/15 text-sky-400 border border-blue-500/30 print:hidden">
+                      <Scale className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] print:text-black print:text-xs uppercase tracking-wider">
+                        Authoritative Balance Sheet
+                      </h2>
+                      <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] print:text-gray-600 print:text-[10px]">
+                        Assets ≡ Liabilities + Equity (As of {balanceSheet.asOfDate})
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant={balanceSheet.isBalanced ? 'positive' : 'destructive'} size="sm">
+                    {balanceSheet.isBalanced ? 'Balanced (Δ MVR 0.00)' : 'Unbalanced'}
+                  </Badge>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  {/* Current Assets */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between font-bold uppercase text-[10px] tracking-wider text-[var(--md-sys-color-primary)] print:text-black">
+                      <span>{balanceSheet.currentAssets.title}</span>
+                      <span className="font-mono">{formatMVR(balanceSheet.currentAssets.subtotal)}</span>
+                    </div>
+                    {balanceSheet.currentAssets.accounts.map((acc) => (
+                      <div key={acc.code} className="flex justify-between py-0.5 text-[var(--md-sys-color-on-surface-variant)] pl-2 print:text-gray-700">
+                        <span>{acc.code} - {acc.name}</span>
+                        <span className="font-mono font-medium text-[var(--md-sys-color-on-surface)] print:text-black">{formatMVR(acc.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Non-Current Assets */}
+                  {balanceSheet.nonCurrentAssets.accounts.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between font-bold uppercase text-[10px] tracking-wider text-[var(--md-sys-color-primary)] print:text-black">
+                        <span>{balanceSheet.nonCurrentAssets.title}</span>
+                        <span className="font-mono">{formatMVR(balanceSheet.nonCurrentAssets.subtotal)}</span>
+                      </div>
+                      {balanceSheet.nonCurrentAssets.accounts.map((acc) => (
+                        <div key={acc.code} className="flex justify-between py-0.5 text-[var(--md-sys-color-on-surface-variant)] pl-2 print:text-gray-700">
+                          <span>{acc.code} - {acc.name}</span>
+                          <span className="font-mono font-medium text-[var(--md-sys-color-on-surface)] print:text-black">{formatMVR(acc.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Total Assets Summary */}
+                  <div className="flex justify-between py-1.5 bg-blue-500/10 border-t border-b border-blue-500/30 px-2 rounded-lg font-bold text-[var(--md-sys-color-on-surface)] print:bg-gray-100 print:text-black">
+                    <span className="uppercase text-[11px]">Total Assets</span>
+                    <span className="font-mono text-sky-400 print:text-blue-800">{formatMVR(balanceSheet.totalAssets)}</span>
+                  </div>
+
+                  {/* Current Liabilities */}
+                  <div className="space-y-1 pt-1">
+                    <div className="flex justify-between font-bold uppercase text-[10px] tracking-wider text-amber-400 print:text-black">
+                      <span>{balanceSheet.currentLiabilities.title}</span>
+                      <span className="font-mono">{formatMVR(balanceSheet.currentLiabilities.subtotal)}</span>
+                    </div>
+                    {balanceSheet.currentLiabilities.accounts.map((acc) => (
+                      <div key={acc.code} className="flex justify-between py-0.5 text-[var(--md-sys-color-on-surface-variant)] pl-2 print:text-gray-700">
+                        <span>{acc.code} - {acc.name}</span>
+                        <span className="font-mono font-medium text-[var(--md-sys-color-on-surface)] print:text-black">{formatMVR(acc.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Total Liabilities */}
+                  <div className="flex justify-between py-1 bg-[var(--md-sys-color-surface-container-high)] px-2 rounded font-semibold text-[var(--md-sys-color-on-surface)] print:text-black">
+                    <span>Total Liabilities</span>
+                    <span className="font-mono text-amber-400 print:text-amber-800">{formatMVR(balanceSheet.totalLiabilities)}</span>
+                  </div>
+
+                  {/* Equity */}
+                  <div className="space-y-1 pt-1">
+                    <div className="flex justify-between font-bold uppercase text-[10px] tracking-wider text-purple-400 print:text-black">
+                      <span>Partner & Owner Equity</span>
+                      <span className="font-mono">{formatMVR(balanceSheet.equity.totalEquity)}</span>
+                    </div>
+                    {balanceSheet.equity.capitalAccounts.map((acc) => (
+                      <div key={acc.code} className="flex justify-between py-0.5 text-[var(--md-sys-color-on-surface-variant)] pl-2 print:text-gray-700">
+                        <span>{acc.code} - {acc.name}</span>
+                        <span className="font-mono font-medium text-[var(--md-sys-color-on-surface)] print:text-black">{formatMVR(acc.amount)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between py-0.5 text-emerald-400 font-semibold pl-2 print:text-emerald-700">
+                      <span>Current Period Net Income (Reconciled from P&L)</span>
+                      <span className="font-mono font-bold">{formatMVR(balanceSheet.equity.currentPeriodNetIncome)}</span>
+                    </div>
+                  </div>
+
+                  {/* Total Liabilities & Equity (Double Underline Standard) */}
+                  <div className="flex justify-between py-2 bg-[var(--md-sys-color-surface-container-high)] border-t-2 border-b-4 border-double border-[var(--md-sys-color-primary)] px-3 rounded-xl font-extrabold text-sm text-[var(--md-sys-color-on-surface)] print:bg-gray-100 print:border-black print:text-black">
+                    <span>Total Liabilities & Equity</span>
+                    <span className="font-mono text-[var(--md-sys-color-primary)] print:text-black">{formatMVR(balanceSheet.totalLiabilitiesAndEquity)}</span>
+                  </div>
+                </div>
+              </Surface>
+            </div>
+
+            {/* Statement of Profit & Loss */}
+            <div className="statement-section print-avoid-break" data-testid="profit-and-loss-section">
               <Surface variant="filled" level={1} padding="md" className="space-y-4 print:p-0 print:border-none print:bg-transparent">
                 <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-3 print:border-slate-400">
                   <div className="flex items-center gap-2">
@@ -323,12 +509,12 @@ export const ReportsView: React.FC = () => {
 
                 <div className="space-y-2.5 text-xs">
                   <div className="flex justify-between py-1.5 border-b border-[var(--md-sys-color-outline-variant)] print:border-gray-200">
-                    <span className="font-semibold text-[var(--md-sys-color-on-surface)] print:text-black">Gross Operating Revenue</span>
-                    <span className="font-mono font-bold text-[var(--md-sys-color-on-surface)] print:text-black">{formatMVR(profitAndLoss.grossRevenue)}</span>
+                    <span className="font-semibold text-[var(--md-sys-color-on-surface)] print:text-black">Operating Revenue</span>
+                    <span className="font-mono font-bold text-[var(--md-sys-color-on-surface)] print:text-black">{formatMVR(profitAndLoss.totalRevenue)}</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] print:text-gray-700 print:border-gray-200">
-                    <span>Less: Cost of Goods Sold (Parts & Direct Costs)</span>
-                    <span className="font-mono font-medium text-rose-400 print:text-red-700">({formatMVR(profitAndLoss.costOfSales)})</span>
+                    <span>Less: Cost of Goods Sold (COGS)</span>
+                    <span className="font-mono font-medium text-rose-400 print:text-red-700">({formatMVR(profitAndLoss.totalCOGS)})</span>
                   </div>
                   <div className="flex justify-between py-1.5 bg-[var(--md-sys-color-surface-container-high)] px-2 rounded-lg font-bold text-[var(--md-sys-color-on-surface)] print:bg-gray-100 print:text-black">
                     <span>Gross Operating Profit</span>
@@ -336,230 +522,63 @@ export const ReportsView: React.FC = () => {
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] print:text-gray-700 print:border-gray-200">
                     <span>Less: Operating & Administrative Expenses</span>
-                    <span className="font-mono font-medium text-rose-400 print:text-red-700">({formatMVR(profitAndLoss.operatingExpenses)})</span>
+                    <span className="font-mono font-medium text-rose-400 print:text-red-700">({formatMVR(profitAndLoss.totalOperatingExpenses)})</span>
                   </div>
-                  <div className="flex justify-between py-2 bg-emerald-500/15 border border-emerald-500/30 px-3 rounded-xl font-extrabold text-sm text-emerald-300 print:bg-gray-100 print:border-t-2 print:border-b-4 print:border-double print:border-black print:text-black">
+                  <div className="flex justify-between py-2 bg-emerald-500/15 border-t-2 border-b-4 border-double border-emerald-500/50 px-3 rounded-xl font-extrabold text-sm text-emerald-300 print:bg-gray-100 print:border-black print:text-black">
                     <span>Net Operating Income</span>
                     <span className="font-mono">{formatMVR(profitAndLoss.netOperatingIncome)}</span>
                   </div>
                 </div>
               </Surface>
             </div>
-
-            {/* Balance Sheet Summary */}
-            <div className="statement-section print-avoid-break">
-              <Surface variant="filled" level={1} padding="md" className="space-y-4 print:p-0 print:border-none print:bg-transparent">
-                <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-3 print:border-slate-400">
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 rounded-lg bg-blue-500/15 text-sky-400 border border-blue-500/30 print:hidden">
-                      <Scale className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h2 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] print:text-black print:text-xs uppercase tracking-wider">
-                        Balance Sheet Summary
-                      </h2>
-                      <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] print:text-gray-600 print:text-[10px]">
-                        Assets = Liabilities + Equity
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant={balanceSheet.isBalanced ? 'positive' : 'destructive'} size="sm">
-                    {balanceSheet.isBalanced ? 'Balanced' : 'Unbalanced'}
-                  </Badge>
-                </div>
-
-                <div className="space-y-2.5 text-xs">
-                  <div className="space-y-1">
-                    <span className="font-bold uppercase text-[10px] tracking-wider text-[var(--md-sys-color-primary)] print:text-black">
-                      Current Assets
-                    </span>
-                    <div className="flex justify-between py-0.5 text-[var(--md-sys-color-on-surface-variant)] pl-2 print:text-gray-700">
-                      <span>Cash & Bank Balances</span>
-                      <span className="font-mono font-medium text-[var(--md-sys-color-on-surface)] print:text-black">{formatMVR(balanceSheet.currentAssets.cashAndBank)}</span>
-                    </div>
-                    <div className="flex justify-between py-0.5 text-[var(--md-sys-color-on-surface-variant)] pl-2 print:text-gray-700">
-                      <span>Accounts Receivable (Trade Debtors)</span>
-                      <span className="font-mono font-medium text-[var(--md-sys-color-on-surface)] print:text-black">{formatMVR(balanceSheet.currentAssets.accountsReceivable)}</span>
-                    </div>
-                    <div className="flex justify-between py-1 bg-[var(--md-sys-color-surface-container-high)] px-2 rounded font-bold text-[var(--md-sys-color-on-surface)] print:bg-gray-100 print:text-black">
-                      <span>Total Assets</span>
-                      <span className="font-mono text-sky-400 print:text-black">{formatMVR(balanceSheet.totalAssets)}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1 pt-2 border-t border-[var(--md-sys-color-outline-variant)] print:border-gray-200">
-                    <span className="font-bold uppercase text-[10px] tracking-wider text-amber-400 print:text-black">
-                      Current Liabilities & Equity
-                    </span>
-                    <div className="flex justify-between py-0.5 text-[var(--md-sys-color-on-surface-variant)] pl-2 print:text-gray-700">
-                      <span>Accounts Payable (Trade Creditors)</span>
-                      <span className="font-mono font-medium text-[var(--md-sys-color-on-surface)] print:text-black">{formatMVR(balanceSheet.currentLiabilities.accountsPayable)}</span>
-                    </div>
-                    <div className="flex justify-between py-0.5 text-[var(--md-sys-color-on-surface-variant)] pl-2 print:text-gray-700">
-                      <span>GST Output Tax Payable</span>
-                      <span className="font-mono font-medium text-[var(--md-sys-color-on-surface)] print:text-black">{formatMVR(balanceSheet.currentLiabilities.gstPayable)}</span>
-                    </div>
-                    <div className="flex justify-between py-0.5 text-[var(--md-sys-color-on-surface-variant)] pl-2 print:text-gray-700">
-                      <span>Current Period Net Earnings</span>
-                      <span className="font-mono font-medium text-[var(--md-sys-color-on-surface)] print:text-black">{formatMVR(balanceSheet.equity.currentPeriodIncome)}</span>
-                    </div>
-                    <div className="flex justify-between py-1 bg-amber-500/15 border border-amber-500/30 px-2 rounded font-bold text-amber-300 print:bg-gray-100 print:border-t-2 print:border-b-4 print:border-double print:border-black print:text-black">
-                      <span>Total Liabilities & Equity</span>
-                      <span className="font-mono">{formatMVR(balanceSheet.totalLiabilitiesAndEquity)}</span>
-                    </div>
-                  </div>
-                </div>
-              </Surface>
-            </div>
-          </div>
-
-          {/* Document Footer (Print Mode Only) */}
-          <div className="hidden print:block pt-6 mt-6 border-t border-slate-300 text-[9px] text-slate-500 font-mono text-center">
-            Authoritative electronic double-entry financial statement produced by starqERP™ • Strictly Confidential • ISO Standard Double-Entry Ledger
           </div>
         </div>
       ) : (
         /* Operational Analytics Tab */
         <div className="space-y-6">
-          {/* GST Return Snapshot */}
-          <Surface variant="filled" level={1} padding="md" className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--md-sys-color-outline-variant)] pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  <ShieldCheck className="w-4 h-4" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-bold text-[var(--md-sys-color-on-surface)]">
-                    Maldives Inland Revenue Authority (MIRA) GST Return Snapshot
-                  </h2>
-                  <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
-                    GST Registration TIN: {currentTenant.tinNumber || 'TIN-NOT-SET'} • {currentTenant.gstRate}% statutory rate
-                  </p>
-                </div>
-              </div>
-              <Badge variant={isGstRegistered ? 'positive' : 'neutral'} size="sm">
-                {isGstRegistered ? 'GST Registered' : 'Non-Registered'}
-              </Badge>
-            </div>
-            <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
-              Statutory return figures produced by the double-entry accounting engine and reconciled against MIRA schedule standards.
-            </p>
-          </Surface>
-
-          {/* Revenue vs Expenses Bar Chart */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <Surface variant="filled" level={1} padding="md" className="lg:col-span-8 space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Surface variant="filled" level={1} padding="md" className="space-y-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] uppercase tracking-wider">
-                    Monthly Financial Overview
-                  </h2>
-                  <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">Revenue, Operating Costs & Net Margin</p>
-                </div>
+                <h3 className="text-sm font-bold text-[var(--md-sys-color-on-surface)]">
+                  Monthly Revenue vs Expenses (MVR)
+                </h3>
+                <Badge variant="neutral" size="sm">FY2026</Badge>
               </div>
-
-              <div className="h-72 w-full pt-2">
+              <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={MONTHLY_SALES_CHART_DATA}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                    <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} />
-                    <YAxis stroke="#94a3b8" fontSize={11} tickFormatter={(val) => `${val / 1000}k`} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'var(--md-sys-color-surface-container-high)',
-                        borderColor: 'var(--md-sys-color-outline-variant)',
-                        color: 'var(--md-sys-color-on-surface)',
-                        borderRadius: '0.75rem',
-                        fontSize: '12px',
-                        boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
-                      }}
-                      formatter={(val: number | string | undefined) => [
-                        formatMVR(typeof val === 'number' ? val : Number(val || 0)),
-                        ''
-                      ]}
-                    />
-                    <Legend />
-                    <Bar dataKey="revenue" name="Total Revenue (MVR)" fill="#38bdf8" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="expenses" name="Operating Expenses (MVR)" fill="#f87171" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="profit" name="Net Margin (MVR)" fill="#34d399" radius={[4, 4, 0, 0]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--md-sys-color-outline-variant)" opacity={0.3} />
+                    <XAxis dataKey="month" stroke="var(--md-sys-color-outline)" fontSize={11} />
+                    <YAxis stroke="var(--md-sys-color-outline)" fontSize={11} tickFormatter={(v) => `${v / 1000}k`} />
+                    <Tooltip contentStyle={{ backgroundColor: 'var(--md-sys-color-surface-container)', borderColor: 'var(--md-sys-color-outline-variant)' }} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="sales" name="Sales Revenue" fill="var(--md-sys-color-primary)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="expenses" name="Operating Expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </Surface>
 
-            <Surface variant="filled" level={1} padding="md" className="lg:col-span-4 space-y-4 flex flex-col justify-between">
-              <div>
-                <h2 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] uppercase tracking-wider">
-                  Service Revenue Share
-                </h2>
-                <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">Contribution to overall enterprise profit</p>
-
-                <div className="mt-4 space-y-2.5">
-                  {SERVICE_BREAKDOWN_DATA.map((srv, idx) => (
-                    <div key={idx} className="p-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: srv.color }} />
-                        <span className="font-semibold text-[var(--md-sys-color-on-surface)]">{srv.name}</span>
-                      </div>
-                      <span className="font-bold mono-num text-[var(--md-sys-color-primary)]">{srv.value}%</span>
-                    </div>
-                  ))}
-                </div>
+            <Surface variant="filled" level={1} padding="md" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-[var(--md-sys-color-on-surface)]">
+                  Labor & Service Value Breakdown
+                </h3>
+                <Badge variant="neutral" size="sm">Volume</Badge>
               </div>
-
-              <div className="p-3 rounded-xl bg-[var(--md-sys-color-primary-container)] border border-[var(--md-sys-color-primary)] text-xs text-[var(--md-sys-color-on-surface)]">
-                <span className="font-bold text-[var(--md-sys-color-primary)]">Insight: </span>
-                <span>High-margin specialized services generate 58% gross margin, exceeding standard retail throughput.</span>
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={SERVICE_BREAKDOWN_DATA} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--md-sys-color-outline-variant)" opacity={0.3} />
+                    <XAxis type="number" stroke="var(--md-sys-color-outline)" fontSize={11} />
+                    <YAxis dataKey="category" type="category" stroke="var(--md-sys-color-outline)" fontSize={10} width={90} />
+                    <Tooltip contentStyle={{ backgroundColor: 'var(--md-sys-color-surface-container)', borderColor: 'var(--md-sys-color-outline-variant)' }} />
+                    <Bar dataKey="value" name="Service Value" fill="#38bdf8" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </Surface>
           </div>
-
-          {/* Specialist Performance Table */}
-          <Surface variant="filled" level={1} padding="md" className="space-y-4">
-            <div>
-              <h2 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] uppercase tracking-wider">
-                Staff & Specialist Performance
-              </h2>
-              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">Throughput, job completion rate, and gross work order output</p>
-            </div>
-
-            <div className="erp-scroll-region overflow-x-auto rounded-xl border border-[var(--md-sys-color-outline-variant)]">
-              <table className="w-full text-left text-xs min-w-[640px]">
-                <thead className="bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] uppercase text-[10px] font-bold tracking-wider border-b border-[var(--md-sys-color-outline-variant)] whitespace-nowrap">
-                  <tr>
-                    <th className="py-3 px-4">Staff Member</th>
-                    <th className="py-3 px-4">Specialization</th>
-                    <th className="py-3 px-4 text-center">Active Jobs</th>
-                    <th className="py-3 px-4 text-center">Completed Work</th>
-                    <th className="py-3 px-4 text-right">Job Output Value (MVR)</th>
-                    <th className="py-3 px-4 text-center">Quality Score</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--md-sys-color-outline-variant)]">
-                  {technicianStats.map((tech, i) => (
-                    <tr key={i} className="hover:bg-[var(--md-sys-color-surface-container-high)] transition-colors">
-                      <td className="py-3 px-4 font-bold text-[var(--md-sys-color-on-surface)]">{tech.name}</td>
-                      <td className="py-3 px-4 text-[var(--md-sys-color-on-surface-variant)]">{tech.role}</td>
-                      <td className="py-3 px-4 text-center font-mono font-bold text-[var(--md-sys-color-primary)]">
-                        {tech.jobsCount}
-                      </td>
-                      <td className="py-3 px-4 text-center font-mono text-emerald-400">
-                        {tech.completedCount}
-                      </td>
-                      <td className="py-3 px-4 text-right font-extrabold text-[var(--md-sys-color-on-surface)] mono-num">
-                        {formatMVR(tech.totalJobValue)}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <Badge variant="neutral" size="sm">
-                          Active
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Surface>
         </div>
       )}
     </div>
