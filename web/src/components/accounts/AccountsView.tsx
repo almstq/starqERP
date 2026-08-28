@@ -19,7 +19,8 @@ import {
   DollarSign,
   Layers,
   BookOpen,
-  Sparkles
+  Sparkles,
+  Landmark
 } from 'lucide-react';
 import {
   AccountRecord,
@@ -39,6 +40,7 @@ import { AccountDetailModal } from './AccountDetailModal';
 import { ManualJournalModal } from './ManualJournalModal';
 import { GeneralLedgerView } from './GeneralLedgerView';
 import { PeriodManagementView } from './PeriodManagementView';
+import { BankReconciliationView } from './BankReconciliationView';
 import { AccountingPeriod, generateFiscalPeriods, assertPeriodNotLocked } from '../../domain/periods';
 import { Badge, Surface, Button } from '../ui';
 import { useERP } from '../../context/ERPContext';
@@ -50,7 +52,7 @@ import {
 export const AccountsView: React.FC = () => {
   const { invoices, payments, expenses, purchaseOrders, currentTenant, isGstRegistered, formatMVR } = useERP();
 
-  const [activeTab, setActiveTab] = useState<'chart_of_accounts' | 'general_ledger' | 'periods'>('chart_of_accounts');
+  const [activeTab, setActiveTab] = useState<'chart_of_accounts' | 'general_ledger' | 'periods' | 'bank_reconciliation'>('chart_of_accounts');
 
   // Accounting Periods State
   const [periods, setPeriods] = useState<AccountingPeriod[]>(() => {
@@ -331,6 +333,21 @@ export const AccountsView: React.FC = () => {
               <Lock size={14} />
               <span>Period Lock & Year-End</span>
             </button>
+            <button
+              type="button"
+              data-testid="bank-recon-tab-btn"
+              onClick={() => {
+                setActiveTab('bank_reconciliation');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                activeTab === 'bank_reconciliation'
+                  ? 'bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-primary)] shadow-sm'
+                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+              }`}
+            >
+              <Landmark size={14} />
+              <span>Bank Reconciliation</span>
+            </button>
           </div>
 
           <Button
@@ -373,7 +390,6 @@ export const AccountsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Tab Content */}
       {activeTab === 'general_ledger' ? (
         <GeneralLedgerView
           accounts={accounts}
@@ -393,6 +409,14 @@ export const AccountsView: React.FC = () => {
             saveManualJournals(updated);
           }}
           formatMVR={formatMVR}
+        />
+      ) : activeTab === 'bank_reconciliation' ? (
+        <BankReconciliationView
+          journals={allJournals}
+          onAddAdjustmentJournal={(adjJe) => {
+            const updated = [adjJe, ...manualJournals];
+            saveManualJournals(updated);
+          }}
         />
       ) : (
         <div className="space-y-6">
