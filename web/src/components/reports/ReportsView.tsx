@@ -19,7 +19,9 @@ import {
   Building2,
   FileText,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Clock,
+  Search
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -46,6 +48,8 @@ import {
   computeAuthoritativeProfitAndLoss,
   computeAuthoritativeBalanceSheet,
 } from '../../lib/bookkeeping';
+import { DrilldownDrawer, DrilldownAccountDetails } from './DrilldownDrawer';
+import { AgingMatricesView } from './AgingMatricesView';
 
 export const ReportsView: React.FC = () => {
   const navigate = useNavigate();
@@ -53,7 +57,8 @@ export const ReportsView: React.FC = () => {
 
   const [dateRange, setDateRange] = useState('This Year (2026)');
   const [selectedBookFilter, setSelectedBookFilter] = useState<'CONSOLIDATED' | 'CURRENT_BOOK'>('CONSOLIDATED');
-  const [activeReportTab, setActiveReportTab] = useState<'statements' | 'analytics'>('statements');
+  const [activeReportTab, setActiveReportTab] = useState<'statements' | 'aging' | 'analytics'>('statements');
+  const [drilldownAccount, setDrilldownAccount] = useState<DrilldownAccountDetails | null>(null);
 
   const isGstRegistered = currentTenant.gstStatus === 'registered';
 
@@ -119,25 +124,17 @@ export const ReportsView: React.FC = () => {
     });
   }, [allJournals, accounts]);
 
-  const technicianStats = staff.map((st) => {
-    const assignedJobs = jobs.filter((j) => j.assignedStaff.some((s) => s.id === st.id));
-    const completedCount = assignedJobs.filter((j) => j.status === 'Completed' || j.status === 'Invoiced').length;
-    const totalJobValue = assignedJobs.reduce((sum, j) => sum + j.quotedAmount, 0);
-    return {
-      name: st.name,
-      role: st.role,
-      jobsCount: assignedJobs.length,
-      completedCount,
-      totalJobValue,
-    };
-  });
-
   const companyLegalName = currentTenant.legalName || currentTenant.name || 'Starq Technologies Private Limited';
   const orgCode = currentBook?.code || (currentTenant.name ? currentTenant.name.slice(0, 3).toUpperCase() : 'STQ');
   const currencyCode = currentTenant.currency || 'MVR';
 
-  const handleDrilldown = (accountCode: string) => {
-    navigate('/accounts');
+  const handleDrilldownAccount = (code: string, name: string, accountClass: string, amount: number) => {
+    setDrilldownAccount({
+      code,
+      name,
+      accountClass,
+      totalAmount: amount,
+    });
   };
 
   return (
@@ -184,14 +181,14 @@ export const ReportsView: React.FC = () => {
         <div className="space-y-1 min-w-0">
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)]">
-              Financial Statements & Reports
+              Reports & Financial Statements
             </h1>
             <Badge variant="neutral" size="sm">
               {currentTenant.name}
             </Badge>
           </div>
           <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
-            Standard 2-column Trial Balance, authoritative Balance Sheet, P&L, and operational analytics
+            Standard 2-column Trial Balance, authoritative Balance Sheet, P&L with drilldowns, and AR/AP aging
           </p>
         </div>
 
@@ -209,6 +206,19 @@ export const ReportsView: React.FC = () => {
               <Scale className="w-3.5 h-3.5" />
               <span>Financial Statements</span>
             </button>
+
+            <button
+              onClick={() => setActiveReportTab('aging')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeReportTab === 'aging'
+                  ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] shadow-xs border border-[var(--md-sys-color-primary)]'
+                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>AR / AP Aging</span>
+            </button>
+
             <button
               onClick={() => setActiveReportTab('analytics')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -323,7 +333,7 @@ export const ReportsView: React.FC = () => {
                     {trialBalance.accounts.map((acc) => (
                       <tr
                         key={acc.code}
-                        onClick={() => handleDrilldown(acc.code)}
+                        onClick={() => navigate('/accounts')}
                         className="hover:bg-[var(--md-sys-color-surface-container-high)] transition-colors cursor-pointer group"
                       >
                         <td className="py-2 px-4 font-mono font-bold text-[var(--md-sys-color-primary)] print:text-black">
@@ -485,7 +495,7 @@ export const ReportsView: React.FC = () => {
               </Surface>
             </div>
 
-            {/* Statement of Profit & Loss */}
+            {/* Statement of Profit & Loss with Drilldown Trigger */}
             <div className="statement-section print-avoid-break" data-testid="profit-and-loss-section">
               <Surface variant="filled" level={1} padding="md" className="space-y-4 print:p-0 print:border-none print:bg-transparent">
                 <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-3 print:border-slate-400">
@@ -498,7 +508,7 @@ export const ReportsView: React.FC = () => {
                         Statement of Profit & Loss (P&L)
                       </h2>
                       <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] print:text-gray-600 print:text-[10px]">
-                        Period: {dateRange}
+                        Period: {dateRange} (Click line item to inspect contributing journal lines)
                       </p>
                     </div>
                   </div>
@@ -508,22 +518,52 @@ export const ReportsView: React.FC = () => {
                 </div>
 
                 <div className="space-y-2.5 text-xs">
-                  <div className="flex justify-between py-1.5 border-b border-[var(--md-sys-color-outline-variant)] print:border-gray-200">
-                    <span className="font-semibold text-[var(--md-sys-color-on-surface)] print:text-black">Operating Revenue</span>
+                  {/* Operating Revenue Item */}
+                  <div
+                    onClick={() => handleDrilldownAccount('4000', 'Operating & Service Revenue', 'REVENUE', profitAndLoss.totalRevenue)}
+                    className="flex justify-between py-1.5 border-b border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] px-1 rounded cursor-pointer group transition print:border-gray-200"
+                    data-testid="pnl-line-revenue"
+                  >
+                    <span className="font-semibold text-[var(--md-sys-color-on-surface)] flex items-center gap-1 print:text-black">
+                      <span>Operating Revenue</span>
+                      <Search size={11} className="opacity-0 group-hover:opacity-100 text-[var(--md-sys-color-primary)] transition" />
+                    </span>
                     <span className="font-mono font-bold text-[var(--md-sys-color-on-surface)] print:text-black">{formatMVR(profitAndLoss.totalRevenue)}</span>
                   </div>
-                  <div className="flex justify-between py-1.5 border-b border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] print:text-gray-700 print:border-gray-200">
-                    <span>Less: Cost of Goods Sold (COGS)</span>
+
+                  {/* Cost of Goods Sold Item */}
+                  <div
+                    onClick={() => handleDrilldownAccount('5000', 'Cost of Goods Sold (Parts & Direct Costs)', 'EXPENSE', profitAndLoss.totalCOGS)}
+                    className="flex justify-between py-1.5 border-b border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] px-1 rounded cursor-pointer group transition print:text-gray-700 print:border-gray-200"
+                    data-testid="pnl-line-cogs"
+                  >
+                    <span className="flex items-center gap-1">
+                      <span>Less: Cost of Goods Sold (COGS)</span>
+                      <Search size={11} className="opacity-0 group-hover:opacity-100 text-[var(--md-sys-color-primary)] transition" />
+                    </span>
                     <span className="font-mono font-medium text-rose-400 print:text-red-700">({formatMVR(profitAndLoss.totalCOGS)})</span>
                   </div>
+
+                  {/* Gross Profit */}
                   <div className="flex justify-between py-1.5 bg-[var(--md-sys-color-surface-container-high)] px-2 rounded-lg font-bold text-[var(--md-sys-color-on-surface)] print:bg-gray-100 print:text-black">
                     <span>Gross Operating Profit</span>
                     <span className="font-mono text-emerald-400 print:text-emerald-800">{formatMVR(profitAndLoss.grossProfit)}</span>
                   </div>
-                  <div className="flex justify-between py-1.5 border-b border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] print:text-gray-700 print:border-gray-200">
-                    <span>Less: Operating & Administrative Expenses</span>
+
+                  {/* Operating Expenses Item */}
+                  <div
+                    onClick={() => handleDrilldownAccount('6000', 'Operating & Administrative Expenses', 'EXPENSE', profitAndLoss.totalOperatingExpenses)}
+                    className="flex justify-between py-1.5 border-b border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] px-1 rounded cursor-pointer group transition print:text-gray-700 print:border-gray-200"
+                    data-testid="pnl-line-opex"
+                  >
+                    <span className="flex items-center gap-1">
+                      <span>Less: Operating & Administrative Expenses</span>
+                      <Search size={11} className="opacity-0 group-hover:opacity-100 text-[var(--md-sys-color-primary)] transition" />
+                    </span>
                     <span className="font-mono font-medium text-rose-400 print:text-red-700">({formatMVR(profitAndLoss.totalOperatingExpenses)})</span>
                   </div>
+
+                  {/* Net Operating Income */}
                   <div className="flex justify-between py-2 bg-emerald-500/15 border-t-2 border-b-4 border-double border-emerald-500/50 px-3 rounded-xl font-extrabold text-sm text-emerald-300 print:bg-gray-100 print:border-black print:text-black">
                     <span>Net Operating Income</span>
                     <span className="font-mono">{formatMVR(profitAndLoss.netOperatingIncome)}</span>
@@ -533,6 +573,15 @@ export const ReportsView: React.FC = () => {
             </div>
           </div>
         </div>
+      ) : activeReportTab === 'aging' ? (
+        /* AR & AP Aging Matrices Tab */
+        <AgingMatricesView
+          invoices={invoices}
+          payments={payments}
+          purchaseOrders={purchaseOrders}
+          asOfDate={new Date().toISOString().split('T')[0]}
+          formatMVR={formatMVR}
+        />
       ) : (
         /* Operational Analytics Tab */
         <div className="space-y-6">
@@ -581,6 +630,15 @@ export const ReportsView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Interactive P&L Drilldown Drawer */}
+      <DrilldownDrawer
+        isOpen={Boolean(drilldownAccount)}
+        onClose={() => setDrilldownAccount(null)}
+        account={drilldownAccount}
+        journals={allJournals}
+        formatMVR={formatMVR}
+      />
     </div>
   );
 };
