@@ -70,6 +70,43 @@ $$\text{Identity} \longrightarrow \begin{matrix} \text{Platform Entitlement} \\ 
 
 ## Implementation & Release Status
 
+### Shipped Capabilities
+
+The accounting spine landed in `main` on 29 August 2026. These modules are merged and building; acceptance review is tracked separately from delivery, so "merged" here does not mean "signed off".
+
+| Area | Capability | Status |
+| :--- | :--- | :--- |
+| **General Ledger** | Chart of Accounts with account hierarchy management | Merged |
+| | Live double-entry journal posting and GL explorer | Merged |
+| | Authoritative trial balance and balance sheet, with a zero-variance invariant | Merged |
+| | Accounting period lock, audited unlock, and fiscal year-end roll-forward to retained earnings | Merged |
+| **Receivables** | Credit notes, customer advance deposits and settlement allocation | Merged |
+| | Customer credit limits and automated dunning | Merged |
+| | AR / AP ageing with drill-down | Merged |
+| **Banking** | Bank and cash ledger with BML / MIB CSV statement reconciliation | Merged |
+| | Multi-currency purchasing with MMA rates and FX gain/loss | Merged |
+| **Maldives Tax** | MIRA GST-201 return schedule and export, box 1 through 13 | Merged |
+| | Tourism GST (TGST) and Green Tax, with citizen exemption handling | Merged |
+| **Localization** | Bilingual Dhivehi (Thaana) and English document print engine | Merged |
+| | MMA Favara instant QR payment generation | Merged |
+| **Operations** | Job costing, multi-warehouse transfers, production orders, payroll | Merged |
+| **Platform** | Two-plane control plane, tenant provisioning, staff invitation lifecycle | Merged |
+| **Reporting** | Direct and indirect IFRS cash flow statement | Merged |
+| | Consolidated multi-book and multi-outlet reporting | Merged |
+
+### Engineering Quality Gates
+
+Every push runs both gates in CI:
+
+| Gate | Current |
+| :--- | :--- |
+| TypeScript strict typecheck | **0 errors** |
+| Vitest suite | **81 files, 292 passing** |
+| Playwright end-to-end | **15 passing** across Chromium, Firefox, WebKit and mobile |
+| Production build | **Clean** |
+| Secret and credential sweep | **0 findings** |
+| Migration lint | **Clean**, 31 migrations, monotonic |
+
 ### Canonical Roadmap Snapshot
 *Baseline Snapshot Date: 2026-08-27 | Release: v0.2.0-beta*
 

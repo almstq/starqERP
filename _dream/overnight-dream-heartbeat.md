@@ -1,9 +1,7 @@
-# STARQERP DREAM HEARTBEAT — Phase A validation
+# STARQERP Dream Heartbeat — Phase A Validation
 
-timestamp: 2026-08-29T02:35:00Z
-HEAD: UNREADABLE
-board:
-BOARD_UNREADABLE
-latest_broker_sequence: 162
-
-DREAM_PIPELINE_OK
+- timestamp: 2026-08-29T02:45:49Z
+- HEAD: 2ce7332ff8a99c061058d952c885eb1ea4c2eb93
+- broker_seq_latest: 0
+- board_totals: {"done":142,"planned":170,"in_progress":4,"blocked":2,"todo":1}
+- status: DREAM_PIPELINE_OK
