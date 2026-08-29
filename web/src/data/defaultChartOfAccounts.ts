@@ -347,7 +347,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
   {
     id: 'coa-2122',
     code: '2122',
-    name: 'MIRA Tourism GST (TGST 16%)',
+    name: 'MIRA Tourism GST Payable (TGST)',
     accountClass: 'LIABILITY',
     subtype: 'TAX_PAYABLE',
     parentId: 'coa-2120',
