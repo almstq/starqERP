@@ -1,153 +1,140 @@
 -- -----------------------------------------------------------------------------
 -- accept_staff_invitation_probe.sql
--- Test probe for the accept_staff_invitation function fix
+--
+-- Proves that public.accept_staff_invitation(uuid, uuid) actually EXECUTES —
+-- the function the Edge calls at supabase/functions/starq-api/index.ts:541.
+--
+-- WHY THIS EXISTS AT ALL
+-- A clean CREATE proves syntax only. plpgsql function bodies are not semantically
+-- checked, so a body full of non-existent column names applies without complaint.
+-- Migration 0029 was withdrawn on 29 Aug 2026 for exactly that: it applied clean
+-- and could not run, because it inserted memberships.updated_at, a column that
+-- does not exist. Creating a function is not evidence that it works. Running it is.
+--
+-- HISTORY
+-- The first version of this probe had never been run by its author and failed at
+-- line 12. It carried four defects, every one the same class it was written to
+-- catch: it inserted organisations.updated_at and persons.updated_at (neither
+-- column exists), passed role_id => 'viewer' when role_id is uuid, and ignored
+-- memberships_role_fk, which is composite on (organisation_id, role_id).
+--
+-- Runs inside a transaction and rolls back. It leaves nothing behind.
+--
+-- Usage:
+--   docker exec -i <container> psql -U supabase_admin -d <db> -v ON_ERROR_STOP=1 \
+--     < tests/accept_staff_invitation_probe.sql
 -- -----------------------------------------------------------------------------
 
--- Test setup: Create a test organisation, person, and invitation
-BEGIN;
+\set ON_ERROR_STOP on
 
--- Create a test organisation
-INSERT INTO public.organisations (id, slug, legal_name, status, created_at, updated_at)
-VALUES 
-  ('00000000-0000-0000-0000-000000000001'::uuid, 'test-org', 'Test Organisation', 'active', now(), now());
+begin;
 
--- Create a test person
-INSERT INTO public.persons (id, person_key, external_subject, display_label, status, created_at, updated_at)
-VALUES
-  ('11111111-1111-1111-1111-111111111111'::uuid, 'test-person-key', 'test-external-sub', 'Test Person', 'active', now(), now());
+do $probe$
+declare
+  v_org        uuid;
+  v_role       uuid;
+  v_person     uuid;
+  v_invitation uuid;
+  v_result     jsonb;
+  v_unbound    uuid;
+  v_unbound_rs jsonb;
+  m            record;
+  inv          record;
+begin
+  -- An organisation that actually has roles: memberships_role_fk is composite,
+  -- FOREIGN KEY (organisation_id, role_id) REFERENCES roles(organisation_id, id),
+  -- so the role must belong to the SAME organisation as the invitation.
+  select o.id into v_org
+    from public.organisations o
+    join public.roles r on r.organisation_id = o.id
+   group by o.id
+  having count(r.id) > 0
+   limit 1;
 
--- Create a test invitation
-INSERT INTO public.invitations (
-  id, organisation_id, email, name, role_id, job_title, phone, book_ids, location_ids,
-  token, status, invited_by, expires_at, created_at, updated_at
-) VALUES (
-  '22222222-2222-2222-2222-222222222222'::uuid,
-  '00000000-0000-0000-0000-000000000001'::uuid,
-  'test@example.com',
-  'Test Invitee',
-  'viewer',  -- role_id that should map to a seat
-  'Tester',
-  '+1234567890',
-  '{}',
-  '{}',
-  'testtoken123456789abcdef',
-  'pending',
-  '11111111-1111-1111-1111-111111111111'::uuid,
-  now() + interval '7 days',
-  now(),
-  now()
-);
+  if v_org is null then
+    raise exception 'PROBE SETUP FAILED: no organisation has any roles';
+  end if;
 
--- Test 1: Verify the function can be called without error
-DO $$
-DECLARE
-  result JSONB;
-BEGIN
-  -- Call the accept_staff_invitation function
-  SELECT * INTO result FROM public.accept_staff_invitation(
-    '22222222-2222-2222-2222-222222222222'::uuid,  -- invitation_id
-    '11111111-1111-1111-1111-111111111111'::uuid,  -- person_id
-    'test@example.com'  -- verified_email
-  );
+  select id into v_role from public.roles where organisation_id = v_org order by id limit 1;
 
-  -- Check if the result is OK
-  IF result->>'ok' != 'true' THEN
-    RAISE EXCEPTION 'accept_staff_invitation failed: %', result;
-  END IF;
+  -- ---------------------------------------------------------------------------
+  -- CASE 1 — it must FAIL CLOSED when the identity is not bound.
+  -- This is asserted first, deliberately. A function that accepts invitations is
+  -- only safe if it refuses the unbound case, and that is the case a happy-path
+  -- test never reaches.
+  -- Note: no updated_at on persons. The old probe invented one.
+  -- ---------------------------------------------------------------------------
+  insert into public.persons (person_key, external_subject, display_label, status)
+  values ('probe-unbound-' || gen_random_uuid()::text, null, 'Unbound Probe', 'active')
+  returning id into v_unbound;
 
-  RAISE NOTICE '✓ Test 1 PASSED: Function executed successfully';
-END $$;
+  insert into public.invitations (organisation_id, email, name, role_id, status)
+  values (v_org, 'unbound@example.test', 'Unbound Probe', v_role, 'pending')
+  returning id into v_invitation;
 
--- Test 2: Verify membership was created
-DO $$
-DECLARE
-  membership_count INTEGER;
-BEGIN
-  SELECT COUNT(*) INTO membership_count
-  FROM public.memberships
-  WHERE person_id = '11111111-1111-1111-1111-111111111111'::uuid
-    AND organisation_id = '00000000-0000-0000-0000-000000000001'::uuid;
+  select public.accept_staff_invitation(v_invitation, v_unbound) into v_unbound_rs;
 
-  IF membership_count != 1 THEN
-    RAISE EXCEPTION 'Expected 1 membership, found %', membership_count;
-  END IF;
+  if coalesce((v_unbound_rs->>'ok')::boolean, false) then
+    raise exception 'FAIL: an unbound identity was allowed to accept an invitation: %', v_unbound_rs;
+  end if;
+  raise notice 'PASS: fails closed for an unbound identity — %', v_unbound_rs->>'error';
 
-  RAISE NOTICE '✓ Test 2 PASSED: Membership created correctly';
-END $$;
+  -- ---------------------------------------------------------------------------
+  -- CASE 2 — the happy path.
+  -- ---------------------------------------------------------------------------
+  insert into public.persons (person_key, external_subject, display_label, status, verified_email)
+  values ('probe-' || gen_random_uuid()::text, 'probe-subject', 'Probe Invitee', 'active', 'probe@example.test')
+  returning id into v_person;
 
--- Test 3: Verify membership seat was created
-DO $$
-DECLARE
-  seat_count INTEGER;
-BEGIN
-  -- Get the membership ID first
-  SELECT COUNT(*) INTO seat_count
-  FROM public.membership_seats ms
-  JOIN public.memberships m ON ms.membership_id = m.id
-  WHERE m.person_id = '11111111-1111-1111-1111-111111111111'::uuid
-    AND m.organisation_id = '00000000-0000-0000-0000-000000000001'::uuid;
+  insert into public.invitations (organisation_id, email, name, role_id, job_title, status)
+  values (v_org, 'probe@example.test', 'Probe Invitee', v_role, 'Probe', 'pending')
+  returning id into v_invitation;
 
-  IF seat_count != 1 THEN
-    RAISE EXCEPTION 'Expected 1 membership seat, found %', seat_count;
-  END IF;
+  -- THE ACTUAL TEST. Everything above is setup.
+  select public.accept_staff_invitation(v_invitation, v_person) into v_result;
 
-  RAISE NOTICE '✓ Test 3 PASSED: Membership seat created correctly';
-END $$;
+  if not coalesce((v_result->>'ok')::boolean, false) then
+    raise exception 'FAIL: acceptance returned %', v_result;
+  end if;
+  raise notice 'PASS: accepted — %', v_result;
 
--- Test 4: Verify audit event was created with correct columns
-DO $$
-DECLARE
-  audit_count INTEGER;
-BEGIN
-  SELECT COUNT(*) INTO audit_count
-  FROM public.audit_events
-  WHERE actor_person_id = '11111111-1111-1111-1111-111111111111'::uuid
-    AND action = 'invitation.accepted';
+  -- a membership must exist, be active, and carry the INVITED role
+  select * into m from public.memberships
+   where organisation_id = v_org and person_id = v_person;
+  if not found then
+    raise exception 'FAIL: no membership was created';
+  end if;
+  if m.status <> 'active' then
+    raise exception 'FAIL: membership status is %, expected active', m.status;
+  end if;
+  if m.role_id is distinct from v_role then
+    raise exception 'FAIL: invited role was not recorded — membership role_id is %, invited %', m.role_id, v_role;
+  end if;
+  raise notice 'PASS: membership active and the invited role was recorded';
 
-  IF audit_count != 1 THEN
-    RAISE EXCEPTION 'Expected 1 audit event with correct columns, found %', audit_count;
-  END IF;
+  -- the invitation must be consumed, not left pending
+  select * into inv from public.invitations where id = v_invitation;
+  if inv.status = 'pending' then
+    raise exception 'FAIL: invitation still pending after acceptance';
+  end if;
+  if inv.accepted_at is null then
+    raise exception 'FAIL: invitation accepted_at was not set';
+  end if;
+  raise notice 'PASS: invitation consumed — status=%, accepted_at set', inv.status;
 
-  RAISE NOTICE '✓ Test 4 PASSED: Audit event created with correct columns';
-END $$;
+  -- a role invitation must NOT synthesize a seat grant.
+  -- Roles govern visibility; seats govern EXECUTION. Seat assignment stays an
+  -- explicit admin action. This is the defect that got migration 0029 withdrawn,
+  -- so it is asserted here permanently.
+  if exists (select 1 from public.membership_seats where membership_id = m.id) then
+    raise exception 'FAIL: accepting a ROLE invitation granted a SEAT. Roles govern visibility, seats govern execution — seat assignment must stay an explicit admin action.';
+  end if;
+  raise notice 'PASS: no seat synthesized from a role invitation';
 
--- Test 5: Verify invitation status was updated to 'accepted'
-DO $$
-DECLARE
-  invitation_status TEXT;
-BEGIN
-  SELECT status INTO invitation_status
-  FROM public.invitations
-  WHERE id = '22222222-2222-2222-2222-222222222222'::uuid;
+  raise notice '--------------------------------------------------';
+  raise notice 'accept_staff_invitation(uuid, uuid) EXECUTES CORRECTLY';
+  raise notice '--------------------------------------------------';
+end
+$probe$;
 
-  IF invitation_status != 'accepted' THEN
-    RAISE EXCEPTION 'Expected invitation status to be "accepted", found "%"', invitation_status;
-  END IF;
-
-  RAISE NOTICE '✓ Test 5 PASSED: Invitation status updated to accepted';
-END $$;
-
--- Test 6: Verify that an invalid invitation token is rejected
-DO $$
-DECLARE
-  result JSONB;
-BEGIN
-  -- Try to accept with wrong email (should fail)
-  SELECT * INTO result FROM public.accept_staff_invitation(
-    '22222222-2222-2222-2222-222222222222'::uuid,  -- same invitation
-    '11111111-1111-1111-1111-111111111111'::uuid,  -- same person
-    'wrong@example.com'  -- WRONG email
-  );
-
-  -- Should return an error
-  IF result->>'ok' != 'false' THEN
-    RAISE EXCEPTION 'Expected function to fail with wrong email, but it succeeded: %', result;
-  END IF;
-
-  RAISE NOTICE '✓ Test 6 PASSED: Wrong email correctly rejected';
-END $$;
-
--- Clean up: Rollback everything
-ROLLBACK;
-
-RAISE NOTICE '✓ ALL TESTS PASSED: accept_staff_invitation function works correctly!';
+rollback;
