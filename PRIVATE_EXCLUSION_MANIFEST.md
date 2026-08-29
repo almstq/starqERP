@@ -35,6 +35,9 @@ The following files contain proprietary commercial analysis, market positioning,
 - `docs/qa/commercial-replacement-audit/SECURITY_AND_SAAS_READINESS.md` — Internal pre-commercial security review
 - `docs/qa/commercial-replacement-audit/TOP_10_COMMERCIAL_BLOCKERS.md` — Proprietary product blocker backlog
 - `docs/roadmap/BOARD_REPRIORITIZATION_2026-08-27.md` — Internal backlog prioritization memo
+- `docs/qa/coa-accountant-audit-2026-08-29/README.md` — Internal CoA audit index
+- `docs/qa/coa-accountant-audit-2026-08-29/ACCOUNTANT_REVIEW_REPORT.md` — External accountant review of the live ledger
+- `docs/qa/coa-accountant-audit-2026-08-29/ELDER_RECONCILIATION.md` — Internal finance-kernel defect reconciliation
 
 ---
 
