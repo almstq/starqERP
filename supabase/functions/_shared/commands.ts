@@ -1,3 +1,14 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// GENERATED FILE — DO NOT EDIT.
+//
+// Copied verbatim from contracts/commands.ts by scripts/sync-contract.mjs so
+// that Supabase bundles it with the Edge function. Editing this file instead of
+// the canonical one recreates the drift the contract exists to eliminate.
+//
+// Edit:  contracts/commands.ts
+// Then:  node scripts/sync-contract.mjs
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * STARQ ERP — Canonical command contract.
  *

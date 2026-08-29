@@ -1,3 +1,4 @@
+import { resolveFavaraAccountNumber } from '../invoices/FavaraPaymentModal';
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -267,14 +268,14 @@ export const DashboardView: React.FC = () => {
 
       {/* Primary KPI Grid (Fluid auto-fit, container-safe, never forced 2 cols) */}
       <ResponsiveGrid columns="auto" minItemWidth="160px" gap="sm">
-        <Surface variant="filled" level={2} padding="sm" container className="space-y-1 min-w-0">
-          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+        <Surface variant="filled" level={2} padding="sm" container className="flex flex-col justify-between h-[100px] min-w-0">
+          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate h-4">
             Sales Today
           </span>
-          <div className="text-base sm:text-lg font-bold mono-num text-[var(--md-sys-color-on-surface)] truncate">
+          <div className="text-base sm:text-lg font-bold mono-num text-[var(--md-sys-color-on-surface)] truncate leading-none my-auto">
             {formatMVR(totalSalesToday, false)}
           </div>
-          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
+          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate h-3.5 leading-none">
             {invoices.filter((inv) => inv.date === new Date().toISOString().split('T')[0]).length} invoices logged
           </span>
         </Surface>
@@ -285,15 +286,15 @@ export const DashboardView: React.FC = () => {
           padding="sm"
           container
           onClick={() => navigate('/payments')}
-          className="space-y-1 min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
+          className="flex flex-col justify-between h-[100px] min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
         >
-          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate h-4">
             Cash Received
           </span>
-          <div className="text-base sm:text-lg font-bold mono-num truncate" style={{ color: 'var(--positive)' }}>
+          <div className="text-base sm:text-lg font-bold mono-num truncate leading-none my-auto" style={{ color: 'var(--positive)' }}>
             {formatMVR(totalCashReceived, false)}
           </div>
-          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
+          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate h-3.5 leading-none">
             Month-to-date collections
           </span>
         </Surface>
@@ -304,15 +305,15 @@ export const DashboardView: React.FC = () => {
           padding="sm"
           container
           onClick={() => navigate('/invoices')}
-          className="space-y-1 min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
+          className="flex flex-col justify-between h-[100px] min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
         >
-          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate h-4">
             Receivables Due
           </span>
-          <div className="text-base sm:text-lg font-bold mono-num truncate" style={{ color: 'var(--md-sys-color-error)' }}>
+          <div className="text-base sm:text-lg font-bold mono-num truncate leading-none my-auto" style={{ color: 'var(--md-sys-color-error)' }}>
             {formatMVR(totalOutstandingInvoices, false)}
           </div>
-          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
+          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate h-3.5 leading-none">
             Outstanding invoices
           </span>
         </Surface>
@@ -323,15 +324,15 @@ export const DashboardView: React.FC = () => {
           padding="sm"
           container
           onClick={() => navigate('/purchasing')}
-          className="space-y-1 min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
+          className="flex flex-col justify-between h-[100px] min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
         >
-          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate h-4">
             Accounts Payable
           </span>
-          <div className="text-base sm:text-lg font-bold mono-num truncate" style={{ color: 'var(--warning)' }}>
+          <div className="text-base sm:text-lg font-bold mono-num truncate leading-none my-auto" style={{ color: 'var(--warning)' }}>
             {formatMVR(totalAccountsPayable, false)}
           </div>
-          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
+          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate h-3.5 leading-none">
             Vendor dues (4 suppliers)
           </span>
         </Surface>
@@ -342,15 +343,15 @@ export const DashboardView: React.FC = () => {
           padding="sm"
           container
           onClick={() => navigate('/jobs')}
-          className="space-y-1 min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
+          className="flex flex-col justify-between h-[100px] min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
         >
-          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate h-4">
             {currentTerms.orders}
           </span>
-          <div className="text-base sm:text-lg font-bold mono-num truncate" style={{ color: 'var(--md-sys-color-primary)' }}>
+          <div className="text-base sm:text-lg font-bold mono-num truncate leading-none my-auto" style={{ color: 'var(--md-sys-color-primary)' }}>
             {activeJobsCount} {currentArchetype.id === 'automotive_workshop' ? 'In Bay' : 'Active'}
           </div>
-          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
+          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate h-3.5 leading-none">
             {currentArchetype.id === 'automotive_workshop' ? 'Floor work orders' : 'In progress'}
           </span>
         </Surface>
@@ -363,19 +364,19 @@ export const DashboardView: React.FC = () => {
             padding="sm"
             container
             onClick={() => navigate('/inventory')}
-            className="space-y-1 min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
+            className="flex flex-col justify-between h-[100px] min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
           >
-            <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+            <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate h-4">
               Low Stock Items
             </span>
             <div
-              className="text-base sm:text-lg font-bold mono-num truncate"
+              className="text-base sm:text-lg font-bold mono-num truncate leading-none my-auto"
               style={{ color: lowStockItemsCount > 0 ? 'var(--md-sys-color-error)' : 'var(--positive)' }}
             >
               {lowStockItemsCount} Items
             </div>
-            <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
-              Reorder required
+            <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate h-3.5 leading-none">
+              Threshold triggers
             </span>
           </Surface>
         )}
@@ -772,7 +773,7 @@ export const DashboardView: React.FC = () => {
             <div className="flex items-center justify-between min-w-0">
               <span className="text-[var(--md-sys-color-on-surface-variant)]">BML Settlement:</span>
               <span className="mono-num font-semibold text-[var(--md-sys-color-on-surface)]">
-                {currentTenant?.bmlAccount ? currentTenant.bmlAccount.split(' ')[0] : 'Not Configured'}
+                {resolveFavaraAccountNumber(currentTenant?.bmlAccount) ?? 'Not Configured'}
               </span>
             </div>
             <div className="flex items-center justify-between min-w-0">

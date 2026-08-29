@@ -14,38 +14,38 @@ export const SupportTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Support Overview Card */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+      <div className="p-6 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] shadow-xs">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
             <LifeBuoy className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+            <h2 className="text-base font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)]">
               Technical Support & SLA Matrix
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)]">
               Transparent operational support with direct executive escalation and business-hour response targets.
             </p>
           </div>
         </div>
 
         {/* Operating Hours Banner */}
-        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2.5 text-slate-700 dark:text-slate-300">
+        <div className="p-4 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)]/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5 text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)]">
             <Clock className="w-4 h-4 text-blue-600 shrink-0" />
             <span>
               <strong>Standard Operating Hours:</strong> Sunday – Thursday, 09:00 – 18:00 MVT (UTC+5).
             </span>
           </div>
-          <div className="text-slate-500 dark:text-slate-400 text-[11px]">
+          <div className="text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] text-[11px]">
             Friday (Jumu'ah) & Weekend off-hours triaged next business day.
           </div>
         </div>
       </div>
 
       {/* Severity Tiers & Response Targets */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+      <div className="p-6 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] shadow-xs">
+        <h3 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] mb-4 flex items-center gap-2">
           <AlertOctagon className="w-4 h-4 text-amber-500" />
           <span>Severity Classification & Target Response Times</span>
         </h3>
@@ -53,7 +53,7 @@ export const SupportTab: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold">
+              <tr className="border-b border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] font-semibold">
                 <th className="pb-3 pr-4">Tier</th>
                 <th className="pb-3 pr-4">Client Impact Definition</th>
                 <th className="pb-3 pr-4">Target Initial Triage</th>
@@ -66,13 +66,13 @@ export const SupportTab: React.FC = () => {
                   <span className="w-2 h-2 rounded-full bg-rose-500" />
                   Sev-1 (Critical)
                 </td>
-                <td className="py-3 pr-4 text-slate-700 dark:text-slate-300 font-medium">
+                <td className="py-3 pr-4 text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] font-medium">
                   <strong>System Down</strong> or <strong>Financial / Ledger Inaccuracy</strong> (invoices/settlements corrupt).
                 </td>
-                <td className="py-3 pr-4 font-bold text-slate-900 dark:text-slate-100">
+                <td className="py-3 pr-4 font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)]">
                   &le; 4 Business Hours
                 </td>
-                <td className="py-3 text-slate-500 dark:text-slate-400">
+                <td className="py-3 text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)]">
                   Standard Hours + Founder Escalation
                 </td>
               </tr>
@@ -81,13 +81,13 @@ export const SupportTab: React.FC = () => {
                   <span className="w-2 h-2 rounded-full bg-amber-500" />
                   Sev-2 (High)
                 </td>
-                <td className="py-3 pr-4 text-slate-700 dark:text-slate-300">
+                <td className="py-3 pr-4 text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)]">
                   Core business workflow blocked with no viable workaround (POS payment lock, checkout failure).
                 </td>
-                <td className="py-3 pr-4 font-bold text-slate-900 dark:text-slate-100">
+                <td className="py-3 pr-4 font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)]">
                   &le; 12 Business Hours
                 </td>
-                <td className="py-3 text-slate-500 dark:text-slate-400">
+                <td className="py-3 text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)]">
                   Standard Business Hours
                 </td>
               </tr>
@@ -96,28 +96,28 @@ export const SupportTab: React.FC = () => {
                   <span className="w-2 h-2 rounded-full bg-blue-500" />
                   Sev-3 (Medium)
                 </td>
-                <td className="py-3 pr-4 text-slate-700 dark:text-slate-300">
+                <td className="py-3 pr-4 text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)]">
                   Non-critical workflow degraded; operational workaround available (reporting filter defect, non-blocking UI glitch).
                 </td>
-                <td className="py-3 pr-4 font-bold text-slate-900 dark:text-slate-100">
+                <td className="py-3 pr-4 font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)]">
                   &le; 24 Business Hours
                 </td>
-                <td className="py-3 text-slate-500 dark:text-slate-400">
+                <td className="py-3 text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)]">
                   Next Sprint Deployment
                 </td>
               </tr>
               <tr>
-                <td className="py-3 pr-4 font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                <td className="py-3 pr-4 font-bold text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-slate-400" />
                   Sev-4 (Low)
                 </td>
-                <td className="py-3 pr-4 text-slate-700 dark:text-slate-300">
+                <td className="py-3 pr-4 text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)]">
                   General queries, styling requests, feature improvements.
                 </td>
-                <td className="py-3 pr-4 font-bold text-slate-900 dark:text-slate-100">
+                <td className="py-3 pr-4 font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)]">
                   &le; 48 Business Hours
                 </td>
-                <td className="py-3 text-slate-500 dark:text-slate-400">
+                <td className="py-3 text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)]">
                   Standard Backlog
                 </td>
               </tr>
@@ -129,16 +129,16 @@ export const SupportTab: React.FC = () => {
       {/* Escalation Ladder & Contact Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Support Routing */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-slate-100">
+        <div className="p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] shadow-xs space-y-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)]">
             <Mail className="w-4 h-4 text-blue-600" />
             <span>Direct Support Inboxes</span>
           </div>
           <div className="space-y-2 text-xs">
-            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+            <div className="p-3 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/40 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)]/60 flex items-center justify-between">
               <div>
-                <div className="font-bold text-slate-900 dark:text-slate-100">General Support & Inquiries</div>
-                <div className="text-slate-500 dark:text-slate-400 text-[11px]">Triage and ticket creation</div>
+                <div className="font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)]">General Support & Inquiries</div>
+                <div className="text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] text-[11px]">Triage and ticket creation</div>
               </div>
               <a
                 href="mailto:support@starq.mv"
@@ -163,8 +163,8 @@ export const SupportTab: React.FC = () => {
         </div>
 
         {/* Named Escalation Target */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-slate-100">
+        <div className="p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] shadow-xs space-y-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)]">
             <UserCheck className="w-4 h-4 text-indigo-600" />
             <span>Named Escalation Authority</span>
           </div>
@@ -175,11 +175,11 @@ export const SupportTab: React.FC = () => {
                 Founder & Managing Director
               </span>
             </div>
-            <p className="text-slate-600 dark:text-slate-400 text-[11px]">
+            <p className="text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] text-[11px]">
               Every unresolved Sev-1 or escalated customer ticket terminates with the founder by name, ensuring decisions and hotfixes have direct executive ownership.
             </p>
             <div className="pt-1 flex items-center justify-between text-[11px]">
-              <span className="text-slate-500 dark:text-slate-400">Escalation Channel:</span>
+              <span className="text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)]">Escalation Channel:</span>
               <a href="mailto:founder@starq.mv" className="font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
                 founder@starq.mv
               </a>
@@ -189,8 +189,8 @@ export const SupportTab: React.FC = () => {
       </div>
 
       {/* Security & RFC 9116 Policy Link */}
-      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+      <div className="p-4 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/40 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)]/60 flex items-center justify-between text-xs">
+        <div className="flex items-center gap-2 text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)]">
           <Shield className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>
             Security vulnerability or coordinated disclosure? Review our RFC 9116 security policy and safe harbor.

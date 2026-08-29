@@ -343,7 +343,7 @@ export const GlobalSearchModal: React.FC = () => {
                           inv.status === 'Paid'
                             ? 'positive'
                             : inv.status === 'Overdue'
-                            ? 'danger'
+                            ? 'destructive'
                             : 'warning'
                         }
                         size="sm"
@@ -394,7 +394,7 @@ export const GlobalSearchModal: React.FC = () => {
                         {item.quantityOnHand} {item.unit}
                       </span>
                       <Badge
-                        variant={item.stockStatus === 'Low Stock' ? 'danger' : 'positive'}
+                        variant={item.stockStatus === 'Low Stock' ? 'destructive' : 'positive'}
                         size="sm"
                         className="ml-2"
                       >

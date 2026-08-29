@@ -134,7 +134,7 @@ export const CreateJobModal: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsCreateJobOpen(false)}
-            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200"
+            className="px-4 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface)] text-xs font-semibold border border-[var(--md-sys-color-outline-variant)]"
           >
             Cancel
           </button>
@@ -160,12 +160,12 @@ export const CreateJobModal: React.FC = () => {
         {/* Customer & Service Type */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Customer / Fleet *</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Customer / Fleet *</label>
             <select
               required
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             >
               {customers.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -176,11 +176,11 @@ export const CreateJobModal: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Service Type *</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Service Type *</label>
             <select
               value={serviceType}
               onChange={(e) => setServiceType(e.target.value as ServiceType)}
-              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500 font-medium"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500 font-medium"
             >
               <option value="Full Body Repaint">Full Body Repaint</option>
               <option value="Vinyl Wrap Installation">Vinyl Wrap Installation</option>
@@ -194,50 +194,50 @@ export const CreateJobModal: React.FC = () => {
         </div>
 
         {/* Vehicle Information */}
-        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+        <div className="p-3.5 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] space-y-2.5">
           <div className="text-xs font-bold text-blue-600 uppercase tracking-wider">
             Vehicle / Asset Info
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <div>
-              <label className="block text-[11px] text-slate-500 mb-1">Plate Number</label>
+              <label className="block text-[11px] text-[var(--md-sys-color-on-surface-variant)] mb-1">Plate Number</label>
               <input
                 type="text"
                 required
                 value={plateNumber}
                 onChange={(e) => setPlateNumber(e.target.value.toUpperCase())}
                 placeholder="AB1-8842"
-                className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-blue-600 font-mono font-semibold focus:outline-none focus:border-blue-500"
+                className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-blue-600 font-mono font-semibold focus:outline-none focus:border-blue-500"
               />
             </div>
             <div>
-              <label className="block text-[11px] text-slate-500 mb-1">Make</label>
+              <label className="block text-[11px] text-[var(--md-sys-color-on-surface-variant)] mb-1">Make</label>
               <input
                 type="text"
                 value={make}
                 onChange={(e) => setMake(e.target.value)}
                 placeholder="Toyota / Audi"
-                className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+                className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
               />
             </div>
             <div>
-              <label className="block text-[11px] text-slate-500 mb-1">Model</label>
+              <label className="block text-[11px] text-[var(--md-sys-color-on-surface-variant)] mb-1">Model</label>
               <input
                 type="text"
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
                 placeholder="Prado TX / Supra"
-                className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+                className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
               />
             </div>
             <div>
-              <label className="block text-[11px] text-slate-500 mb-1">Color / Finish</label>
+              <label className="block text-[11px] text-[var(--md-sys-color-on-surface-variant)] mb-1">Color / Finish</label>
               <input
                 type="text"
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
                 placeholder="Pearl White"
-                className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+                className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
               />
             </div>
           </div>
@@ -245,38 +245,38 @@ export const CreateJobModal: React.FC = () => {
 
         {/* Scope of Work */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">Requested Scope of Work *</label>
+          <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Requested Scope of Work *</label>
           <textarea
             required
             rows={2}
             value={requestedWork}
             onChange={(e) => setRequestedWork(e.target.value)}
             placeholder="Detailed description of paint preparation, disassembly, layers of clearcoat, wrap coverage..."
-            className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500"
+            className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-outline)] focus:outline-none focus:border-blue-500"
           />
         </div>
 
         {/* Financials & Quotes (MVR) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-3.5 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)]">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Quoted Price (MVR) *</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Quoted Price (MVR) *</label>
             <input
               type="number"
               required
               min="0"
               value={quotedAmount}
               onChange={(e) => setQuotedAmount(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-900 font-mono focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs font-bold text-[var(--md-sys-color-on-surface)] font-mono focus:outline-none focus:border-blue-500"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Advance Deposit Received (MVR)</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Advance Deposit Received (MVR)</label>
             <input
               type="number"
               min="0"
               value={depositPaid}
               onChange={(e) => setDepositPaid(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-emerald-600 font-mono focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs font-bold text-emerald-600 font-mono focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>
@@ -284,11 +284,11 @@ export const CreateJobModal: React.FC = () => {
         {/* Bay & Priority & Dates */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Assigned Garage Bay</label>
+            <label className="block text-[11px] font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Assigned Garage Bay</label>
             <select
               value={bayNumber}
               onChange={(e) => setBayNumber(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             >
               <option value="Spray Booth Bay 1 (Bake Oven)">Spray Booth Bay 1 (Bake Oven)</option>
               <option value="Clean Wrap Studio Bay 1">Clean Wrap Studio Bay 1</option>
@@ -299,11 +299,11 @@ export const CreateJobModal: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Job Priority</label>
+            <label className="block text-[11px] font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Job Priority</label>
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value as any)}
-              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             >
               <option value="Normal">Normal</option>
               <option value="High">High</option>
@@ -312,20 +312,20 @@ export const CreateJobModal: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Target Completion</label>
+            <label className="block text-[11px] font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Target Completion</label>
             <input
               type="date"
               required
               value={expectedCompletionDate}
               onChange={(e) => setExpectedCompletionDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>
 
         {/* Assigned Staff */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1.5">Assign Technicians & Specialists</label>
+          <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1.5">Assign Technicians & Specialists</label>
           <div className="flex flex-wrap gap-2">
             {staff.map((s) => {
               const isSelected = selectedStaffIds.includes(s.id);
@@ -337,7 +337,7 @@ export const CreateJobModal: React.FC = () => {
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
                     isSelected
                       ? 'bg-blue-600 text-white border-blue-600 font-bold shadow-xs'
-                      : 'bg-slate-100 text-slate-600 border-slate-200 hover:border-slate-300'
+                      : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline-variant)]'
                   }`}
                 >
                   {s.name} ({s.role})

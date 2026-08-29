@@ -33,12 +33,12 @@ describe('Cross-Device Onboarding & Atomic Tenant Provisioning Vertical Slice', 
   beforeEach(() => {
     dbTenantApplications = [];
     dbOrganisations = [
-      { id: '29552026-0001-0000-0000-000000000001', slug: 'club-ignition', name: 'Club Ignition Pvt Ltd' },
-      { id: '30222026-0002-0000-0000-000000000002', slug: 'starq-tech', name: 'Starq Technologies Pvt Ltd' },
+      { id: 'a0000000-0001-0000-0000-000000000001', slug: 'club-ignition', name: 'Club Ignition Pvt Ltd' },
+      { id: 'a0000000-0002-0000-0000-000000000002', slug: 'starq-tech', name: 'Starq Technologies Pvt Ltd' },
     ];
     dbBooks = [
-      { id: 'book-ci-01', organisation_id: '29552026-0001-0000-0000-000000000001', code: 'INK', name: 'Ignition Ink' },
-      { id: 'book-stq-01', organisation_id: '30222026-0002-0000-0000-000000000002', code: 'STQ', name: 'Starq Tech' },
+      { id: 'book-ci-01', organisation_id: 'a0000000-0001-0000-0000-000000000001', code: 'INK', name: 'Ignition Ink' },
+      { id: 'book-stq-01', organisation_id: 'a0000000-0002-0000-0000-000000000002', code: 'STQ', name: 'Starq Tech' },
     ];
     dbMemberships = [];
     dbMembershipSeats = [];
@@ -294,14 +294,14 @@ describe('Cross-Device Onboarding & Atomic Tenant Provisioning Vertical Slice', 
     });
 
     // Attempting to access Club Ignition (Tenant 1)
-    const ciOrgId = '29552026-0001-0000-0000-000000000001';
+    const ciOrgId = 'a0000000-0001-0000-0000-000000000001';
     const hasCiAccess = dbMemberships.some(
       (m) => m.person_id === applicantPersonUuid && m.organisation_id === ciOrgId
     );
     expect(hasCiAccess).toBe(false);
 
     // Attempting to access Starq Tech (Tenant 2)
-    const stqOrgId = '30222026-0002-0000-0000-000000000002';
+    const stqOrgId = 'a0000000-0002-0000-0000-000000000002';
     const hasStqAccess = dbMemberships.some(
       (m) => m.person_id === applicantPersonUuid && m.organisation_id === stqOrgId
     );

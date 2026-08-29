@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useTheme } from './ThemeContext';
 import {
   NavigationTab,
@@ -113,6 +113,22 @@ export interface ERPContextType {
   roles: UserRole[];
   invitations: StaffInvitationRecord[];
   switchCurrentUser: (userId: string) => void;
+  /**
+   * OPTIONAL AND CURRENTLY NEVER PROVIDED.
+   *
+   * MultiWarehouseView, PayrollManagementView and JobCostingView all call this
+   * to post a generated journal, and each already guards with
+   * `typeof addJournalEntry === 'function'` because no provider supplies it.
+   * Declaring it optional makes the type state that fact rather than implying a
+   * method that does not exist.
+   *
+   * Consequence, recorded deliberately: journal posting from those three
+   * modules is INERT. The entries are computed and then dropped. Wiring this to
+   * real journal state is a feature change, not a typecheck fix, so it is
+   * reported rather than invented here.
+   */
+  addJournalEntry?: (entry: import('../domain/journals').JournalEntry) => void;
+
   authorizeUser: (userId: string, roleId?: string) => void;
   suspendUser: (userId: string) => void;
   inviteUser: (userData: { name: string; email: string; phone: string; roleId: string; jobTitle?: string }) => AppUser;
@@ -1179,16 +1195,20 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return { ok: true };
   };
 
+  const usersRef = useRef(users);
+  usersRef.current = users;
+  const rolesRef = useRef(roles);
+  rolesRef.current = roles;
+
   // Switch Current User Persona (to showcase RBAC gating)
-  const switchCurrentUser = (userId: string) => {
-    const user = users.find((u) => u.id === userId);
-    if (!user) return;
+  const switchCurrentUser = useCallback((userId: string) => {
     setCurrentUserId(userId);
+    const user = usersRef.current.find((u) => u.id === userId);
     // If switching to a privileged account, reset session elevation to require challenge
-    const userRole = roles.find((r) => r.id === user.roleId);
-    const isPrivileged = user.roleName === 'Super Administrator' || !!userRole?.isSystemAdmin || !!user.mfaRequired;
+    const userRole = rolesRef.current.find((r) => r.id === user?.roleId);
+    const isPrivileged = user?.roleName === 'Super Administrator' || !!userRole?.isSystemAdmin || !!user?.mfaRequired;
     setIsMfaElevated(!isPrivileged);
-  };
+  }, []);
 
   // Authorize Pending User (Admin Capability)
   const authorizeUser = (userId: string, roleId?: string) => {

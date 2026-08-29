@@ -86,7 +86,7 @@ export const RecordPaymentModal: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsRecordPaymentOpen(false)}
-            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200"
+            className="px-4 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface)] text-xs font-semibold border border-[var(--md-sys-color-outline-variant)]"
           >
             Cancel
           </button>
@@ -103,12 +103,12 @@ export const RecordPaymentModal: React.FC = () => {
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
         {/* Invoice selection */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">Select Invoice to Settle *</label>
+          <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Select Invoice to Settle *</label>
           <select
             required
             value={invoiceId}
             onChange={(e) => handleInvoiceChange(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+            className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
           >
             {invoices.map((inv) => (
               <option key={inv.id} value={inv.id}>
@@ -119,14 +119,14 @@ export const RecordPaymentModal: React.FC = () => {
         </div>
 
         {selectedInvoice && (
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-            <div className="flex justify-between text-slate-600">
+          <div className="p-3 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] space-y-1">
+            <div className="flex justify-between text-[var(--md-sys-color-on-surface-variant)]">
               <span>Customer:</span>
-              <span className="font-semibold text-slate-900">{selectedInvoice.customerName}</span>
+              <span className="font-semibold text-[var(--md-sys-color-on-surface)]">{selectedInvoice.customerName}</span>
             </div>
-            <div className="flex justify-between text-slate-600">
+            <div className="flex justify-between text-[var(--md-sys-color-on-surface-variant)]">
               <span>Invoice Total:</span>
-              <span className="mono-num text-slate-900">{formatMVR(selectedInvoice.totalAmount)}</span>
+              <span className="mono-num text-[var(--md-sys-color-on-surface)]">{formatMVR(selectedInvoice.totalAmount)}</span>
             </div>
             <div className="flex justify-between text-rose-600 font-bold">
               <span>Current Outstanding Balance:</span>
@@ -138,7 +138,7 @@ export const RecordPaymentModal: React.FC = () => {
         {/* Amount Paid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Amount (MVR) *</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Payment Amount (MVR) *</label>
             <input
               type="number"
               required
@@ -146,16 +146,16 @@ export const RecordPaymentModal: React.FC = () => {
               max={selectedInvoice?.balanceDue || undefined}
               value={amount}
               onChange={(e) => setAmount(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-emerald-600 font-mono focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs font-bold text-emerald-600 font-mono focus:outline-none focus:border-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Method</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Payment Method</label>
             <select
               value={method}
               onChange={(e) => setMethod(e.target.value as PaymentMethod)}
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             >
               <option value="BML Bank Transfer">Bank of Maldives (BML Transfer)</option>
               <option value="MIB Transfer">Maldives Islamic Bank (MIB)</option>
@@ -169,36 +169,36 @@ export const RecordPaymentModal: React.FC = () => {
         {/* Bank & Reference */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Bank Slip / Transaction Reference</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Bank Slip / Transaction Reference</label>
             <input
               type="text"
               required
               value={referenceNumber}
               onChange={(e) => setReferenceNumber(e.target.value)}
               placeholder="e.g. TXN-89218731"
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs font-mono text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Deposited To Account</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Deposited To Account</label>
             <input
               type="text"
               value={bankAccount}
               onChange={(e) => setBankAccount(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">Internal Notes</label>
+          <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Internal Notes</label>
           <input
             type="text"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Verified on BML Mobile banking portal..."
-            className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+            className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
           />
         </div>
       </form>

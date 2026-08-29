@@ -22,6 +22,7 @@ import { SupplierDetailView } from '../components/suppliers/SupplierDetailView';
 import { ReportsView } from '../components/reports/ReportsView';
 import { AuditLogView } from '../components/audit/AuditLogView';
 import { SettingsView } from '../components/settings/SettingsView';
+import { AccountsView } from '../components/accounts/AccountsView';
 
 const AuthGate: React.FC = () => {
   const { session, isLoading } = useAuth();
@@ -72,7 +73,7 @@ export const router = createBrowserRouter([
           { path: 'payments/:id', element: <PaymentDetailView /> },
 
           { path: 'expenses', element: <ExpensesView /> },
-
+          { path: 'accounts', element: <AccountsView /> },
           { path: 'inventory', element: <InventoryView /> },
 
           { path: 'purchasing', element: <PurchasingView /> },

@@ -99,14 +99,14 @@ export const UsersManagementTab: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+            <h2 className="text-base font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)]">
               Users & Staff Authorizations
             </h2>
             <Badge variant="blue" size="sm">
               Google Identity Bound
             </Badge>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-2xl">
+          <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] mt-0.5 max-w-2xl">
             Invite staff members by their verified Google account email. Upon sign-in, membership and assigned operating book/location scopes activate automatically.
           </p>
         </div>
@@ -121,13 +121,13 @@ export const UsersManagementTab: React.FC = () => {
       </div>
 
       {/* Tenant Authority Callout */}
-      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs flex items-start gap-3">
+      <div className="p-4 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)]/60 text-xs flex items-start gap-3">
         <ShieldAlert className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <span className="font-bold text-slate-900 dark:text-slate-100">
+          <span className="font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)]">
             Tenant Authority Boundary
           </span>
-          <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
+          <p className="text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] text-[11px] leading-relaxed">
             Roles assigned here (including <strong>Super Administrator</strong> and <strong>Managing Director</strong>) grant authority strictly within <em>{currentTenant?.name || 'this organization'}</em>. Platform control operations (Starq HQ) require an independent platform operator entitlement.
           </p>
         </div>
@@ -159,7 +159,7 @@ export const UsersManagementTab: React.FC = () => {
             {pendingInvitations.map((inv) => (
               <div
                 key={inv.id}
-                className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-blue-200/70 dark:border-blue-900/60 shadow-xs space-y-3"
+                className="p-4 rounded-xl bg-[var(--md-sys-color-surface-container)] border border-blue-200/70 dark:border-blue-900/60 shadow-xs space-y-3"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3">
@@ -167,16 +167,16 @@ export const UsersManagementTab: React.FC = () => {
                       {inv.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <div className="font-bold text-xs text-slate-900 dark:text-slate-100">
+                      <div className="font-bold text-xs text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)]">
                         {inv.name}
                       </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                        <Mail className="w-3 h-3 text-slate-400" />
+                      <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] flex items-center gap-1.5">
+                        <Mail className="w-3 h-3 text-[var(--md-sys-color-outline)]" />
                         <span className="font-mono">{inv.email}</span>
                       </div>
                       {inv.phone && (
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
-                          <Phone className="w-3 h-3 text-slate-400" />
+                        <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] flex items-center gap-1.5 mt-0.5">
+                          <Phone className="w-3 h-3 text-[var(--md-sys-color-outline)]" />
                           <span className="font-mono">{inv.phone}</span>
                         </div>
                       )}
@@ -188,10 +188,10 @@ export const UsersManagementTab: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 min-w-0">
+                <div className="pt-2 border-t border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+                  <div className="flex items-center gap-1.5 text-xs text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] min-w-0">
                     <span className="text-[11px] whitespace-nowrap">Assigned Role:</span>
-                    <span className="font-semibold text-slate-900 dark:text-slate-200 capitalize">
+                    <span className="font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] capitalize">
                       {roles.find((r) => r.id === inv.role_id)?.name || inv.role_id}
                     </span>
                   </div>
@@ -199,7 +199,7 @@ export const UsersManagementTab: React.FC = () => {
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => resendInvitation(inv.id)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--md-sys-color-surface-container-high)] bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-surface-container-highest)] dark:hover:bg-slate-700 text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] text-xs font-semibold transition-colors cursor-pointer"
                       title="Resend invitation and refresh 7-day expiration"
                     >
                       <RotateCw className="w-3 h-3" />
@@ -222,15 +222,15 @@ export const UsersManagementTab: React.FC = () => {
       )}
 
       {/* ACTIVE TEAM MEMBERS LIST */}
-      <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 flex-wrap gap-2">
+      <div className="p-5 sm:p-6 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] pb-3 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-blue-600" />
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+            <h3 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] uppercase tracking-wider">
               Active Team Members ({activeUsers.length})
             </h3>
           </div>
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-[var(--md-sys-color-outline)]">
             Active memberships with book-level isolation
           </span>
         </div>
@@ -238,7 +238,7 @@ export const UsersManagementTab: React.FC = () => {
         <div className="w-full overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse min-w-[780px]">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400">
+              <tr className="border-b border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)]">
                 <th className="py-2.5 px-3 font-semibold whitespace-nowrap">User & Contact</th>
                 <th className="py-2.5 px-3 font-semibold whitespace-nowrap">Assigned Role</th>
                 <th className="py-2.5 px-3 font-semibold whitespace-nowrap">Job Title</th>
@@ -252,7 +252,7 @@ export const UsersManagementTab: React.FC = () => {
                 return (
                   <tr
                     key={user.id}
-                    className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                    className="hover:bg-[var(--md-sys-color-surface-container-low)]/70 dark:hover:bg-slate-800/40 transition-colors"
                   >
                     <td className="py-3 px-3 whitespace-nowrap">
                       <div className="flex items-center gap-3">
@@ -260,7 +260,7 @@ export const UsersManagementTab: React.FC = () => {
                           {user.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                          <div className="font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] flex items-center gap-1.5">
                             <span>{user.name}</span>
                             {isCurrent && (
                               <span className="px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-[10px] font-bold">
@@ -268,7 +268,7 @@ export const UsersManagementTab: React.FC = () => {
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] text-slate-400 flex items-center gap-2">
+                          <div className="text-[11px] text-[var(--md-sys-color-outline)] flex items-center gap-2">
                             <span className="font-mono">{user.email}</span>
                             {user.phone && (
                               <>
@@ -285,7 +285,7 @@ export const UsersManagementTab: React.FC = () => {
                       <select
                         value={user.roleId}
                         onChange={(e) => updateUserRole(user.id, e.target.value)}
-                        className="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-blue-500"
+                        className="px-2.5 py-1 rounded-lg bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-xs font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] focus:outline-hidden focus:border-blue-500"
                       >
                         {roles.map((r) => (
                           <option key={r.id} value={r.id}>
@@ -295,11 +295,11 @@ export const UsersManagementTab: React.FC = () => {
                       </select>
                     </td>
 
-                    <td className="py-3 px-3 text-slate-600 dark:text-slate-400 text-xs whitespace-nowrap">
+                    <td className="py-3 px-3 text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] text-xs whitespace-nowrap">
                       {user.jobTitle || 'Team Member'}
                     </td>
 
-                    <td className="py-3 px-3 text-slate-500 dark:text-slate-400 text-[11px] whitespace-nowrap">
+                    <td className="py-3 px-3 text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] text-[11px] whitespace-nowrap">
                       {user.lastActiveAt || 'Active Session'}
                     </td>
 
@@ -308,7 +308,7 @@ export const UsersManagementTab: React.FC = () => {
                         {Boolean(import.meta.env.DEV) && (
                           <button
                             onClick={() => switchCurrentUser(user.id)}
-                            className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-[11px] transition-colors whitespace-nowrap cursor-pointer"
+                            className="px-2.5 py-1 rounded-lg bg-[var(--md-sys-color-surface-container-high)] bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-surface-container-highest)] dark:hover:bg-slate-700 text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] font-semibold text-[11px] transition-colors whitespace-nowrap cursor-pointer"
                             title="[DEV ONLY] Switch active user session to test role UI gating"
                           >
                             Simulate User
@@ -335,8 +335,8 @@ export const UsersManagementTab: React.FC = () => {
 
       {/* SUSPENDED USERS */}
       {suspendedUsers.length > 0 && (
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+        <div className="p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] shadow-xs space-y-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] uppercase tracking-wider">
             <XCircle className="w-4 h-4 text-rose-500" />
             <span>Suspended / Withdrawn Access ({suspendedUsers.length})</span>
           </div>
@@ -348,10 +348,10 @@ export const UsersManagementTab: React.FC = () => {
                 className="py-3 flex items-center justify-between text-xs"
               >
                 <div>
-                  <span className="font-bold text-slate-700 dark:text-slate-300">
+                  <span className="font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)]">
                     {user.name}
                   </span>
-                  <span className="text-slate-400 ml-2">({user.email})</span>
+                  <span className="text-[var(--md-sys-color-outline)] ml-2">({user.email})</span>
                   <span className="text-rose-500 text-[10px] ml-2 font-semibold">
                     Access Withdrawn
                   </span>
@@ -359,7 +359,7 @@ export const UsersManagementTab: React.FC = () => {
 
                 <button
                   onClick={() => authorizeUser(user.id, user.roleId)}
-                  className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 font-semibold text-[11px] cursor-pointer"
+                  className="px-3 py-1 rounded-lg bg-[var(--md-sys-color-surface-container-high)] bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-highest)] font-semibold text-[11px] cursor-pointer"
                 >
                   Restore Access
                 </button>
@@ -372,17 +372,17 @@ export const UsersManagementTab: React.FC = () => {
       {/* Invite Modal */}
       {isInviteOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-          <div className="w-full max-w-md p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div className="w-full max-w-md p-6 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] pb-3">
               <div className="flex items-center gap-2">
                 <UserPlus className="w-4 h-4 text-blue-600" />
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                <h3 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)]">
                   Invite Staff Member
                 </h3>
               </div>
               <button
                 onClick={() => setIsInviteOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                className="text-[var(--md-sys-color-outline)] hover:text-[var(--md-sys-color-on-surface-variant)] dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -393,10 +393,10 @@ export const UsersManagementTab: React.FC = () => {
                 <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 mx-auto flex items-center justify-center">
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
-                <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                <h4 className="font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] text-sm">
                   Staff Invitation Dispatched!
                 </h4>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
                   A 7-day activation token was generated. Access will bind upon Google sign-in.
                 </p>
               </div>
@@ -409,7 +409,7 @@ export const UsersManagementTab: React.FC = () => {
                 )}
 
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] mb-1">
                     Full Name <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -418,12 +418,12 @@ export const UsersManagementTab: React.FC = () => {
                     value={inviteName}
                     onChange={(e) => setInviteName(e.target.value)}
                     placeholder="e.g. Mariyam Nazim"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] mb-1">
                     Verified Google Identity Email <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -432,13 +432,13 @@ export const UsersManagementTab: React.FC = () => {
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     placeholder="e.g. nazim@starqtech.com or nazim@gmail.com"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
+                    className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500 font-mono"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] mb-1">
                       Maldives Mobile
                     </label>
                     <input
@@ -446,18 +446,18 @@ export const UsersManagementTab: React.FC = () => {
                       value={invitePhone}
                       onChange={(e) => setInvitePhone(e.target.value)}
                       placeholder="+960 778-0000"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500 font-mono"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] mb-1">
                       Operational Role
                     </label>
                     <select
                       value={inviteRole}
                       onChange={(e) => setInviteRole(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
                     >
                       {roles.map((r) => (
                         <option key={r.id} value={r.id}>
@@ -469,7 +469,7 @@ export const UsersManagementTab: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] mb-1">
                     Job Title / Organizational Position
                   </label>
                   <input
@@ -477,19 +477,19 @@ export const UsersManagementTab: React.FC = () => {
                     value={inviteTitle}
                     onChange={(e) => setInviteTitle(e.target.value)}
                     placeholder="e.g. Operations Coordinator / Finance Officer"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
                 {/* Operating Books Scope */}
                 {books && books.length > 1 && (
                   <div className="space-y-1.5">
-                    <label className="block font-semibold text-slate-700 dark:text-slate-300">
+                    <label className="block font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)]">
                       Operating Book Scopes
                     </label>
-                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1.5">
+                    <div className="p-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] space-y-1.5">
                       {books.map((b) => (
-                        <label key={b.id} className="flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300">
+                        <label key={b.id} className="flex items-center gap-2 cursor-pointer text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)]">
                           <input
                             type="checkbox"
                             checked={selectedBooks.includes(b.id)}
@@ -500,9 +500,9 @@ export const UsersManagementTab: React.FC = () => {
                                 setSelectedBooks(selectedBooks.filter((id) => id !== b.id));
                               }
                             }}
-                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            className="rounded border-[var(--md-sys-color-outline-variant)] text-blue-600 focus:ring-blue-500"
                           />
-                          <BookOpen className="w-3.5 h-3.5 text-slate-400" />
+                          <BookOpen className="w-3.5 h-3.5 text-[var(--md-sys-color-outline)]" />
                           <span className="font-semibold">[{b.code}] {b.name}</span>
                         </label>
                       ))}
@@ -514,7 +514,7 @@ export const UsersManagementTab: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsInviteOpen(false)}
-                    className="px-3.5 py-2 rounded-xl text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl text-xs text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] hover:bg-[var(--md-sys-color-surface-container-high)] dark:hover:bg-slate-800 cursor-pointer"
                   >
                     Cancel
                   </button>

@@ -7,6 +7,8 @@
 -- 3. Stored procedure public.accept_staff_invitation to atomically activate membership.
 -- -----------------------------------------------------------------------------
 
+begin;
+
 CREATE TABLE IF NOT EXISTS public.invitations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organisation_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
@@ -188,3 +190,5 @@ BEGIN
     );
 END;
 $$;
+
+commit;
