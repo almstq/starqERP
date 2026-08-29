@@ -158,3 +158,46 @@ Payroll no longer debits Workshop Rent and Electricity. 82 test files, 295 tests
 **Do not fix SERP-342 by swapping `0.16` to `0.17`** — adjudication
 `docs/adjudications/2026-08-22_TGST-RATE-16-vs-17.md` explains why that reproduces the same defect
 backwards.
+
+---
+
+## 9. Addendum — wider sweep, 30 Aug
+
+PR #24 **merged** as `e04f7e3`. It carried one more artefact than catalogued in §1:
+`tests/probes/serp349_payment_schema_probe.sql`. The payments lane therefore shipped a schema, a
+bank onboarding pack **and** its own probe.
+
+Swept every git repository on `D:` — 25 of them. Findings that matter:
+
+### `starqERP-public` — safe, but 19 commits stale
+
+Last synced `6584e9d`; private `main` is **19 commits ahead**. Nothing from today is mirrored: the
+CoA specification, SERP-340, the SERP-300 evidence, the payments schema.
+
+**No leak risk.** `scripts/sync-public.mjs` is **allowlist-based and fails closed** — its own header
+records that on 29 Aug a naive mirror would have published an ISO 27001 readiness gap audit, "a map
+of where our controls are weakest." Confirmed on disk: `docs/qa/`, the handoff and this convergence
+file are all absent from the public tree. The design is right.
+
+The only exposure is reputational: the public repo advertises a v0.2.0-beta capability set that is
+now 19 commits behind what exists. **Whether to re-sync is a founder call**, not a defect.
+
+### In-flight work in other repositories
+
+| Repo | Uncommitted | Assessment |
+|---|---|---|
+| `BuzzLab` | 17 | **Stale, not active** — newest artefacts are 17–19 Aug. Includes two ELDER rulings, a RIVET document inventory, an Ignition Ink touchpoint map and a Starq roster authority matrix. Real analysis sitting untracked for eleven days |
+| `projects/antrac-erp` | 12 | The founder's personal app. WLI fleet registers, cost lists and a Thilafushi photo audit dating to April. Untracked, on branch `codex/antrac-mvp-access-reports` |
+| `projects/wc2026-nexus` | 4 | Live-state JSON, the WC2026 view, CSS, and an untracked `wc2026-watchdog.mjs` |
+| `03_PROJECTS/hoadha` | 2 | A resumption-trigger proposal from 17 Aug |
+| `AgentRuntimes/Hermes/hermes-agent` | 3 | Includes an untracked file literally named `nul` — a botched `> nul` redirect on Windows. Harmless, but delete-safe only by a human under the never-delete rule |
+
+**None of it is mine and I have touched none of it.** The BuzzLab and antrac-erp material is the
+largest exposure — genuine written analysis that has never been committed, in the same class as the
+1,617 payments lines that nearly went today.
+
+### What this changes
+
+Nothing urgent in the ERP lane. The value of the sweep is knowing that **untracked work is a
+pattern here, not an incident.** Five repositories are carrying uncommitted analysis right now.
+The payments rescue was luck plus a timely finding; the rest is still exposed.
