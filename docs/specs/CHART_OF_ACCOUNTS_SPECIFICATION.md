@@ -1,6 +1,6 @@
 # STARQ ERP — Chart of Accounts Specification
 
-**Version:** 1.0 · **Effective:** 29 August 2026 · **Status:** Approved by the founder, 29 Aug 2026
+**Version:** 1.1 · **Effective:** 30 August 2026 · **Status:** Approved by the founder
 **Owner:** Starq Technologies Pvt Ltd (Reg. C29552026)
 **Prepared for:** external accountants, auditors, and implementation engineers
 **Basis:** IFRS for SMEs Accounting Standard, Third Edition (2025)
@@ -96,6 +96,8 @@ subledger is the detail; the control account is its total, and only the subledge
 | `1310` | Merchandise & Spare Parts Inventory | **C** | MVR | Moving weighted average. **Dr** on goods received, **Cr** on issue to job or sale. Inventory engine only |
 | `1320` | Goods in Transit (Sea Freight & Clearing) | P | MVR | Imports shipped but not received. Cleared to `1310` on arrival |
 | `1330` | Work-in-Progress | **C** | MVR | Jobs and production started, not complete. Absorbs `5240` labour and `5230` overhead; relieved to `5110` on completion |
+| `1400` | Statutory Tax Receivables | H | — | Amounts recoverable from MIRA |
+| `1410` | Input GST Recoverable (MIRA) | **C** | MVR | GST incurred on qualifying purchases, claimable as input tax. **Dr** on a qualifying supplier invoice, **Cr** on settlement against output GST. Reported **gross** on GST-201 — see §6 |
 | `1500` | Fixed Assets (Property, Plant & Equipment) | H | — | |
 | `1510` | Workshop Machinery & Diagnostic Equipment | P | MVR | Capitalised at cost |
 | `1590` | Accumulated Depreciation — Fixed Assets ※ | **S** | MVR | **Credit balance.** Written only by the depreciation run, contra to `1510` |
@@ -111,6 +113,9 @@ subledger is the detail; the control account is its total, and only the subledge
 | `2121` | MIRA Output GST Payable | **C** | MVR | GST charged on sales. **Cr** on invoice, **Dr** on filing payment and on credit-note reversal. **Rate is never in the account** — see §6 |
 | `2122` | MIRA Tourism GST Payable (TGST) | **C** | MVR | Tourism-sector supplies. Same treatment as `2121` |
 | `2123` | MIRA Green Tax Payable | **C** | MVR | Per-guest-night environmental levy where applicable |
+| `2124` | MIRA Employee Withholding Tax (EWT) Payable | **C** | MVR | Withheld from remuneration, owed to MIRA. Payroll-generated only. **No rate in the account** |
+| `2125` | MIRA Non-resident Withholding Tax (NWT) Payable | **C** | MVR | On specified payments to non-residents. Rate varies by payment category, so none is encoded here |
+| `2126` | MIRA Income Tax Payable | **C** | MVR | Current income tax liability. Written by the tax provision, never by hand |
 | `2130` | MPAO / MRPS Pension Contributions Payable | **C** | MVR | **Cr** with employee deduction *and* employer contribution, **Dr** on remittance to MPAO. **This is not a tax** — see §7 |
 | `2140` | Net Salaries & Wages Payable | **C** | MVR | **Cr** with net pay on payroll run, **Dr** on disbursement |
 | `2150` | Customer Advances & Deposits | **C** | MVR | Money received before delivery. A liability until earned, never revenue |
@@ -161,8 +166,9 @@ to a misstated result.
 | `6310` | Bank & Merchant Gateway Fees | P | MVR | Acquiring discount and transfer fees. Provider (BML/Favara/MIB) is a dimension |
 | `6410` | Realized Foreign Exchange Loss | **S** | MVR | Settlement-date loss. Counterpart to `4310` |
 | `6910` | Depreciation Expense | **S** | MVR | Period charge, contra-credited to `1590` |
+| `6920` | Current Income Tax Expense | **S** | MVR | Period income tax charge. Counterpart to `2126`; the computation lives outside the chart |
 
-**49 accounts.** The chart is deliberately small. Provider, customer, supplier, employee, branch and
+**55 accounts.** The chart is deliberately small. Provider, customer, supplier, employee, branch and
 payment-rail detail lives in **dimensions and subledgers**, never in account names — which is why
 there is one `6310`, not one account per bank.
 
@@ -280,8 +286,8 @@ GST is charged **only** where the entity is registered for that tax type on the 
 Registration status is itself effective-dated. An unregistered entity charges nothing — it does not
 charge 0%, it charges nothing, and no GST account moves.
 
-**Output GST** (`2121`, `2122`) is collected on sales and owed to MIRA. **Input GST** is incurred on
-qualifying purchases and recoverable. Both are reported gross on the GST-201 return and settled net;
+**Output GST** (`2121`, `2122`) is collected on sales and owed to MIRA. **Input GST** (`1410`) is
+incurred on qualifying purchases and recoverable — it is an **asset**, not a negative liability. Both are reported gross on the GST-201 return and settled net;
 they are **not** netted into a single opaque account, because a net-only figure cannot be traced back
 to the transactions that produced it.
 
@@ -294,8 +300,12 @@ The Maldives Retirement Pension Scheme requires **7% from the employee and 7% fr
 
 Classifying pension under a tax subtype is a reporting error with consequences: it inflates the
 apparent tax liability, it puts a pension balance into GST reconciliation, and it makes the MIRA
-position on the balance sheet wrong. `2130` reports under payroll/statutory liabilities, never under
-`2120` MIRA Tax & Statutory Payables.
+position on the balance sheet wrong. `2130` carries the subtype `PENSION_PAYABLE` and reports under payroll/statutory
+liabilities, never under `2120` MIRA Tax & Statutory Payables.
+
+**Withholding tax is different and does belong to MIRA.** `2124` EWT and `2125` NWT sit under `2120`
+with the subtype `WITHHOLDING_TAX_PAYABLE`, so they are visible as MIRA obligations without being
+confused with GST. No rate is encoded in either name, because NWT rates vary by payment category.
 
 ---
 
@@ -353,6 +363,7 @@ This chart is a controlled document.
 
 | Ver | Date | Change |
 |---|---|---|
+| 1.1 | 30 Aug 2026 | SERP-341. Six statutory accounts added — `1400`/`1410` input GST recoverable, `2124` EWT, `2125` NWT, `2126` income tax payable, `6920` income tax expense. `2130` moved off the tax subtype onto `PENSION_PAYABLE`. `RENT_AND_UTILITIES` split into `RENT_AND_LEASE` and `UTILITIES`. Provider names removed from `6220` and `6310` — STELCO, FENAKA, BML and Favara are dimensions, not accounts. 49 → 55 |
 | 1.0 | 29 Aug 2026 | First issue. Establishes 49 accounts, posting-control classes, journal templates, effective-dated tax treatment, and separates MPAO from MIRA. Supersedes the undocumented 39-account seed, of which only five accounts matched what the posting engines used. |
 
 ---
