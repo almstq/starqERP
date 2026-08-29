@@ -39,8 +39,8 @@ describe('SERP-002: Dual-Tenant Organisation, Outlet & Module Spine', () => {
     const ignition = INITIAL_TENANTS.find((t) => t.id === 'tenant-ignition');
 
     expect(starq).toBeDefined();
-    expect(starq?.name).toBe('Starq Technologies');
-    expect(starq?.legalName).toBe('Starq Technologies LLP');
+    expect(starq?.name).toBe('Starq Technologies Pvt Ltd');
+    expect(starq?.legalName).toBe('Starq Technologies Private Limited');
     expect(starq?.industry).toBe('Software & Engineering Services');
 
     expect(ignition).toBeDefined();
@@ -76,7 +76,7 @@ describe('SERP-002: Dual-Tenant Organisation, Outlet & Module Spine', () => {
     });
 
     expect(screen.getByTestId('current-tenant-id').textContent).toBe('tenant-starq');
-    expect(screen.getByTestId('current-tenant-name').textContent).toBe('Starq Technologies');
+    expect(screen.getByTestId('current-tenant-name').textContent).toBe('Starq Technologies Pvt Ltd');
     expect(screen.getByTestId('current-tenant-outlets-count').textContent).toBe('2');
 
     // Switch to Club Ignition

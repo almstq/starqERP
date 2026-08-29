@@ -132,7 +132,7 @@ export const CreateInvoiceModal: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsCreateInvoiceOpen(false)}
-            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200"
+            className="px-4 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface)] text-xs font-semibold border border-[var(--md-sys-color-outline-variant)]"
           >
             Cancel
           </button>
@@ -150,12 +150,12 @@ export const CreateInvoiceModal: React.FC = () => {
         {/* Customer & Job Linkage */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
           <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Customer / Fleet *</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Customer / Fleet *</label>
             <select
               required
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             >
               {customers.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -166,11 +166,11 @@ export const CreateInvoiceModal: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Link Work Order (Optional)</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Link Work Order (Optional)</label>
             <select
               value={linkedJobId}
               onChange={(e) => setLinkedJobId(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             >
               <option value="">-- Standalone Invoice --</option>
               {jobs.map((j) => (
@@ -185,22 +185,22 @@ export const CreateInvoiceModal: React.FC = () => {
         {/* Due Date */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Due Date</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Payment Due Date</label>
             <input
               type="date"
               required
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Terms</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Payment Terms</label>
             <input
               type="text"
               readOnly
               value="Net 14 Days / BML Bank Transfer"
-              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500 focus:outline-none"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface-variant)] focus:outline-none"
             />
           </div>
         </div>
@@ -208,7 +208,7 @@ export const CreateInvoiceModal: React.FC = () => {
         {/* Line Items */}
         <div className="space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider">
+            <span className="font-bold text-[var(--md-sys-color-on-surface)] uppercase text-[10px] tracking-wider">
               Invoice Line Items & Services
             </span>
             <button
@@ -225,7 +225,7 @@ export const CreateInvoiceModal: React.FC = () => {
             {items.map((item, idx) => (
               <div
                 key={idx}
-                className="p-3 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-12 gap-2 items-center"
+                className="p-3 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] grid grid-cols-12 gap-2 items-center"
               >
                 <div className="col-span-12 sm:col-span-5">
                   <input
@@ -234,7 +234,7 @@ export const CreateInvoiceModal: React.FC = () => {
                     placeholder="Description of service / parts"
                     value={item.description}
                     onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
                   />
                 </div>
                 <div className="col-span-4 sm:col-span-2">
@@ -245,7 +245,7 @@ export const CreateInvoiceModal: React.FC = () => {
                     placeholder="Qty"
                     value={item.quantity}
                     onChange={(e) => handleItemChange(idx, 'quantity', Number(e.target.value))}
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 font-mono focus:outline-none focus:border-blue-500 text-center"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] font-mono focus:outline-none focus:border-blue-500 text-center"
                   />
                 </div>
                 <div className="col-span-4 sm:col-span-2">
@@ -256,17 +256,17 @@ export const CreateInvoiceModal: React.FC = () => {
                     placeholder="Unit Price"
                     value={item.unitPrice}
                     onChange={(e) => handleItemChange(idx, 'unitPrice', Number(e.target.value))}
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 font-mono focus:outline-none focus:border-blue-500 text-right"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] font-mono focus:outline-none focus:border-blue-500 text-right"
                   />
                 </div>
-                <div className="col-span-3 sm:col-span-2 text-right font-bold text-slate-900 mono-num">
+                <div className="col-span-3 sm:col-span-2 text-right font-bold text-[var(--md-sys-color-on-surface)] mono-num">
                   {formatMVR(item.amount)}
                 </div>
                 <div className="col-span-1 text-center">
                   <button
                     type="button"
                     onClick={() => handleRemoveItem(idx)}
-                    className="p-1 rounded text-slate-400 hover:text-rose-600 transition-colors"
+                    className="p-1 rounded text-[var(--md-sys-color-outline)] hover:text-rose-600 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -277,16 +277,16 @@ export const CreateInvoiceModal: React.FC = () => {
         </div>
 
         {/* Totals Breakdown */}
-        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-          <div className="flex justify-between text-slate-600">
+        <div className="p-4 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] space-y-2">
+          <div className="flex justify-between text-[var(--md-sys-color-on-surface-variant)]">
             <span>Subtotal:</span>
-            <span className="font-mono text-slate-900 font-semibold">{formatMVR(subtotal)}</span>
+            <span className="font-mono text-[var(--md-sys-color-on-surface)] font-semibold">{formatMVR(subtotal)}</span>
           </div>
-          <div className="flex justify-between text-slate-600">
+          <div className="flex justify-between text-[var(--md-sys-color-on-surface-variant)]">
             <span>Maldives GST (8%):</span>
-            <span className="font-mono text-slate-900 font-semibold">{formatMVR(gstAmount)}</span>
+            <span className="font-mono text-[var(--md-sys-color-on-surface)] font-semibold">{formatMVR(gstAmount)}</span>
           </div>
-          <div className="flex justify-between text-base font-extrabold text-slate-900 border-t border-slate-200 pt-2">
+          <div className="flex justify-between text-base font-extrabold text-[var(--md-sys-color-on-surface)] border-t border-[var(--md-sys-color-outline-variant)] pt-2">
             <span>Total Payable (MVR):</span>
             <span className="mono-num text-emerald-600">{formatMVR(totalAmount)}</span>
           </div>
@@ -294,12 +294,12 @@ export const CreateInvoiceModal: React.FC = () => {
 
         {/* Notes */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice Remarks & Notes</label>
+          <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Invoice Remarks & Notes</label>
           <input
             type="text"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+            className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
           />
         </div>
       </form>

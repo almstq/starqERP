@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { useRipple } from './Ripple';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'filled' | 'tonal' | 'outlined' | 'text' | 'elevated' | 'danger' | 'primary' | 'secondary' | 'ghost';
+  variant?: 'filled' | 'tonal' | 'outlined' | 'text' | 'elevated' | 'destructive' | 'primary' | 'secondary' | 'ghost';
   size?: 'xs' | 'sm' | 'md' | 'lg';
   loading?: boolean;
   icon?: React.ReactNode;
@@ -72,7 +72,7 @@ export const Button: React.FC<ButtonProps> = ({
           border: '1px solid transparent',
           fontWeight: 500,
         };
-      case 'danger':
+      case 'destructive':
         return {
           backgroundColor: 'var(--md-sys-color-error)',
           color: 'var(--md-sys-color-on-error)',

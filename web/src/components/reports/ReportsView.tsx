@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BarChart3,
   TrendingUp,
@@ -14,7 +15,14 @@ import {
   Printer,
   CheckCircle2,
   Scale,
-  BookOpen
+  BookOpen,
+  Building2,
+  FileText,
+  ExternalLink,
+  ChevronRight,
+  Clock,
+  Search,
+  Palmtree
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -24,493 +32,680 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  Legend,
-  LineChart,
-  Line,
-  PieChart as RePieChart,
-  Pie,
-  Cell
+  Legend
 } from 'recharts';
 import { useERP } from '../../context/ERPContext';
 import { Badge } from '../common/Badge';
+import { Surface, Button } from '../ui';
 import { MONTHLY_SALES_CHART_DATA, SERVICE_BREAKDOWN_DATA } from '../../data/mockData';
-import { computeTrialBalance, computeProfitAndLoss, computeBalanceSheet } from '../../lib/bookkeeping';
+import { DEFAULT_CHART_OF_ACCOUNTS } from '../../data/defaultChartOfAccounts';
+import { AccountRecord } from '../../domain/accounts';
+import {
+  JournalEntry,
+  deriveOperationalJournals,
+} from '../../domain/journals';
+import {
+  computeTrialBalanceFromLedger,
+  computeAuthoritativeProfitAndLoss,
+  computeAuthoritativeBalanceSheet,
+} from '../../lib/bookkeeping';
+import { DrilldownDrawer, DrilldownAccountDetails } from './DrilldownDrawer';
+import { AgingMatricesView } from './AgingMatricesView';
+import { MiraGst201View } from '../tax/MiraGst201View';
+import { MiraTgstView } from '../tax/MiraTgstView';
+import { CashFlowStatementView } from './CashFlowStatementView';
 
 export const ReportsView: React.FC = () => {
-  const { formatMVR, invoices, payments, expenses, purchaseOrders, jobs, staff, currentTenant } = useERP();
+  const navigate = useNavigate();
+  const { formatMVR, invoices, payments, expenses, purchaseOrders, jobs, staff, currentTenant, currentBook } = useERP();
 
   const [dateRange, setDateRange] = useState('This Year (2026)');
-  const [activeReportTab, setActiveReportTab] = useState<'statements' | 'analytics'>('statements');
+  const [selectedBookFilter, setSelectedBookFilter] = useState<'CONSOLIDATED' | 'CURRENT_BOOK'>('CONSOLIDATED');
+  const [activeReportTab, setActiveReportTab] = useState<'statements' | 'aging' | 'analytics' | 'mira_gst_201' | 'mira_tgst_16' | 'cash_flow'>('statements');
+  const [drilldownAccount, setDrilldownAccount] = useState<DrilldownAccountDetails | null>(null);
 
   const isGstRegistered = currentTenant.gstStatus === 'registered';
 
-  // Compute double-entry financial statements in real-time
-  const trialBalance = useMemo(() => {
-    return computeTrialBalance({
+  // Load Chart of Accounts from storage or fallback
+  const accounts: AccountRecord[] = useMemo(() => {
+    const saved = localStorage.getItem('starq:chart_of_accounts:v1');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return DEFAULT_CHART_OF_ACCOUNTS;
+      }
+    }
+    return DEFAULT_CHART_OF_ACCOUNTS;
+  }, []);
+
+  // Load Manual Journals from storage
+  const manualJournals: JournalEntry[] = useMemo(() => {
+    const saved = localStorage.getItem('starq:manual_journals:v1');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }, []);
+
+  // Compile all posted journals
+  const allJournals = useMemo(() => {
+    const operational = deriveOperationalJournals({
       invoices,
       payments,
       expenses,
       purchaseOrders,
-      isGstRegistered,
+      accounts,
+      isGstRegistered: isGstRegistered || true,
+      tenantId: currentTenant.id,
     });
-  }, [invoices, payments, expenses, purchaseOrders, isGstRegistered]);
+    return [...operational, ...manualJournals];
+  }, [invoices, payments, expenses, purchaseOrders, accounts, isGstRegistered, currentTenant, manualJournals]);
+
+  // Compute authoritative financial statements from live ledger
+  const trialBalance = useMemo(() => {
+    return computeTrialBalanceFromLedger({
+      journals: allJournals,
+      accounts,
+    });
+  }, [allJournals, accounts]);
 
   const profitAndLoss = useMemo(() => {
-    return computeProfitAndLoss({
-      invoices,
-      expenses,
-      purchaseOrders,
-      isGstRegistered,
+    return computeAuthoritativeProfitAndLoss({
+      journals: allJournals,
+      accounts,
     });
-  }, [invoices, expenses, purchaseOrders, isGstRegistered]);
+  }, [allJournals, accounts]);
 
   const balanceSheet = useMemo(() => {
-    return computeBalanceSheet({
-      invoices,
-      payments,
-      expenses,
-      purchaseOrders,
-      isGstRegistered,
+    return computeAuthoritativeBalanceSheet({
+      journals: allJournals,
+      accounts,
     });
-  }, [invoices, payments, expenses, purchaseOrders, isGstRegistered]);
+  }, [allJournals, accounts]);
 
-  const technicianStats = staff.map((st) => {
-    const assignedJobs = jobs.filter((j) => j.assignedStaff.some((s) => s.id === st.id));
-    const completedCount = assignedJobs.filter((j) => j.status === 'Completed' || j.status === 'Invoiced').length;
-    const totalJobValue = assignedJobs.reduce((sum, j) => sum + j.quotedAmount, 0);
-    return {
-      name: st.name,
-      role: st.role,
-      jobsCount: assignedJobs.length,
-      completedCount,
-      totalJobValue
-    };
-  });
+  const companyLegalName = currentTenant.legalName || currentTenant.name || 'Starq Technologies Private Limited';
+  const orgCode = currentBook?.code || (currentTenant.name ? currentTenant.name.slice(0, 3).toUpperCase() : 'STQ');
+  const currencyCode = currentTenant.currency || 'MVR';
+
+  const handleDrilldownAccount = (code: string, name: string, accountClass: string, amount: number) => {
+    setDrilldownAccount({
+      code,
+      name,
+      accountClass,
+      totalAmount: amount,
+    });
+  };
 
   return (
-    <div className="space-y-6 pb-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+    <div className="space-y-6 pb-12 w-full min-w-0" data-testid="reports-view">
+      {/* ─────────────────────────────────────────────────────────────────────
+         FORMAL EXECUTIVE DOCUMENT MASTHEAD (Visible ONLY when printing / PDF export)
+         ───────────────────────────────────────────────────────────────────── */}
+      <div className="hidden print:block mb-6 pb-4 border-b-2 border-slate-900">
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="text-xl font-black uppercase tracking-tight text-slate-900">
+              {companyLegalName}
+            </div>
+            <div className="text-xs font-semibold text-slate-700 tracking-wide mt-0.5">
+              AUTHORITATIVE FINANCIAL STATEMENTS & TRIAL BALANCE REPORT
+            </div>
+            <div className="text-[10px] text-slate-500 font-mono mt-1 space-x-2">
+              <span>ORG: {orgCode}</span>
+              <span>•</span>
+              <span>TIN: {currentTenant.tinNumber || 'NON-REGISTERED'}</span>
+              <span>•</span>
+              <span>CURRENCY: {currencyCode}</span>
+              <span>•</span>
+              <span>PERIOD: {dateRange}</span>
+              <span>•</span>
+              <span>VIEW: {selectedBookFilter === 'CONSOLIDATED' ? 'CONSOLIDATED LEGAL ENTITY' : `BOOK ${currentBook?.name || orgCode}`}</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="inline-block border border-slate-900 px-2.5 py-0.5 text-[10px] font-mono font-bold uppercase rounded">
+              {trialBalance.isBalanced ? '✔ ZERO_VARIANCE_PASS' : '⚠ VARIANCE_DETECTED'}
+            </div>
+            <div className="text-[9px] text-slate-500 font-mono mt-1">
+              GENERATED: {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────────────
+         INTERACTIVE SCREEN HEADER (Hidden in Print Mode)
+         ───────────────────────────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden min-w-0">
+        <div className="space-y-1 min-w-0">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)]">
               Reports & Financial Statements
             </h1>
-            <Badge variant="purple" size="sm">
+            <Badge variant="neutral" size="sm">
               {currentTenant.name}
             </Badge>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Double-entry bookkeeping, balancing trial balance, P&L, and operational analytics
+          <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
+            Standard 2-column Trial Balance, authoritative Balance Sheet, P&L with drilldowns, and AR/AP aging
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          {/* Segmented Tab Switcher */}
+          <div className="flex p-1 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)]">
             <button
               onClick={() => setActiveReportTab('statements')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeReportTab === 'statements'
-                  ? 'bg-white text-blue-600 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] shadow-xs border border-[var(--md-sys-color-primary)]'
+                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
               }`}
             >
               <Scale className="w-3.5 h-3.5" />
               <span>Financial Statements</span>
             </button>
+
+            <button
+              onClick={() => setActiveReportTab('aging')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeReportTab === 'aging'
+                  ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] shadow-xs border border-[var(--md-sys-color-primary)]'
+                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>AR / AP Aging</span>
+            </button>
+
             <button
               onClick={() => setActiveReportTab('analytics')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeReportTab === 'analytics'
-                  ? 'bg-white text-blue-600 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] shadow-xs border border-[var(--md-sys-color-primary)]'
+                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
               }`}
             >
               <BarChart3 className="w-3.5 h-3.5" />
               <span>Operational Analytics</span>
             </button>
+
+            <button
+              data-testid="mira-gst-tab-btn"
+              onClick={() => setActiveReportTab('mira_gst_201')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeReportTab === 'mira_gst_201'
+                  ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] shadow-xs border border-[var(--md-sys-color-primary)]'
+                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>MIRA GST-201</span>
+            </button>
+
+            <button
+              data-testid="mira-tgst-tab-btn"
+              onClick={() => setActiveReportTab('mira_tgst_16')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeReportTab === 'mira_tgst_16'
+                  ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] shadow-xs border border-[var(--md-sys-color-primary)]'
+                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+              }`}
+            >
+              <Palmtree className="w-3.5 h-3.5" />
+              <span>16% TGST & Green Tax</span>
+            </button>
+
+            <button
+              data-testid="cash-flow-tab-btn"
+              onClick={() => setActiveReportTab('cash_flow')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeReportTab === 'cash_flow'
+                  ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] shadow-xs border border-[var(--md-sys-color-primary)]'
+                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>Cash Flow (IFRS)</span>
+            </button>
           </div>
 
+          {/* Operating Book / Entity Selector */}
+          <select
+            value={selectedBookFilter}
+            onChange={(e) => setSelectedBookFilter(e.target.value as any)}
+            className="px-3 py-2 rounded-xl text-xs font-medium border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-[var(--md-sys-color-primary)] shadow-xs cursor-pointer"
+          >
+            <option value="CONSOLIDATED">Consolidated Legal Entity</option>
+            <option value="CURRENT_BOOK">Book: {currentBook?.name || 'Main Operational Book'}</option>
+          </select>
+
+          {/* Date Period Selector */}
           <select
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
-            className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-blue-500 shadow-xs"
+            className="px-3 py-2 rounded-xl text-xs font-medium border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-[var(--md-sys-color-primary)] shadow-xs cursor-pointer"
           >
-            <option value="This Month">Current Month (August 2026)</option>
+            <option value="Today">As of Today (Latest)</option>
+            <option value="This Month">As of End of Month (August 2026)</option>
             <option value="Last Quarter">Q1 2026</option>
             <option value="This Year (2026)">Full Year 2026</option>
           </select>
 
-          <button
+          <Button
+            variant="tonal"
+            size="sm"
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold border border-slate-200 shadow-xs transition-colors"
+            icon={<Printer size={14} />}
           >
-            <Printer className="w-3.5 h-3.5" />
             <span>Export PDF</span>
-          </button>
+          </Button>
         </div>
       </div>
 
       {activeReportTab === 'statements' ? (
         <div className="space-y-6">
-          {/* Trial Balance Health Banner */}
-          <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+          {/* Trial Balance Health Banner (Screen Only) */}
+          <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden ${
             trialBalance.isBalanced
-              ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
-              : 'bg-amber-50/80 border-amber-200 text-amber-900'
+              ? 'bg-[rgba(34,197,94,0.1)] border-[rgba(34,197,94,0.3)] text-[#4ade80]'
+              : 'bg-[rgba(245,158,11,0.1)] border-[rgba(245,158,11,0.3)] text-[#fbbf24]'
           }`}>
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-xl ${trialBalance.isBalanced ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+              <div className={`p-2 rounded-xl ${trialBalance.isBalanced ? 'bg-[rgba(34,197,94,0.2)] text-[#34d399]' : 'bg-[rgba(245,158,11,0.2)] text-[#f59e0b]'}`}>
                 {trialBalance.isBalanced ? <CheckCircle2 className="w-5 h-5" /> : <Scale className="w-5 h-5" />}
               </div>
               <div>
-                <h3 className="text-sm font-bold">
+                <h3 className="text-sm font-bold text-[var(--md-sys-color-on-surface)]">
                   {trialBalance.isBalanced ? 'Trial Balance Verified & In Balance' : 'Trial Balance Variance Detected'}
                 </h3>
-                <p className="text-xs text-slate-600">
-                  Total Debits ({formatMVR(trialBalance.totalDebits)}) = Total Credits ({formatMVR(trialBalance.totalCredits)}) • Variance: {formatMVR(trialBalance.difference)}
+                <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
+                  Total Debits ({formatMVR(trialBalance.totalDebits)}) = Total Credits ({formatMVR(trialBalance.totalCredits)}) • Variance: {formatMVR(trialBalance.variance)}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant={trialBalance.isBalanced ? 'success' : 'warning'} size="sm">
-                {trialBalance.isBalanced ? '0.00 Variance (DEC-043)' : 'Out of Balance'}
+              <Badge variant={trialBalance.isBalanced ? 'positive' : 'warning'} size="sm">
+                {trialBalance.isBalanced ? '0.00 Variance (DEC-043 / SERP-292)' : 'Out of Balance'}
               </Badge>
-              <Badge variant={isGstRegistered ? 'blue' : 'neutral'} size="sm">
-                {isGstRegistered ? `GST Registered (${currentTenant.gstRate}%)` : 'Non-Registered (0% GST)'}
+              <Badge variant={isGstRegistered ? 'info' : 'neutral'} size="sm">
+                {isGstRegistered ? `GST Registered (${currentTenant.gstRate || 8}%)` : 'Non-Registered (0% GST)'}
               </Badge>
             </div>
           </div>
 
-          {/* Trial Balance Table */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                  General Ledger Trial Balance
-                </h2>
-                <p className="text-xs text-slate-500">Double-entry account balances as of 25 August 2026</p>
+          {/* ─────────────────────────────────────────────────────────────────
+             1. STANDARD 2-COLUMN TRIAL BALANCE (Debit = Credit)
+             ───────────────────────────────────────────────────────────────── */}
+          <div className="statement-section" data-testid="trial-balance-section">
+            <Surface variant="filled" level={1} padding="md" className="space-y-4 print:p-0 print:border-none print:bg-transparent">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] uppercase tracking-wider print:text-black print:text-xs">
+                    Standard General Ledger Trial Balance
+                  </h2>
+                  <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] print:text-gray-600 print:text-[10px]">
+                    Authoritative double-entry account balances as of {trialBalance.asOfDate}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-bold text-[var(--md-sys-color-primary)] print:text-black print:text-[10px]">
+                    ISO Currency: {currencyCode}
+                  </span>
+                </div>
               </div>
-              <span className="text-xs font-mono font-bold text-slate-500">ISO Currency: {currentTenant.currency}</span>
-            </div>
 
-            <div className="overflow-x-auto rounded-xl border border-slate-200">
-              <table className="w-full text-left text-xs text-slate-700">
-                <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200">
-                  <tr>
-                    <th className="py-3 px-4 w-24">Code</th>
-                    <th className="py-3 px-4">Account Title</th>
-                    <th className="py-3 px-4 w-28">Type</th>
-                    <th className="py-3 px-4 text-right w-36">Debit (MVR)</th>
-                    <th className="py-3 px-4 text-right w-36">Credit (MVR)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {trialBalance.accounts.map((acc) => (
-                    <tr key={acc.code} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-2.5 px-4 font-mono font-bold text-slate-600">{acc.code}</td>
-                      <td className="py-2.5 px-4 font-semibold text-slate-900">{acc.name}</td>
-                      <td className="py-2.5 px-4">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                          acc.type === 'asset' ? 'bg-blue-50 text-blue-700' :
-                          acc.type === 'liability' ? 'bg-amber-50 text-amber-700' :
-                          acc.type === 'revenue' ? 'bg-emerald-50 text-emerald-700' :
-                          'bg-slate-100 text-slate-700'
-                        }`}>
-                          {acc.type}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-4 text-right font-mono font-medium text-slate-900">
-                        {acc.debit > 0 ? formatMVR(acc.debit) : '—'}
-                      </td>
-                      <td className="py-2.5 px-4 text-right font-mono font-medium text-slate-900">
-                        {acc.credit > 0 ? formatMVR(acc.credit) : '—'}
-                      </td>
+              <div className="erp-scroll-region overflow-x-auto rounded-xl border border-[var(--md-sys-color-outline-variant)] print:border-none">
+                <table className="w-full text-left text-xs min-w-[720px] print:min-w-0 print-doc-table">
+                  <thead className="bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] uppercase text-[10px] font-bold tracking-wider border-b border-[var(--md-sys-color-outline-variant)] whitespace-nowrap">
+                    <tr>
+                      <th className="py-2.5 px-4 w-24">Code</th>
+                      <th className="py-2.5 px-4">Account Title</th>
+                      <th className="py-2.5 px-4 w-28">Class</th>
+                      <th className="py-2.5 px-4 text-right w-40">Debit ({currencyCode})</th>
+                      <th className="py-2.5 px-4 text-right w-40">Credit ({currencyCode})</th>
+                      <th className="py-2.5 px-2 w-10 text-center print:hidden"></th>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-slate-50 font-bold border-t-2 border-slate-300 text-slate-900">
-                  <tr>
-                    <td colSpan={3} className="py-3 px-4 text-right uppercase tracking-wider text-[11px]">
-                      Totals (Debits & Credits)
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono font-extrabold text-blue-700 text-sm">
-                      {formatMVR(trialBalance.totalDebits)}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono font-extrabold text-blue-700 text-sm">
-                      {formatMVR(trialBalance.totalCredits)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--md-sys-color-outline-variant)]">
+                    {trialBalance.accounts.map((acc) => (
+                      <tr
+                        key={acc.code}
+                        onClick={() => navigate('/accounts')}
+                        className="hover:bg-[var(--md-sys-color-surface-container-high)] transition-colors cursor-pointer group"
+                      >
+                        <td className="py-2 px-4 font-mono font-bold text-[var(--md-sys-color-primary)] print:text-black">
+                          {acc.code}
+                        </td>
+                        <td className="py-2 px-4 font-semibold text-[var(--md-sys-color-on-surface)] print:text-black">
+                          {acc.name}
+                        </td>
+                        <td className="py-2 px-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase print:border print:border-gray-400 print:text-black ${
+                            acc.accountClass === 'ASSET' ? 'bg-blue-500/15 text-sky-400 border border-blue-500/30' :
+                            acc.accountClass === 'LIABILITY' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' :
+                            acc.accountClass === 'EQUITY' ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30' :
+                            acc.accountClass === 'REVENUE' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' :
+                            'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                          }`}>
+                            {acc.accountClass}
+                          </span>
+                        </td>
+                        <td className="py-2 px-4 text-right font-mono font-medium text-[var(--md-sys-color-on-surface)] print:text-black">
+                          {acc.debit > 0 ? formatMVR(acc.debit) : '—'}
+                        </td>
+                        <td className="py-2 px-4 text-right font-mono font-medium text-[var(--md-sys-color-on-surface)] print:text-black">
+                          {acc.credit > 0 ? formatMVR(acc.credit) : '—'}
+                        </td>
+                        <td className="py-2 px-2 text-center print:hidden">
+                          <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 text-[var(--md-sys-color-primary)] transition" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-[var(--md-sys-color-surface-container-high)] font-bold border-t-2 border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)]">
+                    <tr>
+                      <td colSpan={3} className="py-2.5 px-4 text-right uppercase tracking-wider text-[11px] print:text-black">
+                        Totals (Σ Debits = Σ Credits)
+                      </td>
+                      <td className="py-2.5 px-4 text-right font-mono font-extrabold text-[var(--md-sys-color-primary)] text-sm print:text-black">
+                        {formatMVR(trialBalance.totalDebits)}
+                      </td>
+                      <td className="py-2.5 px-4 text-right font-mono font-extrabold text-[var(--md-sys-color-primary)] text-sm print:text-black">
+                        {formatMVR(trialBalance.totalCredits)}
+                      </td>
+                      <td className="print:hidden"></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </Surface>
           </div>
 
-          {/* Profit & Loss & Balance Sheet Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Profit & Loss Statement */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200">
-                    <TrendingUp className="w-4 h-4" />
+          {/* ─────────────────────────────────────────────────────────────────
+             2. AUTHORITATIVE BALANCE SHEET & STATEMENT OF PROFIT & LOSS
+             ───────────────────────────────────────────────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start print:grid-cols-2 print:gap-4">
+            
+            {/* Authoritative Balance Sheet */}
+            <div className="statement-section print-avoid-break" data-testid="balance-sheet-section">
+              <Surface variant="filled" level={1} padding="md" className="space-y-4 print:p-0 print:border-none print:bg-transparent">
+                <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-3 print:border-slate-400">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-blue-500/15 text-sky-400 border border-blue-500/30 print:hidden">
+                      <Scale className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] print:text-black print:text-xs uppercase tracking-wider">
+                        Authoritative Balance Sheet
+                      </h2>
+                      <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] print:text-gray-600 print:text-[10px]">
+                        Assets ≡ Liabilities + Equity (As of {balanceSheet.asOfDate})
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-sm font-bold text-slate-900">Statement of Profit & Loss (P&L)</h2>
-                    <p className="text-xs text-slate-500">Period: Year-to-Date 2026</p>
-                  </div>
+                  <Badge variant={balanceSheet.isBalanced ? 'positive' : 'destructive'} size="sm">
+                    {balanceSheet.isBalanced ? 'Balanced (Δ MVR 0.00)' : 'Unbalanced'}
+                  </Badge>
                 </div>
-                <Badge variant={profitAndLoss.netOperatingIncome >= 0 ? 'success' : 'danger'} size="sm">
-                  Margin: {profitAndLoss.operatingMarginPct}%
-                </Badge>
-              </div>
 
-              <div className="space-y-3 text-xs">
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="font-semibold text-slate-700">Gross Operating Revenue</span>
-                  <span className="font-mono font-bold text-slate-900">{formatMVR(profitAndLoss.grossRevenue)}</span>
+                <div className="space-y-3 text-xs">
+                  {/* Current Assets */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between font-bold uppercase text-[10px] tracking-wider text-[var(--md-sys-color-primary)] print:text-black">
+                      <span>{balanceSheet.currentAssets.title}</span>
+                      <span className="font-mono">{formatMVR(balanceSheet.currentAssets.subtotal)}</span>
+                    </div>
+                    {balanceSheet.currentAssets.accounts.map((acc) => (
+                      <div key={acc.code} className="flex justify-between py-0.5 text-[var(--md-sys-color-on-surface-variant)] pl-2 print:text-gray-700">
+                        <span>{acc.code} - {acc.name}</span>
+                        <span className="font-mono font-medium text-[var(--md-sys-color-on-surface)] print:text-black">{formatMVR(acc.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Non-Current Assets */}
+                  {balanceSheet.nonCurrentAssets.accounts.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between font-bold uppercase text-[10px] tracking-wider text-[var(--md-sys-color-primary)] print:text-black">
+                        <span>{balanceSheet.nonCurrentAssets.title}</span>
+                        <span className="font-mono">{formatMVR(balanceSheet.nonCurrentAssets.subtotal)}</span>
+                      </div>
+                      {balanceSheet.nonCurrentAssets.accounts.map((acc) => (
+                        <div key={acc.code} className="flex justify-between py-0.5 text-[var(--md-sys-color-on-surface-variant)] pl-2 print:text-gray-700">
+                          <span>{acc.code} - {acc.name}</span>
+                          <span className="font-mono font-medium text-[var(--md-sys-color-on-surface)] print:text-black">{formatMVR(acc.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Total Assets Summary */}
+                  <div className="flex justify-between py-1.5 bg-blue-500/10 border-t border-b border-blue-500/30 px-2 rounded-lg font-bold text-[var(--md-sys-color-on-surface)] print:bg-gray-100 print:text-black">
+                    <span className="uppercase text-[11px]">Total Assets</span>
+                    <span className="font-mono text-sky-400 print:text-blue-800">{formatMVR(balanceSheet.totalAssets)}</span>
+                  </div>
+
+                  {/* Current Liabilities */}
+                  <div className="space-y-1 pt-1">
+                    <div className="flex justify-between font-bold uppercase text-[10px] tracking-wider text-amber-400 print:text-black">
+                      <span>{balanceSheet.currentLiabilities.title}</span>
+                      <span className="font-mono">{formatMVR(balanceSheet.currentLiabilities.subtotal)}</span>
+                    </div>
+                    {balanceSheet.currentLiabilities.accounts.map((acc) => (
+                      <div key={acc.code} className="flex justify-between py-0.5 text-[var(--md-sys-color-on-surface-variant)] pl-2 print:text-gray-700">
+                        <span>{acc.code} - {acc.name}</span>
+                        <span className="font-mono font-medium text-[var(--md-sys-color-on-surface)] print:text-black">{formatMVR(acc.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Total Liabilities */}
+                  <div className="flex justify-between py-1 bg-[var(--md-sys-color-surface-container-high)] px-2 rounded font-semibold text-[var(--md-sys-color-on-surface)] print:text-black">
+                    <span>Total Liabilities</span>
+                    <span className="font-mono text-amber-400 print:text-amber-800">{formatMVR(balanceSheet.totalLiabilities)}</span>
+                  </div>
+
+                  {/* Equity */}
+                  <div className="space-y-1 pt-1">
+                    <div className="flex justify-between font-bold uppercase text-[10px] tracking-wider text-purple-400 print:text-black">
+                      <span>Partner & Owner Equity</span>
+                      <span className="font-mono">{formatMVR(balanceSheet.equity.totalEquity)}</span>
+                    </div>
+                    {balanceSheet.equity.capitalAccounts.map((acc) => (
+                      <div key={acc.code} className="flex justify-between py-0.5 text-[var(--md-sys-color-on-surface-variant)] pl-2 print:text-gray-700">
+                        <span>{acc.code} - {acc.name}</span>
+                        <span className="font-mono font-medium text-[var(--md-sys-color-on-surface)] print:text-black">{formatMVR(acc.amount)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between py-0.5 text-emerald-400 font-semibold pl-2 print:text-emerald-700">
+                      <span>Current Period Net Income (Reconciled from P&L)</span>
+                      <span className="font-mono font-bold">{formatMVR(balanceSheet.equity.currentPeriodNetIncome)}</span>
+                    </div>
+                  </div>
+
+                  {/* Total Liabilities & Equity (Double Underline Standard) */}
+                  <div className="flex justify-between py-2 bg-[var(--md-sys-color-surface-container-high)] border-t-2 border-b-4 border-double border-[var(--md-sys-color-primary)] px-3 rounded-xl font-extrabold text-sm text-[var(--md-sys-color-on-surface)] print:bg-gray-100 print:border-black print:text-black">
+                    <span>Total Liabilities & Equity</span>
+                    <span className="font-mono text-[var(--md-sys-color-primary)] print:text-black">{formatMVR(balanceSheet.totalLiabilitiesAndEquity)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100 text-slate-600">
-                  <span>Less: Cost of Goods Sold (Parts & Direct Costs)</span>
-                  <span className="font-mono font-medium text-rose-600">({formatMVR(profitAndLoss.costOfSales)})</span>
-                </div>
-                <div className="flex justify-between py-1.5 bg-slate-50 px-2 rounded-lg font-bold text-slate-900">
-                  <span>Gross Operating Profit</span>
-                  <span className="font-mono text-emerald-600">{formatMVR(profitAndLoss.grossProfit)}</span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100 text-slate-600">
-                  <span>Less: Operating & Administrative Expenses</span>
-                  <span className="font-mono font-medium text-rose-600">({formatMVR(profitAndLoss.operatingExpenses)})</span>
-                </div>
-                <div className="flex justify-between py-2 bg-emerald-50/70 border border-emerald-200 px-3 rounded-xl font-extrabold text-sm text-emerald-900">
-                  <span>Net Operating Income</span>
-                  <span className="font-mono">{formatMVR(profitAndLoss.netOperatingIncome)}</span>
-                </div>
-              </div>
+              </Surface>
             </div>
 
-            {/* Balance Sheet Summary */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-blue-50 text-blue-600 border border-blue-200">
-                    <Scale className="w-4 h-4" />
+            {/* Statement of Profit & Loss with Drilldown Trigger */}
+            <div className="statement-section print-avoid-break" data-testid="profit-and-loss-section">
+              <Surface variant="filled" level={1} padding="md" className="space-y-4 print:p-0 print:border-none print:bg-transparent">
+                <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-3 print:border-slate-400">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 print:hidden">
+                      <TrendingUp className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] print:text-black print:text-xs uppercase tracking-wider">
+                        Statement of Profit & Loss (P&L)
+                      </h2>
+                      <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] print:text-gray-600 print:text-[10px]">
+                        Period: {dateRange} (Click line item to inspect contributing journal lines)
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-sm font-bold text-slate-900">Balance Sheet Summary</h2>
-                    <p className="text-xs text-slate-500">Assets = Liabilities + Equity</p>
-                  </div>
-                </div>
-                <Badge variant={balanceSheet.isBalanced ? 'success' : 'danger'} size="sm">
-                  {balanceSheet.isBalanced ? 'Balanced' : 'Unbalanced'}
-                </Badge>
-              </div>
-
-              <div className="space-y-3 text-xs">
-                <div className="space-y-1.5">
-                  <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider text-blue-700">Current Assets</span>
-                  <div className="flex justify-between py-1 text-slate-600 pl-2">
-                    <span>Cash & Bank Balances</span>
-                    <span className="font-mono font-medium text-slate-900">{formatMVR(balanceSheet.currentAssets.cashAndBank)}</span>
-                  </div>
-                  <div className="flex justify-between py-1 text-slate-600 pl-2">
-                    <span>Accounts Receivable (Trade Debtors)</span>
-                    <span className="font-mono font-medium text-slate-900">{formatMVR(balanceSheet.currentAssets.accountsReceivable)}</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 bg-blue-50/50 px-2 rounded font-bold text-blue-900">
-                    <span>Total Assets</span>
-                    <span className="font-mono">{formatMVR(balanceSheet.totalAssets)}</span>
-                  </div>
+                  <Badge variant={profitAndLoss.netOperatingIncome >= 0 ? 'positive' : 'destructive'} size="sm">
+                    Margin: {profitAndLoss.operatingMarginPct}%
+                  </Badge>
                 </div>
 
-                <div className="space-y-1.5 pt-2 border-t border-slate-100">
-                  <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider text-amber-700">Current Liabilities & Equity</span>
-                  <div className="flex justify-between py-1 text-slate-600 pl-2">
-                    <span>Accounts Payable (Trade Creditors)</span>
-                    <span className="font-mono font-medium text-slate-900">{formatMVR(balanceSheet.currentLiabilities.accountsPayable)}</span>
+                <div className="space-y-2.5 text-xs">
+                  {/* Operating Revenue Item */}
+                  <div
+                    onClick={() => handleDrilldownAccount('4000', 'Operating & Service Revenue', 'REVENUE', profitAndLoss.totalRevenue)}
+                    className="flex justify-between py-1.5 border-b border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] px-1 rounded cursor-pointer group transition print:border-gray-200"
+                    data-testid="pnl-line-revenue"
+                  >
+                    <span className="font-semibold text-[var(--md-sys-color-on-surface)] flex items-center gap-1 print:text-black">
+                      <span>Operating Revenue</span>
+                      <Search size={11} className="opacity-0 group-hover:opacity-100 text-[var(--md-sys-color-primary)] transition" />
+                    </span>
+                    <span className="font-mono font-bold text-[var(--md-sys-color-on-surface)] print:text-black">{formatMVR(profitAndLoss.totalRevenue)}</span>
                   </div>
-                  <div className="flex justify-between py-1 text-slate-600 pl-2">
-                    <span>GST Output Tax Payable</span>
-                    <span className="font-mono font-medium text-slate-900">{formatMVR(balanceSheet.currentLiabilities.gstPayable)}</span>
+
+                  {/* Cost of Goods Sold Item */}
+                  <div
+                    onClick={() => handleDrilldownAccount('5000', 'Cost of Goods Sold (Parts & Direct Costs)', 'EXPENSE', profitAndLoss.totalCOGS)}
+                    className="flex justify-between py-1.5 border-b border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] px-1 rounded cursor-pointer group transition print:text-gray-700 print:border-gray-200"
+                    data-testid="pnl-line-cogs"
+                  >
+                    <span className="flex items-center gap-1">
+                      <span>Less: Cost of Goods Sold (COGS)</span>
+                      <Search size={11} className="opacity-0 group-hover:opacity-100 text-[var(--md-sys-color-primary)] transition" />
+                    </span>
+                    <span className="font-mono font-medium text-rose-400 print:text-red-700">({formatMVR(profitAndLoss.totalCOGS)})</span>
                   </div>
-                  <div className="flex justify-between py-1 text-slate-600 pl-2">
-                    <span>Current Period Net Earnings</span>
-                    <span className="font-mono font-medium text-slate-900">{formatMVR(balanceSheet.equity.currentPeriodIncome)}</span>
+
+                  {/* Gross Profit */}
+                  <div className="flex justify-between py-1.5 bg-[var(--md-sys-color-surface-container-high)] px-2 rounded-lg font-bold text-[var(--md-sys-color-on-surface)] print:bg-gray-100 print:text-black">
+                    <span>Gross Operating Profit</span>
+                    <span className="font-mono text-emerald-400 print:text-emerald-800">{formatMVR(profitAndLoss.grossProfit)}</span>
                   </div>
-                  <div className="flex justify-between py-1.5 bg-amber-50/50 px-2 rounded font-bold text-amber-900">
-                    <span>Total Liabilities & Equity</span>
-                    <span className="font-mono">{formatMVR(balanceSheet.totalLiabilitiesAndEquity)}</span>
+
+                  {/* Operating Expenses Item */}
+                  <div
+                    onClick={() => handleDrilldownAccount('6000', 'Operating & Administrative Expenses', 'EXPENSE', profitAndLoss.totalOperatingExpenses)}
+                    className="flex justify-between py-1.5 border-b border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] px-1 rounded cursor-pointer group transition print:text-gray-700 print:border-gray-200"
+                    data-testid="pnl-line-opex"
+                  >
+                    <span className="flex items-center gap-1">
+                      <span>Less: Operating & Administrative Expenses</span>
+                      <Search size={11} className="opacity-0 group-hover:opacity-100 text-[var(--md-sys-color-primary)] transition" />
+                    </span>
+                    <span className="font-mono font-medium text-rose-400 print:text-red-700">({formatMVR(profitAndLoss.totalOperatingExpenses)})</span>
+                  </div>
+
+                  {/* Net Operating Income */}
+                  <div className="flex justify-between py-2 bg-emerald-500/15 border-t-2 border-b-4 border-double border-emerald-500/50 px-3 rounded-xl font-extrabold text-sm text-emerald-300 print:bg-gray-100 print:border-black print:text-black">
+                    <span>Net Operating Income</span>
+                    <span className="font-mono">{formatMVR(profitAndLoss.netOperatingIncome)}</span>
                   </div>
                 </div>
-              </div>
+              </Surface>
             </div>
           </div>
         </div>
+      ) : activeReportTab === 'aging' ? (
+        /* AR & AP Aging Matrices Tab */
+        <AgingMatricesView
+          invoices={invoices}
+          payments={payments}
+          purchaseOrders={purchaseOrders}
+          asOfDate={new Date().toISOString().split('T')[0]}
+          formatMVR={formatMVR}
+        />
       ) : (
         /* Operational Analytics Tab */
         <div className="space-y-6">
-          {/* GST return snapshot */}
-          {isGstRegistered ? (
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200">
-                    <ShieldCheck className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-bold text-slate-900">
-                      Maldives Inland Revenue Authority (MIRA) GST Return Snapshot
-                    </h2>
-                    <p className="text-xs text-slate-500">
-                      GST Registration TIN: {currentTenant.tinNumber} • {currentTenant.gstRate}% rate
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs text-slate-500">
-                Return figures are produced by the accounting engine and are reconciled against the statutory tax schedule.
-              </p>
-            </div>
-          ) : (
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                <div className="flex items-start gap-2">
-                  <div className="p-2 rounded-lg bg-slate-100 text-slate-500 border border-slate-200">
-                    <ShieldCheck className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-bold text-slate-900">GST Return</h2>
-                    <p className="text-xs text-slate-500 mt-0.5 max-w-xl">
-                      {currentTenant.name} is not registered for GST, so no return, rate or TIN is
-                      shown. Register with MIRA and record the TIN in Settings to enable this report.
-                    </p>
-                  </div>
-                </div>
-                <Badge variant="neutral" size="sm">
-                  Not GST-registered
-                </Badge>
-              </div>
-            </div>
-          )}
-
-          {/* 2 Big Charts: Revenue vs Expenses Bar Chart + Profit Margins */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-8 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Surface variant="filled" level={1} padding="md" className="space-y-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                    Monthly Financial Overview
-                  </h2>
-                  <p className="text-xs text-slate-500">Revenue, Operating Costs & Net Income</p>
-                </div>
+                <h3 className="text-sm font-bold text-[var(--md-sys-color-on-surface)]">
+                  Monthly Revenue vs Expenses (MVR)
+                </h3>
+                <Badge variant="neutral" size="sm">FY2026</Badge>
               </div>
-
-              <div className="h-72 w-full pt-2">
+              <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={MONTHLY_SALES_CHART_DATA}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.8} />
-                    <XAxis dataKey="month" stroke="#64748b" fontSize={11} />
-                    <YAxis stroke="#64748b" fontSize={11} tickFormatter={(val) => `${val / 1000}k`} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#ffffff',
-                        borderColor: '#e2e8f0',
-                        color: '#0f172a',
-                        borderRadius: '0.75rem',
-                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                        fontSize: '12px'
-                      }}
-                      formatter={(val: number | string | undefined) => [
-                        formatMVR(typeof val === 'number' ? val : Number(val || 0)),
-                        ''
-                      ]}
-                    />
-                    <Legend />
-                    <Bar dataKey="revenue" name="Total Revenue (MVR)" fill="#2563eb" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="expenses" name="Operating Expenses (MVR)" fill="#f87171" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="profit" name="Net Margin (MVR)" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--md-sys-color-outline-variant)" opacity={0.3} />
+                    <XAxis dataKey="month" stroke="var(--md-sys-color-outline)" fontSize={11} />
+                    <YAxis stroke="var(--md-sys-color-outline)" fontSize={11} tickFormatter={(v) => `${v / 1000}k`} />
+                    <Tooltip contentStyle={{ backgroundColor: 'var(--md-sys-color-surface-container)', borderColor: 'var(--md-sys-color-outline-variant)' }} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="sales" name="Sales Revenue" fill="var(--md-sys-color-primary)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="expenses" name="Operating Expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+            </Surface>
 
-            <div className="lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4 flex flex-col justify-between">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                  Service Revenue Share
-                </h2>
-                <p className="text-xs text-slate-500">Contribution to overall garage profit</p>
-
-                <div className="mt-4 space-y-3">
-                  {SERVICE_BREAKDOWN_DATA.map((srv, idx) => (
-                    <div key={idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: srv.color }} />
-                        <span className="font-semibold text-slate-800">{srv.name}</span>
-                      </div>
-                      <span className="font-bold mono-num text-blue-600">{srv.value}%</span>
-                    </div>
-                  ))}
-                </div>
+            <Surface variant="filled" level={1} padding="md" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-[var(--md-sys-color-on-surface)]">
+                  Labor & Service Value Breakdown
+                </h3>
+                <Badge variant="neutral" size="sm">Volume</Badge>
               </div>
-
-              <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-100 text-xs text-slate-700">
-                <span className="font-bold text-blue-700">Insight: </span>
-                <span>Vinyl Wraps & Ceramic coatings carry a 58% gross margin, higher than full body repairs (42%).</span>
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={SERVICE_BREAKDOWN_DATA} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--md-sys-color-outline-variant)" opacity={0.3} />
+                    <XAxis type="number" stroke="var(--md-sys-color-outline)" fontSize={11} />
+                    <YAxis dataKey="category" type="category" stroke="var(--md-sys-color-outline)" fontSize={10} width={90} />
+                    <Tooltip contentStyle={{ backgroundColor: 'var(--md-sys-color-surface-container)', borderColor: 'var(--md-sys-color-outline-variant)' }} />
+                    <Bar dataKey="value" name="Service Value" fill="#38bdf8" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
-            </div>
-          </div>
-
-          {/* Technician & Bay Performance Table */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                  Technician & Specialist Performance
-                </h2>
-                <p className="text-xs text-slate-500">Throughput, job completion rate, and gross work order output</p>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto rounded-xl border border-slate-200">
-              <table className="w-full text-left text-xs text-slate-700">
-                <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200">
-                  <tr>
-                    <th className="py-3 px-4">Technician</th>
-                    <th className="py-3 px-4">Specialization</th>
-                    <th className="py-3 px-4 text-center">Active Jobs Assigned</th>
-                    <th className="py-3 px-4 text-center">Completed Work</th>
-                    <th className="py-3 px-4 text-right">Job Output Value (MVR)</th>
-                    <th className="py-3 px-4 text-center">Quality Score</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {technicianStats.map((tech, i) => (
-                    <tr key={i} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4 font-bold text-slate-900">{tech.name}</td>
-                      <td className="py-3 px-4 text-slate-500">{tech.role}</td>
-                      <td className="py-3 px-4 text-center font-mono font-bold text-blue-600">
-                        {tech.jobsCount}
-                      </td>
-                      <td className="py-3 px-4 text-center font-mono text-emerald-600">
-                        {tech.completedCount}
-                      </td>
-                      <td className="py-3 px-4 text-right font-extrabold text-slate-900 mono-num">
-                        {formatMVR(tech.totalJobValue)}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <Badge variant="neutral" size="sm">
-                          Not tracked
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            </Surface>
           </div>
         </div>
       )}
+
+      {activeReportTab === 'mira_gst_201' && (
+        <MiraGst201View />
+      )}
+
+      {activeReportTab === 'mira_tgst_16' && (
+        <MiraTgstView
+          onAddJournalEntry={(je) => {
+            // manualJournals above is a useMemo over localStorage, not state, so
+            // there is no setter. Write back to the same key it reads from.
+            try {
+              const saved = localStorage.getItem('starq:manual_journals:v1');
+              const existing: JournalEntry[] = saved ? JSON.parse(saved) : [];
+              localStorage.setItem('starq:manual_journals:v1', JSON.stringify([je, ...existing]));
+            } catch {
+              /* storage unavailable; the entry is not persisted */
+            }
+          }}
+        />
+      )}
+
+      {activeReportTab === 'cash_flow' && (
+        <CashFlowStatementView journals={allJournals} />
+      )}
+
+      {/* Interactive P&L Drilldown Drawer */}
+      <DrilldownDrawer
+        isOpen={Boolean(drilldownAccount)}
+        onClose={() => setDrilldownAccount(null)}
+        account={drilldownAccount}
+        journals={allJournals}
+        formatMVR={formatMVR}
+      />
     </div>
   );
 };

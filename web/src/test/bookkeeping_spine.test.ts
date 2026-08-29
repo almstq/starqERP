@@ -10,7 +10,7 @@ describe('M0-CLIE-001 — Bookkeeping Spine & Financial Statements (Two Tenants)
 
   it('1. Explicitly configures two distinct pilot tenants (Starq Tech & Club Ignition)', () => {
     expect(starqTenant).toBeDefined();
-    expect(starqTenant.name).toBe('Starq Technologies');
+    expect(starqTenant.name).toBe('Starq Technologies Pvt Ltd');
     expect(starqTenant.gstStatus).toBe('not_registered');
     expect(starqTenant.gstRate).toBe(0);
 

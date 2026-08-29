@@ -32,9 +32,11 @@ export const JobsView: React.FC = () => {
     formatMVR,
     activeJobsCount,
     workflowStages,
+    currentTerms,
   } = useERP();
 
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+  const [selectedMobileStageId, setSelectedMobileStageId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [serviceFilter, setServiceFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -67,7 +69,7 @@ export const JobsView: React.FC = () => {
   const jobColumns: ColumnDef<JobOrder>[] = [
     {
       key: 'jobId',
-      header: 'Job ID',
+      header: `${currentTerms.order} ID`,
       width: '14%',
       render: (job) => (
         <span
@@ -81,7 +83,7 @@ export const JobsView: React.FC = () => {
     },
     {
       key: 'customerName',
-      header: 'Customer & Vehicle',
+      header: `${currentTerms.customer} & ${currentTerms.primaryAsset}`,
       width: '28%',
       render: (job) => (
         <div className="min-w-0">
@@ -89,14 +91,14 @@ export const JobsView: React.FC = () => {
             {job.customerName}
           </div>
           <div className="text-[11px] mono-num truncate text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
-            {job.vehicle?.plateNumber} ({job.vehicle?.model})
+            {job.vehicle?.plateNumber ? `${job.vehicle.plateNumber} (${job.vehicle.model})` : (job.projectRef || job.serviceType || 'Standard Scope')}
           </div>
         </div>
       ),
     },
     {
       key: 'serviceType',
-      header: 'Service',
+      header: 'Scope / Service',
       width: '16%',
       hideOn: 'compact',
       render: (job) => (
@@ -107,12 +109,12 @@ export const JobsView: React.FC = () => {
     },
     {
       key: 'bayNumber',
-      header: 'Bay',
+      header: currentTerms.facility,
       width: '12%',
       hideOn: 'medium',
       render: (job) => (
         <span className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
-          {job.bayNumber || 'Main Bay'}
+          {job.bayNumber || job.location || currentTerms.facility}
         </span>
       ),
     },
@@ -172,14 +174,14 @@ export const JobsView: React.FC = () => {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
             <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[var(--md-sys-color-on-surface)] truncate">
-              Work Orders & Floor Pipeline
+              {currentTerms.orders} & Delivery Pipeline
             </h1>
             <Badge variant="accent" size="sm">
               {activeJobsCount} Active
             </Badge>
           </div>
           <p className="mt-0.5 text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">
-            Dynamic pipeline stages ({workflowStages.length} phases), bay allocations & material tracking
+            Dynamic pipeline ({workflowStages.length} stages), {currentTerms.facility.toLowerCase()} allocation & deliverable tracking
           </p>
         </div>
 
@@ -201,7 +203,7 @@ export const JobsView: React.FC = () => {
             onClick={() => setIsCreateJobOpen(true)}
             icon={<Plus size={15} />}
           >
-            <span>New Job</span>
+            <span>New {currentTerms.order}</span>
           </Button>
         </ActionGroup>
       </div>
@@ -212,7 +214,7 @@ export const JobsView: React.FC = () => {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by job ID, customer, plate, model…"
+            placeholder={`Search by ${currentTerms.order.toLowerCase()} ID, ${currentTerms.customer.toLowerCase()}, ${currentTerms.primaryAsset.toLowerCase()}…`}
             icon={<Search size={14} />}
           />
         </div>
@@ -265,8 +267,161 @@ export const JobsView: React.FC = () => {
 
       {/* Kanban View Mode */}
       {viewMode === 'kanban' && (
-        <div className="erp-scroll-region pb-4">
-          <div className="flex gap-3 sm:gap-4 min-w-max">
+        <div className="space-y-4">
+          {/* Mobile Stage Selector Strip (Shown on screens < md) */}
+          <div className="flex md:hidden items-center gap-2 overflow-x-auto pb-2 -mx-1 px-1 erp-scroll-region">
+            {workflowStages.map((stage) => {
+              const stageJobs = filteredJobs.filter(
+                (j) =>
+                  j.status.toLowerCase() === stage.name.toLowerCase() ||
+                  j.status.toLowerCase() === stage.code.toLowerCase()
+              );
+              const isActive = (selectedMobileStageId || workflowStages[0]?.id) === stage.id;
+
+              return (
+                <button
+                  key={stage.id}
+                  type="button"
+                  onClick={() => setSelectedMobileStageId(stage.id)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-[var(--md-sys-shape-corner-medium)] text-xs font-semibold whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                    isActive
+                      ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-primary)] shadow-sm'
+                      : 'bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-surface-container-high)]'
+                  }`}
+                >
+                  <span>{stage.name}</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      isActive
+                        ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)]'
+                        : 'bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)]'
+                    }`}
+                  >
+                    {stageJobs.length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Mobile Single Column Vertical Stream (< md) */}
+          <div className="flex md:hidden flex-col gap-3">
+            {(() => {
+              const currentStage = workflowStages.find((s) => s.id === (selectedMobileStageId || workflowStages[0]?.id)) || workflowStages[0];
+              if (!currentStage) return null;
+              const stageJobs = filteredJobs.filter(
+                (j) =>
+                  j.status.toLowerCase() === currentStage.name.toLowerCase() ||
+                  j.status.toLowerCase() === currentStage.code.toLowerCase()
+              );
+
+              return (
+                <div
+                  className="flex flex-col p-4 rounded-[var(--md-sys-shape-corner-large)]"
+                  style={{
+                    backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                    border: '1px solid var(--md-sys-color-outline-variant)',
+                  }}
+                >
+                  <div
+                    className="flex items-center justify-between pb-3 mb-3"
+                    style={{ borderBottom: '1px solid var(--md-sys-color-outline-variant)' }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="mono-num text-xs font-bold px-2 py-0.5 rounded-[var(--md-sys-shape-corner-extra-small)]"
+                        style={{
+                          backgroundColor: 'var(--md-sys-color-primary-container)',
+                          color: 'var(--md-sys-color-on-primary-container)',
+                        }}
+                      >
+                        {currentStage.code}
+                      </span>
+                      <span className="text-sm font-bold text-[var(--md-sys-color-on-surface)]">
+                        {currentStage.name}
+                      </span>
+                    </div>
+                    <Badge variant="neutral" size="sm">
+                      {stageJobs.length} {stageJobs.length === 1 ? 'Job' : 'Jobs'}
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-3">
+                    {stageJobs.length === 0 ? (
+                      <div
+                        className="py-10 text-center text-xs rounded-[var(--md-sys-shape-corner-medium)]"
+                        style={{
+                          border: '1px dashed var(--md-sys-color-outline-variant)',
+                          color: 'var(--md-sys-color-on-surface-variant)',
+                        }}
+                      >
+                        <Wrench className="w-6 h-6 mx-auto mb-2 opacity-40 text-[var(--md-sys-color-outline)]" />
+                        <p className="font-medium">No work orders in {currentStage.name}</p>
+                      </div>
+                    ) : (
+                      stageJobs.map((job) => (
+                        <div
+                          key={job.id}
+                          onClick={() => navigate(`/jobs/${job.id}`)}
+                          style={{
+                            backgroundColor: 'var(--md-sys-color-surface-container-lowest)',
+                            border: '1px solid var(--md-sys-color-outline-variant)',
+                            borderRadius: 'var(--md-sys-shape-corner-medium)',
+                          }}
+                          className="p-3.5 space-y-2.5 cursor-pointer transition-all hover:border-[var(--md-sys-color-primary)] active:scale-[0.99] shadow-xs"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="mono-num font-bold text-xs" style={{ color: 'var(--md-sys-color-primary)' }}>
+                              {job.jobId}
+                            </span>
+                            <Badge
+                              variant={job.priority === 'Urgent' ? 'destructive' : 'neutral'}
+                              size="sm"
+                            >
+                              {job.priority}
+                            </Badge>
+                          </div>
+
+                          <div>
+                            <div className="font-bold text-sm text-[var(--md-sys-color-on-surface)]">
+                              {job.customerName}
+                            </div>
+                            <div className="text-xs mono-num text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
+                              {job.vehicle?.plateNumber ? `${job.vehicle.plateNumber} • ${job.vehicle.model}` : (job.projectRef || job.serviceType || 'Standard Scope')}
+                            </div>
+                          </div>
+
+                          <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] flex items-center justify-between pt-1">
+                            <span>{job.serviceType}</span>
+                            <span className="text-[11px] font-medium">{job.bayNumber || job.location || currentTerms.facility}</span>
+                          </div>
+
+                          <div
+                            className="pt-2.5 flex items-center justify-between text-xs"
+                            style={{ borderTop: '1px solid var(--md-sys-color-outline-variant)' }}
+                          >
+                            <span className="mono-num font-bold text-sm text-[var(--md-sys-color-on-surface)]">
+                              {formatMVR(job.quotedAmount)}
+                            </span>
+                            <span
+                              className="text-xs font-semibold flex items-center gap-1 hover:underline"
+                              style={{ color: 'var(--md-sys-color-primary)' }}
+                            >
+                              <span>Open Details</span>
+                              <ChevronRight size={14} />
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Desktop Dominant Multi-Column Landscape Board (Shown on screens >= md) */}
+          <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
             {workflowStages.map((stage) => {
               const stageJobs = filteredJobs.filter(
                 (j) =>
@@ -277,7 +432,7 @@ export const JobsView: React.FC = () => {
               return (
                 <div
                   key={stage.id}
-                  className="w-68 sm:w-72 shrink-0 flex flex-col max-h-[75vh] p-3 sm:p-3.5 rounded-[var(--md-sys-shape-corner-large)] min-w-0"
+                  className="w-full flex flex-col max-h-[80vh] p-3.5 rounded-[var(--md-sys-shape-corner-large)] min-w-0"
                   style={{
                     backgroundColor: 'var(--md-sys-color-surface-container-low)',
                     border: '1px solid var(--md-sys-color-outline-variant)',
@@ -348,7 +503,7 @@ export const JobsView: React.FC = () => {
                               {job.customerName}
                             </div>
                             <div className="text-[11px] mono-num truncate" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                              {job.vehicle?.plateNumber} • {job.vehicle?.model}
+                              {job.vehicle?.plateNumber ? `${job.vehicle.plateNumber} • ${job.vehicle.model}` : (job.projectRef || job.serviceType || 'Standard Scope')}
                             </div>
                           </div>
 

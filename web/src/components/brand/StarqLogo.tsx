@@ -31,16 +31,17 @@ export const StarqLogomark: React.FC<StarqLogomarkProps> = ({ size = 20, classNa
   );
 };
 
-export interface StarqBrandLockupProps {
+export interface StarqERPBrandProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   showTag?: boolean;
 }
 
 /**
- * Authoritative Starq Brand Lockup: Canonical Logomark + "starq" + "ERP"
+ * Authoritative starqERP Product Brand: Blue container + "starq" + "ERP" badge
+ * Use on PRODUCT surfaces (navigation mastheads, login hero, app shell).
  */
-export const StarqBrandLockup: React.FC<StarqBrandLockupProps> = ({
+export const StarqERPBrand: React.FC<StarqERPBrandProps> = ({
   size = 'md',
   className = '',
   showTag = true,
@@ -93,3 +94,106 @@ export const StarqBrandLockup: React.FC<StarqBrandLockupProps> = ({
     </div>
   );
 };
+
+export const StarqBrandLockup = StarqERPBrand;
+
+export interface StarqCorporateBrandProps {
+  variant?: 'inline' | 'compact' | 'card';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
+  legalSuffix?: boolean; // false -> "Starq Technologies", true -> "Starq Technologies Pvt Ltd"
+  legalName?: string;
+  prefixText?: string;
+  subtitle?: string;
+  className?: string;
+}
+
+/**
+ * Authoritative Starq Technologies Corporate / Studio Brand
+ * Represents the COMPANY / SOFTWARE STUDIO / BUILDER (not the product).
+ * Uses the official Starq Technologies corporate logo asset (/starq-logo.png).
+ */
+export const StarqCorporateBrand: React.FC<StarqCorporateBrandProps> = ({
+  variant = 'compact',
+  size = 'sm',
+  legalSuffix = false,
+  legalName,
+  prefixText,
+  subtitle,
+  className = '',
+}) => {
+  const displayName = legalName || (legalSuffix ? 'Starq Technologies Pvt Ltd' : 'Starq Technologies');
+
+  if (variant === 'inline') {
+    const imgHeights = { xs: '13px', sm: '15px', md: '17px', lg: '20px' };
+    return (
+      <span className={`inline-flex items-center gap-1.5 align-middle select-none ${className}`}>
+        <img
+          src="/starq-logo.png"
+          alt="Starq Technologies"
+          className="inline-block object-contain shrink-0"
+          style={{ height: imgHeights[size], width: 'auto' }}
+        />
+        {prefixText && <span>{prefixText}</span>}
+        <span className="font-semibold">{displayName}</span>
+      </span>
+    );
+  }
+
+  if (variant === 'card') {
+    return (
+      <div className={`flex items-center gap-3 select-none min-w-0 ${className}`}>
+        <div className="p-1 rounded-xl bg-slate-900/5 dark:bg-white/5 border border-slate-200 dark:border-slate-700/50 shrink-0 flex items-center justify-center">
+          <img
+            src="/starq-logo.png"
+            alt="Starq Technologies"
+            className="object-contain h-9 w-auto"
+          />
+        </div>
+        <div className="min-w-0 leading-tight space-y-0.5">
+          <div className="font-bold text-sm text-[var(--md-sys-color-on-surface)] truncate">
+            {displayName}
+          </div>
+          {subtitle && (
+            <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">
+              {subtitle}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Default: 'compact'
+  const imgHeights = { xs: '14px', sm: '18px', md: '22px', lg: '28px' };
+  const textSizes = {
+    xs: 'text-[10px]',
+    sm: 'text-xs',
+    md: 'text-sm font-semibold',
+    lg: 'text-base font-bold',
+  };
+
+  return (
+    <div className={`flex items-center gap-2 select-none min-w-0 ${className}`}>
+      <img
+        src="/starq-logo.png"
+        alt="Starq Technologies"
+        className="object-contain shrink-0"
+        style={{ height: imgHeights[size], width: 'auto' }}
+      />
+      <div className="min-w-0 leading-tight">
+        {prefixText && <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mr-1">{prefixText}</span>}
+        <span className={`font-semibold text-[var(--md-sys-color-on-surface)] truncate ${textSizes[size]}`}>
+          {displayName}
+        </span>
+        {subtitle && (
+          <div className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] truncate mt-0.5">
+            {subtitle}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export const StarqCorporateIdentity = StarqCorporateBrand;
+export const StarqCorporateBadge = StarqCorporateBrand;

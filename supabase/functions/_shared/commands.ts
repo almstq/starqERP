@@ -4130,12 +4130,19 @@ export const STARQ_ERP_CANONICAL_METADATA: ProductIdentityMetadata = {
   embeddedAiName: 'starqAI',
   companyName: 'Starq Technologies Pvt Ltd',
   version: '0.2.0',
-  releaseTrack: 'R1 - M0 main base',
+  releaseTrack: 'beta',
   baseCurrency: 'MVR',
   contactEmail: 'ops@starq.mv',
   legalJurisdiction: 'Republic of Maldives',
   tagline: 'Multi-tenant ERP & Commercial Operating System',
 };
+
+/**
+ * Derives the canonical user-facing formatted product version string (e.g. "v0.2.0-beta")
+ */
+export function getFormattedProductVersion(meta: ProductIdentityMetadata = STARQ_ERP_CANONICAL_METADATA): string {
+  return meta.releaseTrack ? `v${meta.version}-${meta.releaseTrack}` : `v${meta.version}`;
+}
 
 export function validateProductIdentityMetadata(meta: unknown): {
   valid: boolean;

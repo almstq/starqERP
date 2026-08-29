@@ -74,7 +74,7 @@ export const NewCustomerModal: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsNewCustomerOpen(false)}
-            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200"
+            className="px-4 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface)] text-xs font-semibold border border-[var(--md-sys-color-outline-variant)]"
           >
             Cancel
           </button>
@@ -92,46 +92,46 @@ export const NewCustomerModal: React.FC = () => {
         {/* Customer Information */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name / Company *</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Full Name / Company *</label>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Ibrahim Shaan or Villa Shipping Fleet"
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Phone Number (Dhiraagu / Ooredoo) *</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Phone Number (Dhiraagu / Ooredoo) *</label>
             <input
               type="text"
               required
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+960 777-1234"
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500 font-mono"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500 font-mono"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Email Address</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="client@domain.mv"
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Classification</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Customer Classification</label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value as CustomerType)}
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             >
               <option value="Individual">Individual</option>
               <option value="VIP">VIP / Enthusiast</option>
@@ -141,24 +141,24 @@ export const NewCustomerModal: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Client Brand Logo URL <span className="text-slate-400 font-normal">(Optional)</span>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
+              Client Brand Logo URL <span className="text-[var(--md-sys-color-outline)] font-normal">(Optional)</span>
             </label>
             <input
               type="url"
               value={logoUrl}
               onChange={(e) => setLogoUrl(e.target.value)}
               placeholder="https://.../logo.png or asset path"
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Island / Location</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Island / Location</label>
             <select
               value={island}
               onChange={(e) => setIsland(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             >
               <option value="Hulhumale'">Hulhumale' (Phase 1 / 2)</option>
               <option value="Male'">Male' City</option>
@@ -169,11 +169,11 @@ export const NewCustomerModal: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Vehicle Type</label>
+            <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Vehicle Type</label>
             <select
               value={vehicleType}
               onChange={(e) => setVehicleType(e.target.value as any)}
-              className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             >
               <option value="Car">Passenger Car / Sedan / SUV</option>
               <option value="Motorcycle">Motorcycle / Scooter</option>
@@ -184,62 +184,62 @@ export const NewCustomerModal: React.FC = () => {
         </div>
 
         {/* Primary Vehicle Registration */}
-        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+        <div className="p-3.5 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] space-y-3">
           <div className="text-xs font-bold text-blue-600 uppercase tracking-wider">
             Primary Vehicle / Asset Details
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <div>
-              <label className="block text-[11px] text-slate-500 mb-1">Plate Number</label>
+              <label className="block text-[11px] text-[var(--md-sys-color-on-surface-variant)] mb-1">Plate Number</label>
               <input
                 type="text"
                 value={plateNumber}
                 onChange={(e) => setPlateNumber(e.target.value.toUpperCase())}
                 placeholder="AB1-8842"
-                className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-blue-600 font-mono focus:outline-none focus:border-blue-500"
+                className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-blue-600 font-mono focus:outline-none focus:border-blue-500"
               />
             </div>
             <div>
-              <label className="block text-[11px] text-slate-500 mb-1">Make</label>
+              <label className="block text-[11px] text-[var(--md-sys-color-on-surface-variant)] mb-1">Make</label>
               <input
                 type="text"
                 value={make}
                 onChange={(e) => setMake(e.target.value)}
                 placeholder="Toyota / Honda"
-                className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+                className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
               />
             </div>
             <div>
-              <label className="block text-[11px] text-slate-500 mb-1">Model</label>
+              <label className="block text-[11px] text-[var(--md-sys-color-on-surface-variant)] mb-1">Model</label>
               <input
                 type="text"
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
                 placeholder="Prado / Supra"
-                className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+                className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
               />
             </div>
             <div>
-              <label className="block text-[11px] text-slate-500 mb-1">Color / Finish</label>
+              <label className="block text-[11px] text-[var(--md-sys-color-on-surface-variant)] mb-1">Color / Finish</label>
               <input
                 type="text"
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
                 placeholder="Pearl White"
-                className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+                className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
               />
             </div>
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">Notes & Garage Preferences</label>
+          <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Notes & Garage Preferences</label>
           <textarea
             rows={2}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Special instructions, paint code preferences, VIP handling notes..."
-            className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+            className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
           />
         </div>
       </form>

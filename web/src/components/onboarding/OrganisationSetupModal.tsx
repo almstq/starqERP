@@ -156,24 +156,24 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200"
       data-testid="organisation-setup-modal"
     >
-      <div className="relative w-full max-w-3xl my-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden transition-all">
+      <div className="relative w-full max-w-3xl my-8 rounded-3xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] shadow-2xl overflow-hidden transition-all">
         {/* Top Gradient Banner */}
         <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 px-6 sm:px-8 py-6 text-white relative">
           <button
             onClick={onClose}
-            className="absolute top-5 right-5 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            className="absolute top-5 right-5 p-2 rounded-full bg-[var(--md-sys-color-surface-container-high)]/10 hover:bg-[var(--md-sys-color-surface-container-high)]/20 text-white transition-colors"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
 
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shadow-inner">
+            <div className="w-11 h-11 rounded-2xl bg-[var(--md-sys-color-surface-container-high)]/20 backdrop-blur-md flex items-center justify-center text-white shadow-inner">
               <Building2 className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-white/20 text-white uppercase tracking-wider">
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)]/20 text-white uppercase tracking-wider">
                   Self-Service Onboarding Wizard
                 </span>
                 <Badge variant="blue" size="sm">SERP-276</Badge>
@@ -187,9 +187,9 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
 
           {/* Progress step indicators */}
           <div className="grid grid-cols-3 gap-2 mt-5">
-            <div className={`h-1.5 rounded-full transition-all ${step >= 1 ? 'bg-white' : 'bg-white/30'}`} />
-            <div className={`h-1.5 rounded-full transition-all ${step >= 2 ? 'bg-white' : 'bg-white/30'}`} />
-            <div className={`h-1.5 rounded-full transition-all ${step >= 3 ? 'bg-white' : 'bg-white/30'}`} />
+            <div className={`h-1.5 rounded-full transition-all ${step >= 1 ? 'bg-[var(--md-sys-color-surface-container-high)]' : 'bg-[var(--md-sys-color-surface-container-high)]/30'}`} />
+            <div className={`h-1.5 rounded-full transition-all ${step >= 2 ? 'bg-[var(--md-sys-color-surface-container-high)]' : 'bg-[var(--md-sys-color-surface-container-high)]/30'}`} />
+            <div className={`h-1.5 rounded-full transition-all ${step >= 3 ? 'bg-[var(--md-sys-color-surface-container-high)]' : 'bg-[var(--md-sys-color-surface-container-high)]/30'}`} />
           </div>
         </div>
 
@@ -206,11 +206,11 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
           {step === 1 && (
             <div className="space-y-5 animate-in fade-in">
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <h3 className="text-base font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] flex items-center gap-2">
                   <span>Step 1: Business Activity & Organization Identity</span>
                   <Badge variant="blue" size="sm">Client Configurable</Badge>
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] mt-0.5">
                   Select your SME industry archetype. StarqERP will automatically seed tailored workflow stages, document numbering, and operational accounts.
                 </p>
               </div>
@@ -253,7 +253,7 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                       className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
                         isSelected
                           ? 'border-blue-600 bg-blue-50/60 dark:bg-blue-950/40 dark:border-blue-500 shadow-xs'
-                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50'
+                          : 'border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline-variant)] dark:hover:border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)]/50 bg-[var(--md-sys-color-surface-container)]/50'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1.5">
@@ -262,18 +262,18 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                             className={`w-8 h-8 rounded-xl flex items-center justify-center ${
                               isSelected
                                 ? 'bg-blue-600 text-white'
-                                : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                                : 'bg-[var(--md-sys-color-surface-container-highest)] bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] text-[var(--md-sys-color-on-surface-variant)]'
                             }`}
                           >
                             <Icon className="w-4 h-4" />
                           </div>
-                          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                          <span className="text-xs font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)]">
                             {item.title}
                           </span>
                         </div>
                         {isSelected && <CheckCircle2 className="w-4 h-4 text-blue-600" />}
                       </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 pl-10">
+                      <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] pl-10">
                         {item.desc}
                       </p>
                     </div>
@@ -284,7 +284,7 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
               {/* Business Name Inputs */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] mb-1">
                     Organization Display Name <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -293,13 +293,13 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Velocity Motors & Spray Garage"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 text-xs"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/80 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] focus:outline-hidden focus:border-blue-500 text-xs"
                     data-testid="input-org-name"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] mb-1">
                     Registered Legal Entity Name
                   </label>
                   <input
@@ -307,7 +307,7 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                     value={legalName}
                     onChange={(e) => setLegalName(e.target.value)}
                     placeholder="e.g. Velocity Motors Maldives Pvt Ltd"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 text-xs"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/80 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] focus:outline-hidden focus:border-blue-500 text-xs"
                     data-testid="input-org-legal-name"
                   />
                 </div>
@@ -318,18 +318,18 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
           {step === 2 && (
             <div className="space-y-5 animate-in fade-in">
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <h3 className="text-base font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] flex items-center gap-2">
                   <span>Step 2: Tax Registration & Document Numbering</span>
                   <Badge variant="blue" size="sm">Client Configurable</Badge>
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] mt-0.5">
                   Configure Maldives Inland Revenue Authority (MIRA) GST registration and document sequence prefixes.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] mb-1">
                     MIRA GST TIN Registration Number (Optional)
                   </label>
                   <input
@@ -337,10 +337,10 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                     value={tinNumber}
                     onChange={(e) => setTinNumber(e.target.value)}
                     placeholder="Leave blank if not registered"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 font-mono font-bold focus:outline-hidden focus:border-blue-500 text-xs"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/80 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-blue-600 dark:text-blue-400 font-mono font-bold focus:outline-hidden focus:border-blue-500 text-xs"
                     data-testid="input-tin-number"
                   />
-                  <span className="text-[10px] text-slate-400 mt-1 block">
+                  <span className="text-[10px] text-[var(--md-sys-color-outline)] mt-1 block">
                     {tinNumber.trim()
                       ? '✓ Registered MIRA TIN will be printed on formal tax invoices'
                       : 'Unregistered tenants issue non-GST commercial bills (zero invented placeholders).'}
@@ -348,13 +348,13 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] mb-1">
                     Applicable GST Rate (%)
                   </label>
                   <select
                     value={gstRate}
                     onChange={(e) => setGstRate(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 text-xs"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/80 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] focus:outline-hidden focus:border-blue-500 text-xs"
                     data-testid="select-gst-rate"
                   >
                     <option value={8}>8% Standard General GST (GGST)</option>
@@ -364,7 +364,7 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] mb-1">
                     Job / Work Order Prefix
                   </label>
                   <input
@@ -372,13 +372,13 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                     value={jobPrefix}
                     onChange={(e) => setJobPrefix(e.target.value.toUpperCase())}
                     placeholder="e.g. JOB-, CI-JOB-"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono focus:outline-hidden focus:border-blue-500 text-xs"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/80 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] font-mono focus:outline-hidden focus:border-blue-500 text-xs"
                     data-testid="input-job-prefix"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] mb-1">
                     Sales Invoice Prefix
                   </label>
                   <input
@@ -386,13 +386,13 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                     value={invoicePrefix}
                     onChange={(e) => setInvoicePrefix(e.target.value.toUpperCase())}
                     placeholder="e.g. INV-, CI-INV-"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono focus:outline-hidden focus:border-blue-500 text-xs"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/80 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] font-mono focus:outline-hidden focus:border-blue-500 text-xs"
                     data-testid="input-invoice-prefix"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] mb-1">
                     Operating Base Currency
                   </label>
                   <div className="flex items-center gap-3">
@@ -402,7 +402,7 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                       className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
                         currency === 'MVR'
                           ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                          : 'bg-[var(--md-sys-color-surface-container-high)] bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)]'
                       }`}
                       data-testid="btn-currency-mvr"
                     >
@@ -414,7 +414,7 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                       className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
                         currency === 'USD'
                           ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                          : 'bg-[var(--md-sys-color-surface-container-high)] bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)]'
                       }`}
                       data-testid="btn-currency-usd"
                     >
@@ -429,23 +429,23 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
           {step === 3 && (
             <div className="space-y-5 animate-in fade-in">
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <h3 className="text-base font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] flex items-center gap-2">
                   <span>Step 3: Location, Banking & Statutory Invariants</span>
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] mt-0.5">
                   Confirm island branch, banking settlement accounts, and review non-negotiable statutory governance boundaries.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] mb-1">
                     Registered Island / City
                   </label>
                   <select
                     value={island}
                     onChange={(e) => setIsland(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 text-xs"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/80 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] focus:outline-hidden focus:border-blue-500 text-xs"
                     data-testid="select-island"
                   >
                     <option value="Male'">Male' (Capital)</option>
@@ -459,7 +459,7 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] mb-1">
                     Contact Phone & Accounts Email
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -468,7 +468,7 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="+960 778-0000"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 font-mono text-xs"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/80 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] focus:outline-hidden focus:border-blue-500 font-mono text-xs"
                       data-testid="input-phone"
                     />
                     <input
@@ -476,14 +476,14 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="admin@sme.mv"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 text-xs"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/80 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] focus:outline-hidden focus:border-blue-500 text-xs"
                       data-testid="input-email"
                     />
                   </div>
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] mb-1">
                     Bank of Maldives (BML) Settlement Account (Optional)
                   </label>
                   <input
@@ -491,22 +491,22 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                     value={bmlAccount}
                     onChange={(e) => setBmlAccount(e.target.value)}
                     placeholder="e.g. 7730000189201 (Leave empty if none)"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 font-mono text-xs"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/80 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] focus:outline-hidden focus:border-blue-500 font-mono text-xs"
                     data-testid="input-bml-account"
                   />
                 </div>
               </div>
 
               {/* Product-Fixed Governance Invariants (DEC-073 §10 / Vision §19) */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5" data-testid="governance-invariants-box">
+              <div className="p-4 rounded-2xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] space-y-2.5" data-testid="governance-invariants-box">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <div className="flex items-center gap-2 text-xs font-bold text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)]">
                     <Lock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <span>Product-Fixed Governance Invariants (Immutable)</span>
                   </div>
-                  <Badge variant="success" size="sm">Non-Editable Guarantees</Badge>
+                  <Badge variant="positive" size="sm">Non-Editable Guarantees</Badge>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-600 dark:text-slate-400 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] pt-1">
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                     <span>Single source of financial truth (DEC-068/A2)</span>
@@ -529,7 +529,7 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
           )}
 
           {/* Footer Action Buttons */}
-          <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between pt-4 border-t border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)]">
             {step > 1 ? (
               <button
                 type="button"
@@ -537,7 +537,7 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                   setValidationError(null);
                   setStep((s) => s - 1);
                 }}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] text-xs font-semibold hover:bg-[var(--md-sys-color-surface-container-highest)] dark:hover:bg-slate-700 transition-colors"
                 data-testid="wizard-back-button"
               >
                 <ArrowLeft className="w-4 h-4" />

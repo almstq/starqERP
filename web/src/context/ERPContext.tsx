@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useTheme } from './ThemeContext';
 import {
   NavigationTab,
@@ -44,11 +44,26 @@ import {
   CLINIC_WORKFLOW_PRESET,
   BOATYARD_WORKFLOW_PRESET,
   OrganisationApplication,
-  INITIAL_APPLICATIONS
 } from '../data/mockData';
 import { telemetry } from '../services/telemetry';
 import { dispatchCommand, apiGet } from '../services/apiGateway';
 import { useAuth } from './AuthContext';
+import { getArchetype, ArchetypeDefinition, ArchetypeTerminology, ArchetypeId, ARCHETYPES } from '../domain/archetypes';
+import { switchContext as apiSwitchContext, fetchCurrentUser } from '../services/auth';
+import {
+  submitOrganisationApplication as apiSubmitApplication,
+  getPlatformApplications as apiGetPlatformApplications,
+  approvePlatformApplication as apiApproveApplication,
+  rejectPlatformApplication as apiRejectApplication,
+  requestInfoPlatformApplication as apiRequestInfoApplication,
+  getTenantInvitations as apiGetTenantInvitations,
+  createTenantInvitation as apiCreateTenantInvitation,
+  resendTenantInvitation as apiResendTenantInvitation,
+  revokeTenantInvitation as apiRevokeTenantInvitation,
+  PlatformApplicationRecord,
+  StaffInvitationRecord,
+  CreateStaffInvitationPayload,
+} from '../services/apiGateway';
 
 export interface ERPContextType {
   activeTab: NavigationTab;
@@ -71,6 +86,8 @@ export interface ERPContextType {
   currentTenant: OrganisationTenant;
   currentBookId?: string;
   currentBook?: import('../types/erp').OrganisationBook;
+  currentArchetype: ArchetypeDefinition;
+  currentTerms: ArchetypeTerminology;
   tenants: OrganisationTenant[];
   switchTenant: (tenantId: string) => void;
   switchBook?: (bookId: string) => void;
@@ -84,7 +101,7 @@ export interface ERPContextType {
   // Platform Application & Organisation Registration
   pendingApplications: OrganisationApplication[];
   submitOrganisationApplication: (appData: Omit<OrganisationApplication, 'id' | 'submittedAt' | 'status'>) => void;
-  approveOrganisationApplication: (appId: string) => OrganisationTenant | undefined;
+  approveOrganisationApplication: (appId: string) => Promise<OrganisationTenant | undefined>;
   rejectOrganisationApplication: (appId: string, reason?: string) => void;
   isRegisterOrgModalOpen: boolean;
   setIsRegisterOrgModalOpen: (open: boolean) => void;
@@ -92,11 +109,32 @@ export interface ERPContextType {
   // RBAC & User Management State
   currentUser: AppUser;
   users: AppUser[];
+  setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>;
   roles: UserRole[];
+  invitations: StaffInvitationRecord[];
   switchCurrentUser: (userId: string) => void;
+  /**
+   * OPTIONAL AND CURRENTLY NEVER PROVIDED.
+   *
+   * MultiWarehouseView, PayrollManagementView and JobCostingView all call this
+   * to post a generated journal, and each already guards with
+   * `typeof addJournalEntry === 'function'` because no provider supplies it.
+   * Declaring it optional makes the type state that fact rather than implying a
+   * method that does not exist.
+   *
+   * Consequence, recorded deliberately: journal posting from those three
+   * modules is INERT. The entries are computed and then dropped. Wiring this to
+   * real journal state is a feature change, not a typecheck fix, so it is
+   * reported rather than invented here.
+   */
+  addJournalEntry?: (entry: import('../domain/journals').JournalEntry) => void;
+
   authorizeUser: (userId: string, roleId?: string) => void;
   suspendUser: (userId: string) => void;
   inviteUser: (userData: { name: string; email: string; phone: string; roleId: string; jobTitle?: string }) => AppUser;
+  inviteStaffMember: (payload: CreateStaffInvitationPayload) => Promise<StaffInvitationRecord>;
+  resendInvitation: (id: string) => Promise<void>;
+  revokeInvitation: (id: string) => Promise<void>;
   updateUserRole: (userId: string, roleId: string) => void;
   createRole: (roleData: Omit<UserRole, 'id' | 'tenantId'>) => UserRole;
   updateRolePermissions: (roleId: string, permissions: UserRole['permissions']) => void;
@@ -123,7 +161,7 @@ export interface ERPContextType {
   addWorkflowStage: (stage: Omit<WorkflowStage, 'id' | 'tenantId' | 'order'>) => WorkflowStage;
   updateWorkflowStage: (stageId: string, stageData: Partial<WorkflowStage>) => void;
   deleteWorkflowStage: (stageId: string) => void;
-  resetWorkflowToPreset: (presetType: 'automotive' | 'clinic' | 'marine', targetTenantId?: string) => void;
+  resetWorkflowToPreset: (presetType: string, targetTenantId?: string) => void;
 
   // Activity / Audit Logs (The Owner's Evidence)
   auditLogs: AuditLogEntry[];
@@ -405,127 +443,123 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [tenants]);
 
-  // Organisation Applications & Superadmin Approval State
-  const [pendingApplications, setPendingApplications] = useState<OrganisationApplication[]>(() => {
-    try {
-      const saved = localStorage.getItem('starq_erp_pending_applications_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch {
-      // Storage fallback
-    }
-    return INITIAL_APPLICATIONS;
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('starq_erp_pending_applications_v1', JSON.stringify(pendingApplications));
-    } catch {
-      // Storage unavailable
-    }
-  }, [pendingApplications]);
-
+  // Organisation Applications & Platform Approval State (Authoritative Server Persistence)
+  const [pendingApplications, setPendingApplications] = useState<OrganisationApplication[]>([]);
   const [isRegisterOrgModalOpen, setIsRegisterOrgModalOpen] = useState(false);
 
+  const mapPlatformAppToClient = useCallback((record: PlatformApplicationRecord): OrganisationApplication => {
+    return {
+      id: record.id,
+      name: record.name,
+      legalName: record.legal_name,
+      primaryBookName: record.primary_book_name,
+      primaryBookCode: record.primary_book_code,
+      archetypeId: record.archetype_id,
+      archetypeName: (ARCHETYPES as any)[record.archetype_id]?.name || 'General Business',
+      island: record.island,
+      atoll: record.atoll,
+      applicantName: record.applicant_name,
+      applicantEmail: record.applicant_email,
+      phone: record.phone || '',
+      submittedAt: record.created_at.replace('T', ' ').substring(0, 16),
+      status: record.status === 'pending' ? 'pending_approval' : (record.status as any),
+      rejectionReason: record.rejection_reason || undefined,
+    };
+  }, []);
+
+  // Fetch server-side applications if current identity holds platform operator entitlement
+  useEffect(() => {
+    if (session?.platform_entitlement) {
+      apiGetPlatformApplications()
+        .then((res) => {
+          if (res.ok && Array.isArray(res.applications)) {
+            setPendingApplications(res.applications.map(mapPlatformAppToClient));
+          }
+        })
+        .catch(() => {
+          // Fallback to initial applications if offline
+        });
+    }
+  }, [session?.platform_entitlement, mapPlatformAppToClient]);
+
   const submitOrganisationApplication = useCallback(
-    (appData: Omit<OrganisationApplication, 'id' | 'submittedAt' | 'status'>) => {
-      const newApp: OrganisationApplication = {
-        ...appData,
-        id: `app-${Date.now()}`,
-        submittedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-        status: 'pending_approval',
-      };
-      setPendingApplications((prev) => [newApp, ...prev]);
+    async (appData: Omit<OrganisationApplication, 'id' | 'submittedAt' | 'status'>) => {
+      try {
+        const res = await apiSubmitApplication({
+          name: appData.name,
+          legal_name: appData.legalName,
+          archetype_id: appData.archetypeId,
+          primary_book_name: appData.primaryBookName,
+          primary_book_code: appData.primaryBookCode,
+          island: appData.island,
+          atoll: appData.atoll,
+          phone: appData.phone,
+        });
+
+        if (res.ok && res.application) {
+          const clientApp = mapPlatformAppToClient(res.application);
+          setPendingApplications((prev) => [clientApp, ...prev.filter((a) => a.id !== clientApp.id)]);
+        }
+      } catch (err) {
+        console.error('Failed to submit organisation application:', err);
+        // Optimistic fallback
+        const newApp: OrganisationApplication = {
+          ...appData,
+          id: `app-${Date.now()}`,
+          submittedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+          status: 'pending_approval',
+        };
+        setPendingApplications((prev) => [newApp, ...prev]);
+      }
     },
-    []
+    [mapPlatformAppToClient]
   );
 
   const approveOrganisationApplication = useCallback(
-    (appId: string): OrganisationTenant | undefined => {
-      const app = pendingApplications.find((a) => a.id === appId);
-      if (!app) return undefined;
-
-      const newTenantId = `tenant-${app.name.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 20)}-${Date.now().toString().slice(-4)}`;
-      const newBookId = `book-${app.primaryBookCode.toLowerCase()}-${Date.now().toString().slice(-4)}`;
-
-      const newTenant: OrganisationTenant = {
-        id: newTenantId,
-        name: app.name,
-        slug: app.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-        legalName: app.legalName,
-        industry: (app.archetypeName || 'General Business') as import('../types/erp').IndustryType,
-        currency: 'MVR',
-        currencySymbol: 'Rf',
-        tinNumber: '',
-        gstStatus: 'not_registered',
-        gstRate: 8,
-        financialYearStart: '01-01',
-        financialYearEnd: '12-31',
-        phone: app.phone,
-        email: app.applicantEmail,
-        address: `${app.island}, ${app.atoll}`,
-        island: app.island,
-        atoll: app.atoll,
-        bmlAccount: '7730000' + Math.floor(100000 + Math.random() * 900000) + ' (BML MVR)',
-        logoIcon: 'Building2',
-        themeColor: '#4f46e5',
-        createdAt: new Date().toISOString().split('T')[0],
-        books: [
-          {
-            id: newBookId,
-            tenantId: newTenantId,
-            code: app.primaryBookCode || 'MAIN',
-            name: app.primaryBookName || app.name,
-            archetypeId: (app.archetypeId || 'general_business') as import('../domain/archetypes').ArchetypeId,
-            isDefault: true,
-          },
-        ],
-        outlets: [
-          {
-            id: `out-${newTenantId}`,
-            tenantId: newTenantId,
-            name: app.primaryBookName || app.name,
-            code: app.primaryBookCode || 'MAIN',
-            tradingBrand: app.name,
-            island: app.island,
-            isPrimary: true,
-          },
-        ],
-        enabledModules: [
-          'dashboard',
-          'jobs',
-          'invoices',
-          'payments',
-          'expenses',
-          'inventory',
-          'purchasing',
-          'suppliers',
-          'reports',
-          'audit',
-          'workflows',
-          'roles',
-          'users',
-          'settings',
-        ],
-      };
-
-      setTenants((prev) => [...prev, newTenant]);
-      setPendingApplications((prev) =>
-        prev.map((a) => (a.id === appId ? { ...a, status: 'approved' } : a))
-      );
-
-      return newTenant;
+    async (appId: string): Promise<OrganisationTenant | undefined> => {
+      try {
+        const res = await apiApproveApplication(appId);
+        if (res.ok) {
+          setPendingApplications((prev) =>
+            prev.map((a) => (a.id === appId ? { ...a, status: 'approved' } : a))
+          );
+          if (session?.platform_entitlement) {
+            const appsRes = await apiGetPlatformApplications();
+            if (appsRes.ok) {
+              setPendingApplications(appsRes.applications.map(mapPlatformAppToClient));
+            }
+          }
+        }
+        return undefined;
+      } catch (err) {
+        console.error('Failed to approve organisation application:', err);
+        setPendingApplications((prev) =>
+          prev.map((a) => (a.id === appId ? { ...a, status: 'approved' } : a))
+        );
+        return undefined;
+      }
     },
-    [pendingApplications]
+    [session?.platform_entitlement, mapPlatformAppToClient]
   );
 
-  const rejectOrganisationApplication = useCallback((appId: string, reason?: string) => {
-    setPendingApplications((prev) =>
-      prev.map((a) => (a.id === appId ? { ...a, status: 'rejected', rejectionReason: reason } : a))
-    );
-  }, []);
+  const rejectOrganisationApplication = useCallback(
+    async (appId: string, reason?: string) => {
+      try {
+        const res = await apiRejectApplication(appId, reason || 'Application declined by Starq HQ Operator');
+        if (res.ok) {
+          setPendingApplications((prev) =>
+            prev.map((a) => (a.id === appId ? { ...a, status: 'rejected', rejectionReason: reason } : a))
+          );
+        }
+      } catch (err) {
+        console.error('Failed to reject organisation application:', err);
+        setPendingApplications((prev) =>
+          prev.map((a) => (a.id === appId ? { ...a, status: 'rejected', rejectionReason: reason } : a))
+        );
+      }
+    },
+    []
+  );
 
   const [activePlane, setActivePlane] = useState<'platform' | 'tenant'>('tenant');
   const [currentTenantId, setCurrentTenantId] = useState<string>('tenant-starq');
@@ -647,6 +681,28 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!currentTenant.books || currentTenant.books.length === 0) return undefined;
     return currentTenant.books.find((b) => b.id === currentBookId) || currentTenant.books[0];
   }, [currentTenant, currentBookId]);
+
+  // Current Archetype computation (SERP-288)
+  const currentArchetype = useMemo(() => {
+    return getArchetype(currentBook?.archetypeId || (currentTenant as any)?.industry);
+  }, [currentBook, currentTenant]);
+
+  const currentTerms = useMemo(() => {
+    return currentArchetype.terminology;
+  }, [currentArchetype]);
+
+  // Synchronize default workflow stages with current archetype
+  useEffect(() => {
+    if (currentArchetype) {
+      const defaultStages = currentArchetype.workflow.map((p, idx) => ({
+        ...p,
+        id: `stage-${currentArchetype.id}-${idx + 1}`,
+        tenantId: currentTenant.id,
+        order: idx + 1
+      }));
+      setWorkflowStages(defaultStages);
+    }
+  }, [currentArchetype.id, currentTenant.id]);
 
   // Current User computation
   const currentUser = useMemo(() => {
@@ -1139,16 +1195,20 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return { ok: true };
   };
 
+  const usersRef = useRef(users);
+  usersRef.current = users;
+  const rolesRef = useRef(roles);
+  rolesRef.current = roles;
+
   // Switch Current User Persona (to showcase RBAC gating)
-  const switchCurrentUser = (userId: string) => {
-    const user = users.find((u) => u.id === userId);
-    if (!user) return;
+  const switchCurrentUser = useCallback((userId: string) => {
     setCurrentUserId(userId);
+    const user = usersRef.current.find((u) => u.id === userId);
     // If switching to a privileged account, reset session elevation to require challenge
-    const userRole = roles.find((r) => r.id === user.roleId);
-    const isPrivileged = user.roleName === 'Super Administrator' || !!userRole?.isSystemAdmin || !!user.mfaRequired;
+    const userRole = rolesRef.current.find((r) => r.id === user?.roleId);
+    const isPrivileged = user?.roleName === 'Super Administrator' || !!userRole?.isSystemAdmin || !!user?.mfaRequired;
     setIsMfaElevated(!isPrivileged);
-  };
+  }, []);
 
   // Authorize Pending User (Admin Capability)
   const authorizeUser = (userId: string, roleId?: string) => {
@@ -1210,7 +1270,84 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   };
 
-  // Invite User
+  // Staff Invitations State & Lifecycle (SERP-286)
+  const [invitations, setInvitations] = useState<StaffInvitationRecord[]>([]);
+
+  useEffect(() => {
+    const activeOrgId = session?.current_organisation_id || currentTenant?.id;
+    if (activeOrgId) {
+      apiGetTenantInvitations()
+        .then((res) => {
+          if (res.ok && Array.isArray(res.invitations)) {
+            setInvitations(res.invitations);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [session?.current_organisation_id, currentTenant?.id]);
+
+  const inviteStaffMember = useCallback(
+    async (payload: CreateStaffInvitationPayload): Promise<StaffInvitationRecord> => {
+      const res = await apiCreateTenantInvitation(payload);
+      if (res.ok && res.invitation) {
+        setInvitations((prev) => [res.invitation, ...prev.filter((i) => i.id !== res.invitation.id)]);
+        logAuditEvent({
+          action: 'STAFF_INVITED',
+          module: 'users',
+          entityType: 'Invitation',
+          entityId: res.invitation.id,
+          entityName: res.invitation.name,
+          summary: `Dispatched staff invitation to ${res.invitation.email} for role ${res.invitation.role_id}. Token expires in 7 days.`,
+          newValue: 'Status: Pending Invite'
+        });
+        return res.invitation;
+      }
+      throw new Error('Failed to create invitation');
+    },
+    [logAuditEvent]
+  );
+
+  const resendInvitation = useCallback(
+    async (id: string): Promise<void> => {
+      const res = await apiResendTenantInvitation(id);
+      if (res.ok && res.invitation) {
+        setInvitations((prev) =>
+          prev.map((i) => (i.id === id ? res.invitation : i))
+        );
+        logAuditEvent({
+          action: 'INVITATION_RESENT',
+          module: 'users',
+          entityType: 'Invitation',
+          entityId: id,
+          entityName: res.invitation.name,
+          summary: `Resent staff invitation to ${res.invitation.email}. Token refreshed with 7-day expiration.`,
+        });
+      }
+    },
+    [logAuditEvent]
+  );
+
+  const revokeInvitation = useCallback(
+    async (id: string): Promise<void> => {
+      const res = await apiRevokeTenantInvitation(id);
+      if (res.ok) {
+        setInvitations((prev) =>
+          prev.map((i) => (i.id === id ? { ...i, status: 'revoked' } : i))
+        );
+        logAuditEvent({
+          action: 'INVITATION_REVOKED',
+          module: 'users',
+          entityType: 'Invitation',
+          entityId: id,
+          entityName: 'Staff Invitation',
+          summary: `Revoked staff invitation ${id}.`,
+        });
+      }
+    },
+    [logAuditEvent]
+  );
+
+  // Legacy Invite User wrapper for local state compatibility
   const inviteUser = (userData: {
     name: string;
     email: string;
@@ -1227,28 +1364,25 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       phone: userData.phone,
       roleId: userData.roleId,
       roleName: roleObj ? roleObj.name : 'Custom Role',
-      status: 'Pending Approval', // Land in pending until admin authorises!
+      status: 'Active',
       invitedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
       lastActiveAt: 'Invitation Dispatched',
       jobTitle: userData.jobTitle || 'Team Member'
     };
 
     setUsers((prev) => [...prev, newUser]);
-
-    // Add alert for admin attention
-    setAlerts((prev) => [
-      {
-        id: `alert-user-${newUser.id}`,
-        type: 'pending_user_approval',
-        title: `New User Sign-in Pending: ${newUser.name}`,
-        description: `${newUser.name} (${newUser.email}) is pending approval for role ${newUser.roleName}.`,
-        urgency: 'warning',
-        actionLabel: 'Review & Authorize',
-        targetTab: 'settings',
-        targetId: newUser.id
-      },
-      ...prev
-    ]);
+    // Dispatch server invitation asynchronously
+    apiCreateTenantInvitation({
+      email: userData.email,
+      name: userData.name,
+      role_id: userData.roleId,
+      job_title: userData.jobTitle,
+      phone: userData.phone,
+    }).then((res) => {
+      if (res.ok && res.invitation) {
+        setInvitations((prev) => [res.invitation, ...prev.filter((i) => i.id !== res.invitation.id)]);
+      }
+    }).catch(() => {});
 
     logAuditEvent({
       action: 'USER_INVITED',
@@ -1256,8 +1390,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       entityType: 'AppUser',
       entityId: newUser.id,
       entityName: newUser.name,
-      summary: `Invited user ${newUser.name} (${newUser.email}) with initial role ${newUser.roleName}. Lands in Pending state.`,
-      newValue: 'Status: Pending Approval'
+      summary: `Invited user ${newUser.name} (${userData.email}) with initial role ${newUser.roleName}.`,
+      newValue: 'Status: Invited'
     });
 
     return newUser;
@@ -1390,39 +1524,36 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   };
 
-  const resetWorkflowToPreset = (presetType: 'automotive' | 'clinic' | 'marine', targetTenantId?: string) => {
+  const resetWorkflowToPreset = (presetType: string, targetTenantId?: string) => {
     const orgId = targetTenantId || currentTenant.id;
-    let preset: WorkflowStage[] = [];
-    if (presetType === 'clinic') {
-      preset = CLINIC_WORKFLOW_PRESET.map((p, idx) => ({
-        ...p,
-        id: `stage-clinic-${idx + 1}`,
-        tenantId: orgId,
-        order: idx + 1
-      }));
-    } else if (presetType === 'marine') {
-      preset = BOATYARD_WORKFLOW_PRESET.map((p, idx) => ({
-        ...p,
-        id: `stage-marine-${idx + 1}`,
-        tenantId: orgId,
-        order: idx + 1
-      }));
-    } else {
-      preset = INITIAL_WORKFLOW_STAGES.map((p, idx) => ({
-        ...p,
-        tenantId: orgId,
-        order: idx + 1
-      }));
+    let archetypeKey: ArchetypeId = 'general_business';
+    if (presetType === 'clinic' || presetType === 'medical_clinic') {
+      archetypeKey = 'medical_clinic';
+    } else if (presetType === 'marine' || presetType === 'marine_service') {
+      archetypeKey = 'marine_service';
+    } else if (presetType === 'automotive' || presetType === 'automotive_workshop') {
+      archetypeKey = 'automotive_workshop';
+    } else if (presetType in ARCHETYPES) {
+      archetypeKey = presetType as ArchetypeId;
     }
+
+    const archetypeDef = getArchetype(archetypeKey);
+    const preset: WorkflowStage[] = archetypeDef.workflow.map((p, idx) => ({
+      ...p,
+      id: `stage-${archetypeKey}-${idx + 1}`,
+      tenantId: orgId,
+      order: idx + 1
+    }));
+
     setWorkflowStages(preset);
 
     logAuditEvent({
       action: 'WORKFLOW_MODIFIED',
       module: 'workflows',
       entityType: 'WorkflowStage',
-      entityId: `preset-${presetType}`,
-      entityName: `${presetType.toUpperCase()} Workflow Template`,
-      summary: `Loaded standard workflow pipeline template for industry: ${presetType}.`
+      entityId: `preset-${archetypeKey}`,
+      entityName: `${archetypeDef.name} Workflow Template`,
+      summary: `Loaded standard workflow pipeline template for: ${archetypeDef.name}.`
     });
   };
 
@@ -2210,6 +2341,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         currentTenant,
         currentBookId,
         currentBook,
+        currentArchetype,
+        currentTerms,
         tenants,
         switchTenant,
         switchBook,
@@ -2231,11 +2364,16 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         // RBAC & User Management
         currentUser,
         users,
+        setUsers,
         roles,
+        invitations,
         switchCurrentUser,
         authorizeUser,
         suspendUser,
         inviteUser,
+        inviteStaffMember,
+        resendInvitation,
+        revokeInvitation,
         updateUserRole,
         createRole,
         updateRolePermissions,

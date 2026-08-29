@@ -39,18 +39,30 @@ export const StarqHQApplications: React.FC = () => {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const handleApprove = (app: OrganisationApplication) => {
-    const approved = approveOrganisationApplication(app.id);
-    if (approved) {
-      showToast(`Successfully provisioned "${approved.name}" as an active client tenant!`);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleApprove = async (app: OrganisationApplication) => {
+    setIsProcessing(true);
+    try {
+      await approveOrganisationApplication(app.id);
+      showToast(`Successfully provisioned "${app.name}" as an active client tenant!`);
       setSelectedApp(null);
+    } catch {
+      showToast(`Provisioning failed for "${app.name}".`);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const handleReject = (app: OrganisationApplication) => {
-    rejectOrganisationApplication(app.id, 'Application declined by Starq HQ Operator');
-    showToast(`Application for "${app.name}" was rejected.`);
-    setSelectedApp(null);
+  const handleReject = async (app: OrganisationApplication) => {
+    setIsProcessing(true);
+    try {
+      await rejectOrganisationApplication(app.id, 'Application declined by Starq HQ Operator');
+      showToast(`Application for "${app.name}" was rejected.`);
+      setSelectedApp(null);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleSendInfoRequest = () => {

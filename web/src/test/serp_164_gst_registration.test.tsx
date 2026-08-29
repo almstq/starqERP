@@ -43,7 +43,7 @@ describe('SERP-164: Explicit MIRA GST Registration Status State & Reports Reacti
     expect(screen.getByText(/Non-Registered \(0% GST\)/i)).toBeDefined();
 
     // Find the GST registration status select
-    const select = screen.getByDisplayValue(/Not Registered with MIRA/i);
+    const select = screen.getByDisplayValue(/Not Registered/i);
     expect(select).toBeDefined();
 
     // Change value to registered

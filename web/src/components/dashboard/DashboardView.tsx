@@ -1,3 +1,4 @@
+import { resolveFavaraAccountNumber } from '../invoices/FavaraPaymentModal';
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -31,6 +32,7 @@ import {
   CartesianGrid
 } from 'recharts';
 import { useERP } from '../../context/ERPContext';
+import { useAuth } from '../../context/AuthContext';
 import { MONTHLY_SALES_CHART_DATA, SERVICE_BREAKDOWN_DATA } from '../../data/mockData';
 import { StarqHQShell } from '../platform/StarqHQShell';
 import {
@@ -45,9 +47,14 @@ import {
 
 export const DashboardView: React.FC = () => {
   const navigate = useNavigate();
+  const { session } = useAuth();
   const {
     activePlane,
+    currentUser,
     currentTenant,
+    currentBook,
+    currentArchetype,
+    currentTerms,
     totalSalesToday,
     totalCashReceived,
     totalOutstandingInvoices,
@@ -76,7 +83,7 @@ export const DashboardView: React.FC = () => {
   const recentJobColumns: ColumnDef<any>[] = [
     {
       key: 'jobId',
-      header: 'Job ID / Bay',
+      header: `${currentTerms.order} / ${currentTerms.facility}`,
       width: '16%',
       render: (job) => (
         <div className="min-w-0">
@@ -84,27 +91,27 @@ export const DashboardView: React.FC = () => {
             {job.jobId}
           </div>
           <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] truncate mt-0.5">
-            {job.bayNumber || 'Main Bay'}
+            {job.bayNumber || job.location || currentTerms.facility}
           </div>
         </div>
       ),
     },
     {
       key: 'customerName',
-      header: 'Customer & Asset',
+      header: `${currentTerms.customer} & ${currentTerms.primaryAsset}`,
       width: '26%',
       render: (job) => (
         <div className="min-w-0">
           <div className="font-semibold text-xs text-[var(--md-sys-color-on-surface)] truncate">{job.customerName}</div>
           <div className="text-[11px] mono-num truncate text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
-            {job.vehicle?.plateNumber} ({job.vehicle?.model})
+            {job.vehicle?.plateNumber ? `${job.vehicle.plateNumber} (${job.vehicle.model})` : (job.projectRef || job.serviceType || 'Standard Scope')}
           </div>
         </div>
       ),
     },
     {
       key: 'serviceType',
-      header: 'Service',
+      header: 'Scope / Service',
       width: '16%',
       hideOn: 'compact',
       render: (job) => (
@@ -169,22 +176,66 @@ export const DashboardView: React.FC = () => {
     },
   ];
 
+  const greeting = (() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  })();
+
+  const rawUserName = session?.name || currentUser?.name || 'User';
+  const preferredName = rawUserName.includes(' ') ? rawUserName.split(' ')[1] : rawUserName;
+
+  const companyName = currentTenant.legalName || currentTenant.name || 'Enterprise';
+  const bookCode = currentBook?.code || (currentTenant.name ? currentTenant.name.slice(0, 3).toUpperCase() : 'STQ');
+  const attentionCount = alerts.length;
+
   return (
     <div className="space-y-4 sm:space-y-6 pb-12 w-full min-w-0">
-      {/* Top Banner / Welcome with Quick Actions */}
+      {/* Top Banner / Welcome with Tenant Identity, Personalized Welcome & Quick Actions */}
       <Surface variant="filled" level={1} padding="md" className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
-        <div className="space-y-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] truncate">
-              Operations Overview
-            </h1>
-            <Badge variant="positive" size="sm">
-              Live System
-            </Badge>
+        <div className="flex items-center gap-3.5 min-w-0">
+          {currentTenant.logoUrl ? (
+            <img
+              src={currentTenant.logoUrl}
+              alt={currentTenant.name}
+              className="w-12 h-12 rounded-xl object-contain p-1 border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] shrink-0"
+            />
+          ) : (
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border border-[var(--md-sys-color-outline-variant)]"
+              style={{
+                backgroundColor: 'var(--md-sys-color-primary-container)',
+                color: 'var(--md-sys-color-on-primary-container)',
+              }}
+            >
+              {(currentBook?.code || currentTenant.name.slice(0, 2)).toUpperCase()}
+            </div>
+          )}
+          <div className="space-y-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] truncate">
+                {greeting}, {preferredName}
+              </h1>
+              <Badge variant="neutral" size="sm">
+                {currentBook?.name ? `${currentBook.name} · ${currentArchetype.name}` : currentArchetype.name}
+              </Badge>
+              <Badge variant="positive" size="sm">
+                Live Book
+              </Badge>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--md-sys-color-on-surface-variant)]">
+              <span className="font-semibold text-[var(--md-sys-color-on-surface)] truncate">
+                {companyName} · {bookCode}
+              </span>
+              <span className="hidden sm:inline text-[var(--md-sys-color-outline)]">•</span>
+              <span className={attentionCount > 0 ? "font-medium text-[var(--md-sys-color-error)]" : "text-[var(--md-sys-color-on-surface-variant)]"}>
+                {attentionCount === 0
+                  ? 'No items require your attention right now.'
+                  : `${attentionCount} ${attentionCount === 1 ? 'item requires' : 'items require'} your attention today.`}
+              </span>
+            </div>
           </div>
-          <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] max-w-2xl">
-            Real-time operations dashboard. Monitor work orders, bay scheduling, cash settlements, invoice balances, and material inventory.
-          </p>
         </div>
 
         <ActionGroup align="right" className="shrink-0">
@@ -194,7 +245,7 @@ export const DashboardView: React.FC = () => {
             onClick={() => setIsCreateJobOpen(true)}
             icon={<Plus size={15} />}
           >
-            <span>New Work Order</span>
+            <span>New {currentTerms.order}</span>
           </Button>
           <Button
             variant="tonal"
@@ -217,14 +268,14 @@ export const DashboardView: React.FC = () => {
 
       {/* Primary KPI Grid (Fluid auto-fit, container-safe, never forced 2 cols) */}
       <ResponsiveGrid columns="auto" minItemWidth="160px" gap="sm">
-        <Surface variant="filled" level={2} padding="sm" container className="space-y-1 min-w-0">
-          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+        <Surface variant="filled" level={2} padding="sm" container className="flex flex-col justify-between h-[100px] min-w-0">
+          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate h-4">
             Sales Today
           </span>
-          <div className="text-base sm:text-lg font-bold mono-num text-[var(--md-sys-color-on-surface)] truncate">
+          <div className="text-base sm:text-lg font-bold mono-num text-[var(--md-sys-color-on-surface)] truncate leading-none my-auto">
             {formatMVR(totalSalesToday, false)}
           </div>
-          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
+          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate h-3.5 leading-none">
             {invoices.filter((inv) => inv.date === new Date().toISOString().split('T')[0]).length} invoices logged
           </span>
         </Surface>
@@ -235,15 +286,15 @@ export const DashboardView: React.FC = () => {
           padding="sm"
           container
           onClick={() => navigate('/payments')}
-          className="space-y-1 min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
+          className="flex flex-col justify-between h-[100px] min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
         >
-          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate h-4">
             Cash Received
           </span>
-          <div className="text-base sm:text-lg font-bold mono-num truncate" style={{ color: 'var(--positive)' }}>
+          <div className="text-base sm:text-lg font-bold mono-num truncate leading-none my-auto" style={{ color: 'var(--positive)' }}>
             {formatMVR(totalCashReceived, false)}
           </div>
-          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
+          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate h-3.5 leading-none">
             Month-to-date collections
           </span>
         </Surface>
@@ -254,15 +305,15 @@ export const DashboardView: React.FC = () => {
           padding="sm"
           container
           onClick={() => navigate('/invoices')}
-          className="space-y-1 min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
+          className="flex flex-col justify-between h-[100px] min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
         >
-          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate h-4">
             Receivables Due
           </span>
-          <div className="text-base sm:text-lg font-bold mono-num truncate" style={{ color: 'var(--md-sys-color-error)' }}>
+          <div className="text-base sm:text-lg font-bold mono-num truncate leading-none my-auto" style={{ color: 'var(--md-sys-color-error)' }}>
             {formatMVR(totalOutstandingInvoices, false)}
           </div>
-          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
+          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate h-3.5 leading-none">
             Outstanding invoices
           </span>
         </Surface>
@@ -273,15 +324,15 @@ export const DashboardView: React.FC = () => {
           padding="sm"
           container
           onClick={() => navigate('/purchasing')}
-          className="space-y-1 min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
+          className="flex flex-col justify-between h-[100px] min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
         >
-          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
+          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate h-4">
             Accounts Payable
           </span>
-          <div className="text-base sm:text-lg font-bold mono-num truncate" style={{ color: 'var(--warning)' }}>
+          <div className="text-base sm:text-lg font-bold mono-num truncate leading-none my-auto" style={{ color: 'var(--warning)' }}>
             {formatMVR(totalAccountsPayable, false)}
           </div>
-          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
+          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate h-3.5 leading-none">
             Vendor dues (4 suppliers)
           </span>
         </Surface>
@@ -292,40 +343,43 @@ export const DashboardView: React.FC = () => {
           padding="sm"
           container
           onClick={() => navigate('/jobs')}
-          className="space-y-1 min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
+          className="flex flex-col justify-between h-[100px] min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
         >
-          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
-            Active Jobs
+          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate h-4">
+            {currentTerms.orders}
           </span>
-          <div className="text-base sm:text-lg font-bold mono-num truncate" style={{ color: 'var(--md-sys-color-primary)' }}>
-            {activeJobsCount} In Bay
+          <div className="text-base sm:text-lg font-bold mono-num truncate leading-none my-auto" style={{ color: 'var(--md-sys-color-primary)' }}>
+            {activeJobsCount} {currentArchetype.id === 'automotive_workshop' ? 'In Bay' : 'Active'}
           </div>
-          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
-            Floor work orders
+          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate h-3.5 leading-none">
+            {currentArchetype.id === 'automotive_workshop' ? 'Floor work orders' : 'In progress'}
           </span>
         </Surface>
 
-        <Surface
-          variant="filled"
-          level={2}
-          padding="sm"
-          container
-          onClick={() => navigate('/inventory')}
-          className="space-y-1 min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
-        >
-          <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate">
-            Low Stock Items
-          </span>
-          <div
-            className="text-base sm:text-lg font-bold mono-num truncate"
-            style={{ color: lowStockItemsCount > 0 ? 'var(--md-sys-color-error)' : 'var(--positive)' }}
+        {/* Capability-driven KPI: Only show Inventory if physical stock is enabled / applicable */}
+        {currentArchetype.id !== 'software_services' && currentArchetype.id !== 'professional_services' && (
+          <Surface
+            variant="filled"
+            level={2}
+            padding="sm"
+            container
+            onClick={() => navigate('/inventory')}
+            className="flex flex-col justify-between h-[100px] min-w-0 cursor-pointer hover:border-[var(--md-sys-color-primary)] transition-all"
           >
-            {lowStockItemsCount} Items
-          </div>
-          <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate">
-            Reorder required
-          </span>
-        </Surface>
+            <span className="block text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] truncate h-4">
+              Low Stock Items
+            </span>
+            <div
+              className="text-base sm:text-lg font-bold mono-num truncate leading-none my-auto"
+              style={{ color: lowStockItemsCount > 0 ? 'var(--md-sys-color-error)' : 'var(--positive)' }}
+            >
+              {lowStockItemsCount} Items
+            </div>
+            <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate h-3.5 leading-none">
+              Threshold triggers
+            </span>
+          </Surface>
+        )}
       </ResponsiveGrid>
 
       {/* 2-Column Section: Needs Attention + starqAI Assistant Layer */}
@@ -497,10 +551,10 @@ export const DashboardView: React.FC = () => {
                 </div>
                 <div className="space-y-1 max-w-xs">
                   <p className="text-xs font-semibold text-[var(--md-sys-color-on-surface)]">
-                    Ready for Live Analysis
+                    starqAI (Preview / Standby)
                   </p>
                   <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">
-                    starqAI continuously monitors your floor workflows, margin trends, and receivable aging. Operational recommendations will appear as activity is recorded.
+                    Contextual recommendations and cash-flow insights will appear here when connected to active business activity.
                   </p>
                 </div>
                 <Button
@@ -509,7 +563,7 @@ export const DashboardView: React.FC = () => {
                   onClick={() => setIsAICopilotOpen(true)}
                   icon={<Sparkles size={12} />}
                 >
-                  <span>Open Copilot</span>
+                  <span>Open starqAI</span>
                 </Button>
               </div>
             ) : (
@@ -593,9 +647,9 @@ export const DashboardView: React.FC = () => {
         >
           <div className="min-w-0">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface)] truncate">
-              Active Work Orders & Floor Bays
+              {currentTerms.activeOrdersHeader}
             </h2>
-            <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">Live floor progress for service and repair packages</p>
+            <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">{currentTerms.activeOrdersSubtitle}</p>
           </div>
 
           <Link
@@ -603,7 +657,7 @@ export const DashboardView: React.FC = () => {
             className="text-xs font-semibold hover:underline flex items-center gap-1 shrink-0"
             style={{ color: 'var(--md-sys-color-primary)' }}
           >
-            <span>View All Jobs</span>
+            <span>View All {currentTerms.orders}</span>
             <ChevronRight size={14} />
           </Link>
         </div>
@@ -614,7 +668,7 @@ export const DashboardView: React.FC = () => {
           columns={recentJobColumns}
           keyExtractor={(j) => j.id}
           onRowClick={(j) => navigate(`/jobs/${j.id}`)}
-          emptyMessage="No active work orders on floor."
+          emptyMessage={`No active ${currentTerms.orders.toLowerCase()} in progress.`}
         />
       </Surface>
 
@@ -719,7 +773,7 @@ export const DashboardView: React.FC = () => {
             <div className="flex items-center justify-between min-w-0">
               <span className="text-[var(--md-sys-color-on-surface-variant)]">BML Settlement:</span>
               <span className="mono-num font-semibold text-[var(--md-sys-color-on-surface)]">
-                {currentTenant?.bmlAccount ? currentTenant.bmlAccount.split(' ')[0] : 'Not Configured'}
+                {resolveFavaraAccountNumber(currentTenant?.bmlAccount) ?? 'Not Configured'}
               </span>
             </div>
             <div className="flex items-center justify-between min-w-0">

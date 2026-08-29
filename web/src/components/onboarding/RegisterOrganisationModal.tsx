@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useERP } from '../../context/ERPContext';
+import { useAuth } from '../../context/AuthContext';
 import { Modal } from '../common/Modal';
-import { Building2, Sparkles, CheckCircle2, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Building2, Sparkles, CheckCircle2, ShieldCheck, ArrowRight, UserCheck } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
@@ -18,7 +19,11 @@ const ARCHETYPES = [
 
 export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const { submitOrganisationApplication } = useERP();
-  const [step, setStep] = useState<'form' | 'success'>('form');
+  const { session } = useAuth();
+  const [step, setStep] = useState<'form' | 'positive'>('form');
+
+  const applicantName = session?.name || 'Authenticated Applicant';
+  const applicantEmail = session?.email || 'applicant@example.com';
 
   const [formData, setFormData] = useState({
     name: '',
@@ -28,9 +33,7 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
     archetypeId: 'automotive_workshop',
     island: "Male'",
     atoll: 'Kaafu Atoll',
-    applicantName: 'Ali Mushthaq Ibrahim',
-    applicantEmail: 'a.musthaq@gmail.com',
-    phone: '+960 778-9900',
+    phone: '',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -48,12 +51,12 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
       archetypeName: chosenArchetype?.name || 'General Business',
       island: formData.island,
       atoll: formData.atoll,
-      applicantName: formData.applicantName,
-      applicantEmail: formData.applicantEmail,
+      applicantName,
+      applicantEmail,
       phone: formData.phone,
     });
 
-    setStep('success');
+    setStep('positive');
   };
 
   const handleDone = () => {
@@ -66,9 +69,7 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
       archetypeId: 'automotive_workshop',
       island: "Male'",
       atoll: 'Kaafu Atoll',
-      applicantName: 'Ali Mushthaq Ibrahim',
-      applicantEmail: 'a.musthaq@gmail.com',
-      phone: '+960 778-9900',
+      phone: '',
     });
     onClose();
   };
@@ -96,6 +97,25 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
                 Once approved in the Superadmin console, this organisation will be provisioned into your workspace.
               </p>
             </div>
+          </div>
+
+          <div
+            className="p-2.5 rounded-[var(--md-sys-shape-corner-small)] border text-xs flex items-center justify-between"
+            style={{
+              backgroundColor: 'var(--md-sys-color-surface-container-low)',
+              borderColor: 'var(--md-sys-color-outline-variant)',
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <UserCheck size={16} className="text-[var(--md-sys-color-primary)]" />
+              <div>
+                <span className="font-semibold text-[var(--md-sys-color-on-surface)]">{applicantName}</span>
+                <span className="text-[var(--md-sys-color-on-surface-variant)] ml-1.5">({applicantEmail})</span>
+              </div>
+            </div>
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600">
+              Verified Identity
+            </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
