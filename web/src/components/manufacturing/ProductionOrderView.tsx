@@ -106,7 +106,7 @@ export const ProductionOrderView: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-white">Manufacturing, Assembly & BOM Control</h2>
-                <Badge variant="success">Standard Costing</Badge>
+                <Badge variant="positive">Standard Costing</Badge>
               </div>
               <p className="text-xs text-slate-400">
                 Multi-level Bill of Materials (BOM), raw material issue to WIP (Account 1400), and scrap accounting (Account 5100).
@@ -174,7 +174,7 @@ export const ProductionOrderView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-white">{ord.orderNumber}</span>
                   <span className="text-slate-400 font-sans">· {ord.finishedGoodName}</span>
-                  <Badge variant={ord.status === 'COMPLETED' ? 'success' : ord.status === 'IN_PROGRESS' ? 'warning' : 'neutral'}>
+                  <Badge variant={ord.status === 'COMPLETED' ? 'positive' : ord.status === 'IN_PROGRESS' ? 'warning' : 'neutral'}>
                     {ord.status}
                   </Badge>
                 </div>

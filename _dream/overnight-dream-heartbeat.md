@@ -1,0 +1,9 @@
+# STARQERP DREAM HEARTBEAT — Phase A validation
+
+timestamp: 2026-08-29T02:35:00Z
+HEAD: UNREADABLE
+board:
+BOARD_UNREADABLE
+latest_broker_sequence: 162
+
+DREAM_PIPELINE_OK
