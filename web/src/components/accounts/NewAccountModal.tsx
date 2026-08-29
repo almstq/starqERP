@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Modal } from '../common/Modal';
 import {
   AccountRecord,
@@ -9,6 +9,13 @@ import {
   SUBTYPE_LABELS,
   CLASS_CODE_RANGES,
 } from '../../domain/accounts';
+import {
+  validateAccountDraft,
+  subtypesForClass,
+  eligibleParentsFor,
+  suggestNextCode,
+  describeClassRange,
+} from '../../domain/accountValidation';
 import { Building2, Hash, AlertCircle } from 'lucide-react';
 
 interface NewAccountModalProps {
@@ -56,27 +63,19 @@ export const NewAccountModal: React.FC<NewAccountModalProps> = ({
       setDescription('');
       setError(null);
 
-      // Auto-suggest next available code
-      const range = CLASS_CODE_RANGES[accountClass];
-      const existingCodes = accounts
-        .filter((a) => a.accountClass === accountClass)
-        .map((a) => parseInt(a.code, 10))
-        .filter((n) => !isNaN(n));
-      const maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : parseInt(range.min, 10);
-      setCode(String(maxCode + 1));
+      // SERP-343: suggest inside the block the account actually belongs to. The
+      // old rule took the maximum across the whole class, so a new utility
+      // account was proposed after the highest-numbered expense in the chart.
+      const parent = accounts.find((a) => a.id === (initialParentId || ''));
+      setCode(suggestNextCode(accountClass, accounts, parent?.code));
     }
   }, [isOpen, editingAccount, initialParentId]);
 
   // Handle class change -> adjust code and subtype
   const handleClassChange = (newClass: AccountClass) => {
     setAccountClass(newClass);
-    const range = CLASS_CODE_RANGES[newClass];
-    const existingCodes = accounts
-      .filter((a) => a.accountClass === newClass)
-      .map((a) => parseInt(a.code, 10))
-      .filter((n) => !isNaN(n));
-    const maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : parseInt(range.min, 10);
-    setCode(String(maxCode + 1));
+    setCode(suggestNextCode(newClass, accounts));
+    setParentId('');
 
     // Default subtype for the class
     if (newClass === 'ASSET') setSubtype('CURRENT_ASSET');
@@ -93,21 +92,20 @@ export const NewAccountModal: React.FC<NewAccountModalProps> = ({
     const trimmedName = name.trim();
     const trimmedCode = code.trim();
 
-    if (!trimmedName) {
-      setError('Account name is required.');
-      return;
-    }
-    if (!trimmedCode) {
-      setError('Account code is required.');
-      return;
-    }
-
-    // Check unique code
-    const duplicate = accounts.find(
-      (a) => a.code.toLowerCase() === trimmedCode.toLowerCase() && a.id !== editingAccount?.id
-    );
-    if (duplicate) {
-      setError(`Account code "${trimmedCode}" is already used by "${duplicate.name}".`);
+    // SERP-343: full structural validation. The old path checked required and
+    // unique only — it never enforced the class/range relationship it displays
+    // in its own UI, nor the subtype/class matrix, nor hierarchy acyclicity.
+    const issues = validateAccountDraft({
+      code: trimmedCode,
+      name: trimmedName,
+      accountClass,
+      subtype,
+      parentId: parentId || null,
+      accounts,
+      editingAccountId: editingAccount?.id,
+    });
+    if (issues.length > 0) {
+      setError(issues.map((i) => i.message).join(' '));
       return;
     }
 
@@ -133,9 +131,16 @@ export const NewAccountModal: React.FC<NewAccountModalProps> = ({
     onClose();
   };
 
-  const eligibleParents = accounts.filter(
-    (a) => a.accountClass === accountClass && a.id !== editingAccount?.id
+  // SERP-343: excluding only the account itself let it be parented to its own
+  // child. eligibleParentsFor excludes every descendant.
+  const eligibleParents = useMemo(
+    () => eligibleParentsFor(accountClass, accounts, editingAccount?.id),
+    [accountClass, accounts, editingAccount?.id],
   );
+
+  // SERP-343: the dropdown used to offer every subtype for every class, so
+  // Asset + Payroll Expense was selectable.
+  const availableSubtypes = useMemo(() => subtypesForClass(accountClass), [accountClass]);
 
   return (
     <Modal
@@ -165,7 +170,7 @@ export const NewAccountModal: React.FC<NewAccountModalProps> = ({
             >
               {(Object.keys(CLASS_LABELS) as AccountClass[]).map((cls) => (
                 <option key={cls} value={cls}>
-                  {CLASS_LABELS[cls]} ({CLASS_CODE_RANGES[cls].prefix}000s)
+                  {CLASS_LABELS[cls]} ({describeClassRange(cls)})
                 </option>
               ))}
             </select>
@@ -233,7 +238,7 @@ export const NewAccountModal: React.FC<NewAccountModalProps> = ({
               onChange={(e) => setSubtype(e.target.value as AccountSubtype)}
               className="w-full h-10 px-3 rounded-lg border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] text-sm focus:outline-none focus:border-[var(--md-sys-color-primary)]"
             >
-              {(Object.keys(SUBTYPE_LABELS) as AccountSubtype[]).map((st) => (
+              {availableSubtypes.map((st) => (
                 <option key={st} value={st}>
                   {SUBTYPE_LABELS[st]}
                 </option>
