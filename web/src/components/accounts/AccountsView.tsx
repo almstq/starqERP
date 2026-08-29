@@ -44,7 +44,8 @@ import { GeneralLedgerView } from './GeneralLedgerView';
 import { PeriodManagementView } from './PeriodManagementView';
 import { BankReconciliationView } from './BankReconciliationView';
 import { MultiCurrencyView } from './MultiCurrencyView';
-import { AccountingPeriod, generateFiscalPeriods, assertPeriodNotLocked } from '../../domain/periods';
+import { AccountingPeriod, generateFiscalPeriods } from '../../domain/periods';
+import { assertJournalPostable, PostingActor } from '../../domain/postingControl';
 import { Badge, Surface, Button } from '../ui';
 import { useERP } from '../../context/ERPContext';
 import {
@@ -89,6 +90,7 @@ export const AccountsView: React.FC = () => {
     localStorage.setItem('starq:accounting_periods:v1', JSON.stringify(updated));
   };
   const [selectedLedgerAccountId, setSelectedLedgerAccountId] = useState<string | null>(null);
+  const [postingError, setPostingError] = useState<string | null>(null);
 
   const [accounts, setAccounts] = useState<AccountRecord[]>(() => {
     const saved = localStorage.getItem('starq:chart_of_accounts:v1');
@@ -157,7 +159,24 @@ export const AccountsView: React.FC = () => {
     }
   };
 
-  const handleSaveManualJournal = (entry: JournalEntry) => {
+  /**
+   * The ONLY path by which a journal reaches state. Every caller goes through
+   * here so the posting gate cannot be bypassed by adding another button.
+   *
+   * SERP-345: before this, assertPeriodNotLocked was imported into this file and
+   * called zero times — a journal could be posted into a CLOSED period and
+   * nothing stopped it. The guard existed and was never in effect.
+   */
+  const postJournal = (entry: JournalEntry, actor: PostingActor = 'user') => {
+    try {
+      assertJournalPostable({ entry, periods, accounts, actor });
+    } catch (err) {
+      // Surface the reason rather than throwing out of an event handler, which
+      // would leave the user with a modal that silently refuses to close.
+      setPostingError(err instanceof Error ? err.message : 'Posting rejected.');
+      return;
+    }
+    setPostingError(null);
     setManualJournals((prev) => {
       const next = [entry, ...prev];
       try {
@@ -168,6 +187,8 @@ export const AccountsView: React.FC = () => {
       return next;
     });
   };
+
+  const handleSaveManualJournal = (entry: JournalEntry) => postJournal(entry, 'user');
 
   // Toggle single node expansion
   const toggleExpand = (id: string) => {
@@ -290,6 +311,23 @@ export const AccountsView: React.FC = () => {
 
   return (
     <div className="space-y-6" data-testid="chart-of-accounts-view">
+      {postingError && (
+        <div
+          role="alert"
+          data-testid="posting-rejected"
+          className="flex items-start gap-3 rounded-lg border border-[var(--md-sys-color-error)] bg-[var(--md-sys-color-error-container)] p-4 text-[var(--md-sys-color-on-error-container)]"
+        >
+          <span className="font-semibold shrink-0">Posting rejected</span>
+          <span className="text-sm">{postingError}</span>
+          <button
+            type="button"
+            onClick={() => setPostingError(null)}
+            className="ml-auto text-sm underline shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       {/* Header with View Mode Switcher and Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -359,8 +397,9 @@ export const AccountsView: React.FC = () => {
           journals={allJournals}
           accounts={accounts}
           onClosingJournalPosted={(closingJe) => {
-            const updated = [closingJe, ...manualJournals];
-            setManualJournals(updated);
+            // The close is the one process permitted to write Retained Earnings
+            // and to post into the period it is closing.
+            postJournal(closingJe, 'system');
           }}
           formatMVR={formatMVR}
         />
@@ -368,15 +407,17 @@ export const AccountsView: React.FC = () => {
         <BankReconciliationView
           journals={allJournals}
           onAddAdjustmentJournal={(adjJe) => {
-            const updated = [adjJe, ...manualJournals];
-            setManualJournals(updated);
+            // Bank reconciliation books fees and interest against its own
+            // control accounts, so it posts as the owning engine.
+            postJournal(adjJe, 'system');
           }}
         />
       ) : activeTab === 'multi_currency' ? (
         <MultiCurrencyView
           onAddJournalEntry={(fxJe) => {
-            const updated = [fxJe, ...manualJournals];
-            setManualJournals(updated);
+            // Realised FX gain and loss are system accounts written by the
+            // settlement engine.
+            postJournal(fxJe, 'system');
           }}
         />
       ) : (
