@@ -1,3 +1,4 @@
+import { resolveFavaraAccountNumber } from '../invoices/FavaraPaymentModal';
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -772,7 +773,7 @@ export const DashboardView: React.FC = () => {
             <div className="flex items-center justify-between min-w-0">
               <span className="text-[var(--md-sys-color-on-surface-variant)]">BML Settlement:</span>
               <span className="mono-num font-semibold text-[var(--md-sys-color-on-surface)]">
-                {currentTenant?.bmlAccount ? currentTenant.bmlAccount.split(' ')[0] : 'Not Configured'}
+                {resolveFavaraAccountNumber(currentTenant?.bmlAccount) ?? 'Not Configured'}
               </span>
             </div>
             <div className="flex items-center justify-between min-w-0">
