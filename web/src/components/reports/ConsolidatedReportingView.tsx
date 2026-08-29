@@ -127,7 +127,7 @@ export const ConsolidatedReportingView: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-white">Multi-Branch Consolidated Financial Reporting</h2>
-                <Badge variant="success">Inter-Company Eliminated</Badge>
+                <Badge variant="positive">Inter-Company Eliminated</Badge>
               </div>
               <p className="text-xs text-slate-400">
                 Segmented business unit financial statements with automated internal revenue/charge eliminations.

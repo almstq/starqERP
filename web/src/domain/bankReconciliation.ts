@@ -1,3 +1,5 @@
+import type { JournalEntry } from './journals';
+import { accountClassForCode } from './accounts';
 export interface BankAccountConfig {
   id: string;
   accountCode: string; // e.g. "1010", "1020", "1030"
@@ -340,7 +342,7 @@ export function createBankAdjustmentEntry(params: {
   adjustmentType: 'bank_fee' | 'interest_income';
   narration?: string;
   tenantId: string;
-}) {
+}): JournalEntry {
   const { statementLine, bankAccountCode, adjustmentType, narration, tenantId } = params;
   const isFee = adjustmentType === 'bank_fee';
   let amount = isFee ? statementLine.debit : statementLine.credit;
@@ -360,36 +362,44 @@ export function createBankAdjustmentEntry(params: {
         {
           id: `${statementLine.id}-adj-debit`,
           accountCode: feeAccountCode,
+          accountId: `acc-${feeAccountCode}`,
+          accountClass: accountClassForCode(feeAccountCode),
           accountName: 'Bank Charges & Processing Fees',
           debit: amount,
           credit: 0,
-          description: narration || statementLine.description || 'Monthly bank charges',
+          narration: narration || statementLine.description || 'Monthly bank charges',
         },
         {
           id: `${statementLine.id}-adj-credit`,
           accountCode: bankAccountCode,
+          accountId: `acc-${bankAccountCode}`,
+          accountClass: accountClassForCode(bankAccountCode),
           accountName: 'Operating Bank Account',
           debit: 0,
           credit: amount,
-          description: narration || statementLine.description || 'Bank charges deduction',
+          narration: narration || statementLine.description || 'Bank charges deduction',
         },
       ]
     : [
         {
           id: `${statementLine.id}-adj-debit`,
           accountCode: bankAccountCode,
+          accountId: `acc-${bankAccountCode}`,
+          accountClass: accountClassForCode(bankAccountCode),
           accountName: 'Operating Bank Account',
           debit: amount,
           credit: 0,
-          description: narration || statementLine.description || 'Bank interest receipt',
+          narration: narration || statementLine.description || 'Bank interest receipt',
         },
         {
           id: `${statementLine.id}-adj-credit`,
           accountCode: interestAccountCode,
+          accountId: `acc-${interestAccountCode}`,
+          accountClass: accountClassForCode(interestAccountCode),
           accountName: 'Interest & Profit Income',
           debit: 0,
           credit: amount,
-          description: narration || statementLine.description || 'Bank interest credit',
+          narration: narration || statementLine.description || 'Bank interest credit',
         },
       ];
 

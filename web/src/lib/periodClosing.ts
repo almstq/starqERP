@@ -8,7 +8,7 @@
  */
 
 import { JournalEntry, JournalLine } from '../domain/journals';
-import { AccountRecord } from '../domain/accounts';
+import { AccountRecord, accountClassForCode } from '../domain/accounts';
 import { AccountingPeriod } from '../domain/periods';
 
 export interface YearEndClosePreview {
@@ -103,6 +103,8 @@ export function previewYearEndClose(params: {
     closingLines.push({
       id: `close-rev-${idx}`,
       accountCode: r.code,
+      accountId: `acc-${r.code}`,
+      accountClass: accountClassForCode(r.code),
       accountName: `${r.name} (Year-End Zeroing)`,
       debit: r.balance,
       credit: 0,
@@ -115,6 +117,8 @@ export function previewYearEndClose(params: {
     closingLines.push({
       id: `close-exp-${idx}`,
       accountCode: e.code,
+      accountId: `acc-${e.code}`,
+      accountClass: accountClassForCode(e.code),
       accountName: `${e.name} (Year-End Zeroing)`,
       debit: 0,
       credit: e.balance,
@@ -128,6 +132,8 @@ export function previewYearEndClose(params: {
     closingLines.push({
       id: 'close-retained-earnings',
       accountCode: '3200',
+      accountId: 'acc-3200',
+      accountClass: accountClassForCode('3200'),
       accountName: 'Retained Earnings',
       debit: 0,
       credit: netIncome,
@@ -138,6 +144,8 @@ export function previewYearEndClose(params: {
     closingLines.push({
       id: 'close-retained-earnings',
       accountCode: '3200',
+      accountId: 'acc-3200',
+      accountClass: accountClassForCode('3200'),
       accountName: 'Retained Earnings',
       debit: Math.abs(netIncome),
       credit: 0,
@@ -189,8 +197,16 @@ export function executeYearEndClose(params: {
     date: closingDate,
     narration: `Fiscal Year-End Closing & Roll-Forward for FY${fiscalYear} into Retained Earnings`,
     source: 'YEAR_END_CLOSE',
-    sourceId: `fy-${fiscalYear}`,
+    reference: `fy-${fiscalYear}`,
     lines: preview.closingLines,
+    totalDebit: Math.round(preview.closingLines.reduce((sum, l) => sum + l.debit, 0) * 100) / 100,
+    totalCredit: Math.round(preview.closingLines.reduce((sum, l) => sum + l.credit, 0) * 100) / 100,
+    isBalanced:
+      Math.abs(
+        preview.closingLines.reduce((sum, l) => sum + l.debit, 0) -
+          preview.closingLines.reduce((sum, l) => sum + l.credit, 0),
+      ) < 0.005,
+    tenantId: params.journals[0]?.tenantId || '',
     status: 'POSTED',
     postedAt: new Date().toISOString(),
     postedBy: closedBy,

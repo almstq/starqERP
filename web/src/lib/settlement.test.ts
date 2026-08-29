@@ -16,10 +16,16 @@ describe('SERP-294: Credit Notes, Customer Advances & Settlement Engine', () => 
   const mockInvoice: Invoice = {
     id: 'inv-101',
     invoiceNumber: 'INV-2026-101',
-    jobId: 'job-101',
+    linkedJobId: 'job-101',
     customerId: 'cust-crown',
     customerName: 'Crown Resorts Maldives',
-    issueDate: '2026-08-10',
+    customerPhone: '7777777',
+    customerIsland: 'Male',
+    gstRate: 8,
+    amountPaid: 0,
+    balanceDue: 0,
+    bankDetails: 'BML 7701192837101',
+    date: '2026-08-10',
     dueDate: '2026-08-25',
     items: [],
     subtotal: 10000,
@@ -28,7 +34,6 @@ describe('SERP-294: Credit Notes, Customer Advances & Settlement Engine', () => 
     status: 'Sent',
     paymentStatus: 'Unpaid',
     payments: [],
-    currency: 'MVR',
   };
 
   it('issues credit notes linked to invoices or standalone credits', () => {

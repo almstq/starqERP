@@ -1,3 +1,4 @@
+import { accountClassForCode } from '../domain/accounts';
 import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
@@ -15,8 +16,8 @@ const mockJournals: JournalEntry[] = [
     reference: 'RCT-1001',
     narration: 'Customer Settlement',
     lines: [
-      { id: 'l1', accountCode: '1010', accountName: 'BML MVR', debit: 50000, credit: 0, description: 'Bank Receipt' },
-      { id: 'l2', accountCode: '1100', accountName: 'Accounts Receivable', debit: 0, credit: 50000, description: 'AR Clearing' },
+      { id: 'l1', accountCode: '1010', accountId: 'acc-1010', accountClass: accountClassForCode('1010'), accountName: 'BML MVR', debit: 50000, credit: 0, narration: 'Bank Receipt' },
+      { id: 'l2', accountCode: '1100', accountId: 'acc-1100', accountClass: accountClassForCode('1100'), accountName: 'Accounts Receivable', debit: 0, credit: 50000, narration: 'AR Clearing' },
     ],
     totalDebit: 50000,
     totalCredit: 50000,

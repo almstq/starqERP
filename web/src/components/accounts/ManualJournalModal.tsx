@@ -32,7 +32,7 @@ export const ManualJournalModal: React.FC<ManualJournalModalProps> = ({
   onSave,
 }) => {
   const { currentTenant, currentBook, formatMVR } = useERP();
-  const { session, currentUser } = useAuth();
+  const { session } = useAuth();
 
   const activeAccounts = useMemo(() => {
     return accounts.filter((a) => a.status === 'ACTIVE');
@@ -177,7 +177,7 @@ export const ManualJournalModal: React.FC<ManualJournalModalProps> = ({
     e.preventDefault();
     if (!validation.isValid) return;
 
-    const actorName = session?.name || currentUser?.name || 'Authorized Finance Officer';
+    const actorName = session?.name || session?.name || 'Authorized Finance Officer';
 
     const journalLines: JournalLine[] = lines.map((l, idx) => ({
       id: `jl-${Date.now()}-${idx}`,
@@ -473,7 +473,7 @@ export const ManualJournalModal: React.FC<ManualJournalModalProps> = ({
           <div className="flex items-center gap-1.5">
             <Info size={13} className="text-[var(--md-sys-color-primary)]" />
             <span>
-              Audit Attribution: Posted by <strong className="text-[var(--md-sys-color-on-surface)]">{session?.name || currentUser?.name || 'Authorized Officer'}</strong>
+              Audit Attribution: Posted by <strong className="text-[var(--md-sys-color-on-surface)]">{session?.name || session?.name || 'Authorized Officer'}</strong>
             </span>
           </div>
           <span className="font-mono text-[10px]">Contract: Immutable Double-Entry Ledger</span>

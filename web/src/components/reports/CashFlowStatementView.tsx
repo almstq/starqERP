@@ -85,7 +85,7 @@ export const CashFlowStatementView: React.FC<{
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-white">Statement of Cash Flows (IFRS)</h2>
-                <Badge variant={cfs.isBalanced ? 'success' : 'warning'}>
+                <Badge variant={cfs.isBalanced ? 'positive' : 'warning'}>
                   {cfs.isBalanced ? 'Balanced & Reconciled' : 'Variance Detected'}
                 </Badge>
               </div>

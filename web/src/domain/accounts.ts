@@ -1,5 +1,23 @@
 export type AccountClass = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE';
 
+/**
+ * Classify an account by its code prefix.
+ *
+ * This rule already existed inline in src/domain/journals.ts as a fallback for
+ * codes not present in the chart of accounts. Credit notes, warehouse transfers
+ * and period closing all need the same rule, so it lives here once rather than
+ * being copied a fourth time. 1=asset, 2=liability, 3=equity, 4=revenue,
+ * everything else expense.
+ */
+export function accountClassForCode(code: string): AccountClass {
+  if (code.startsWith('1')) return 'ASSET';
+  if (code.startsWith('2')) return 'LIABILITY';
+  if (code.startsWith('3')) return 'EQUITY';
+  if (code.startsWith('4')) return 'REVENUE';
+  return 'EXPENSE';
+}
+
+
 export type AccountSubtype =
   | 'CURRENT_ASSET'
   | 'BANK_AND_CASH'
