@@ -89,6 +89,10 @@ jobs:
       - name: TypeScript typecheck
         run: npm run lint
 
+      - name: Design token ratchet
+        working-directory: .
+        run: node scripts/lint-design-tokens.mjs
+
       - name: Vitest test suite (31 files, 119 tests)
         run: npm test
 
