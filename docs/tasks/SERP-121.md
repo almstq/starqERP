@@ -29,4 +29,4 @@ Discharged DEC-056 / DEC-089 / DEC-091:
 5. **Automated Test Conformance on main**:
    - Deno contract & endpoint tests: **94/94 PASS**.
    - React web client Vitest tests: **11/11 PASS**.
-   - Python / starqBooks tests: **5/5 AC PASS**.
+   - Python / the foundation engine tests: **5/5 AC PASS**.

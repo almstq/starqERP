@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<template id="__bundler_thumbnail" data-bg-color="#101220">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#101220"/>
+    <g stroke="#3f424d" stroke-width="10" stroke-linecap="round">
+      <path d="M600 150 V 640"/>
+    </g>
+    <g fill="#292b31" stroke="#3f424d" stroke-width="8">
+      <circle cx="600" cy="180" r="42"/>
+      <circle cx="600" cy="310" r="42"/>
+      <circle cx="600" cy="610" r="42"/>
+    </g>
+    <circle cx="600" cy="440" r="70" fill="#2b2741" stroke="#9184d9" stroke-width="10"/>
+    <path d="M566 440 l24 26 l46 -54" fill="none" stroke="#d2cefd" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</template>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/nocturne-c9c449f2-b33d-47b1-8013-ed3e4ed84637/styles.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<script src="_ds/nocturne-c9c449f2-b33d-47b1-8013-ed3e4ed84637/_ds_bundle.js"></script>
+<style>
+  body { margin: 0; background: #101220; }
+  a { color: var(--color-accent); }
+  a:hover { color: var(--color-accent-300); }
+</style>
+</helmet>
+
+<section style="padding:56px 56px 96px;background:#101220;font-family:var(--font-body);color:var(--color-text)">
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:760px;margin-bottom:40px">
+    <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-accent)">STARQ ERP · turn 1</div>
+    <h2 style="font-size:32px;margin:0">The job card and its twelve steps</h2>
+    <p style="font-size:15px;color:var(--color-neutral-400);margin:0;text-wrap:pretty">Phone first, 390pt. Accent means one thing only: this is yours to do now. Nothing in the workflow is red — a refusal is a hairline and a sentence, not an alarm. Tap the seat chip or the checklist in <a href="#1a">1a</a>; it runs.</p>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start">
+
+    <div id="1a" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="tag tag-outline">1a</span>
+        <span style="font-size:13px;color:var(--color-neutral-400)">Job card — live. Journey, current step, seat switch.</span>
+      </div>
+
+      <div style="width:390px;border-radius:var(--radius-lg);background:var(--color-bg);box-shadow:var(--shadow-md);overflow:hidden;position:relative">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px 4px;font-size:12px;color:var(--color-neutral-500)">
+          <span>14:22</span>
+          <span style="display:flex;gap:6px;font-size:13px"><i class="ph ph-wifi-high"></i><i class="ph ph-battery-high"></i></span>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 14px 12px">
+          <button class="btn btn-secondary" style="width:44px;height:44px;padding:0;flex:none;border-color:transparent;font-size:22px"><i class="ph ph-arrow-left"></i></button>
+          <div style="flex:1;font-family:var(--font-heading);font-size:17px">Job card</div>
+          <button onClick="{{ tapSeatChip }}" style="display:flex;align-items:center;gap:7px;height:44px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-neutral-700);background:var(--color-neutral-900);color:var(--color-text);font-family:var(--font-heading);font-size:14px;cursor:pointer" style-hover="background:var(--color-neutral-800)">
+            <i class="ph {{ actingIcon }}" style="font-size:17px;color:var(--color-neutral-300)"></i>
+            <span>{{ actingName }}</span>
+            <i class="ph ph-caret-down" style="font-size:13px;color:var(--color-neutral-500)"></i>
+          </button>
+        </div>
+
+        <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:0 14px 14px;display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:var(--radius-md);background:var(--color-accent-900);box-shadow:0 0 0 1px var(--color-accent-700)">
+            <i class="ph-fill ph-check-circle" style="font-size:20px;color:var(--color-accent-300);flex:none"></i>
+            <div style="font-size:15px;color:var(--color-accent-100);line-height:1.4">{{ toast }}</div>
+          </div>
+        </sc-if>
+
+        <div style="padding:0 14px 16px">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">JOB J-0142</div>
+            <div style="font-family:var(--font-heading);font-size:27px;letter-spacing:-0.01em">A2A 4471</div>
+            <div style="font-size:15px;color:var(--color-neutral-300)">Toyota Aqua · pearl white</div>
+            <div style="font-size:14px;color:var(--color-neutral-500)">Aishath M. · 777 4412 · rear door + quarter panel</div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:14px">
+            <div style="width:84px;height:64px;border-radius:var(--radius-md);background:var(--color-neutral-900);box-shadow:inset 0 0 0 1px var(--color-neutral-800);display:grid;place-items:center;color:var(--color-neutral-600);font-size:22px"><i class="ph ph-image"></i></div>
+            <div style="width:84px;height:64px;border-radius:var(--radius-md);background:var(--color-neutral-900);box-shadow:inset 0 0 0 1px var(--color-neutral-800);display:grid;place-items:center;color:var(--color-neutral-600);font-size:22px"><i class="ph ph-image"></i></div>
+            <div style="width:84px;height:64px;border-radius:var(--radius-md);background:var(--color-neutral-900);box-shadow:inset 0 0 0 1px var(--color-neutral-800);display:grid;place-items:center;color:var(--color-neutral-600);font-size:22px"><i class="ph ph-image"></i></div>
+            <div style="flex:1;display:flex;flex-direction:column;justify-content:center;font-size:13px;color:var(--color-neutral-500);line-height:1.35">3 photos<br>from check-in</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 14px 8px">
+          <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">THE TWELVE STEPS</div>
+          <div style="font-size:14px;color:var(--color-neutral-400)">{{ progress }}</div>
+        </div>
+
+        <div style="padding:0 14px 8px;background:linear-gradient(to bottom, transparent, var(--color-neutral-800) 24px, var(--color-neutral-800) calc(100% - 24px), transparent) no-repeat 34px 0 / 1px 100%">
+
+          <sc-for list="{{ doneList }}" as="s" hint-placeholder-count="7">
+            <div style="display:flex;gap:12px;align-items:center;padding:7px 0">
+              <div style="width:40px;height:40px;flex:none;border-radius:50%;background:var(--color-neutral-900);box-shadow:inset 0 0 0 1px var(--color-neutral-800);display:grid;place-items:center;color:var(--color-neutral-400);font-size:19px"><i class="ph {{ s.icon }}"></i></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:16px;color:var(--color-neutral-300)">{{ s.label }}</div>
+                <div style="font-size:11px;letter-spacing:0.06em;color:var(--color-neutral-600)">{{ s.sys }}</div>
+              </div>
+              <div style="text-align:right;flex:none">
+                <div style="font-size:13px;color:var(--color-neutral-400)">{{ s.seatName }}</div>
+                <div style="font-size:12px;color:var(--color-neutral-600)">{{ s.at }}</div>
+              </div>
+              <i class="ph-fill ph-check-circle" style="font-size:18px;color:var(--color-neutral-500);flex:none"></i>
+            </div>
+          </sc-for>
+
+          <sc-if value="{{ isYours }}" hint-placeholder-val="{{ true }}">
+            <div style="margin:10px 0 14px;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:0 0 0 1px var(--color-accent), 0 10px 34px color-mix(in srgb, var(--color-accent) 16%, transparent)">
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div style="width:40px;height:40px;flex:none;border-radius:50%;background:var(--color-accent-900);box-shadow:inset 0 0 0 1px var(--color-accent-700);display:grid;place-items:center;color:var(--color-accent-300);font-size:21px"><i class="ph-fill {{ cur.icon }}"></i></div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-accent)">YOUR TURN · STEP {{ cur.n }}</div>
+                  <div style="font-family:var(--font-heading);font-size:22px;line-height:1.15;margin-top:3px">{{ cur.label }}</div>
+                  <div style="font-size:11px;letter-spacing:0.06em;color:var(--color-neutral-500)">{{ cur.sys }}</div>
+                </div>
+              </div>
+              <p style="font-size:16px;line-height:1.5;color:var(--color-neutral-200);margin:14px 0 0;text-wrap:pretty">{{ cur.what }}</p>
+              <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500);margin:16px 0 4px">BEFORE YOU CAN FINISH</div>
+              <sc-for list="{{ checks }}" as="c" hint-placeholder-count="3">
+                <div onClick="{{ c.toggle }}" style="display:flex;gap:12px;align-items:center;min-height:48px;padding:4px 6px;margin:0 -6px;border-radius:var(--radius-md);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 5%, transparent)">
+                  <sc-if value="{{ c.done }}" hint-placeholder-val="{{ true }}">
+                    <div style="width:26px;height:26px;flex:none;border-radius:var(--radius-sm);background:var(--color-accent-800);box-shadow:inset 0 0 0 1px var(--color-accent-600);display:grid;place-items:center;color:var(--color-accent-100);font-size:16px"><i class="ph-fill ph-check"></i></div>
+                  </sc-if>
+                  <sc-if value="{{ c.open }}" hint-placeholder-val="{{ false }}">
+                    <div style="width:26px;height:26px;flex:none;border-radius:var(--radius-sm);box-shadow:inset 0 0 0 1.5px var(--color-neutral-600)"></div>
+                  </sc-if>
+                  <div style="font-size:16px;color:var(--color-neutral-200);line-height:1.35">{{ c.label }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isSwitch }}" hint-placeholder-val="{{ false }}">
+            <div style="margin:10px 0 14px;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:var(--shadow-sm)">
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div style="width:40px;height:40px;flex:none;border-radius:50%;background:var(--color-neutral-900);box-shadow:inset 0 0 0 1px var(--color-neutral-700);display:grid;place-items:center;color:var(--color-neutral-300);font-size:21px"><i class="ph {{ cur.icon }}"></i></div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-400)">NEEDS THE {{ cur.seatName }} SEAT · YOU HOLD IT</div>
+                  <div style="font-family:var(--font-heading);font-size:22px;line-height:1.15;margin-top:3px">{{ cur.label }}</div>
+                  <div style="font-size:11px;letter-spacing:0.06em;color:var(--color-neutral-500)">{{ cur.sys }}</div>
+                </div>
+              </div>
+              <p style="font-size:16px;line-height:1.5;color:var(--color-neutral-200);margin:14px 0 0;text-wrap:pretty">{{ cur.what }}</p>
+              <p style="font-size:15px;line-height:1.5;color:var(--color-neutral-400);margin:10px 0 0;text-wrap:pretty">You hold this seat but you are not in it. Switch below — one tap, then confirm.</p>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isOther }}" hint-placeholder-val="{{ false }}">
+            <div style="margin:10px 0 14px;padding:16px;border-radius:var(--radius-lg);background:var(--color-neutral-900);box-shadow:inset 0 0 0 1px var(--color-neutral-800)">
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div style="width:40px;height:40px;flex:none;border-radius:50%;background:var(--color-bg);box-shadow:inset 0 0 0 1px var(--color-neutral-700);display:grid;place-items:center;color:var(--color-neutral-500);font-size:21px"><i class="ph ph-hourglass-medium"></i></div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">WITH THE {{ cur.seatName }} SEAT</div>
+                  <div style="font-family:var(--font-heading);font-size:22px;line-height:1.15;margin-top:3px;color:var(--color-neutral-300)">{{ cur.label }}</div>
+                  <div style="font-size:11px;letter-spacing:0.06em;color:var(--color-neutral-600)">{{ cur.sys }}</div>
+                </div>
+              </div>
+              <p style="font-size:16px;line-height:1.5;color:var(--color-neutral-300);margin:14px 0 0;text-wrap:pretty">{{ cur.notYours }}</p>
+              <div style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:14px;color:var(--color-neutral-500)">
+                <i class="ph ph-clock-countdown" style="font-size:17px"></i>
+                <span>Waiting since 14:05 today</span>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-for list="{{ futureList }}" as="s" hint-placeholder-count="4">
+            <div style="display:flex;gap:12px;align-items:center;padding:7px 0;opacity:0.6">
+              <div style="width:40px;height:40px;flex:none;border-radius:50%;background:var(--color-bg);box-shadow:inset 0 0 0 1px var(--color-neutral-800);display:grid;place-items:center;color:var(--color-neutral-600);font-size:19px"><i class="ph {{ s.icon }}"></i></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:16px;color:var(--color-neutral-400)">{{ s.label }}</div>
+                <div style="font-size:11px;letter-spacing:0.06em;color:var(--color-neutral-600)">{{ s.sys }}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;flex:none;font-size:13px;color:var(--color-neutral-500)">
+                <i class="ph {{ s.seatIcon }}" style="font-size:15px"></i>
+                <span>{{ s.seatName }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ refusal }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:0 14px 10px;display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:var(--radius-md);background:var(--color-neutral-900);box-shadow:inset 0 0 0 1px var(--color-neutral-700)">
+            <i class="ph ph-info" style="font-size:20px;color:var(--color-neutral-400);flex:none"></i>
+            <div style="font-size:15px;color:var(--color-neutral-200);line-height:1.45">{{ refusal }}</div>
+          </div>
+        </sc-if>
+
+        <div style="position:sticky;bottom:0;padding:12px 14px 18px;background:var(--color-bg);box-shadow:0 -1px 0 var(--color-neutral-800), 0 -18px 24px var(--color-bg)">
+          <sc-if value="{{ hasAction }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ doAction }}" class="btn btn-primary" style="width:100%;height:56px;font-size:17px;gap:10px;border-radius:var(--radius-md)">
+              <i class="ph {{ actionIcon }}" style="font-size:21px"></i>
+              <span>{{ actionLabel }}</span>
+            </button>
+          </sc-if>
+          <sc-if value="{{ isOther }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:10px;align-items:center;min-height:56px;padding:0 4px;font-size:15px;color:var(--color-neutral-400);line-height:1.4">
+              <i class="ph ph-bell" style="font-size:20px;flex:none"></i>
+              <span>{{ nextForYou }}</span>
+            </div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ sheet }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;background:color-mix(in srgb, #0b0c14 72%, transparent)">
+            <div onClick="{{ closeSheet }}" style="flex:1"></div>
+            <div style="padding:20px 16px 22px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;background:var(--color-surface);box-shadow:var(--shadow-lg)">
+              <div style="width:44px;height:4px;border-radius:2px;background:var(--color-neutral-700);margin:0 auto 16px"></div>
+              <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">SWITCH SEAT</div>
+              <div style="font-family:var(--font-heading);font-size:22px;margin-top:4px">{{ sheetTitle }}</div>
+              <p style="font-size:16px;line-height:1.5;color:var(--color-neutral-300);margin:10px 0 0;text-wrap:pretty">{{ sheetBody }}</p>
+              <div style="display:flex;flex-direction:column;gap:10px;margin-top:18px">
+                <button onClick="{{ confirmSwitch }}" class="btn btn-primary" style="width:100%;height:56px;font-size:17px;gap:10px;border-radius:var(--radius-md)">
+                  <i class="ph {{ sheetIcon }}" style="font-size:21px"></i>
+                  <span>{{ sheetConfirm }}</span>
+                </button>
+                <button onClick="{{ closeSheet }}" class="btn btn-secondary" style="width:100%;height:56px;font-size:17px;border-radius:var(--radius-md)">Stay where I am</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="width:390px;font-size:13px;color:var(--color-neutral-500);line-height:1.5;text-wrap:pretty">The one action lives at the bottom, always in thumb reach, and never appears when there is nothing to tap. Finishing a step hands the job to the next seat and the screen changes state in front of you.</div>
+    </div>
+
+    <div id="1b" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="tag tag-outline">1b</span>
+        <span style="font-size:13px;color:var(--color-neutral-400)">Refusal, waiting, and an empty shop.</span>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+        <div style="display:flex;flex-direction:column;gap:10px;width:390px">
+          <div style="width:390px;border-radius:var(--radius-lg);background:var(--color-bg);box-shadow:var(--shadow-md);overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px 4px;font-size:12px;color:var(--color-neutral-500)"><span>11:20</span><span style="display:flex;gap:6px;font-size:13px"><i class="ph ph-wifi-high"></i><i class="ph ph-battery-high"></i></span></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 14px 12px">
+              <button class="btn btn-secondary" style="width:44px;height:44px;padding:0;flex:none;border-color:transparent;font-size:22px"><i class="ph ph-arrow-left"></i></button>
+              <div style="flex:1;font-family:var(--font-heading);font-size:17px">Job card</div>
+              <div style="display:flex;align-items:center;gap:7px;height:44px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-neutral-700);background:var(--color-neutral-900);font-family:var(--font-heading);font-size:14px">
+                <i class="ph ph-wrench" style="font-size:17px;color:var(--color-neutral-300)"></i><span>Technician</span><i class="ph ph-caret-down" style="font-size:13px;color:var(--color-neutral-500)"></i>
+              </div>
+            </div>
+            <div style="padding:0 14px 14px">
+              <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">JOB J-0139</div>
+              <div style="font-family:var(--font-heading);font-size:27px">A1F 2210</div>
+              <div style="font-size:15px;color:var(--color-neutral-300)">Nissan March · front bumper</div>
+            </div>
+            <div style="padding:0 14px 16px">
+              <div style="padding:16px;border-radius:var(--radius-lg);background:var(--color-neutral-900);box-shadow:inset 0 0 0 1px var(--color-neutral-800)">
+                <div style="display:flex;gap:12px;align-items:flex-start">
+                  <div style="width:40px;height:40px;flex:none;border-radius:50%;background:var(--color-bg);box-shadow:inset 0 0 0 1px var(--color-neutral-700);display:grid;place-items:center;color:var(--color-neutral-500);font-size:21px"><i class="ph ph-users-three"></i></div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">NEEDS A SECOND SEAT · STEP 7</div>
+                    <div style="font-family:var(--font-heading);font-size:22px;line-height:1.15;margin-top:3px;color:var(--color-neutral-200)">Get the parts</div>
+                    <div style="font-size:11px;letter-spacing:0.06em;color:var(--color-neutral-600)">PARTS_PROCUREMENT</div>
+                  </div>
+                </div>
+                <p style="font-size:16px;line-height:1.5;color:var(--color-neutral-200);margin:14px 0 0;text-wrap:pretty">A purchase is approved by one seat and paid by another. You are in both, so this one waits for someone else. That is the rule working, not a fault.</p>
+                <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500);margin:16px 0 6px">WHAT HAS TO HAPPEN FIRST</div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <div style="display:flex;gap:10px;align-items:flex-start;font-size:15px;color:var(--color-neutral-300);line-height:1.4"><i class="ph ph-check-square-offset" style="font-size:19px;color:var(--color-neutral-500);flex:none"></i><span>Counter approves the parts order — done 10:48</span></div>
+                  <div style="display:flex;gap:10px;align-items:flex-start;font-size:15px;color:var(--color-neutral-300);line-height:1.4"><i class="ph ph-hourglass-medium" style="font-size:19px;color:var(--color-neutral-500);flex:none"></i><span>A different seat records the payment</span></div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;padding:14px;border-radius:var(--radius-md);background:var(--color-surface);box-shadow:var(--shadow-sm)">
+                <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">PARTS ON THIS JOB</div>
+                <div style="display:flex;justify-content:space-between;font-size:15px;color:var(--color-neutral-200)"><span>Front bumper, primed</span><span style="color:var(--color-neutral-500)">ordered</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:15px;color:var(--color-neutral-200)"><span>Clips ×6</span><span style="color:var(--color-neutral-500)">in stock</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:15px;color:var(--color-neutral-200)"><span>2K clear, 1L</span><span style="color:var(--color-neutral-500)">waiting 3 days</span></div>
+              </div>
+            </div>
+            <div style="padding:12px 14px 18px;box-shadow:0 -1px 0 var(--color-neutral-800)">
+              <div style="display:flex;gap:10px;align-items:center;min-height:56px;padding:0 4px;font-size:15px;color:var(--color-neutral-400);line-height:1.4"><i class="ph ph-bell" style="font-size:20px;flex:none"></i><span>You will see this job again at step 8, Do the work.</span></div>
+            </div>
+          </div>
+          <div style="font-size:13px;color:var(--color-neutral-500);line-height:1.5;width:390px;text-wrap:pretty">Routine refusal. No button, no override, no red. It names the seats, states what is outstanding, and says when the job comes back.</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;width:390px">
+          <div style="width:390px;border-radius:var(--radius-lg);background:var(--color-bg);box-shadow:var(--shadow-md);overflow:hidden;display:flex;flex-direction:column;min-height:520px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px 4px;font-size:12px;color:var(--color-neutral-500)"><span>08:04</span><span style="display:flex;gap:6px;font-size:13px"><i class="ph ph-wifi-high"></i><i class="ph ph-battery-high"></i></span></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 14px 12px">
+              <div style="flex:1;font-family:var(--font-heading);font-size:20px">Today</div>
+              <div style="display:flex;align-items:center;gap:7px;height:44px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-neutral-700);background:var(--color-neutral-900);font-family:var(--font-heading);font-size:14px">
+                <i class="ph ph-storefront" style="font-size:17px;color:var(--color-neutral-300)"></i><span>Counter</span><i class="ph ph-caret-down" style="font-size:13px;color:var(--color-neutral-500)"></i>
+              </div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:24px 22px 8px">
+              <i class="ph ph-moon-stars" style="font-size:40px;color:var(--color-neutral-600)"></i>
+              <div style="font-family:var(--font-heading);font-size:25px;line-height:1.2">Nothing to do right now</div>
+              <p style="font-size:16px;line-height:1.5;color:var(--color-neutral-300);margin:0;text-wrap:pretty">No car is in the bay and nothing is waiting on you. When a customer calls, start here.</p>
+              <div style="display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:var(--radius-md);background:var(--color-neutral-900);box-shadow:inset 0 0 0 1px var(--color-neutral-800)">
+                <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">ELSEWHERE IN THE SHOP</div>
+                <div style="display:flex;gap:10px;align-items:flex-start;font-size:15px;color:var(--color-neutral-300);line-height:1.4"><i class="ph ph-package" style="font-size:19px;color:var(--color-neutral-500);flex:none"></i><span>A1F 2210 — waiting on 2K clear, 3 days</span></div>
+                <div style="display:flex;gap:10px;align-items:flex-start;font-size:15px;color:var(--color-neutral-300);line-height:1.4"><i class="ph ph-shield-check" style="font-size:19px;color:var(--color-neutral-500);flex:none"></i><span>A2A 4471 — with the QC seat since 14:05</span></div>
+              </div>
+            </div>
+            <div style="padding:12px 14px 18px;box-shadow:0 -1px 0 var(--color-neutral-800)">
+              <button class="btn btn-primary" style="width:100%;height:56px;font-size:17px;gap:10px;border-radius:var(--radius-md)"><i class="ph ph-phone-call" style="font-size:21px"></i><span>Take a call</span></button>
+            </div>
+          </div>
+          <div style="font-size:13px;color:var(--color-neutral-500);line-height:1.5;width:390px;text-wrap:pretty">An idle shop is a normal state. It says what is happening elsewhere so the quiet reads as accounted for, and keeps the one thing you can start at the bottom.</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;width:390px">
+          <div style="width:390px;border-radius:var(--radius-lg);background:color-mix(in srgb, #0b0c14 72%, var(--color-bg));box-shadow:var(--shadow-md);overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;min-height:360px">
+            <div style="padding:20px 16px 22px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;background:var(--color-surface);box-shadow:var(--shadow-lg)">
+              <div style="width:44px;height:4px;border-radius:2px;background:var(--color-neutral-700);margin:0 auto 16px"></div>
+              <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">SWITCH SEAT</div>
+              <div style="font-family:var(--font-heading);font-size:22px;margin-top:4px">Act as QC</div>
+              <p style="font-size:16px;line-height:1.5;color:var(--color-neutral-300);margin:10px 0 0;text-wrap:pretty">You hold the QC seat. Everything you do next is recorded as QC until you switch back. Whoever did the work cannot sign it off.</p>
+              <div style="display:flex;flex-direction:column;gap:10px;margin-top:18px">
+                <button class="btn btn-primary" style="width:100%;height:56px;font-size:17px;gap:10px;border-radius:var(--radius-md)"><i class="ph ph-shield-check" style="font-size:21px"></i><span>Act as QC</span></button>
+                <button class="btn btn-secondary" style="width:100%;height:56px;font-size:17px;border-radius:var(--radius-md)">Stay where I am</button>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:13px;color:var(--color-neutral-500);line-height:1.5;width:390px;text-wrap:pretty">The switch sheet names the seat, says what it means, and takes one tap plus one confirm. Both buttons are 56pt and side-stacked for gloved thumbs.</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="1c" style="display:flex;flex-direction:column;gap:14px;width:660px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="tag tag-outline">1c</span>
+        <span style="font-size:13px;color:var(--color-neutral-400)">Tokens, components, copy rules.</span>
+      </div>
+
+      <div style="padding:28px;border-radius:var(--radius-lg);background:var(--color-bg);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:26px">
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <h4 style="margin:0;font-size:20px">One meaning per treatment</h4>
+          <p style="font-size:14px;color:var(--color-neutral-400);margin:0;text-wrap:pretty">The old accent meant both "primary action" and "refused". Here the accent means only: this is yours, now. Everything else is a neutral step on the ramp, so a refusal cannot be mistaken for a fault. Role identity is carried by an icon and a word, never by colour.</p>
+          <table class="table" style="margin-top:6px">
+            <thead><tr><th>State</th><th>Treatment</th><th>Token</th></tr></thead>
+            <tbody>
+              <tr><td>Yours now</td><td>Accent hairline + accent glow, filled icon</td><td>accent, accent-900 fill, accent-700 edge</td></tr>
+              <tr><td>Done</td><td>Surface-less row, filled tick, role + time</td><td>neutral-300 text, neutral-500 tick</td></tr>
+              <tr><td>Held by another seat</td><td>neutral-900 panel, inset hairline, hourglass</td><td>neutral-900 / neutral-800 edge</td></tr>
+              <tr><td>Refused, routine</td><td>Same panel + what has to happen first</td><td>neutral-900 / neutral-700 edge</td></tr>
+              <tr><td>Later</td><td>Row at 0.6 opacity, outline icon, seat named</td><td>neutral-400 / neutral-600</td></tr>
+              <tr><td>Success</td><td>Accent-900 banner, filled check, 4s</td><td>accent-900 / accent-300</td></tr>
+              <tr><td>Destructive</td><td>Not used in the workflow at all</td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <h4 style="margin:0;font-size:20px">Type and touch, workshop floor</h4>
+          <table class="table">
+            <thead><tr><th>Role</th><th>Size</th><th>Where</th></tr></thead>
+            <tbody>
+              <tr><td>Vehicle plate</td><td>27 / 500</td><td>Job identity — read at arm's length</td></tr>
+              <tr><td>Current step</td><td>22 / 500</td><td>Expanded card title</td></tr>
+              <tr><td>Instruction, checklist</td><td>16 / 400, line 1.5</td><td>SOP body and requirement rows</td></tr>
+              <tr><td>Step label, action</td><td>16 / 400</td><td>Journey rows, buttons at 17</td></tr>
+              <tr><td>Seat, time, meta</td><td>13–14 / 400</td><td>Never below 13 on the phone</td></tr>
+              <tr><td>System name, kicker</td><td>11 / 0.1em caps</td><td>INTAKE, JOB_CARD — reference only</td></tr>
+            </tbody>
+          </table>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px">
+            <span class="tag tag-neutral">Targets 56pt primary, 44pt minimum</span>
+            <span class="tag tag-neutral">Checklist rows 48pt tall</span>
+            <span class="tag tag-neutral">One action, bottom 25% of screen</span>
+            <span class="tag tag-neutral">12pt gap between anything tappable</span>
+            <span class="tag tag-neutral">Nothing tappable in the top third</span>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <h4 style="margin:0;font-size:20px">Words</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;font-size:14px;line-height:1.5">
+            <div style="display:flex;gap:8px"><i class="ph ph-check" style="color:var(--color-accent-300);font-size:17px;flex:none"></i><span>Name the seat: "with the QC seat"</span></div>
+            <div style="display:flex;gap:8px;color:var(--color-neutral-500)"><i class="ph ph-x" style="font-size:17px;flex:none"></i><span>Never a person: "waiting on Ahmed"</span></div>
+            <div style="display:flex;gap:8px"><i class="ph ph-check" style="color:var(--color-accent-300);font-size:17px;flex:none"></i><span>"Nothing for you here right now."</span></div>
+            <div style="display:flex;gap:8px;color:var(--color-neutral-500)"><i class="ph ph-x" style="font-size:17px;flex:none"></i><span>"Bay locked", "denied", "error"</span></div>
+            <div style="display:flex;gap:8px"><i class="ph ph-check" style="color:var(--color-accent-300);font-size:17px;flex:none"></i><span>Say what happens next, and when</span></div>
+            <div style="display:flex;gap:8px;color:var(--color-neutral-500)"><i class="ph ph-x" style="font-size:17px;flex:none"></i><span>Offer a switch to a seat he cannot hold</span></div>
+            <div style="display:flex;gap:8px"><i class="ph ph-check" style="color:var(--color-accent-300);font-size:17px;flex:none"></i><span>Verbs for steps, system name kept small</span></div>
+            <div style="display:flex;gap:8px;color:var(--color-neutral-500)"><i class="ph ph-x" style="font-size:17px;flex:none"></i><span>"Continue anyway", any override</span></div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <h4 style="margin:0;font-size:20px">Components to build</h4>
+          <table class="table">
+            <thead><tr><th>Widget</th><th>Does</th></tr></thead>
+            <tbody>
+              <tr><td>JourneyList</td><td>All 12 in order, fading rail, current expanded in place</td></tr>
+              <tr><td>JourneyRow</td><td>done / future variant — icon, verb, system name, seat or role+time</td></tr>
+              <tr><td>StepCard</td><td>Current step: kicker, verb, SOP paragraph, requirement rows</td></tr>
+              <tr><td>RequirementRow</td><td>48pt tap row, box or filled tick, one line of plain language</td></tr>
+              <tr><td>SeatChip</td><td>Acting seat, 44pt, opens SeatSwitchSheet</td></tr>
+              <tr><td>SeatSwitchSheet</td><td>Names the seat, states the consequence, confirm or stay</td></tr>
+              <tr><td>WaitingPanel</td><td>Held / routinely refused: seat named, prerequisites, return point</td></tr>
+              <tr><td>ActionBar</td><td>Bottom, one action or one sentence — never a dead button</td></tr>
+              <tr><td>IdleCard</td><td>Nothing to do, plus what is happening elsewhere</td></tr>
+              <tr><td>SuccessBanner</td><td>What advanced and which seat holds it now</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <h4 style="margin:0;font-size:20px">Tokens, as Dart</h4>
+          <pre style="margin:0;padding:16px;border-radius:var(--radius-md);background:var(--color-neutral-900);box-shadow:inset 0 0 0 1px var(--color-neutral-800);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.65;color:var(--color-neutral-200);overflow-x:auto">class StarqColors {
+  static const ground      = Color(0xFF161826); // page
+  static const surface     = Color(0xFF232532); // card
+  static const text        = Color(0xFFE9E9ED);
+  static const mine        = Color(0xFF9184D9); // yours, now — the only accent
+  static const mineFill    = Color(0xFF2B2741);
+  static const mineEdge    = Color(0xFF5D5294);
+  static const mineText    = Color(0xFFD2CEFD); // accent text on a tint
+  static const n300        = Color(0xFFCFD3E5); // primary on dark
+  static const n400        = Color(0xFFB2B6CA); // secondary
+  static const n500        = Color(0xFF9397AB); // meta, icons
+  static const n600        = Color(0xFF75798C); // later, hairline text
+  static const n700        = Color(0xFF595D6C); // refusal edge
+  static const n800        = Color(0xFF3F424D); // quiet edge
+  static const n900        = Color(0xFF292B31); // held / waiting panel
+}
+
+class StarqSpace {
+  static const x1 = 2.8, x2 = 5.6, x3 = 8.4, x4 = 11.2, x6 = 16.8, x8 = 22.4;
+  static const rSm = 4.0, rMd = 8.0, rLg = 14.0;
+  static const tapPrimary = 56.0, tapMin = 44.0, tapRow = 48.0;
+}
+
+enum Seat { counter, technician, qcSigner }        // never a person
+enum StepStance { done, mine, switchable, held, later }</pre>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <h4 style="margin:0;font-size:20px">The twelve, as written on screen</h4>
+          <table class="table">
+            <thead><tr><th>#</th><th>On screen</th><th>System</th><th>Seat</th></tr></thead>
+            <tbody>
+              <sc-for list="{{ allSteps }}" as="s" hint-placeholder-count="12">
+                <tr>
+                  <td style="color:var(--color-neutral-500)">{{ s.n }}</td>
+                  <td>{{ s.label }}</td>
+                  <td style="font-size:11px;letter-spacing:0.06em;color:var(--color-neutral-500)">{{ s.sys }}</td>
+                  <td style="color:var(--color-neutral-400)">{{ s.seatName }}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;liveStep&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:8,&quot;min&quot;:1,&quot;max&quot;:12,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Live frame&quot;},&quot;actingSeat&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;technician&quot;,&quot;options&quot;:[&quot;counter&quot;,&quot;technician&quot;,&quot;qc_signer&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Live frame&quot;},&quot;showSystemNames&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Journey&quot;}}">
+const SEATS = {
+  counter: { name: 'Counter', icon: 'ph-storefront' },
+  technician: { name: 'Technician', icon: 'ph-wrench' },
+  qc_signer: { name: 'QC', icon: 'ph-shield-check' },
+};
+
+const STEPS = [
+  { n: 1, label: 'Take the call', sys: 'CALL', seat: 'counter', icon: 'ph-phone-call', at: 'Mon 08:52' },
+  { n: 2, label: 'Book the car in', sys: 'BOOKING', seat: 'counter', icon: 'ph-calendar-plus', at: 'Mon 09:10' },
+  { n: 3, label: 'Check the car in', sys: 'INTAKE', seat: 'counter', icon: 'ph-camera', at: 'Tue 08:31' },
+  { n: 4, label: 'Price the work', sys: 'ESTIMATE', seat: 'counter', icon: 'ph-calculator', at: 'Tue 09:02' },
+  { n: 5, label: "Get the customer's OK", sys: 'AUTHORISATION', seat: 'counter', icon: 'ph-signature', at: 'Tue 09:40' },
+  { n: 6, label: 'Open the job card', sys: 'JOB_CARD', seat: 'counter', icon: 'ph-clipboard-text', at: 'Tue 09:44' },
+  { n: 7, label: 'Get the parts', sys: 'PARTS_PROCUREMENT', seat: 'technician', icon: 'ph-package', at: 'Wed 11:20' },
+  { n: 8, label: 'Do the work', sys: 'WORK', seat: 'technician', icon: 'ph-paint-roller', at: 'Thu 13:55' },
+  { n: 9, label: 'Check the work', sys: 'QC', seat: 'qc_signer', icon: 'ph-shield-check', at: 'Thu 14:20' },
+  { n: 10, label: 'Give the car back', sys: 'HANDOVER', seat: 'counter', icon: 'ph-key', at: 'Thu 15:10' },
+  { n: 11, label: 'Take the payment', sys: 'INVOICE_PAYMENT', seat: 'counter', icon: 'ph-money', at: 'Thu 15:22' },
+  { n: 12, label: 'Close the job', sys: 'CLOSE', seat: 'counter', icon: 'ph-check-circle', at: 'Thu 15:30' },
+];
+
+const SOP = {
+  8: {
+    what: 'Sand, prime, spray and finish the panels listed on this job card. Log your hours as you go.',
+    checks: [
+      { id: 'photos', label: 'Three photos of the finished panels' },
+      { id: 'hours', label: "Today's hours logged" },
+      { id: 'card', label: 'Photo of the spray card with the paint code' },
+    ],
+    action: 'Mark the work finished',
+    actionIcon: 'ph-check',
+    refusal: 'Not finished yet — the spray card photo is still missing. Add it and this step will close.',
+  },
+  9: {
+    what: 'Walk around the car in daylight. Check the colour match, dust, runs and panel gaps against the job card, then sign off.',
+    notYours: 'Nothing for you here. The QC seat checks the work and signs it off. Whoever did the work cannot sign it.',
+    checks: [
+      { id: 'photos', label: 'Work photos reviewed' },
+      { id: 'hours', label: 'Colour match confirmed in daylight' },
+      { id: 'card', label: 'Panel gaps and finish checked' },
+    ],
+    action: 'Sign off the work',
+    actionIcon: 'ph-shield-check',
+    refusal: 'Not signed off yet — one check is still open.',
+  },
+};
+
+const FALLBACK = {
+  what: 'Do this step on the car in front of you, then close it here so the next seat can pick it up.',
+  notYours: 'Nothing for you here right now. Another seat has this step.',
+  checks: [
+    { id: 'photos', label: 'Everything on the job card is done' },
+    { id: 'hours', label: 'Photos or notes attached' },
+    { id: 'card', label: 'Customer told, if this affects them' },
+  ],
+  action: 'Close this step',
+  actionIcon: 'ph-check',
+  refusal: 'Not finished yet — one requirement is still open.',
+};
+
+class Component extends DCLogic {
+  state = { acting: null, step: null, checks: { photos: true, hours: true, card: false }, sheet: false, toast: null, refusal: null };
+
+  seatsHeld(acting) {
+    return acting === 'technician' ? ['technician'] : ['counter', 'qc_signer'];
+  }
+
+  renderVals() {
+    const acting = this.state.acting ?? (this.props.actingSeat ?? 'technician');
+    const stepNo = Math.min(12, Math.max(1, this.state.step ?? (this.props.liveStep ?? 8)));
+    const cur = STEPS[stepNo - 1];
+    const sop = { ...FALLBACK, ...(SOP[stepNo] || {}) };
+    const held = this.seatsHeld(acting);
+    const isYours = acting === cur.seat;
+    const isSwitch = !isYours && held.includes(cur.seat);
+    const isOther = !isYours && !isSwitch;
+    const showSys = this.props.showSystemNames !== false;
+
+    const decorate = (s) => ({
+      ...s,
+      sys: showSys ? s.sys : '',
+      seatName: SEATS[s.seat].name,
+      seatIcon: SEATS[s.seat].icon,
+    });
+
+    const checks = sop.checks.map((c) => ({
+      label: c.label,
+      done: !!this.state.checks[c.id],
+      open: !this.state.checks[c.id],
+      toggle: () => this.setState((s) => ({
+        checks: { ...s.checks, [c.id]: !s.checks[c.id] },
+        refusal: null,
+      })),
+    }));
+    const allDone = checks.every((c) => c.done);
+
+    const advance = () => {
+      if (!allDone) { this.setState({ refusal: sop.refusal }); return; }
+      const next = STEPS[Math.min(12, stepNo + 1) - 1];
+      this.setState({
+        step: Math.min(12, stepNo + 1),
+        refusal: null,
+        checks: { photos: true, hours: false, card: false },
+        toast: cur.label + ' is done. Now with the ' + SEATS[next.seat].name + ' seat.',
+      });
+    };
+
+    return {
+      allSteps: STEPS.map(decorate),
+      doneList: STEPS.slice(0, stepNo - 1).map(decorate),
+      futureList: STEPS.slice(stepNo).map(decorate),
+      cur: { ...decorate(cur), what: sop.what, notYours: sop.notYours },
+      progress: 'Step ' + stepNo + ' of 12',
+      isYours, isSwitch, isOther,
+      checks,
+      actingName: SEATS[acting].name,
+      actingIcon: SEATS[acting].icon,
+      hasAction: isYours || isSwitch,
+      actionLabel: isYours ? sop.action : 'Switch to the ' + SEATS[cur.seat].name + ' seat',
+      actionIcon: isYours ? sop.actionIcon : SEATS[cur.seat].icon,
+      doAction: isYours ? advance : () => this.setState({ sheet: true, refusal: null }),
+      nextForYou: (() => {
+        const mine = STEPS.slice(stepNo).find((s) => held.includes(s.seat));
+        if (mine) return 'You will see this job again at step ' + mine.n + ', ' + mine.label.toLowerCase() + '.';
+        return 'Nothing else on this job is yours. The ' + SEATS[cur.seat].name + ' seat takes it from here.';
+      })(),
+      toast: this.state.toast,
+      refusal: this.state.refusal,
+      sheet: this.state.sheet,
+      sheetTitle: 'Act as ' + SEATS[cur.seat].name,
+      sheetIcon: SEATS[cur.seat].icon,
+      sheetConfirm: 'Act as ' + SEATS[cur.seat].name,
+      sheetBody: 'You hold the ' + SEATS[cur.seat].name + ' seat. Everything you do next is recorded as '
+        + SEATS[cur.seat].name + ' until you switch back. Whoever did the work cannot sign it off.',
+      confirmSwitch: () => this.setState({ acting: cur.seat, sheet: false, toast: 'You are acting as ' + SEATS[cur.seat].name + ' now.' }),
+      closeSheet: () => this.setState({ sheet: false }),
+      tapSeatChip: () => this.setState({ sheet: true }),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+Run the compare now. Do not mark-read-and-hold packet 2049d079-68d2-4eaf-9b57-c7ac53a64f44.
+
+Compare StarqTech SSOT files against D:\StarqTech\the foundation engine\ops\_nexus-projects-tab-reply.txt. If D:\!starq copies disagree, they lose — StarqTech is authority.
+
+Portal / starq-portal-tasks.json stays untouched.
+
+Do not invent SBK rows. Do not add Google client IDs. Do not nest serve.py.
+
+Report match vs refresh needed on project-the foundation engine.md and the foundation engine-tasks.json only.

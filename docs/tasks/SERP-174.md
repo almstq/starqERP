@@ -14,7 +14,7 @@
 
 ## Scope & Implementation
 
-Formalized Amendment A2 into the canonical contract `contracts/commands.ts` to prevent financial drift between StarqERP presentation and the authoritative accounting engine (`starqBooks` double-entry ledger).
+Formalized Amendment A2 into the canonical contract `contracts/commands.ts` to prevent financial drift between StarqERP presentation and the authoritative accounting engine (`legacy/engine` double-entry ledger).
 
 ### 1. Verbatim Founder Invariant
 Enshrined the exact founder directive as `FINANCIAL_TRUTH_INVARIANT`:

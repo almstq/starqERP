@@ -23,7 +23,7 @@ Fixed the defect where the client posted `{ sop: 'APPROVAL' }` — an unsupporte
   - `pay`: Requires `payer`
 - Refused `APPROVAL` command outright at the boundary without server pollution.
 
-### 2. Client UI & Seat Guidance ([`ops_shell_screen.dart`](file:///d:/StarqTech/starqBooks/starq-ops-app/lib/features/garage/home/ops_shell_screen.dart))
+### 2. Client UI & Seat Guidance ([`ops_shell_screen.dart`](file:///D:/!starq/starqERP/legacy/engine/starq-ops-app/lib/features/garage/home/ops_shell_screen.dart))
 - Updated `_buildApprovalsView` to clearly display the exact required seat for each approval step:
   - `FC MATCH`: `Seat: financial_controller`
   - `PAYER RELEASE`: `Seat: payer`

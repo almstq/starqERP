@@ -5,7 +5,7 @@
 - **Epic:** SERP-E00
 - **Priority:** P0
 - **Execution state:** Complete; ready for independent review
-- **Implementation commit:** `697e748` (starqBooks) / `6652613` (starqERP / migration 0017)
+- **Implementation commit:** `697e748` (the foundation engine) / `6652613` (starqERP / migration 0017)
 - **Date:** 2026-08-25
 - **Accountable owner:** Antigravity (`antigravity`)
 - **Authority / Decisions:** DEC-060, DEC-073 §10
@@ -16,7 +16,7 @@
 
 Closed the critical TGST rate change defect (Maldives Tourism GST changing from 16% to 17% on 1 July 2025 under the Seventh Amendment to the GST Act) by enforcing that tax rates are never hardcoded constants, but date-effective validity periods resolved strictly by time of supply.
 
-### 1. Python Accounting Engine Alignment ([`starqBooks/`](file:///d:/StarqTech/starqBooks/))
+### 1. Python Accounting Engine Alignment ([`legacy/engine/`](file:///D:/!starq/starqERP/legacy/engine/))
 - **`ops/masters/tax.json`:**
   - Structured all tax rate codes with explicit `valid_from` and `valid_to` timestamps.
   - Added historical TGST schedules (16% through 2025-06-30; 17% from 2025-07-01) and GGST (8%).
@@ -33,7 +33,7 @@ Closed the critical TGST rate change defect (Maldives Tourism GST changing from 
 
 ## Verification & Conformance Evidence
 
-- **Specification-by-Test Suite ([`starqBooks/test_tax_period.py`](file:///d:/StarqTech/starqBooks/test_tax_period.py)):**
+- **Specification-by-Test Suite ([`legacy/engine/test_tax_period.py`](file:///D:/!starq/starqERP/legacy/engine/test_tax_period.py)):**
   - AC1 (every rate carries `valid_from`): **PASS**
   - AC2 (resolver accepts a date): **PASS**
   - AC3 (16% on 2025-06-30, 17% on 2025-07-01): **PASS**

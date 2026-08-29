@@ -1,0 +1,16 @@
+{
+  "as_of": "2026-08-19",
+  "policy": "DEC-007 perpetual. Account 1300 is on the chart. Quantity is not counted — qty is null, not zero. Zero would mean a stock take found nothing.",
+  "posting_now": "Purchases still expense 5100. Do not debit 1300 from ops until first count. Leftover paint is not for sale (4300 blocked).",
+  "account": "1300",
+  "lines": [
+    {"sku": "INK-PAINT", "product_id": "svc-paint", "qty_status": "service", "qty": null, "uom": null},
+    {"sku": "INK-BODY", "product_id": "svc-body", "qty_status": "service", "qty": null, "uom": null},
+    {"sku": "INK-WRAP", "product_id": "svc-wrap", "qty_status": "service", "qty": null, "uom": null},
+    {"sku": "INK-DETAIL", "product_id": "svc-detail", "qty_status": "service", "qty": null, "uom": null},
+    {"sku": "INK-CAGE", "product_id": "sku-cage-stock", "qty_status": "not_counted", "qty": null, "uom": "unit"},
+    {"sku": "INK-PAINT-LEFT", "product_id": "sku-leftover-paint", "qty_status": "not_for_sale", "qty": null, "uom": null, "note": "DEC-023. Not a POS item."},
+    {"sku": "ST-6201", "product_id": "svc-software", "qty_status": "service", "qty": null, "uom": null},
+    {"sku": "ST-8211", "product_id": "svc-professional", "qty_status": "service", "qty": null, "uom": null}
+  ]
+}

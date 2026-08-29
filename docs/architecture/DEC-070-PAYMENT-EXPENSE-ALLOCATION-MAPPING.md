@@ -15,7 +15,7 @@ Prior naive ERP designs assumed a 1-to-1 relationship between commercial events:
 
 In real-world business and accounting operations in the Maldives, this naive model breaks immediately across **nine foundational accounting realities**. Attempting to fit direct expenses into fictitious supplier accounts produces corrupted trade payables, fictitious vendor master rows, and untraceable bank reconciliations.
 
-This document formalizes the canonical architecture and Standard Operating Procedure (SOP) for all payment, expense, refund, and allocation flows across `starqERP` and `starqBooks`.
+This document formalizes the canonical architecture and Standard Operating Procedure (SOP) for all payment, expense, refund, and allocation flows across `starqERP` and `legacy/engine`.
 
 ---
 
@@ -43,7 +43,7 @@ erDiagram
     - `(PAY-01, INV-01, allocated_amount: 4000.00)`
     - `(PAY-02, INV-01, allocated_amount: 6000.00)`
 - **Derived State:** `get_document_settlement_summary(INV-01)` returns `allocated_total = 10000.00`, `unallocated_balance = 0.00`, status `'fully_settled'`.
-- **GL Posting (`starqBooks`):**
+- **GL Posting (`legacy/engine`):**
   - Installment 1: `Dr Cash/Bank (1001/1002) 4,000.00` / `Cr Accounts Receivable (1200) 4,000.00`
   - Installment 2: `Dr Cash/Bank (1001/1002) 6,000.00` / `Cr Accounts Receivable (1200) 6,000.00`
 

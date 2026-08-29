@@ -1,0 +1,76 @@
+{
+  "_comment": "Example only. Live Google emails live in D:\\StarqTech\\_secrets\\starqBooks-allowlist.json (not in git) and gitignored ops/users.json. Never commit live Gmails. Placeholder emails cannot sign in. Founder 19 Aug: email → list of seats, not one role. FLAG: founder must supply Gmail addresses — do not invent them.",
+  "people": [
+    {
+      "person_id": "ali",
+      "name": "Ali Mushthaq Ibrahim",
+      "email": "FOUNDER_MUST_SUPPLY_ALI_GOOGLE_EMAIL",
+      "default_seat": "director",
+      "seats": [
+        "director",
+        "financial_controller",
+        "payer",
+        "ledger_poster",
+        "counter"
+      ],
+      "status": "placeholder",
+      "entities": ["starq", "club-ignition", "group"],
+      "notes": "Director of Club Ignition on garage paper — never Starq. FC, payer, and ledger poster are separate seats. Counter is for when he is alone at the shop; he must switch into it, not fuse Director+Counter. entities: he is Starq — Group + Starq + CI. Superadmin Users power is not this list."
+    },
+    {
+      "person_id": "nashid",
+      "name": "Hussain Nashid",
+      "email": "FOUNDER_MUST_SUPPLY_NASHID_GOOGLE_EMAIL",
+      "default_seat": "managing_director",
+      "seats": [
+        "managing_director",
+        "receiver",
+        "qc_signer",
+        "technician",
+        "counter"
+      ],
+      "status": "placeholder",
+      "entities": ["club-ignition"],
+      "notes": "MD, receiver, QC signer, and technician are four seats. QC of own paint requires an explicit switch technician → qc_signer (second timestamp). Do not merge into one MD mega-role. entities: Club Ignition only — never Group, never Starq."
+    },
+    {
+      "person_id": "naleez",
+      "name": "Naleez",
+      "email": "FOUNDER_MUST_SUPPLY_NALEEZ_GOOGLE_EMAIL",
+      "default_seat": "quartermaster",
+      "seats": [
+        "quartermaster",
+        "stores"
+      ],
+      "status": "placeholder",
+      "entities": ["club-ignition"],
+      "notes": "Quartermaster collects quotes only — no award, no GRN sign, no pay. Stores is a second seat for quote compare / leftover colour. Full name FLAG if the founder wants it on the badge. entities: Club Ignition only."
+    },
+    {
+      "person_id": "ammadey",
+      "name": "Ammadey",
+      "email": "FOUNDER_MUST_SUPPLY_AMMADEY_GOOGLE_EMAIL",
+      "default_seat": "technician",
+      "seats": [
+        "technician",
+        "counter"
+      ],
+      "status": "placeholder_later",
+      "entities": ["club-ignition"],
+      "notes": "After 1 Sep. Not qc_signer until named deputy. Not receiver/payer/FC. entities: Club Ignition only."
+    },
+    {
+      "person_id": "arey",
+      "name": "Arey",
+      "email": "FOUNDER_MUST_SUPPLY_AREY_GOOGLE_EMAIL",
+      "default_seat": "technician",
+      "seats": [
+        "technician",
+        "counter"
+      ],
+      "status": "placeholder_later",
+      "entities": ["club-ignition"],
+      "notes": "After 1 Sep. Same occupancy as Ammadey unless founder names extra seats. entities: Club Ignition only."
+    }
+  ]
+}

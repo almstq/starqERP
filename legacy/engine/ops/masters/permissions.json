@@ -1,0 +1,55 @@
+{
+  "as_of": "2026-08-19",
+  "note": "Seat → allowed ops event types. Ledger post is not an ops event (DEC-008). Mirror of auth.py SEAT_EVENTS; this file is the ERP permission master for Settings.",
+  "modules": {
+    "books": ["ledger_poster", "financial_controller", "director", "managing_director"],
+    "ops": ["managing_director", "director", "counter", "technician", "qc_signer", "receiver", "stores", "quartermaster", "financial_controller", "payer"],
+    "pos": ["counter", "director", "managing_director", "stores", "ledger_poster", "financial_controller"],
+    "inventory_qty": [],
+    "contacts_create": ["director", "managing_director", "financial_controller", "counter"],
+    "payroll_create": ["director", "managing_director", "financial_controller"],
+    "payroll_rate_set": ["director", "managing_director", "financial_controller"],
+    "sell_price_set": ["director", "managing_director", "financial_controller", "ledger_poster"],
+    "sku_create": ["director", "managing_director", "financial_controller", "ledger_poster"],
+    "locations_create": ["director", "managing_director", "financial_controller"]
+  },
+  "seats": {
+    "managing_director": ["CALL", "BOOKING", "INTAKE", "ESTIMATE", "AUTHORISATION", "JOB_CARD", "PARTS_PROCUREMENT", "WORK", "QC", "HANDOVER", "INVOICE_PAYMENT", "CLOSE", "PURCHASE", "STOCK", "EXCEPTION", "RECEIPT", "BILL", "INVOICE"],
+    "director": ["CALL", "BOOKING", "INTAKE", "ESTIMATE", "AUTHORISATION", "JOB_CARD", "PARTS_PROCUREMENT", "QC", "HANDOVER", "INVOICE_PAYMENT", "CLOSE", "PURCHASE", "STOCK", "EXCEPTION", "RECEIPT", "BILL", "INVOICE"],
+    "financial_controller": ["ESTIMATE", "AUTHORISATION", "PURCHASE", "STOCK", "EXCEPTION", "INVOICE_PAYMENT", "CLOSE", "RECEIPT", "BILL", "INVOICE"],
+    "quartermaster": ["PARTS_PROCUREMENT", "PURCHASE", "STOCK", "EXCEPTION"],
+    "receiver": ["PURCHASE", "STOCK", "EXCEPTION", "RECEIPT"],
+    "payer": ["PURCHASE", "INVOICE_PAYMENT", "EXCEPTION", "RECEIPT", "BILL"],
+    "counter": ["CALL", "BOOKING", "INTAKE", "ESTIMATE", "AUTHORISATION", "JOB_CARD", "HANDOVER", "INVOICE_PAYMENT", "EXCEPTION", "RECEIPT", "INVOICE"],
+    "technician": ["JOB_CARD", "PARTS_PROCUREMENT", "WORK", "STOCK", "EXCEPTION"],
+    "qc_signer": ["QC", "HANDOVER", "EXCEPTION"],
+    "stores": ["PARTS_PROCUREMENT", "PURCHASE", "STOCK", "EXCEPTION"],
+    "ledger_poster": ["EXCEPTION"]
+  },
+  "invariants": [
+    "Google authenticates the person. This file authorizes the seat.",
+    "Nashid never has starq or group in entities.",
+    "Ops events do not post GL until DEC-008 is lifted.",
+    "Shop POS module empty on Starq occupancy.",
+    "PO/INV issued increments only when an authorised seat issues a valued document. Award does not allocate.",
+    "Contact master stays empty until an authorised seat writes a real name on that occupancy. Ops-derived names are not masters. No invented Gmails.",
+    "users.json is the person_id master. payroll.json is employment only. No second people file. No invented salaries. Nashid never a Starq employee.",
+    "Payroll GL draft only when rate_mvr exists on disk. Empty rates refuse. Ops never posts (DEC-008).",
+    "payroll_rate_set is optional on Settings when an employment row exists. Ali types rate_mvr. Empty clears.",
+    "sell_price_mvr is optional and occupancy-scoped. Empty/null is honest. Leftover paint cannot be priced. CI till sale only when a real price exists; else consume-only. Starq occupancy has no shop POS.",
+    "SKU create is occupancy-scoped id+name. sell_price and qty stay empty. Leftover paint cannot be created again. No seed SKUs.",
+    "Optional contact_id on issue/sale only when that occupancy master row exists. Never create a contact to satisfy the link.",
+    "Live invoice tax is tax master rate (0 while GST not Active). Posted 8 is refused.",
+    "Location create is occupancy-scoped name+type. No shop POS. Starq has no shop floor."
+  ],
+  "document_issue": {
+    "po": ["director", "financial_controller", "managing_director"],
+    "invoice": ["director", "financial_controller", "managing_director", "counter"]
+  },
+  "contacts_create": ["director", "managing_director", "financial_controller", "counter"],
+  "payroll_create": ["director", "managing_director", "financial_controller"],
+  "payroll_rate_set": ["director", "managing_director", "financial_controller"],
+  "sell_price_set": ["director", "managing_director", "financial_controller", "ledger_poster"],
+  "sku_create": ["director", "managing_director", "financial_controller", "ledger_poster"],
+  "locations_create": ["director", "managing_director", "financial_controller"]
+}

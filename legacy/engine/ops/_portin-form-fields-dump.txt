@@ -1,0 +1,168 @@
+template=D:\StarqTech\Mobile-Number-Port-In-Request-Form-Fillable-09072024.pdf
+pages=2
+encrypted=False
+field_count=163
+
+NAME='Text1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.2' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.2.0' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.2.0.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.2.0.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.2.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.2.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.2.1.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.0' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.0.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.0.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.1.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.3' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.3.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.3.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.4' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.4.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.5' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.5.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.5.0' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.5.0.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.5.0.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.5.0.1.2' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.5.0.1.3' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.5.0.1.0' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.5.0.1.0.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.5.0.1.0.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.5.0.1.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.5.0.1.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.5.0.1.1.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.5.0.1.1.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.5.0.1.1.1.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.6' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.6.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.6.0' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.6.0.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.6.0.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.6.0.2' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text1.1.1.0.1.6.0.3' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.0' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.0.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.0' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.0.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.0.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.1.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.2' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.2.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.2.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.3' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.3.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.3.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.4' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.4.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.4.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.5' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.5.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.5.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.6' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.6.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.6.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.7' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.7.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.7.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.8' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.8.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.8.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.9' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.9.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.9.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.10' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.10.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.1.10.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.0' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.0.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.0.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.0.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.0.1.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.0.1.0.1.2' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.1.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.1.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.1.1.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.1.1.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.1.1.1.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.1.1.1.2' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.2' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.2.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.2.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.2.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.2.1.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.2.1.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.2.1.1.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.2.1.1.2' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.3' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.3.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.3.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.3.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.3.1.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.3.1.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.3.1.1.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.3.1.1.2' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.4' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.4.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.4.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.4.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.4.1.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.4.1.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.4.1.1.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.4.1.1.2' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.5' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.5.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.5.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.5.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.5.1.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.5.1.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.5.1.1.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.5.1.1.2' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.6' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.6.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.6.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.6.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.6.1.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.6.1.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.6.1.1.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.6.1.1.2' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.7' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.7.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.7.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.7.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.7.1.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Text2.7.1.1.0' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.7.1.1.1' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Text2.7.1.1.2' FT=/Tx V=None DV=None Ff=None Opt=None
+NAME='Check Box3' FT=None V=None DV=None Ff=None Opt=None
+NAME='Check Box3.0' FT=None V=None DV=None Ff=None Opt=None
+NAME='Check Box3.0.0' FT=/Btn V=None DV=None Ff=None Opt=None
+NAME='Check Box3.0.1' FT=/Btn V=None DV=None Ff=None Opt=None
+NAME='Check Box3.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Check Box3.1.1' FT=/Btn V=None DV=None Ff=None Opt=None
+NAME='Check Box3.1.0' FT=None V=None DV=None Ff=None Opt=None
+NAME='Check Box3.1.0.0' FT=/Btn V=None DV=None Ff=None Opt=None
+NAME='Check Box3.1.0.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Check Box3.1.0.1.0' FT=None V=None DV=None Ff=None Opt=None
+NAME='Check Box3.1.0.1.0.0' FT=/Btn V=None DV=None Ff=None Opt=None
+NAME='Check Box3.1.0.1.0.1' FT=/Btn V=None DV=None Ff=None Opt=None
+NAME='Check Box3.1.0.1.1' FT=None V=None DV=None Ff=None Opt=None
+NAME='Check Box3.1.0.1.1.0' FT=/Btn V=None DV=None Ff=None Opt=None

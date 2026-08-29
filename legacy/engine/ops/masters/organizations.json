@@ -1,0 +1,74 @@
+{
+  "as_of": "2026-08-19",
+  "organizations": [
+    {
+      "id": "starq",
+      "legal_name": "Starq Technologies Pvt Ltd",
+      "registry_c": "C29552026",
+      "tin": null,
+      "gst_number": null,
+      "gst_status": "not_registered",
+      "base_currency": "MVR",
+      "timezone": "Indian/Maldives",
+      "accounting_method": "accrual",
+      "fiscal_year_start_month": 1,
+      "entity": "STARQ",
+      "modules": ["books", "erp_8211"],
+      "pos": false,
+      "business_names": [
+        {"bn": "BN62392026", "name": "Starq Dynamics", "bar": "BP89422026", "isic": "8211", "income_accounts": ["4110"]},
+        {"bn": "BN60162026", "name": "Hoadhaa Network", "bar": null, "isic": null, "income_accounts": []}
+      ],
+      "company_bar": {"bp": "BP84562026", "isic": "6201", "income_accounts": ["4100"]},
+      "fiscal_periods": [{"id": "2026", "start": "2026-01-01", "end": "2026-12-31", "status": "open"}],
+      "sequences": {
+        "invoice": {"prefix": "ST-INV-", "next": 1, "issued": 0},
+        "credit_note": {"prefix": "ST-CN-", "next": 1, "issued": 0},
+        "purchase_order": {"prefix": "ST-PO-", "next": 1, "issued": 0},
+        "quotation": {"prefix": "ST-QUO-", "next": 1, "issued": 0}
+      },
+      "bank_accounts": [
+        {"code": "1120", "label": "MIB MVR", "status": "not_opened"},
+        {"code": "1121", "label": "MIB USD", "status": "not_opened"}
+      ],
+      "cash_accounts": [
+        {"code": "1110", "label": "Cash on hand", "status": "open"},
+        {"code": "1125", "label": "Bandeyri Pay wallet", "status": "open"}
+      ]
+    },
+    {
+      "id": "club-ignition",
+      "legal_name": "Club Ignition Pvt Ltd",
+      "registry_c": "C30222026",
+      "tin": null,
+      "gst_number": null,
+      "gst_status": "not_registered",
+      "base_currency": "MVR",
+      "timezone": "Indian/Maldives",
+      "accounting_method": "accrual",
+      "fiscal_year_start_month": 1,
+      "entity": "CI",
+      "modules": ["books", "ops"],
+      "pos": false,
+      "business_names": [
+        {"bn": "BN60352026", "name": "Ignition Ink", "bar": "BP86372026", "isic": "4520", "income_accounts": ["4200", "4210", "4220", "4230"]}
+      ],
+      "fiscal_periods": [{"id": "2026", "start": "2026-01-01", "end": "2026-12-31", "status": "open"}],
+      "sequences": {
+        "invoice": {"prefix": "CI-INV-", "next": 1, "issued": 0},
+        "credit_note": {"prefix": "CI-CN-", "next": 1, "issued": 0},
+        "purchase_order": {"prefix": "CI-PO-", "next": 1, "issued": 0},
+        "quotation": {"prefix": "CI-QUO-", "next": 1, "issued": 0},
+        "job": {"prefix": "JOB-2026-", "source": "ops/state.json job_seq", "issued": "ops"}
+      },
+      "bank_accounts": [
+        {"code": "1120", "label": "MIB MVR", "status": "not_opened"},
+        {"code": "1121", "label": "MIB USD", "status": "not_opened"}
+      ],
+      "cash_accounts": [
+        {"code": "1110", "label": "Cash on hand", "status": "open"},
+        {"code": "1125", "label": "Bandeyri Pay wallet", "status": "open"}
+      ]
+    }
+  ]
+}

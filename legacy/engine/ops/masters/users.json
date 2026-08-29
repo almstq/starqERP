@@ -1,0 +1,39 @@
+{
+  "as_of": "2026-08-19",
+  "note": "person_id + seats + occupancy. Live Gmails are only in gitignored allowlist / ops/users.json. Do not copy emails here.",
+  "users": [
+    {
+      "person_id": "ali",
+      "label": "Trial user #0",
+      "status": "active",
+      "entities": ["starq", "club-ignition", "group"],
+      "portal": "hq",
+      "flutter": "ci_ops_approve",
+      "default_seat": "director",
+      "seats": ["director", "financial_controller", "payer", "ledger_poster", "counter"],
+      "never": []
+    },
+    {
+      "person_id": "nashid",
+      "label": "Test user #1",
+      "status": "active",
+      "entities": ["club-ignition"],
+      "portal": "ci_only_not_workplace",
+      "flutter": "ci_ops_simplified",
+      "default_seat": "managing_director",
+      "seats": ["managing_director", "receiver", "qc_signer", "technician", "counter"],
+      "never": ["starq", "group", "payer", "financial_controller", "ledger_poster"]
+    },
+    {
+      "person_id": "naleez",
+      "label": "CI occupant (not activated)",
+      "status": "placeholder",
+      "entities": ["club-ignition"],
+      "portal": "ci_only",
+      "flutter": "ci_ops_simplified",
+      "default_seat": "quartermaster",
+      "seats": ["quartermaster", "stores"],
+      "never": ["starq", "group", "payer", "financial_controller", "ledger_poster"]
+    }
+  ]
+}

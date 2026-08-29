@@ -1,0 +1,13 @@
+Thanks. Yes: do the compare.
+
+Path correction: operational SSOT is D:\StarqTech, not D:\!starq. Compare the reply note at D:\StarqTech\the foundation engine\ops\_nexus-projects-tab-reply.txt against:
+- D:\StarqTech\library\12_PROJECTS\project-the foundation engine.md
+- D:\StarqTech\starqNexus\data\the foundation engine-tasks.json
+
+If copies exist under D:\!starq, treat them as possibly stale. StarqTech wins.
+
+Keep Portal untouched: starq-portal-tasks.json / STARQ ERP+POS. Do not merge, re-point, or mix those boards with the foundation engine.
+
+Do not invent board rows. Refresh project-the foundation engine only if the StarqTech record disagrees with the reply note on path, occupancies, Goal 1 chrome, DEC-008, or “no Starq POS”.
+
+Do not paste Google client IDs. Do not run serve.py from a nested finance clone.

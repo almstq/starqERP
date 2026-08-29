@@ -29,7 +29,7 @@ Fixed the defect where customer name, vehicle registration, and phone number wer
   - Returns `customer_name`, `vehicle_reg`, `customer_phone`, and `phone` on each job item in `jobs` aggregate.
   - Returns `customer_name`, `vehicle_reg`, `phone` in active `campaign` payload.
 
-### 2. Client Job Card Rendering ([`starq-ops-app/lib/features/garage/`](file:///d:/StarqTech/starqBooks/starq-ops-app/lib/features/garage/))
+### 2. Client Job Card Rendering ([`starq-ops-app/lib/features/garage/`](file:///D:/!starq/starqERP/legacy/engine/starq-ops-app/lib/features/garage/))
 - **`job_card_screen.dart`:**
   - Reads `customer_name`, `vehicle_reg`, and `customer_phone` / `phone`.
   - Fallback parses `summary` only if discrete fields are empty.

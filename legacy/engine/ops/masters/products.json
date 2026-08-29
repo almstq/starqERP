@@ -1,0 +1,110 @@
+{
+  "as_of": "2026-08-19",
+  "products": [
+    {
+      "id": "svc-paint",
+      "entity": "CI",
+      "type": "service",
+      "sku": "INK-PAINT",
+      "name": "Paint and refinishing",
+      "income_account": "4200",
+      "cogs_account": "5100",
+      "inventory_account": null,
+      "tax": "none_until_gst_active",
+      "active": true,
+      "sell_price_mvr": null
+    },
+    {
+      "id": "svc-body",
+      "entity": "CI",
+      "type": "service",
+      "sku": "INK-BODY",
+      "name": "Body repair",
+      "income_account": "4210",
+      "cogs_account": "5100",
+      "inventory_account": null,
+      "tax": "none_until_gst_active",
+      "active": true,
+      "sell_price_mvr": null
+    },
+    {
+      "id": "svc-wrap",
+      "entity": "CI",
+      "type": "service",
+      "sku": "INK-WRAP",
+      "name": "Wrap",
+      "income_account": "4220",
+      "cogs_account": "5100",
+      "inventory_account": null,
+      "tax": "none_until_gst_active",
+      "active": true,
+      "sell_price_mvr": null
+    },
+    {
+      "id": "svc-detail",
+      "entity": "CI",
+      "type": "service",
+      "sku": "INK-DETAIL",
+      "name": "Detailing",
+      "income_account": "4230",
+      "cogs_account": "5100",
+      "inventory_account": null,
+      "tax": "none_until_gst_active",
+      "active": true,
+      "sell_price_mvr": null
+    },
+    {
+      "id": "sku-leftover-paint",
+      "entity": "CI",
+      "type": "consumable",
+      "sku": "INK-PAINT-LEFT",
+      "name": "Leftover paint (not for sale)",
+      "income_account": "4300",
+      "cogs_account": "5100",
+      "inventory_account": "1300",
+      "tax": "n/a",
+      "active": false,
+      "note": "4300 blocked DEC-023. Qty not on disk (DEC-007). Not a POS item. No sell_price_mvr."
+    },
+    {
+      "id": "sku-cage-stock",
+      "entity": "CI",
+      "type": "consumable",
+      "sku": "INK-CAGE",
+      "name": "Cage stock (paint and consumables)",
+      "income_account": null,
+      "cogs_account": "5100",
+      "inventory_account": "1300",
+      "tax": "n/a",
+      "active": true,
+      "note": "Stock take writes qty here. Does not post 1300 until Ali journals after the engine is trusted. Till sale only after a real sell_price_mvr — empty is honest.",
+      "sell_price_mvr": null
+    },
+    {
+      "id": "svc-software",
+      "entity": "STARQ",
+      "type": "service",
+      "sku": "ST-6201",
+      "name": "Software services",
+      "income_account": "4100",
+      "cogs_account": null,
+      "inventory_account": null,
+      "tax": "none_until_gst_active",
+      "active": true,
+      "sell_price_mvr": null
+    },
+    {
+      "id": "svc-professional",
+      "entity": "STARQ",
+      "type": "service",
+      "sku": "ST-8211",
+      "name": "Professional / Dynamics",
+      "income_account": "4110",
+      "cogs_account": null,
+      "inventory_account": null,
+      "tax": "none_until_gst_active",
+      "active": true,
+      "sell_price_mvr": null
+    }
+  ]
+}

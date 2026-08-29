@@ -1,0 +1,376 @@
+{
+  "as_of": "2026-08-19",
+  "law": "Event → seat. No GL from Ops. Ali posts journals as ledger_poster on the portal (DEC-008). Nashid quests never require payer, FC, or ledger_poster. Rent / water / power are office — not in the paint-shop sim.",
+  "rows": [
+    {
+      "id": "acc-call",
+      "entity": "CI",
+      "category_id": "garage-job",
+      "event_type": "CALL",
+      "seats": [
+        "counter",
+        "managing_director"
+      ],
+      "gl": false,
+      "receipts": false,
+      "sim": true
+    },
+    {
+      "id": "acc-booking",
+      "entity": "CI",
+      "category_id": "garage-job",
+      "event_type": "BOOKING",
+      "seats": [
+        "counter",
+        "managing_director"
+      ],
+      "gl": false,
+      "receipts": false,
+      "sim": true
+    },
+    {
+      "id": "acc-intake",
+      "entity": "CI",
+      "category_id": "garage-job",
+      "event_type": "INTAKE",
+      "seats": [
+        "counter",
+        "managing_director"
+      ],
+      "gl": false,
+      "receipts": false,
+      "sim": true
+    },
+    {
+      "id": "acc-estimate",
+      "entity": "CI",
+      "category_id": "garage-job",
+      "event_type": "ESTIMATE",
+      "seats": [
+        "managing_director",
+        "counter"
+      ],
+      "gl": false,
+      "receipts": false,
+      "sim": true
+    },
+    {
+      "id": "acc-authorisation",
+      "entity": "CI",
+      "category_id": "garage-job",
+      "event_type": "AUTHORISATION",
+      "seats": [
+        "managing_director",
+        "counter"
+      ],
+      "gl": false,
+      "note": "Deposit is ops fact. Ali posts 2500 later.",
+      "receipts": "customer",
+      "sim": true
+    },
+    {
+      "id": "acc-job-card",
+      "entity": "CI",
+      "category_id": "garage-job",
+      "event_type": "JOB_CARD",
+      "seats": [
+        "managing_director",
+        "counter",
+        "technician"
+      ],
+      "gl": false,
+      "receipts": false,
+      "sim": true
+    },
+    {
+      "id": "acc-parts",
+      "entity": "CI",
+      "category_id": "garage-job",
+      "event_type": "PARTS_PROCUREMENT",
+      "seats": [
+        "managing_director",
+        "technician",
+        "receiver"
+      ],
+      "gl": false,
+      "receipts": false,
+      "sim": true
+    },
+    {
+      "id": "acc-work",
+      "entity": "CI",
+      "category_id": "garage-job",
+      "event_type": "WORK",
+      "seats": [
+        "technician",
+        "managing_director"
+      ],
+      "gl": false,
+      "receipts": false,
+      "sim": true
+    },
+    {
+      "id": "acc-qc",
+      "entity": "CI",
+      "category_id": "garage-job",
+      "event_type": "QC",
+      "seats": [
+        "qc_signer"
+      ],
+      "gl": false,
+      "note": "Must role_switch after own WORK.",
+      "receipts": false,
+      "sim": true
+    },
+    {
+      "id": "acc-handover",
+      "entity": "CI",
+      "category_id": "garage-job",
+      "event_type": "HANDOVER",
+      "seats": [
+        "counter",
+        "qc_signer",
+        "managing_director"
+      ],
+      "gl": false,
+      "note": "Nashid quest complete for the vehicle at keys. Ali still books later.",
+      "receipts": false,
+      "sim": true
+    },
+    {
+      "id": "acc-invoice",
+      "entity": "CI",
+      "category_id": "garage-job",
+      "event_type": "INVOICE_PAYMENT",
+      "seats": [
+        "counter",
+        "managing_director"
+      ],
+      "gl": false,
+      "receipts": "customer",
+      "sim": true
+    },
+    {
+      "id": "acc-close",
+      "entity": "CI",
+      "category_id": "garage-job",
+      "event_type": "CLOSE",
+      "seats": [
+        "managing_director",
+        "counter"
+      ],
+      "gl": false,
+      "note": "Ops close only. Ledger is Ali as ledger_poster on the portal.",
+      "receipts": false,
+      "sim": true
+    },
+    {
+      "id": "acc-buy-need",
+      "entity": "CI",
+      "category_id": "purchase-sod",
+      "event_type": "PURCHASE",
+      "scm_step": "need",
+      "seats": [
+        "managing_director",
+        "counter",
+        "technician",
+        "receiver"
+      ],
+      "gl": false,
+      "receipts": false,
+      "sim": true
+    },
+    {
+      "id": "acc-buy-quote",
+      "entity": "CI",
+      "category_id": "purchase-sod",
+      "event_type": "PURCHASE",
+      "scm_step": "quote",
+      "seats": [
+        "quartermaster"
+      ],
+      "gl": false,
+      "receipts": false,
+      "sim": false,
+      "note": "Naleez. Locked for Nashid."
+    },
+    {
+      "id": "acc-buy-award",
+      "entity": "CI",
+      "category_id": "purchase-sod",
+      "event_type": "PURCHASE",
+      "scm_step": "award",
+      "seats": [
+        "financial_controller"
+      ],
+      "gl": false,
+      "receipts": false,
+      "sim": false,
+      "note": "Ali office. Nashid WAIT."
+    },
+    {
+      "id": "acc-buy-receive",
+      "entity": "CI",
+      "category_id": "purchase-sod",
+      "event_type": "PURCHASE",
+      "scm_step": "receive",
+      "seats": [
+        "receiver"
+      ],
+      "gl": false,
+      "receipts": "purchase",
+      "sim": true,
+      "note": "Nashid may capture purchase receipts only."
+    },
+    {
+      "id": "acc-buy-match",
+      "entity": "CI",
+      "category_id": "purchase-sod",
+      "event_type": "PURCHASE",
+      "scm_step": "match",
+      "seats": [
+        "financial_controller"
+      ],
+      "gl": false,
+      "receipts": false,
+      "sim": false,
+      "note": "Ali office. Nashid WAIT."
+    },
+    {
+      "id": "acc-buy-pay",
+      "entity": "CI",
+      "category_id": "purchase-sod",
+      "event_type": "PURCHASE",
+      "scm_step": "pay",
+      "seats": [
+        "payer"
+      ],
+      "gl": false,
+      "receipts": false,
+      "sim": false,
+      "note": "Ali office. Nashid WAIT. Journals still Ali later."
+    },
+    {
+      "id": "acc-rent",
+      "entity": "CI",
+      "item_id": "ci-kiev-rent",
+      "category_id": "premises",
+      "seats": [
+        "director",
+        "payer",
+        "ledger_poster"
+      ],
+      "gl": true,
+      "receipts": "office",
+      "sim": false,
+      "note": "Office. Not in the paint-shop sim. Ali only."
+    },
+    {
+      "id": "acc-utilities",
+      "entity": "CI",
+      "category_id": "utilities",
+      "seats": [
+        "payer",
+        "financial_controller",
+        "ledger_poster"
+      ],
+      "gl": false,
+      "receipts": "office",
+      "sim": false,
+      "note": "No ops event posts GL. Payer cannot be skipped. Nashid does not pay. When Ali journals: debit 6210 credit cash 1110 / AP 2100 / 2400. DEC-008. Amounts not on disk.",
+      "posts_journal": false,
+      "debit_hint": "6210",
+      "credit_hint": "1110|2100|2400",
+      "seat_must_act": "payer",
+      "cannot_act": [
+        "managing_director"
+      ]
+    },
+    {
+      "id": "acc-kiev-electricity",
+      "entity": "CI",
+      "item_id": "ci-kiev-electricity",
+      "category_id": "utilities",
+      "event": "journal.append",
+      "seats": [
+        "payer",
+        "ledger_poster"
+      ],
+      "seat_must_act": "payer",
+      "cannot_act": [
+        "managing_director"
+      ],
+      "gl": false,
+      "posts_journal": false,
+      "debit_hint": "6210",
+      "credit_hint": "1110|2100|2400",
+      "receipts": "office",
+      "sim": false,
+      "note": "Ops never posts GL. Payer cannot be skipped. Nashid does not pay. When Ali ledger_poster journals: debit 6210 credit 1110/2100/2400. DEC-008. No amount posted."
+    },
+    {
+      "id": "acc-kiev-water",
+      "entity": "CI",
+      "item_id": "ci-kiev-water",
+      "category_id": "utilities",
+      "event": "journal.append",
+      "seats": [
+        "payer",
+        "ledger_poster"
+      ],
+      "seat_must_act": "payer",
+      "cannot_act": [
+        "managing_director"
+      ],
+      "gl": false,
+      "posts_journal": false,
+      "debit_hint": "6210",
+      "credit_hint": "1110|2100|2400",
+      "receipts": "office",
+      "sim": false,
+      "note": "Ops never posts GL. Payer cannot be skipped. Nashid does not pay. When Ali ledger_poster journals: debit 6210 credit 1110/2100/2400. DEC-008. No amount posted."
+    },
+    {
+      "id": "acc-kiev-electricity-journal",
+      "entity": "CI",
+      "item_id": "ci-kiev-electricity",
+      "category_id": "utilities",
+      "event": "journal.append",
+      "seats": [
+        "ledger_poster"
+      ],
+      "seat_must_act": "ledger_poster",
+      "cannot_act": [
+        "managing_director"
+      ],
+      "gl": true,
+      "posts_journal": true,
+      "debit_hint": "6210",
+      "credit_hint": "1110|2100|2400",
+      "receipts": "office",
+      "sim": false,
+      "note": "When Ali journals: debit 6210 Utilities, credit cash/AP. DEC-008. Ops events never write journals/."
+    },
+    {
+      "id": "acc-kiev-water-journal",
+      "entity": "CI",
+      "item_id": "ci-kiev-water",
+      "category_id": "utilities",
+      "event": "journal.append",
+      "seats": [
+        "ledger_poster"
+      ],
+      "seat_must_act": "ledger_poster",
+      "cannot_act": [
+        "managing_director"
+      ],
+      "gl": true,
+      "posts_journal": true,
+      "debit_hint": "6210",
+      "credit_hint": "1110|2100|2400",
+      "receipts": "office",
+      "sim": false,
+      "note": "When Ali journals: debit 6210 Utilities, credit cash/AP. DEC-008. Ops events never write journals/."
+    }
+  ]
+}
