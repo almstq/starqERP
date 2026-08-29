@@ -70,17 +70,54 @@ $$\text{Identity} \longrightarrow \begin{matrix} \text{Platform Entitlement} \\ 
 
 ## Implementation & Release Status
 
+### Shipped Capabilities
+
+The accounting spine landed in `main` on 29 August 2026. These modules are merged and building; acceptance review is tracked separately from delivery, so "merged" here does not mean "signed off".
+
+| Area | Capability | Status |
+| :--- | :--- | :--- |
+| **General Ledger** | Chart of Accounts with account hierarchy management | Merged |
+| | Live double-entry journal posting and GL explorer | Merged |
+| | Authoritative trial balance and balance sheet, with a zero-variance invariant | Merged |
+| | Accounting period lock, audited unlock, and fiscal year-end roll-forward to retained earnings | Merged |
+| **Receivables** | Credit notes, customer advance deposits and settlement allocation | Merged |
+| | Customer credit limits and automated dunning | Merged |
+| | AR / AP ageing with drill-down | Merged |
+| **Banking** | Bank and cash ledger with BML / MIB CSV statement reconciliation | Merged |
+| | Multi-currency purchasing with MMA rates and FX gain/loss | Merged |
+| **Maldives Tax** | MIRA GST-201 return schedule and export, box 1 through 13 | Merged |
+| | Tourism GST (TGST) and Green Tax, with citizen exemption handling | Merged |
+| **Localization** | Bilingual Dhivehi (Thaana) and English document print engine | Merged |
+| | MMA Favara instant QR payment generation | Merged |
+| **Operations** | Job costing, multi-warehouse transfers, production orders, payroll | Merged |
+| **Platform** | Two-plane control plane, tenant provisioning, staff invitation lifecycle | Merged |
+| **Reporting** | Direct and indirect IFRS cash flow statement | Merged |
+| | Consolidated multi-book and multi-outlet reporting | Merged |
+
+### Engineering Quality Gates
+
+Every push runs both gates in CI:
+
+| Gate | Current |
+| :--- | :--- |
+| TypeScript strict typecheck | **0 errors** |
+| Vitest suite | **81 files, 292 passing** |
+| Playwright end-to-end | **15 passing** across Chromium, Firefox, WebKit and mobile |
+| Production build | **Clean** |
+| Secret and credential sweep | **0 findings** |
+| Migration lint | **Clean**, 31 migrations, monotonic |
+
 ### Canonical Roadmap Snapshot
 *Baseline Snapshot Date: 2026-08-27 | Release: v0.2.0-beta*
 
 | Milestone Gate | Scope & Focus | Status |
 | :--- | :--- | :--- |
 | **Gate 1 (G1)** | **Commercial Pilot Readiness** — Dual-tenant spine, RLS isolation, session boundaries, inventory valuation, job workflows, invoice lifecycle. | **Active / Near Completion** |
-| **Gate 2 (G2)** | **ERP Replacement Readiness** — Full double-entry general ledger, bank reconciliations, multi-currency purchasing, audit trail immutability. | **Planned** |
-| **Gate 3 (G3)** | **Maldives Competitive Advantage** — Native MIRA GST filing integration, Dhivehi localization, BML payment gateway, offline sync resilience. | **Planned** |
+| **Gate 2 (G2)** | **ERP Replacement Readiness** — Full double-entry general ledger, bank reconciliations, multi-currency purchasing, audit trail immutability. | **Active** — implementations merged, acceptance review pending |
+| **Gate 3 (G3)** | **Maldives Competitive Advantage** — Native MIRA GST filing integration, Dhivehi localization, BML payment gateway, offline sync resilience. | **Partially delivered** — GST-201, Dhivehi print and Favara QR merged; offline sync still planned |
 | **Gate 4 (G4)** | **Enterprise Scale & Governance** — Multi-region replication, automated continuous compliance, high-availability tenancy failover. | **Planned** |
 
-*Canonical Board Progress: **117 of 318 tasks completed (36.79%)** across G1–G4.*
+*Canonical Board Progress: **142 of 319 tasks completed (44.5%)** across G1-G4. Figures are read from the Nexus board SSOT (`starq-erp-tasks.json`), not maintained by hand.*
 
 ---
 

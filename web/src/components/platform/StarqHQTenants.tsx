@@ -48,8 +48,8 @@ export const StarqHQTenants: React.FC = () => {
         <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">Authoritative platform metadata. Tenant ledgers are not queried by this view.</p></div>
       <div className="relative"><Search size={14} className="absolute left-3 top-2.5" /><input aria-label="Search tenants" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search tenants..." className="pl-8 pr-3 py-1.5 text-xs rounded border bg-transparent w-64" /></div>
     </div>
-    <div className="p-3 rounded border flex items-start gap-2.5 text-xs bg-[var(--md-sys-color-surface-container)]"><ShieldCheck size={16} className="text-indigo-500 shrink-0" /><span><strong>Platform metadata only:</strong> suspension changes the tenant authority boundary; it does not expose invoices, payroll, journals, or other financial rows.</span></div>
-    {error && <div role="alert" className="p-3 rounded border border-red-500 text-xs text-red-600">{error}</div>}
+    <div className="p-3 rounded border flex items-start gap-2.5 text-xs bg-[var(--md-sys-color-surface-container)]"><ShieldCheck size={16} className="text-[var(--md-sys-color-primary)] shrink-0" /><span><strong>Platform metadata only:</strong> suspension changes the tenant authority boundary; it does not expose invoices, payroll, journals, or other financial rows.</span></div>
+    {error && <div role="alert" className="p-3 rounded border border-[var(--md-sys-color-error)] text-xs text-[var(--md-sys-color-error)]">{error}</div>}
     {busy === 'loading' && <div className="p-6 text-center text-xs">Loading authoritative tenant registry…</div>}
     {busy !== 'loading' && <div className="rounded border overflow-x-auto bg-[var(--md-sys-color-surface-container)]">
       <table className="w-full text-left text-xs"><thead><tr className="border-b"><th className="p-3">Organisation</th><th className="p-3">Archetype</th><th className="p-3">Books</th><th className="p-3">Subscription</th><th className="p-3">Seats</th><th className="p-3">Status</th><th className="p-3">Control</th></tr></thead>

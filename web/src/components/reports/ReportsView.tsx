@@ -181,8 +181,15 @@ export const ReportsView: React.FC = () => {
       {/* ─────────────────────────────────────────────────────────────────────
          INTERACTIVE SCREEN HEADER (Hidden in Print Mode)
          ───────────────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden min-w-0">
-        <div className="space-y-1 min-w-0">
+      {/*
+        Header stacks rather than sitting beside the toolbar. The toolbar holds a
+        ~900px report tab-group plus two selects and an export button — about
+        1430px of controls. Asking that to share a justify-between row with the
+        heading meant the heading (the only shrinkable item) was squeezed to 0px
+        wide and its text wrapped one character per line.
+      */}
+      <div className="flex flex-col gap-4 print:hidden min-w-0">
+        <div className="space-y-1 min-w-0 flex-1">
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)]">
               Reports & Financial Statements
@@ -196,7 +203,7 @@ export const ReportsView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 min-w-0">
           {/* Segmented Tab Switcher */}
           <div className="flex p-1 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)]">
             <button
