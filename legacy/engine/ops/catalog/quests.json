@@ -1,0 +1,380 @@
+{
+  "as_of": "2026-08-19",
+  "product": "Ignition Ink paint-shop sim",
+  "entity": "CI",
+  "isic": "4520",
+  "trade": "paint wrap repair detailing",
+  "law": "The ops app is the sim. Not Unity. Not a cartoon. Stamps, not coins. One vehicle in the bay. SOP discipline with a light campaign layer. Nashid never sees Starq. Ops never posts journals.",
+  "ux": {
+    "lock": "The app must be exciting to use. Not a hassle.",
+    "screen": "One car, one play, one giant button. The next legal step is the screen.",
+    "motion": "Counter to booth feels like moving a car, not filling an ERP.",
+    "receipt": "Photo, amount, done. Not twelve fields.",
+    "wrong_seat": "Bay locked. Then the legal button. No essays.",
+    "empty_bay": "Take the call. Not a blank dashboard.",
+    "office": "Ali award/pay/rent stays powerful and short. Nashid never sees it as homework.",
+    "noise": "Exciting is not noisy. No emoji rain. No fake XP shop. Stamps only for real SOP.",
+    "split": "If a flow needs more than one decision, it is a hassle. Split it."
+  },
+  "voice": "next play, stamps, one job at a time. Short shop-floor English.",
+  "empty_shop": "No car in the bay. First play: take the call.",
+  "illegal": "Bay locked. Not your seat.",
+  "qc_switch": "Switch seat to QC",
+  "office_door": "Office. Ali.",
+  "receipts": {
+    "nashid": ["purchase"],
+    "ali_office_not_in_sim": ["rent", "water", "power"]
+  },
+  "rules": {
+    "one_job_at_a_time": true,
+    "only_next_play_enabled": true,
+    "illegal_is_not_funny": true,
+    "qc_own_work_requires_role_switch": true,
+    "close_is_ops_not_ledger": true,
+    "no_ledger_poster_on_nashid_quests": true,
+    "wrap_bay_is_work_subtype": true,
+    "catalog_items_ali_only": ["premises", "utilities"]
+  },
+  "stations": [
+    {
+      "id": "counter",
+      "name": "Counter",
+      "events": ["CALL", "BOOKING", "INTAKE", "JOB_CARD"],
+      "note": "Phone + consent. Photos before the vehicle is touched. Job card lives here."
+    },
+    {
+      "id": "spec",
+      "name": "Spec",
+      "events": ["ESTIMATE", "AUTHORISATION"],
+      "note": "Firm price on the card jobs. Both boxes, then the spoken sentence, then the deposit."
+    },
+    {
+      "id": "cage",
+      "name": "Cage",
+      "events": ["PARTS_PROCUREMENT"],
+      "scm_nashid": ["need", "receive"],
+      "scm_office": ["quote", "award", "match", "pay"],
+      "note": "Nashid: say what is missing, count it in. Award and pay are the office — locked door."
+    },
+    {
+      "id": "booth",
+      "name": "Booth",
+      "events": ["WORK"],
+      "subtype": "paint",
+      "note": "Paint the job. Hours and ml on the card."
+    },
+    {
+      "id": "wrap",
+      "name": "Wrap bay",
+      "events": ["WORK"],
+      "subtype": "wrap",
+      "note": "Same WORK event. Write wrap in the notes. Do not invent a ledger type."
+    },
+    {
+      "id": "lamp",
+      "name": "Lamp",
+      "events": ["QC"],
+      "must_switch": "qc_signer",
+      "note": "Daylight, outside. If you painted it, switch seat first."
+    },
+    {
+      "id": "keys",
+      "name": "Keys",
+      "events": ["HANDOVER"],
+      "note": "Walk-around against arrival photos. Then the keys."
+    },
+    {
+      "id": "ticket",
+      "name": "Ticket",
+      "events": ["INVOICE_PAYMENT", "CLOSE"],
+      "note": "Balance at the counter. CLOSE = bay empty. Ali books later on the portal."
+    }
+  ],
+  "campaigns": {
+    "job": {
+      "id": "job",
+      "title": "One vehicle",
+      "sop": ["C-01", "C-02", "C-03", "C-04", "C-05"],
+      "steps": [
+        {
+          "id": "job-call",
+          "station": "counter",
+          "event_type": "CALL",
+          "scm_step": null,
+          "title": "Take the call",
+          "play": "Take the call. Ask the colour. Log it.",
+          "nashid_seats": ["counter", "managing_director"],
+          "blocked_if_acting": ["payer", "financial_controller", "ledger_poster"],
+          "next_ids": ["job-booking"],
+          "stamp": "CALL",
+          "accountability_id": "acc-call"
+        },
+        {
+          "id": "job-booking",
+          "station": "counter",
+          "event_type": "BOOKING",
+          "scm_step": null,
+          "title": "Book the bay",
+          "play": "Book a time. Not a price. Not a deposit.",
+          "nashid_seats": ["counter", "managing_director"],
+          "blocked_if_acting": ["payer", "financial_controller", "ledger_poster"],
+          "next_ids": ["job-intake"],
+          "stamp": "BOOKED",
+          "accountability_id": "acc-booking"
+        },
+        {
+          "id": "job-intake",
+          "station": "counter",
+          "event_type": "INTAKE",
+          "scm_step": null,
+          "title": "Vehicle on site",
+          "play": "Photos first. Four corners, marks, odometer, keys. Then the vehicle may be touched.",
+          "nashid_seats": ["counter", "managing_director"],
+          "blocked_if_acting": ["payer", "financial_controller", "ledger_poster"],
+          "next_ids": ["job-estimate"],
+          "stamp": "IN",
+          "accountability_id": "acc-intake"
+        },
+        {
+          "id": "job-estimate",
+          "station": "spec",
+          "event_type": "ESTIMATE",
+          "scm_step": null,
+          "title": "Write the estimate",
+          "play": "Card price or indicative. No GST line. Colour is a fact.",
+          "nashid_seats": ["managing_director", "counter"],
+          "blocked_if_acting": ["payer", "financial_controller", "ledger_poster"],
+          "next_ids": ["job-authorisation"],
+          "stamp": "SPEC",
+          "accountability_id": "acc-estimate"
+        },
+        {
+          "id": "job-authorisation",
+          "station": "spec",
+          "event_type": "AUTHORISATION",
+          "scm_step": null,
+          "title": "Get the yes",
+          "play": "Both boxes. Speak the sentence. Take 50%. Receipt on the card.",
+          "nashid_seats": ["managing_director", "counter"],
+          "blocked_if_acting": ["payer", "financial_controller", "ledger_poster"],
+          "next_ids": ["job-card"],
+          "stamp": "YES",
+          "accountability_id": "acc-authorisation"
+        },
+        {
+          "id": "job-card",
+          "station": "counter",
+          "event_type": "JOB_CARD",
+          "scm_step": null,
+          "title": "Open the job card",
+          "play": "One card per vehicle. Blanks allowed. Invention not.",
+          "nashid_seats": ["managing_director", "counter", "technician"],
+          "blocked_if_acting": ["payer", "financial_controller", "ledger_poster"],
+          "next_ids": ["job-parts"],
+          "stamp": "CARD",
+          "accountability_id": "acc-job-card"
+        },
+        {
+          "id": "job-parts",
+          "station": "cage",
+          "event_type": "PARTS_PROCUREMENT",
+          "scm_step": null,
+          "title": "Paint for this job",
+          "play": "What is missing. Paint against this job number. Cage, not the office.",
+          "nashid_seats": ["managing_director", "technician", "receiver"],
+          "blocked_if_acting": ["payer", "financial_controller", "ledger_poster"],
+          "next_ids": ["job-work"],
+          "stamp": "CAGE",
+          "accountability_id": "acc-parts"
+        },
+        {
+          "id": "job-work",
+          "station": "booth",
+          "event_type": "WORK",
+          "scm_step": null,
+          "title": "Paint the job",
+          "play": "Booth for paint. Wrap bay is the same stamp — write wrap in the notes.",
+          "nashid_seats": ["technician", "managing_director"],
+          "blocked_if_acting": ["payer", "financial_controller", "ledger_poster", "qc_signer"],
+          "next_ids": ["job-qc"],
+          "stamp": "BOOTH",
+          "accountability_id": "acc-work"
+        },
+        {
+          "id": "job-qc",
+          "station": "lamp",
+          "event_type": "QC",
+          "scm_step": null,
+          "title": "Lamp check",
+          "play": "Switch seat to QC. Daylight, outside. Do not QC your own work in one click.",
+          "switch_play": "Switch seat to QC",
+          "nashid_seats": ["qc_signer"],
+          "blocked_if_acting": ["technician", "payer", "financial_controller", "ledger_poster"],
+          "next_ids": ["job-handover"],
+          "stamp": "LAMP",
+          "accountability_id": "acc-qc"
+        },
+        {
+          "id": "job-handover",
+          "station": "keys",
+          "event_type": "HANDOVER",
+          "scm_step": null,
+          "title": "Hand over the keys",
+          "play": "Walk-around against arrival photos. Then the keys. Quest complete for the bay.",
+          "nashid_seats": ["counter", "qc_signer", "managing_director"],
+          "blocked_if_acting": ["payer", "financial_controller", "ledger_poster"],
+          "next_ids": ["job-invoice"],
+          "stamp": "KEYS",
+          "accountability_id": "acc-handover"
+        },
+        {
+          "id": "job-invoice",
+          "station": "ticket",
+          "event_type": "INVOICE_PAYMENT",
+          "scm_step": null,
+          "title": "Take the balance",
+          "play": "MAN- receipt. Cash or transfer. No GST line. No INV- by hand.",
+          "nashid_seats": ["counter", "managing_director"],
+          "blocked_if_acting": ["payer", "financial_controller", "ledger_poster"],
+          "next_ids": ["job-close"],
+          "stamp": "TICKET",
+          "accountability_id": "acc-invoice"
+        },
+        {
+          "id": "job-close",
+          "station": "ticket",
+          "event_type": "CLOSE",
+          "scm_step": null,
+          "title": "Bay empty",
+          "play": "Ops close. Card done. Ali books later. Not your ledger seat.",
+          "nashid_seats": ["managing_director", "counter"],
+          "blocked_if_acting": ["payer", "financial_controller", "ledger_poster"],
+          "next_ids": [],
+          "stamp": "EMPTY",
+          "accountability_id": "acc-close"
+        }
+      ]
+    },
+    "purchase": {
+      "id": "purchase",
+      "title": "Cage — Nashid slice",
+      "sop": ["P-01", "P-02", "P-04"],
+      "steps": [
+        {
+          "id": "buy-need",
+          "station": "cage",
+          "event_type": "PURCHASE",
+          "scm_step": "need",
+          "title": "What's missing",
+          "play": "Write the need. Paint against the job. Consumables OVERHEAD.",
+          "nashid_seats": ["managing_director", "counter", "technician", "receiver"],
+          "blocked_if_acting": ["payer", "financial_controller", "ledger_poster"],
+          "next_ids": ["buy-quote"],
+          "stamp": "NEED",
+          "wait": false,
+          "accountability_id": "acc-buy-need",
+          "receipts": false
+        },
+        {
+          "id": "buy-quote",
+          "station": "cage",
+          "event_type": "PURCHASE",
+          "scm_step": "quote",
+          "title": "WAIT — Naleez quotes",
+          "play": "Locked. Quartermaster later. Do not skip Naleez.",
+          "ali_play": "Coach: quotes are Naleez. Do not award yet.",
+          "nashid_seats": [],
+          "blocked_if_acting": [
+            "managing_director", "technician", "counter", "receiver",
+            "payer", "financial_controller", "ledger_poster"
+          ],
+          "next_ids": ["buy-award"],
+          "stamp": "WAIT",
+          "wait": true,
+          "wait_for": "Naleez",
+          "locked_door": true,
+          "accountability_id": "acc-buy-quote",
+          "receipts": false
+        },
+        {
+          "id": "buy-award",
+          "station": "cage",
+          "event_type": "PURCHASE",
+          "scm_step": "award",
+          "title": "WAIT — Ali awards",
+          "play": "Bay locked. Not your seat.",
+          "ali_play": "Office: award as FC. Then switch seat before pay.",
+          "nashid_seats": [],
+          "blocked_if_acting": [
+            "managing_director", "technician", "counter", "receiver",
+            "quartermaster", "payer", "ledger_poster"
+          ],
+          "next_ids": ["buy-receive"],
+          "stamp": "WAIT",
+          "wait": true,
+          "wait_for": "Ali",
+          "locked_door": true,
+          "accountability_id": "acc-buy-award",
+          "receipts": false
+        },
+        {
+          "id": "buy-receive",
+          "station": "cage",
+          "event_type": "PURCHASE",
+          "scm_step": "receive",
+          "title": "Count it in",
+          "play": "Count the goods. Photo the packing note. Purchase receipts only.",
+          "nashid_seats": ["receiver"],
+          "blocked_if_acting": ["payer", "financial_controller", "ledger_poster", "quartermaster"],
+          "next_ids": ["buy-match"],
+          "stamp": "IN",
+          "wait": false,
+          "accountability_id": "acc-buy-receive",
+          "receipts": "purchase"
+        },
+        {
+          "id": "buy-match",
+          "station": "cage",
+          "event_type": "PURCHASE",
+          "scm_step": "match",
+          "title": "WAIT — Ali matches",
+          "play": "Bay locked. Not your seat.",
+          "ali_play": "Office: three-way match as FC. Then switch to payer.",
+          "nashid_seats": [],
+          "blocked_if_acting": [
+            "managing_director", "technician", "counter", "receiver",
+            "quartermaster", "payer", "ledger_poster"
+          ],
+          "next_ids": ["buy-pay"],
+          "stamp": "WAIT",
+          "wait": true,
+          "wait_for": "Ali",
+          "locked_door": true,
+          "accountability_id": "acc-buy-match",
+          "receipts": false
+        },
+        {
+          "id": "buy-pay",
+          "station": "cage",
+          "event_type": "PURCHASE",
+          "scm_step": "pay",
+          "title": "WAIT — Ali pays",
+          "play": "Bay locked. Not your seat.",
+          "ali_play": "Office: pay after match. Two timestamps. No journal from this screen.",
+          "nashid_seats": [],
+          "blocked_if_acting": [
+            "managing_director", "technician", "counter", "receiver",
+            "quartermaster", "financial_controller", "ledger_poster"
+          ],
+          "next_ids": [],
+          "stamp": "WAIT",
+          "wait": true,
+          "wait_for": "Ali",
+          "locked_door": true,
+          "accountability_id": "acc-buy-pay",
+          "receipts": false
+        }
+      ]
+    }
+  }
+}

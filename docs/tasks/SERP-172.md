@@ -45,5 +45,5 @@ Multi-tenancy is verified when attacks fail:
 
 - **Deno contract & adversarial tests:** **87/87 PASS** (5 new SERP-172 tests, 0 failed).
 - **Web client Vitest:** **11/11 PASS**.
-- **Python / starqBooks:** **5/5 AC PASS**.
+- **Python / the foundation engine:** **5/5 AC PASS**.
 - **Public tables:** **31/31 verified (27 RLS, 4 revoked grants, 0 unprotected)**.

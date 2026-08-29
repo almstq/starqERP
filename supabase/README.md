@@ -1,4 +1,4 @@
-# starqBooks PostgreSQL migrations
+# STARQ ERP PostgreSQL migrations
 
 Status: linked foundation; the three controlled migrations were applied to the
 founder-authorized Starq Books Supabase project on 2026-08-20. No seed or live

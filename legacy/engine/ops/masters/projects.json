@@ -1,0 +1,7 @@
+{
+  "as_of": "2026-08-19",
+  "note": "A Club Ignition garage job is a project. Source of job_no is ops/state.json, not this file. Do not duplicate or invent jobs here.",
+  "costing": "CI 4200-4230 on valued CLOSE / INVOICE_PAYMENT. AUTHORISATION with amount drafts 2500 WIP/deferred. Starq valued close credits 4110 (8211) or 4100 (6201). Never 8% GST, never 4300. Ops never posts (DEC-008).",
+  "source": "ops/state.json jobs",
+  "projects": []
+}

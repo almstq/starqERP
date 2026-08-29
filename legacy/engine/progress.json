@@ -1,0 +1,53 @@
+{
+  "project": "the foundation engine",
+  "version": "0.1.0-ops",
+  "status": "active",
+  "domain": "starq-technologies",
+  "current_phase": "goal-1-erp-ready-core",
+  "started": "2026-08-19",
+  "last_updated": "2026-08-20",
+  "workers": {
+    "elder": {
+      "status": "active",
+      "role": "architecture-board-command-home-ops-ux",
+      "tasks_completed": 0
+    },
+    "ag": {
+      "status": "blocked",
+      "role": "flutter-gis-cookie-bus-evidence",
+      "tasks_completed": 0
+    },
+    "codex": {
+      "status": "idle",
+      "role": "docs-ssot-after-code",
+      "tasks_completed": 0
+    },
+    "hermes": {
+      "status": "idle",
+      "role": "coord-broadcast",
+      "tasks_completed": 0
+    },
+    "founder": {
+      "status": "active",
+      "role": "utility-day-sha1-dec-008",
+      "tasks_completed": 0
+    }
+  },
+  "metrics": {
+    "phases_total": 11,
+    "phases_complete": 1,
+    "board_tasks_total": 32,
+    "board_tasks_done": 9,
+    "board_epics": 11
+  },
+  "phase_current": "Goal 1 ERP-ready core OPEN. Reports sub-reports (inventory valuation, sales summary, payroll summary — empty honest). Dashboard Approvals inbox (SoD read-only). Optional QUO draft on ESTIMATE/CALL with amount. PR/RFQ→award→PO chain. Payroll rate_mvr on Settings. T-03 step 1 local backup live (SBK-032 in_progress — offsite still founder). Auto-GL false (DEC-008). Contacts []. INK-CAGE not_counted. Till 0 until price. issued=0.",
+  "phase_next": "Ali writes a real sell price and a real INK-CAGE count before a till sale. Payroll run draft after a real rate. Auto-journals stay gated on DEC-008.",
+  "build_status": "dirty",
+  "stack": [
+    "Python stdlib serve.py :51800",
+    "plain-text journals (human-appended)",
+    "ops/catalog JSON",
+    "Flutter starq-ops-app"
+  ],
+  "notes": "Tier 1. Live path D:\\StarqTech\\the foundation engine. Board starqNexus/data/the foundation engine-tasks.json. Do not commit GIS secrets. Nashid never Starq."
+}

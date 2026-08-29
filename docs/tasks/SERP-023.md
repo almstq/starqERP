@@ -16,7 +16,7 @@ Unified user-visible application chrome and discovery endpoints to STARQ ERP bra
 ---
 
 ### 2. Problem Statement
-Legacy metadata and header components contained references to 'starqBooks' or unaligned product naming.
+Legacy metadata and header components contained references to 'the foundation engine' or unaligned product naming.
 
 ---
 

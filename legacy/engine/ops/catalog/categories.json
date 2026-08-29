@@ -1,0 +1,154 @@
+{
+  "as_of": "2026-08-19",
+  "categories": [
+    {
+      "id": "occupancy",
+      "title": "Occupancy",
+      "description": "Company C / business name BN / BAR / ISIC. Static registry facts, not expiry dates.",
+      "default_accounts": ["4100", "4110", "4200", "4210", "4220", "4230", "4300", "6300"],
+      "default_seats": ["director", "ledger_poster"],
+      "ops_event_types": []
+    },
+    {
+      "id": "premises",
+      "title": "Premises",
+      "description": "Godown / workshop rent and rental deposit. Receipt captured before the 10th; Ali journals later (DEC-008).",
+      "default_accounts": ["6200", "1215", "2400"],
+      "default_seats": ["director", "financial_controller", "payer", "ledger_poster"],
+      "ops_event_types": ["RECEIPT"]
+    },
+    {
+      "id": "receipts",
+      "title": "Receipts",
+      "description": "Every spend needs an artefact + date + amount + what it is before it is late. Ops never posts the journal. Kinds: rent, electricity, water, purchase, parts, consumable, fee, other.",
+      "default_accounts": ["6200", "6210", "5100", "6300", "1210", "2100", "2400"],
+      "default_seats": ["director", "financial_controller", "payer", "receiver", "managing_director", "counter", "ledger_poster"],
+      "ops_event_types": ["RECEIPT"]
+    },
+    {
+      "id": "utilities",
+      "title": "Utilities",
+      "description": "Water and electricity at H. Kiev. Chart code 6210. Amount unknown until captured. Due day assumed 10th with rent until confirmed.",
+      "default_accounts": ["6210", "2400"],
+      "default_seats": ["payer", "financial_controller", "ledger_poster"],
+      "ops_event_types": ["RECEIPT"]
+    },
+    {
+      "id": "banking",
+      "title": "Banking",
+      "description": "Cash and bank. No CI bank account is open. Cash can be zero.",
+      "default_accounts": ["1110", "1120", "1121", "1125", "6400"],
+      "default_seats": ["director", "financial_controller", "payer", "ledger_poster"],
+      "ops_event_types": ["FIN_BANK"]
+    },
+    {
+      "id": "tax-gst",
+      "title": "GST (watch)",
+      "description": "Not GST-registered. No 8% on live invoices. 1220 is a posted fact, not a filing deadline.",
+      "default_accounts": ["1220", "2200"],
+      "default_seats": ["director", "financial_controller", "ledger_poster"],
+      "ops_event_types": []
+    },
+    {
+      "id": "tax-cit",
+      "title": "CIT (human filing)",
+      "description": "Corporate income tax is a human filing, not a product gate. No due date on disk.",
+      "default_accounts": ["2230"],
+      "default_seats": ["director", "financial_controller"],
+      "ops_event_types": []
+    },
+    {
+      "id": "inventory",
+      "title": "Inventory",
+      "description": "DEC-007 perpetual decided, not built. 1300 not on chart yet. Leftover paint is not 4300.",
+      "default_accounts": ["5100", "1300"],
+      "default_seats": ["stores", "quartermaster", "ledger_poster"],
+      "ops_event_types": ["STOCK"]
+    },
+    {
+      "id": "garage-job",
+      "title": "Garage job",
+      "description": "Ignition Ink CALL through CLOSE. Ops records the cycle; journals stay append-only (DEC-008).",
+      "default_accounts": ["1110", "2500", "4200", "4210", "4220", "4230", "5100"],
+      "default_seats": ["counter", "technician", "qc_signer", "managing_director", "ledger_poster"],
+      "ops_event_types": [
+        "CALL", "BOOKING", "INTAKE", "ESTIMATE", "AUTHORISATION", "JOB_CARD",
+        "PARTS_PROCUREMENT", "WORK", "QC", "HANDOVER", "INVOICE_PAYMENT", "CLOSE"
+      ]
+    },
+    {
+      "id": "purchase-sod",
+      "title": "Purchase SoD",
+      "description": "need → quote → award → receive → match → pay. Seats cannot collapse.",
+      "default_accounts": ["5100", "2100", "2400", "1110"],
+      "default_seats": [
+        "counter", "quartermaster", "financial_controller", "receiver", "payer", "ledger_poster"
+      ],
+      "ops_event_types": ["PURCHASE", "PARTS_PROCUREMENT", "RECEIPT"]
+    },
+    {
+      "id": "income-software",
+      "title": "Income — software 6201",
+      "description": "STARQ company BAR 6201 credits 4100. Not Dynamics. Not CI.",
+      "default_accounts": ["4100"],
+      "default_seats": ["director", "ledger_poster"],
+      "ops_event_types": []
+    },
+    {
+      "id": "income-professional",
+      "title": "Income — professional 8211",
+      "description": "Starq Dynamics BN BAR 8211 credits 4110. Not software. Not CI.",
+      "default_accounts": ["4110"],
+      "default_seats": ["director", "ledger_poster"],
+      "ops_event_types": []
+    },
+    {
+      "id": "income-garage",
+      "title": "Income — garage 4520",
+      "description": "Ignition Ink paint / repair / wrap / detailing on 4200–4230. Service, not retail.",
+      "default_accounts": ["4200", "4210", "4220", "4230", "2500"],
+      "default_seats": ["counter", "managing_director", "ledger_poster"],
+      "ops_event_types": ["INVOICE_PAYMENT", "CLOSE"]
+    },
+    {
+      "id": "income-blocked-retail",
+      "title": "Income — blocked retail",
+      "description": "4300 unused. CI is 4520 services. Leftover paint cannot be booked as product (DEC-023).",
+      "default_accounts": ["4300"],
+      "default_seats": ["ledger_poster", "director"],
+      "ops_event_types": []
+    },
+    {
+      "id": "intercompany",
+      "title": "Intercompany",
+      "description": "1290 must mirror 2490 in the other entity. Share capital is 2495/3110, not this pair.",
+      "default_accounts": ["1290", "2490", "1600", "2495", "3110"],
+      "default_seats": ["director", "ledger_poster", "financial_controller"],
+      "ops_event_types": []
+    },
+    {
+      "id": "director-funding",
+      "title": "Director funding",
+      "description": "2400 due to director (founder). 2410 due to Managing Director — Club Ignition. No bank yet, so personal-pay is the path.",
+      "default_accounts": ["2400", "2410"],
+      "default_seats": ["director", "managing_director", "ledger_poster"],
+      "ops_event_types": ["FIN_PAYABLE"]
+    },
+    {
+      "id": "backups-t03",
+      "title": "Backups T-03",
+      "description": "Tier-1 journals / accounts / corporate offsite copy. Planned. Mechanism not chosen. Not a fake backup due.",
+      "default_accounts": [],
+      "default_seats": ["director"],
+      "ops_event_types": []
+    },
+    {
+      "id": "decisions",
+      "title": "Decisions",
+      "description": "Founder inbox. Open count is live from decisions.json. Untagged items are group-finance.",
+      "default_accounts": [],
+      "default_seats": ["director", "financial_controller", "ledger_poster"],
+      "ops_event_types": []
+    }
+  ]
+}

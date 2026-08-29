@@ -1293,7 +1293,7 @@ export function validateCallCommandPayload(payload: CallCommandPayload | Readonl
 //            (profit_and_loss, balance_sheet, ledger_balances, posted_receivables,
 //            posted_payables, gst_position, statutory_financial_reporting).
 //            It MUST originate from, or reconcile to, the authoritative accounting
-//            engine (starqBooks / journal_outbox).
+//            engine (legacy/engine - journal_outbox).
 //            Client-side arithmetic on these figures is a contract violation.
 //   false → The resulting figure is operational analytics (job_margin,
 //            turnaround, utilisation, stock_cover) and may be computed locally.
@@ -1429,7 +1429,7 @@ export const MUTATION_SURFACE_MAP: readonly MutationSurfaceEntry[] = [
     serverCommand: 'INVOICE_PAYMENT',
     requiredSeats: COMMAND_SEATS.INVOICE_PAYMENT,
     statutoryBoundary: true,
-    notes: 'INVOICE_PAYMENT command exists. Payment settles a receivable — statutory. Server must update invoice balanceDue and post the receipt to the AP/receivables ledger via starqBooks. Client sends: invoiceId, amount, method, referenceNumber, paymentDate. Server derives: amountPaid, newBalance, status, ledger posting. Client must not update invoice or customer balances locally.',
+    notes: 'INVOICE_PAYMENT command exists. Payment settles a receivable — statutory. Server must update invoice balanceDue and post the receipt to the AP/receivables ledger via the foundation engine. Client sends: invoiceId, amount, method, referenceNumber, paymentDate. Server derives: amountPaid, newBalance, status, ledger posting. Client must not update invoice or customer balances locally.',
   },
   {
     mutation: 'addExpense',

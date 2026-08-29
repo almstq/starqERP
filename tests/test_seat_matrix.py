@@ -6,7 +6,7 @@ Reads actual SQL migrations dynamically (no hardcoded duplicate definitions):
   - supabase/migrations/202608200005_garage_api.sql (Garage workflow commands)
   - supabase/migrations/202608210010_purchase_seat_matrix.sql (Purchase ladder SoD)
   - contracts/commands.ts (Edge TypeScript contract)
-  - auth.py in starqBooks (Python double-entry engine)
+  - legacy/engine/auth.py (the frozen Python double-entry engine)
 
 Run:  python test_seat_matrix.py
 """
@@ -21,15 +21,15 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(HERE)
 
-STARQBOOKS_DIR = os.environ.get("STARQBOOKS_PATH", os.path.abspath(os.path.join(REPO_ROOT, "..", "starqBooks")))
+ENGINE_DIR = os.environ.get("LEGACY_ENGINE_PATH", os.path.abspath(os.path.join(REPO_ROOT, "legacy", "engine")))
 
-if not os.path.isfile(os.path.join(STARQBOOKS_DIR, "auth.py")):
+if not os.path.isfile(os.path.join(ENGINE_DIR, "auth.py")):
     raise RuntimeError(
-        f"CRITICAL DRIFT DETECTOR FAILURE: auth.py not found at {STARQBOOKS_DIR}. "
-        "Set STARQBOOKS_PATH environment variable if sibling directory is non-standard."
+        f"CRITICAL DRIFT DETECTOR FAILURE: auth.py not found at {ENGINE_DIR}. "
+        "Set LEGACY_ENGINE_PATH if the frozen engine has been relocated."
     )
 
-sys.path.insert(0, STARQBOOKS_DIR)
+sys.path.insert(0, ENGINE_DIR)
 
 import auth  # noqa: E402
 

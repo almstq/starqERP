@@ -50,4 +50,4 @@ The missing server-backed command handlers and API endpoints mapped in SERP-166:
 
 - **Deno contract & endpoint tests:** **94/94 PASS** (7 new tests, 0 failed).
 - **Web client Vitest:** **11/11 PASS**.
-- **Python / starqBooks:** **5/5 AC PASS**.
+- **Python / the foundation engine:** **5/5 AC PASS**.

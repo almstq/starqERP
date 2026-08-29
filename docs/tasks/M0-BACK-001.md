@@ -41,5 +41,5 @@ Milestone 0 backend contract and Row Level Security verification:
 
 - **Deno Contract Suite:** 94/94 PASS
 - **Web Client Vitest Suite:** 11/11 PASS
-- **Python / starqBooks Suite:** 5/5 AC PASS
+- **Python / the foundation engine Suite:** 5/5 AC PASS
 - **RLS & Security Probes:** 31/31 tables verified

@@ -35,7 +35,7 @@ Key specifications locked:
 
 * **Web Vitest Suite (`web/src/test/serp_032_product_metadata.test.tsx`):**
   * `✓ verifies canonical product metadata enforces starqERP and starqAI without drift`
-  * `✓ rejects stale starqBooks branding or non-canonical AI branding`
+  * `✓ rejects stale the foundation engine branding or non-canonical AI branding`
   * Total web suite: `31 test files passed | 119 tests passed`.
 * **Deno Contract Suite (`tests/contract/commands_test.ts`):**
   * Added 2 contract tests covering canonical metadata validation and drift rejection.

@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "law": "Three people. Every seat still exists. Google authenticates the person; the app authorizes the seat. Occupancy is an allowlist of emails → seat lists. No SUPERADMIN mega-seat. No seats: ['*'].",
+  "seats": [
+    {"id": "managing_director", "label": "Managing Director", "occupied_today": "nashid"},
+    {"id": "director", "label": "Director (Club Ignition)", "occupied_today": "ali"},
+    {"id": "financial_controller", "label": "Financial Controller", "occupied_today": "ali"},
+    {"id": "quartermaster", "label": "Quartermaster", "occupied_today": "naleez"},
+    {"id": "receiver", "label": "Receiver (GRN)", "occupied_today": "nashid"},
+    {"id": "payer", "label": "Payer", "occupied_today": "ali"},
+    {"id": "counter", "label": "Counter / intake", "occupied_today": "desk"},
+    {"id": "technician", "label": "Technician", "occupied_today": "nashid"},
+    {"id": "qc_signer", "label": "QC signer", "occupied_today": "nashid"},
+    {"id": "stores", "label": "Stores / inventory", "occupied_today": "naleez"},
+    {"id": "ledger_poster", "label": "Ledger poster", "occupied_today": "ali"}
+  ],
+  "sod_pairs": [
+    ["quartermaster", "payer"],
+    ["receiver", "payer"],
+    ["quartermaster", "receiver"],
+    ["technician", "qc_signer"],
+    ["financial_controller", "payer"]
+  ]
+}

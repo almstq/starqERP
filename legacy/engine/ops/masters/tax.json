@@ -1,0 +1,40 @@
+{
+  "as_of": "2026-08-25",
+  "gst_status": "not_registered",
+  "live_invoice_rate": 0,
+  "codes": [
+    {
+      "id": "none_until_gst_active",
+      "code": "DEFAULT",
+      "valid_from": "2020-01-01",
+      "valid_to": null,
+      "rate": 0,
+      "label": "No GST on live invoices"
+    },
+    {
+      "id": "TGST_2023",
+      "code": "TGST",
+      "valid_from": "2023-01-01",
+      "valid_to": "2025-06-30",
+      "rate": 16,
+      "label": "Tourism GST 16% (Sixth Amendment)"
+    },
+    {
+      "id": "TGST_2025",
+      "code": "TGST",
+      "valid_from": "2025-07-01",
+      "valid_to": null,
+      "rate": 17,
+      "label": "Tourism GST 17% (Seventh Amendment)"
+    },
+    {
+      "id": "GGST_2023",
+      "code": "GGST",
+      "valid_from": "2023-01-01",
+      "valid_to": null,
+      "rate": 8,
+      "label": "General GST 8%"
+    }
+  ],
+  "note": "CIT/EWT/NWT are human tax work, not a product gate. Do not print 8% or GST-registered until GST is Active on MIRA."
+}

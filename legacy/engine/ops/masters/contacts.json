@@ -1,0 +1,5 @@
+{
+  "as_of": "2026-08-19",
+  "schema": ["id", "entity", "kind", "name", "phone", "email", "tin", "credit_limit", "payment_terms", "tax_treatment"],
+  "contacts": []
+}

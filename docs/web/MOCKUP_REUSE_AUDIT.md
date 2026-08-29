@@ -16,7 +16,7 @@
 | `starq_technologies/erp.html` | Product Page | **REVISE** | Solid truthful posture. Update to `v0.2.0-beta`, link to `erp.starq.mv` authentication gateway, and align with starqERP product branding. |
 | `starq_technologies/company.html` | About / Corporate | **MERGE** | Merge corporate registration and Maldivian legal jurisdiction facts into `starq.mv/legal` and corporate home. |
 | `starq_technologies/contact.html` | Contact | **REVISE** | Retain clean quotation/inquiry form structure; route inquiries to Starq Dynamics vs. starqERP design partner tracks. |
-| `starq_technologies/starqbooks.html` | Legacy Branding | **RETIRE** | Stale single-tenant naming (`starqBooks`); superseded by `starq.mv/starqerp`. |
+| `starq_technologies/the foundation engine.html` | Legacy Branding | **RETIRE** | Stale single-tenant naming (`legacy/engine`); superseded by `starq.mv/starqerp`. |
 | `starq_technologies/legal/privacy.html` | Legal / Privacy | **REVISE** | Revise to mirror canonical `docs/PRIVACY.md` under `starq.mv/privacy`. |
 | `starq_technologies/legal/website-terms.html` | Legal / Terms | **REVISE** | Revise to mirror canonical `docs/TERMS.md` under `starq.mv/terms`. |
 | `redesigns/starq_web_architecture_redesign.html` | Redesign Draft | **REVISE** | Modern layout components and CSS tokens; extract grid and hero patterns for `starq.mv`. |

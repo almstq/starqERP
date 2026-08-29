@@ -1,4 +1,4 @@
-# StarqBooks cloud API
+# STARQ ERP cloud API
 
 `starq-api` is the only cloud database boundary used by the garage clients.
 Flutter and browser clients never receive the Supabase service-role key and do
@@ -12,7 +12,7 @@ Required function secrets:
 - `STARQBOOKS_ALLOWLIST_JSON`
 - `STARQBOOKS_ALLOWED_ORIGINS` before browser deployment
 
-Deploy with JWT verification disabled because StarqBooks verifies Google ID
+Deploy with JWT verification disabled because the foundation engine verifies Google ID
 tokens and issues its own signed `sb_ops` session. This makes the function a
 public authentication boundary, so rate limits, strict origins, payload caps,
 CSRF, idempotency and database authorization are mandatory.

@@ -1,0 +1,65 @@
+STARQ .mv DOMAIN — APPLY TONIGHT (ops note, 20 Aug 2026)
+========================================================
+Founder chose: start Dhiraagu for starq.mv / starq.com.mv (company).
+Not tonight: Squarespace / starq.company.
+
+No new DEC. Existing: DEC-016 (product names) + board SP-902 (registry check + domains).
+This note is the apply pack. Hermes may paste the one-liner at the bottom into DEC-016 / SP-902 comments only.
+
+1. NAMES (exact)
+   Primary:   starq.mv
+   Secondary: starq.com.mv   (Dhiraagu form requires a second choice if the first is refused)
+
+2. WHERE TO APPLY
+   Existing Dhiraagu customer (preferred):
+     https://www.dhiraagu.com.mv/myaccount
+     Business login also: https://www.dhiraagu.com.mv/ocs/login.aspx
+     Path: Apply for Service → Applications → Web Hosting & Domain Names → New Domain Names
+     Do NOT tick a hosting package unless you actually want Dhiraagu hosting.
+
+   If MyAccount will not take a company domain / first business service:
+     Forms: https://www.dhiraagu.com.mv/personal/support/download-centre
+       - Web Hosting, Domain and Email Service
+       - Business Customer Information Form (first business application)
+     Email both + attachments to: 123@dhiraagu.com.mv
+     Or Male Customer Service Centre (Ant Queue appointment).
+
+   Dhiraagu is the only .mv registrar. There is no GoDaddy/.mv shortcut.
+
+3. WHAT TO PUT (registrant = COMPANY, not Ali personal)
+   Registrant / customer:  STARQ TECHNOLOGIES PVT LTD
+   Certificate style OK:   STARQ TECHNOLOGIES PRIVATE LIMITED
+   Reg. no.:               C29552026
+   Registered office:      G. Fullaage, Rahdhebai Magu, Male' (BAR: Galolhu, 20146, K. Male)
+   Authorised signatory:   Ali Mushthaq Ibrahim, Managing Director (ID A096835)
+   Phone:                  7774356
+   Email (until company mail exists): a.musthaq@gmail.com
+   Contact person:         same as signatory
+
+   Attach (company pack, not personal-only):
+     - Certificate of Registration C29552026
+     - MoA + AoA
+     - MD National ID (copy)
+     - Company stamp on the paper form if you go that route
+   BAR BP84562026 (6201) is useful extra proof of activity; not a substitute for the certificate.
+
+   If they reject because "starq" matches a reserved / registered business name on the
+   Business Portal: that is expected even when YOU own the name. Reply with the
+   certificate + this C-number. CC 123@dhiraagu.com.mv. Do not re-file as Ali personally.
+
+4. WHAT NOT TO DO
+   - Do not buy starq.com (or any gTLD) tonight.
+   - Do not start Squarespace / starq.company.
+   - Do not point DNS at the foundation engine Flutter, the garage app, or any public host yet.
+   - Do not expose http://127.0.0.1:51800 (or any tunnel/ngrok) — books stay localhost.
+   - Do not register in Ali's personal name. Domain is a company asset (same logic as DEC-011 IP).
+   - Do not buy Dhiraagu web hosting just to get the name.
+   - Do not invent a new DEC. SP-902 "Domains secured" is the board row.
+
+5. MONEY / TIMING (confirm on the bill — third-party guide, not a tariff sheet)
+   Typical: registration fee then a monthly domain fee billed on the Dhiraagu account.
+   Pay from the COMPANY BML, not a personal wallet, so the asset sits on Starq.
+   Availability checker on MyAccount is unreliable; wait for the approval email (~24h).
+
+ONE SENTENCE FOR HERMES / DEC-016 annotation (optional):
+20 Aug 2026 founder: company domains via Dhiraagu first — primary starq.mv, secondary starq.com.mv, registrant STARQ TECHNOLOGIES PVT LTD C29552026 (Male), contact a.musthaq@gmail.com until company mail exists; Squarespace/starq.company and starq.com deferred; do not publish books/:51800. SP-902 domains row.

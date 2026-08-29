@@ -1,0 +1,67 @@
+code,name,type,note,entities,status
+1000,ASSETS,ASSET,heading,BOTH,active
+1110,Cash on hand,ASSET,,BOTH,active
+1120,Bank — MIB MVR,ASSET,Not yet opened,BOTH,active
+1121,Bank — MIB USD,ASSET,Not yet opened,BOTH,active
+1125,Bandeyri Pay wallet,ASSET,,BOTH,active
+1200,Accounts receivable,ASSET,,BOTH,active
+1210,Prepayments,ASSET,,BOTH,active
+1215,Rental deposit,ASSET,Refundable — an asset while held not an expense,BOTH,active
+1220,Input GST recoverable,ASSET,"In use from pre-opening (founder 13 Aug 2026). GGST 8%. Gross ÷ 1.08 ROUND_HALF_UP. July CI purchases were booked gross; August 13 correcting entry extracted 8/108. MED fees and H. Kiev rent/deposit stay gross until a tax invoice is evidenced.",BOTH,active
+1290,Due from related parties,ASSET,Intercompany CURRENT ACCOUNT — must mirror 2490 in the other entity. Not for share capital: see 2495,BOTH,active
+1300,Inventory — paint and consumables,ASSET,"DEC-007 perpetual. Account exists. Quantity not counted — do not post stock movements until first count. Purchases still expense 5100 until then. Leftover paint is not 4300 (DEC-023).",CI,active
+1510,Equipment and tools,ASSET,,BOTH,active
+1515,Leasehold improvements and workshop fit-out,ASSET,,BOTH,active
+1520,Furniture and fittings,ASSET,,BOTH,active
+1530,Computer equipment,ASSET,,BOTH,active
+1540,Intangibles — software and brand,ASSET,,BOTH,active
+1590,Accumulated depreciation,ASSET,Contra — credit balance,BOTH,active
+1600,Investment in subsidiary — Club Ignition,ASSET,51 shares MVR 102000. Credit side is 2495 not 2490,STARQ,active
+2000,LIABILITIES,LIABILITY,heading,BOTH,active
+2100,Accounts payable,LIABILITY,,BOTH,active
+2110,Accruals,LIABILITY,,BOTH,active
+2200,GST payable,LIABILITY,"Output tax. In use from pre-opening (founder 13 Aug 2026). GGST 8%. Invoice rates are NET; add 8%. CI will charge GST on invoices. Still must actually file both TINs with MIRA — decision is not the filing.",BOTH,active
+2210,Employee withholding tax payable,LIABILITY,Remit to MIRA,BOTH,active
+2220,Withholding tax payable — non-resident,LIABILITY,Remit to MIRA,BOTH,active
+2230,Income tax payable,LIABILITY,,BOTH,active
+2300,Pension payable — employee share,LIABILITY,MRPS,BOTH,active
+2310,Pension payable — employer share,LIABILITY,MRPS,BOTH,active
+2400,Due to director,LIABILITY,Ali. Expenses paid personally pending reimbursement — see BANK-RECONCILIATION-REGISTER.md,BOTH,active
+2410,Due to Managing Director — Club Ignition,LIABILITY,Nashid,CI,active
+2490,Due to related parties,LIABILITY,Intercompany CURRENT ACCOUNT — must mirror 1290 in the other entity. Not for share capital: see 2495,BOTH,active
+2495,Share subscription payable — Club Ignition,LIABILITY,STARQ's unpaid MVR 102000 subscription. Mirrors CI's 3110 to the extent of the 51% holding — NOT a 1290/2490 item,STARQ,active
+2500,Customer deposits and deferred income,LIABILITY,,BOTH,active
+3000,EQUITY,EQUITY,heading,BOTH,active
+3100,Share capital,EQUITY,,BOTH,active
+3110,Share capital — unpaid,EQUITY,Subscribed but not yet settled. Contra — debit balance,BOTH,active
+3300,Retained earnings,EQUITY,,BOTH,active
+4000,INCOME,INCOME,heading,BOTH,active
+4100,Services income — software,INCOME,"Open 6 Aug 2026 — ISIC 6201 registered on BAR BP84562026, business name Starq Technologies (statutory / software trade of C29552026). Software income only. Professional / Dynamics fees go to 4110 (BAR BP89422026). Never merge the two on one invoice line. Not CI.",STARQ,active
+4110,Services income — professional,INCOME,"UNBLOCKED 16 Aug 2026 — ISIC 8211 registered on BAR BP89422026, business name Starq Dynamics, certificate in the vault. 4100 stays software 6201 (BP84562026). 7010/7020 optional later, not a gate. No 8% GST line on a live invoice until GST is Active on MIRA.",STARQ,active
+4200,Garage — paint and refinishing,INCOME,"Club Ignition trading as Ignition Ink. BAR BP86372026, ISIC 4520. Paint and refinishing jobs — service income, not retail.",CI,active
+4210,Garage — body repair,INCOME,"Club Ignition trading as Ignition Ink. BAR BP86372026, ISIC 4520. Body repair jobs — service income, not retail.",CI,active
+4220,Garage — wrap,INCOME,"Club Ignition trading as Ignition Ink. BAR BP86372026, ISIC 4520. Wrap jobs — service income, not retail.",CI,active
+4230,Garage — detailing,INCOME,"Club Ignition trading as Ignition Ink. BAR BP86372026, ISIC 4520. Detailing jobs — service income, not retail.",CI,active
+4300,Product sales,INCOME,"Not used. Club Ignition is 4520 services (paint, wrap, repair, detailing on 4200–4230), not retail. Post-refused so leftover paint cannot be booked as product (DEC-023). Not a pending BAR gate.",CI,blocked
+4900,Other income,INCOME,,BOTH,active
+5000,COST OF SALES,EXPENSE,heading,BOTH,active
+5100,Materials — paint and consumables,EXPENSE,,CI,active
+5200,Subcontract labour,EXPENSE,,BOTH,active
+5300,Direct wages,EXPENSE,,BOTH,active
+6000,OPERATING EXPENSES,EXPENSE,heading,BOTH,active
+6100,Salaries and wages,EXPENSE,,BOTH,active
+6110,Pension — employer contribution,EXPENSE,,BOTH,active
+6120,Staff welfare,EXPENSE,,BOTH,active
+6200,Rent — premises,EXPENSE,,BOTH,active
+6210,Utilities,EXPENSE,,BOTH,active
+6220,Repairs and maintenance,EXPENSE,,BOTH,active
+6300,Registry and licence fees,EXPENSE,MoED registrations and renewals,BOTH,active
+6310,Professional fees — legal,EXPENSE,,BOTH,active
+6320,Professional fees — accounting and audit,EXPENSE,,BOTH,active
+6400,Bank charges,EXPENSE,,BOTH,active
+6410,Software and subscriptions,EXPENSE,,BOTH,active
+6420,Telephone and internet,EXPENSE,,BOTH,active
+6500,Marketing and signage,EXPENSE,,BOTH,active
+6600,Transport and fuel,EXPENSE,,BOTH,active
+6700,Depreciation,EXPENSE,,BOTH,active
+6900,Other expenses,EXPENSE,,BOTH,active

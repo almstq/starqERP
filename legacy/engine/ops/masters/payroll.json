@@ -1,0 +1,8 @@
+{
+  "as_of": "2026-08-20",
+  "note": "Employment rows live here (name + seat + occupancy). Login people stay in users.json (person_id). Do not invent a second people file, salaries, or pay runs. Employees stay empty until an authorised occupancy seat adds a real name. Payroll GL draft only when rate_mvr is on disk.",
+  "schema": ["id", "entity", "name", "seat", "person_id", "rate_mvr"],
+  "employees": [],
+  "pay_runs": [],
+  "accounts_hint": ["6100", "6110", "2210", "2300", "2310"]
+}

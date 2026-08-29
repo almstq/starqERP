@@ -1,0 +1,28 @@
+Nexus — Cursor. Answers to the starqNexus projects-tab questions. Do not merge products.
+
+1. IDENTITY
+the foundation engine (git almstq/starq-ops, Cursor Origin mustarq/starq-ops) is its own product.
+It is NOT Starq Portal ERP/POS (00_STARQ_HQ/operations/scm/, board SP).
+It is NOT the 2026-05 folder-browser that was never built.
+Keep the Portal board. Do not re-point it at the foundation engine.
+
+2. TAB
+Keep Portal intact.
+Use the existing Nexus row: id project-the foundation engine, prefix SBK, library/12_PROJECTS/project-the foundation engine.md.
+Refresh that record + the foundation engine-tasks.json. Do not add a second the foundation engine slug.
+
+3. FIELDS FOR THE TAB
+- Product: the foundation engine
+- Path: D:\StarqTech\the foundation engine  (never D:\!starq\00_STARQ_HQ\operations\finance\the foundation engine)
+- Owner: Elder + Cursor. Flutter lane AG. Ali trial #0 Starq; Nashid test #1 CI only.
+- Surfaces: portal 127.0.0.1:51800 (HQ). Flutter starq-ops-app = CI garage only. No Starq shop POS.
+- Occupancies: Starq Technologies C29552026 (BNs Dynamics, Hoadhaa Network). Club Ignition C30222026 (Ignition Ink 4520). group = Ali consolidation, not a company.
+- Status: Goal 1 ERP-ready core IN FLIGHT. Visible chrome Dashboard → Sales → Expenses → Banking → Contacts → Products → Reports → Accounting → Settings. Journals SSOT. Ops do not post GL (DEC-008 Ali daily). 1300 on chart; qty not counted as perpetual post. 4300 leftover paint not for sale.
+- Roadmap hook: Bookkeeping → Inventory → POS → Purchasing/Sales → CRM → HR/Payroll → Projects → Manufacturing/Service → Full ERP. POS only on CI occupancy later. Auto-journals are the destination, not live.
+
+4. DO NOT
+Do not run serve.py from the nested finance clone (WRONG TREE — it must exit).
+Do not put Nashid on Starq.
+Do not paste Google client IDs on the bus or git.
+
+Refresh Nexus :3000 #/projects/project-the foundation engine after board regen if the tab looks stale.

@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.join(path.dirname(__filename), '..');
-const DEFAULT_STARQBOOKS = process.env.STARQBOOKS_PATH || path.resolve(ROOT, '..', 'starqBooks');
+const DEFAULT_LEGACY_ENGINE = process.env.LEGACY_ENGINE_PATH || path.resolve(ROOT, 'legacy', 'engine');
 const DEFAULT_ALLOWLIST = 'D:/StarqTech/_secrets/starqBooks-allowlist.json';
 const DEFAULT_DEFINES = 'D:/StarqTech/_secrets/starq-erp-r0-build-defines.json';
 
@@ -56,12 +56,12 @@ export function checkSeatOccupancy(opts = {}) {
 
 export function checkRequiredHeaders(opts = {}) {
   const root = opts.root || ROOT;
-  const starqBooks = opts.starqBooks || DEFAULT_STARQBOOKS;
+  const legacyEngine = opts.legacyEngine || DEFAULT_LEGACY_ENGINE;
   const NAME = 'Required headers — the client sends what the Edge demands';
   
-  const clientPath = path.join(starqBooks, 'starq-ops-app', 'lib', 'core', 'api', 'api_client.dart');
+  const clientPath = path.join(legacyEngine, 'client', 'api_client.dart');
   if (!opts.clientContent && !fs.existsSync(clientPath)) {
-    return { state: 'SKIP', name: NAME, detail: `parked flutter client not found at ${clientPath}` };
+    return { state: 'SKIP', name: NAME, detail: `retired client reference not found at ${clientPath}` };
   }
   const client = opts.clientContent || fs.readFileSync(clientPath, 'utf8');
   const edgePath = path.join(root, 'supabase', 'functions', 'starq-api', 'index.ts');
@@ -162,10 +162,10 @@ export function checkCookieScope(opts = {}) {
 
 export function checkPortalContractDrift(opts = {}) {
   const root = opts.root || ROOT;
-  const starqBooks = opts.starqBooks || DEFAULT_STARQBOOKS;
+  const legacyEngine = opts.legacyEngine || DEFAULT_LEGACY_ENGINE;
   const NAME = 'Portal vs contract — one seat vocabulary across both runtimes';
   
-  const authPath = path.join(starqBooks, 'auth.py');
+  const authPath = path.join(legacyEngine, 'auth.py');
   if (!opts.authContent && !fs.existsSync(authPath)) {
     return { state: 'SKIP', name: NAME, detail: `auth.py not found at ${authPath}` };
   }
