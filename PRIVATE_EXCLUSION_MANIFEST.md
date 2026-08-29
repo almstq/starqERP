@@ -38,6 +38,8 @@ The following files contain proprietary commercial analysis, market positioning,
 - `docs/qa/coa-accountant-audit-2026-08-29/README.md` — Internal CoA audit index
 - `docs/qa/coa-accountant-audit-2026-08-29/ACCOUNTANT_REVIEW_REPORT.md` — External accountant review of the live ledger
 - `docs/qa/coa-accountant-audit-2026-08-29/ELDER_RECONCILIATION.md` — Internal finance-kernel defect reconciliation
+- `docs/qa/coa-accountant-audit-2026-08-29/SERP-340_RULING_TABLE.md` — Internal account-by-account rulings
+- `docs/qa/coa-accountant-audit-2026-08-29/AZHAD_SECOND_REVIEW_PACK.md` — External accountant review pack
 
 ---
 
