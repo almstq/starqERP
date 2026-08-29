@@ -136,10 +136,6 @@ const MIGRATION_STATUS_MAP = {
     status: 'UNAPPLIED_FORWARD_ONLY',
     notes: 'Transactional outbox and immutable audit foundation migration (SERP-034)',
   },
-  '202608280029_fix_accept_staff_invitation.sql': {
-    status: 'REVIEWER_GATED',
-    notes: 'DO NOT APPLY. Proven by execution on 2026-08-29 to be a REGRESSION, not a fix — evidence at tests/evidence/SERP-286/execution-2026-08-29.txt. It creates an OVERLOAD, it does not replace anything, and it has NO callers: the Edge calls accept_staff_invitation(uuid,uuid), which works correctly. This 3-arg version (1) does not run at all, inserting memberships.updated_at which does not exist; (2) never sets memberships.role_id, losing the invited role; (3) trusts a caller-supplied verified_email instead of reading the bound person record; (4) writes membership_seats, synthesizing execution privilege from a visibility invitation. Held until SERP-286 is redesigned or this migration is withdrawn.',
-  },
 };
 
 const classifications = {

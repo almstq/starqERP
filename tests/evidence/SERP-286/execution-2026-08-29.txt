@@ -91,3 +91,27 @@ RECOMMENDATION: DO NOT APPLY 0029. SERP-286 stays open. The behaviour it was
 written to deliver is already delivered correctly by the function the Edge calls.
 
 Prepared by Elder. DEC-072: this is a finding with raw logs, not an acceptance.
+
+=== 6. RESOLUTION — 0029 WITHDRAWN (founder decision, 29 Aug 2026) ===
+
+Chosen over redesign because it is the better answer at scale: ONE canonical
+function, one code path, and no overload whose two signatures disagree on
+whether a role invitation grants a seat. An overloaded RPC with divergent
+security semantics is a trap for every future caller.
+
+No DROP migration was required. Live had 0001-0027 applied 1:1, so the 3-arg
+function was never created on any database. The file is retired to
+_recyclebin/withdrawn-migrations/ (Rule 2), not deleted.
+
+VERIFIED AFTER WITHDRAWAL, on a freshly created database:
+  - 29/29 migrations applied clean in order
+  - exactly ONE accept_staff_invitation function remains (the overload is gone)
+  - probe green, all five assertions:
+      PASS: fails closed for an unbound identity - authenticated_identity_not_bound
+      PASS: accepted - {"ok": true, ...}
+      PASS: membership active and the invited role was recorded
+      PASS: invitation consumed - status=accepted, accepted_at set
+      PASS: no seat synthesized from a role invitation
+
+The probe now targets the function we actually ship, and permanently asserts the
+defect that got 0029 withdrawn: a role invitation must never grant a seat.
