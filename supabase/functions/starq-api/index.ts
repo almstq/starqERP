@@ -877,6 +877,55 @@ Deno.serve(async (req: Request) => {
         return json(403, { ok: false, error: "platform_entitlement_required" }, origin);
       }
 
+      if (req.method === "GET" && path === "/api/platform/tenants") {
+        const { data, error } = await db.schema("platform").rpc("list_tenants", {
+          p_actor: session.person_uuid,
+        });
+        if (error) throw new Error(error.message || "platform_tenants_query_failed");
+        return json(200, { ok: true, tenants: data ?? [] }, origin);
+      }
+
+      if (req.method === "POST" && path === "/api/platform/tenants/provision") {
+        if (session.platform_entitlement.operator_role !== "platform_admin") {
+          return json(403, { ok: false, error: "platform_admin_required" }, origin);
+        }
+        const body = await readJson(req);
+        if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+        const requestKey = req.headers.get("x-idempotency-key");
+        if (!uuid(requestKey)) return json(400, { ok: false, error: "valid_idempotency_key_required" }, origin);
+        const { csrf: _csrf, ...command } = body;
+        const { data, error } = await db.schema("platform").rpc("provision_tenant", {
+          p_actor: session.person_uuid,
+          p_request_key: requestKey,
+          p_command: command,
+        });
+        if (error) throw new Error(error.message || "tenant_provisioning_failed");
+        return json(200, { ok: true, result: data }, origin);
+      }
+
+      if (req.method === "POST" && path.match(/^\/api\/platform\/tenants\/[^\/]+\/status$/)) {
+        if (session.platform_entitlement.operator_role !== "platform_admin") {
+          return json(403, { ok: false, error: "platform_admin_required" }, origin);
+        }
+        const body = await readJson(req);
+        if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+        const organisationId = path.split("/")[4];
+        const requestKey = req.headers.get("x-idempotency-key");
+        if (!uuid(organisationId)) return json(400, { ok: false, error: "invalid_organisation_id" }, origin);
+        if (!uuid(requestKey)) return json(400, { ok: false, error: "valid_idempotency_key_required" }, origin);
+        const action = String(body.action ?? "");
+        if (action !== "suspend" && action !== "reactivate") return json(400, { ok: false, error: "invalid_tenant_action" }, origin);
+        const { data, error } = await db.schema("platform").rpc("set_tenant_status", {
+          p_actor: session.person_uuid,
+          p_target_org: organisationId,
+          p_request_key: requestKey,
+          p_action: action,
+          p_reason: String(body.reason ?? "").trim() || null,
+        });
+        if (error) throw new Error(error.message || "tenant_status_change_failed");
+        return json(200, { ok: true, result: data }, origin);
+      }
+
       if (req.method === "GET" && path === "/api/platform/applications") {
         const { data, error } = await db.schema("platform").from("tenant_applications")
           .select("*")

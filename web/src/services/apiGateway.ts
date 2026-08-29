@@ -113,6 +113,7 @@ export async function apiPost<T>(path: string, payload: Record<string, unknown>)
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       'x-csrf-token': getCsrfToken(),
+      'x-idempotency-key': generateIdempotencyKey(),
     },
     body: JSON.stringify({ ...payload, csrf: getCsrfToken() }),
   });
@@ -123,6 +124,49 @@ export async function apiPost<T>(path: string, payload: Record<string, unknown>)
   }
 
   return data as T;
+}
+
+export interface PlatformTenantRecord {
+  organisation_id: string;
+  slug: string;
+  legal_name: string;
+  organisation_status: 'active' | 'suspended' | 'closed';
+  archetype_id: string;
+  plan_code: string;
+  subscription_status: string;
+  provisioning_status: string;
+  active_seats: number;
+  schema_version: string;
+  books: { id: string; code: string; name: string; is_default: boolean }[];
+}
+
+export interface ProvisionPlatformTenantPayload {
+  slug: string;
+  legal_name: string;
+  archetype_id: string;
+  book_code: string;
+  book_name: string;
+  owner_email: string;
+  owner_name: string;
+  plan_code?: string;
+}
+
+export async function getPlatformTenants(): Promise<{ ok: boolean; tenants: PlatformTenantRecord[] }> {
+  return apiGet<{ ok: boolean; tenants: PlatformTenantRecord[] }>('/api/platform/tenants');
+}
+
+export async function provisionPlatformTenant(
+  payload: ProvisionPlatformTenantPayload,
+): Promise<{ ok: boolean; result: { organisation_id: string; book_id: string; owner_invitation_id: string; status: string } }> {
+  return apiPost('/api/platform/tenants/provision', payload as unknown as Record<string, unknown>);
+}
+
+export async function setPlatformTenantStatus(
+  organisationId: string,
+  action: 'suspend' | 'reactivate',
+  reason: string,
+): Promise<{ ok: boolean; result: Record<string, unknown> }> {
+  return apiPost(`/api/platform/tenants/${organisationId}/status`, { action, reason });
 }
 
 export interface OrganisationApplicationPayload {
