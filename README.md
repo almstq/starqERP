@@ -153,6 +153,9 @@ node --test tests/migrations_0024_0025_verification.test.mjs
 
 # Run responsive layout & viewport tests
 node --test tests/ui_responsive_system.test.mjs
+
+# Verify the production build compiles
+npm --prefix web run build
 ```
 
 ---
