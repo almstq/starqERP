@@ -220,6 +220,7 @@ select
   count(*) = 0
 from missing;
 
+drop role if exists serp300_probe;
 create role serp300_probe noinherit nologin nosuperuser nobypassrls;
 grant serp300_probe to current_user;
 grant usage on schema public, app_private to serp300_probe;
