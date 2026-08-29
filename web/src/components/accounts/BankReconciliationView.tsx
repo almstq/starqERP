@@ -78,8 +78,8 @@ export const BankReconciliationView: React.FC<{
       list.push({
         id: `erp-pay-${p.id}`,
         type: 'payment_receipt',
-        date: p.paymentDate || p.createdAt?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-        reference: p.receiptNumber || p.id.slice(-6).toUpperCase(),
+        date: p.paymentDate || p.paymentDate?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+        reference: p.paymentNumber || p.id.slice(-6).toUpperCase(),
         narration: `Payment from ${p.customerName || 'Customer'}`,
         amount: p.amount,
         isDebit: false, // Bank Statement Credit (Inflow)
@@ -93,7 +93,7 @@ export const BankReconciliationView: React.FC<{
         id: `erp-exp-${exp.id}`,
         type: 'expense',
         date: exp.date || new Date().toISOString().slice(0, 10),
-        reference: exp.reference || exp.category || 'EXPENSE',
+        reference: exp.receiptRef || exp.category || 'EXPENSE',
         narration: exp.description || exp.category,
         amount: exp.amount,
         isDebit: true, // Bank Statement Debit (Outflow)

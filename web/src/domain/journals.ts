@@ -17,6 +17,16 @@ export type JournalEntrySource =
   | 'PAYMENT'
   | 'BILL'
   | 'EXPENSE'
+  | 'CREDIT_NOTE'
+  | 'ADVANCE_DEPOSIT'
+  | 'SETTLEMENT_ALLOCATION'
+  | 'STOCK_TRANSFER_DISPATCH'
+  | 'STOCK_TRANSFER_RECEIPT'
+  | 'YEAR_END_CLOSE'
+  | 'JOB_COMPLETION'
+  | 'FX_REALIZATION'
+  | 'PAYROLL_PROVISION'
+  | 'BANK_RECONCILIATION'
   | 'STOCK_ADJUSTMENT'
   | 'OPENING_BALANCE';
 
@@ -265,10 +275,10 @@ export function deriveOperationalJournals(params: {
 
     journals.push({
       id: `je-pay-${pay.id}`,
-      entryNumber: `JE-RCT-${pay.receiptNumber || pay.id.slice(-6).toUpperCase()}`,
-      date: pay.date,
+      entryNumber: `JE-RCT-${pay.paymentNumber || pay.id.slice(-6).toUpperCase()}`,
+      date: pay.paymentDate,
       source: 'PAYMENT',
-      reference: pay.invoiceNumber || pay.receiptNumber,
+      reference: pay.invoiceNumber || pay.paymentNumber,
       narration: `Payment received via ${pay.method} — ${pay.customerName}`,
       lines: [
         {
@@ -296,7 +306,7 @@ export function deriveOperationalJournals(params: {
       totalCredit: pay.amount,
       isBalanced: true,
       postedBy: 'System / Payment Cashier',
-      postedAt: new Date(pay.date).toISOString(),
+      postedAt: new Date(pay.paymentDate).toISOString(),
       tenantId,
       status: 'POSTED',
     });
@@ -312,7 +322,7 @@ export function deriveOperationalJournals(params: {
       entryNumber: `JE-EXP-${exp.id.slice(-6).toUpperCase()}`,
       date: exp.date,
       source: 'EXPENSE',
-      reference: exp.receiptNumber || exp.category,
+      reference: exp.receiptRef || exp.category,
       narration: `Operating Expense: ${exp.description} (${exp.category})`,
       lines: [
         {
@@ -355,7 +365,7 @@ export function deriveOperationalJournals(params: {
       journals.push({
         id: `je-po-${po.id}`,
         entryNumber: `JE-BILL-${po.poNumber}`,
-        date: po.date,
+        date: po.orderDate,
         source: 'BILL',
         reference: po.poNumber,
         narration: `Procurement Bill from ${po.supplierName}`,
@@ -385,7 +395,7 @@ export function deriveOperationalJournals(params: {
         totalCredit: po.totalAmount,
         isBalanced: true,
         postedBy: 'System / Procurement Engine',
-        postedAt: new Date(po.date).toISOString(),
+        postedAt: new Date(po.orderDate).toISOString(),
         tenantId,
         status: 'POSTED',
       });

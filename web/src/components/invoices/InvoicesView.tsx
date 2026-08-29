@@ -179,7 +179,7 @@ export const InvoicesView: React.FC = () => {
             {inv.invoiceNumber}
           </span>
           <span className="text-[10px] text-slate-500 font-mono">
-            {inv.issueDate}
+            {inv.date}
           </span>
         </div>
       ),

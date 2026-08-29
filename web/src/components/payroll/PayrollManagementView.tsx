@@ -135,7 +135,7 @@ export const PayrollManagementView: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-white">HR & Maldives Statutory Payroll</h2>
-                <Badge variant="success">Employment Act Compliant</Badge>
+                <Badge variant="positive">Employment Act Compliant</Badge>
               </div>
               <p className="text-xs text-slate-400">
                 MRPS Pension (7% + 7%), Ramadan Allowance (MVR 3,000), BML Bulk Transfer & GL Accruals.
@@ -301,7 +301,7 @@ export const PayrollManagementView: React.FC = () => {
               <Receipt size={16} className="text-sky-400" />
               <span>General Ledger Double-Entry Audit ({currentRun.journalEntry.entryNumber})</span>
             </h3>
-            <Badge variant="success">Balanced Provision</Badge>
+            <Badge variant="positive">Balanced Provision</Badge>
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">

@@ -2,7 +2,7 @@ import React from 'react';
 import { Badge as CanonicalBadge, BadgeVariant } from '../ui/Badge';
 
 interface LegacyBadgeProps {
-  variant?: 'success' | 'warning' | 'danger' | 'info' | 'purple' | 'neutral' | 'blue' | 'positive' | 'destructive' | 'accent';
+  variant?: 'positive' | 'warning' | 'destructive' | 'info' | 'purple' | 'neutral' | 'blue' | 'positive' | 'destructive' | 'accent';
   children: React.ReactNode;
   size?: 'sm' | 'md';
   className?: string;
@@ -18,10 +18,10 @@ export const Badge: React.FC<LegacyBadgeProps> = ({
 }) => {
   const mapVariant = (v: string): BadgeVariant => {
     switch (v) {
-      case 'success':
+      case 'positive':
       case 'positive':
         return 'positive';
-      case 'danger':
+      case 'destructive':
       case 'destructive':
         return 'destructive';
       case 'warning':

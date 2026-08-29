@@ -1,3 +1,4 @@
+import { accountClassForCode } from './accounts';
 import { describe, it, expect } from 'vitest';
 import { computeCashFlowStatement, isCashOrBankAccount } from './cashFlow';
 import { JournalEntry } from './journals';
@@ -13,8 +14,8 @@ describe('SERP-317: Direct and Indirect Cash Flow Statement Reporting Engine', (
       reference: 'RCT-1001',
       narration: 'Customer Settlement',
       lines: [
-        { id: 'l1', accountCode: '1010', accountName: 'BML MVR', debit: 50000, credit: 0, description: 'Bank Receipt' },
-        { id: 'l2', accountCode: '1100', accountName: 'Accounts Receivable', debit: 0, credit: 50000, description: 'AR Clearing' },
+        { id: 'l1', accountCode: '1010', accountId: 'acc-1010', accountClass: accountClassForCode('1010'), accountName: 'BML MVR', debit: 50000, credit: 0, narration: 'Bank Receipt' },
+        { id: 'l2', accountCode: '1100', accountId: 'acc-1100', accountClass: accountClassForCode('1100'), accountName: 'Accounts Receivable', debit: 0, credit: 50000, narration: 'AR Clearing' },
       ],
       totalDebit: 50000,
       totalCredit: 50000,
@@ -29,12 +30,12 @@ describe('SERP-317: Direct and Indirect Cash Flow Statement Reporting Engine', (
       id: 'je-02',
       entryNumber: 'JE-PAY-001',
       date: '2026-08-10',
-      source: 'PURCHASE',
+      source: 'BILL',
       reference: 'PAY-2001',
       narration: 'Supplier Settlement',
       lines: [
-        { id: 'l3', accountCode: '2000', accountName: 'Accounts Payable', debit: 15000, credit: 0, description: 'AP Clearing' },
-        { id: 'l4', accountCode: '1010', accountName: 'BML MVR', debit: 0, credit: 15000, description: 'Bank Wire' },
+        { id: 'l3', accountCode: '2000', accountId: 'acc-2000', accountClass: accountClassForCode('2000'), accountName: 'Accounts Payable', debit: 15000, credit: 0, narration: 'AP Clearing' },
+        { id: 'l4', accountCode: '1010', accountId: 'acc-1010', accountClass: accountClassForCode('1010'), accountName: 'BML MVR', debit: 0, credit: 15000, narration: 'Bank Wire' },
       ],
       totalDebit: 15000,
       totalCredit: 15000,
@@ -53,8 +54,8 @@ describe('SERP-317: Direct and Indirect Cash Flow Statement Reporting Engine', (
       reference: 'CAP-MACH-01',
       narration: 'Outboard Engine Purchase',
       lines: [
-        { id: 'l5', accountCode: '1500', accountName: 'Machinery & Equipment', debit: 20000, credit: 0, description: 'Engine' },
-        { id: 'l6', accountCode: '1010', accountName: 'BML MVR', debit: 0, credit: 20000, description: 'Bank Outflow' },
+        { id: 'l5', accountCode: '1500', accountId: 'acc-1500', accountClass: accountClassForCode('1500'), accountName: 'Machinery & Equipment', debit: 20000, credit: 0, narration: 'Engine' },
+        { id: 'l6', accountCode: '1010', accountId: 'acc-1010', accountClass: accountClassForCode('1010'), accountName: 'BML MVR', debit: 0, credit: 20000, narration: 'Bank Outflow' },
       ],
       totalDebit: 20000,
       totalCredit: 20000,
@@ -73,8 +74,8 @@ describe('SERP-317: Direct and Indirect Cash Flow Statement Reporting Engine', (
       reference: 'EQUITY-01',
       narration: 'Owner Capital Deposit',
       lines: [
-        { id: 'l7', accountCode: '1010', accountName: 'BML MVR', debit: 30000, credit: 0, description: 'Capital Inflow' },
-        { id: 'l8', accountCode: '3000', accountName: 'Owner Equity', debit: 0, credit: 30000, description: 'Capital Contribution' },
+        { id: 'l7', accountCode: '1010', accountId: 'acc-1010', accountClass: accountClassForCode('1010'), accountName: 'BML MVR', debit: 30000, credit: 0, narration: 'Capital Inflow' },
+        { id: 'l8', accountCode: '3000', accountId: 'acc-3000', accountClass: accountClassForCode('3000'), accountName: 'Owner Equity', debit: 0, credit: 30000, narration: 'Capital Contribution' },
       ],
       totalDebit: 30000,
       totalCredit: 30000,

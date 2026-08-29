@@ -504,7 +504,7 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                     <Lock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <span>Product-Fixed Governance Invariants (Immutable)</span>
                   </div>
-                  <Badge variant="success" size="sm">Non-Editable Guarantees</Badge>
+                  <Badge variant="positive" size="sm">Non-Editable Guarantees</Badge>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-[var(--md-sys-color-on-surface-variant)] dark:text-[var(--md-sys-color-outline)] pt-1">
                   <div className="flex items-center gap-1.5">

@@ -85,7 +85,7 @@ export const JobCostingView: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-white">Projects & Job-Costing Absorption Ledger</h2>
-                <Badge variant={jobStatus === 'COMPLETED' ? 'success' : 'neutral'}>
+                <Badge variant={jobStatus === 'COMPLETED' ? 'positive' : 'neutral'}>
                   {jobStatus === 'COMPLETED' ? 'Completed & Capitalized' : 'Work-in-Progress (WIP)'}
                 </Badge>
               </div>
@@ -219,7 +219,7 @@ export const JobCostingView: React.FC = () => {
               <Receipt size={16} className="text-emerald-400" />
               <span>Job Completion & COGS Recognition Journal ({sheet.completionJournal.entryNumber})</span>
             </h3>
-            <Badge variant="success">Balanced Journal</Badge>
+            <Badge variant="positive">Balanced Journal</Badge>
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">

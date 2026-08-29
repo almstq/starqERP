@@ -40,7 +40,7 @@ export const AccountDetailModal: React.FC<AccountDetailModalProps> = ({
                 <span className="font-mono text-sm font-bold text-[var(--md-sys-color-primary)]">
                   {account.code}
                 </span>
-                <Badge variant={account.status === 'ACTIVE' ? 'success' : 'neutral'}>
+                <Badge variant={account.status === 'ACTIVE' ? 'positive' : 'neutral'}>
                   {account.status}
                 </Badge>
                 {account.isSystem && (

@@ -1,3 +1,4 @@
+import { accountClassForCode } from './accounts';
 import { JournalEntry } from './journals';
 
 export interface MaterialCostItem {
@@ -154,19 +155,23 @@ export function createJobCompletionCogsJournal(sheet: JobCostSheet, tenantId: st
     {
       id: 'cogs-01',
       accountCode: '5000',
+      accountId: 'acc-5000',
+      accountClass: accountClassForCode('5000'),
       accountName: 'Cost of Goods & Services Sold (COGS)',
       debit: sheet.totalActualCost,
       credit: 0,
-      description: `Capitalized Job Cost Realization for ${sheet.jobCode} (${sheet.projectName})`,
+      narration: `Capitalized Job Cost Realization for ${sheet.jobCode} (${sheet.projectName})`,
     },
     // 2. Credit Work-in-Progress WIP (Account 1400)
     {
       id: 'cogs-02',
       accountCode: '1400',
+      accountId: 'acc-1400',
+      accountClass: accountClassForCode('1400'),
       accountName: 'Work-in-Progress (WIP Inventory)',
       debit: 0,
       credit: sheet.totalActualCost,
-      description: `Clear WIP Asset upon job completion for ${sheet.jobCode}`,
+      narration: `Clear WIP Asset upon job completion for ${sheet.jobCode}`,
     },
   ];
 

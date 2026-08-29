@@ -138,7 +138,7 @@ export function computeARAging(params: {
 
   params.invoices.forEach((inv) => {
     // Only include confirmed non-voided invoices created on or before asOfDate
-    if (inv.status === 'Cancelled' || inv.status === 'Draft' || inv.issueDate > asOf) {
+    if (inv.status === 'Cancelled' || inv.status === 'Draft' || inv.date > asOf) {
       return;
     }
 
@@ -149,7 +149,7 @@ export function computeARAging(params: {
       return; // Fully paid invoice
     }
 
-    const daysOverdue = getDaysDiff(asOf, inv.dueDate || inv.issueDate);
+    const daysOverdue = getDaysDiff(asOf, inv.dueDate || inv.date);
     const bucket = getBucket(daysOverdue);
 
     const roundedBalance = Math.round(balanceDue * 100) / 100;
@@ -159,8 +159,8 @@ export function computeARAging(params: {
       invoiceNumber: inv.invoiceNumber,
       customerId: inv.customerId,
       customerName: inv.customerName,
-      issueDate: inv.issueDate,
-      dueDate: inv.dueDate || inv.issueDate,
+      issueDate: inv.date,
+      dueDate: inv.dueDate || inv.date,
       totalAmount: inv.totalAmount,
       amountPaid: paid,
       balanceDue: roundedBalance,
@@ -275,7 +275,7 @@ export function computeAPAging(params: {
 
     const item: APAgingItem = {
       id: po.id,
-      orderNumber: po.orderNumber,
+      orderNumber: po.poNumber,
       supplierId: po.supplierId,
       supplierName: po.supplierName,
       orderDate: po.orderDate,

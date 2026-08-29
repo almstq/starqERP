@@ -1,3 +1,4 @@
+import { accountClassForCode } from './accounts';
 import { JournalEntry } from './journals';
 
 export interface WarehouseLocation {
@@ -156,18 +157,22 @@ export function dispatchStockTransfer(
       {
         id: 'std-01',
         accountCode: '1350',
+        accountId: 'acc-1350',
+        accountClass: accountClassForCode('1350'),
         accountName: 'Goods-in-Transit (Sea Freight Inter-Island)',
         debit: order.totalTransferValueMvr,
         credit: 0,
-        description: `In-Transit inventory moving to ${order.destinationWarehouseCode}`,
+        narration: `In-Transit inventory moving to ${order.destinationWarehouseCode}`,
       },
       {
         id: 'std-02',
         accountCode: '1300',
+        accountId: 'acc-1300',
+        accountClass: accountClassForCode('1300'),
         accountName: 'Merchandise & Spares Inventory',
         debit: 0,
         credit: order.totalTransferValueMvr,
-        description: `Relieve inventory from ${order.sourceWarehouseCode}`,
+        narration: `Relieve inventory from ${order.sourceWarehouseCode}`,
       },
     ],
     totalDebit: order.totalTransferValueMvr,
@@ -206,18 +211,22 @@ export function receiveStockTransfer(
       {
         id: 'str-01',
         accountCode: '1300',
+        accountId: 'acc-1300',
+        accountClass: accountClassForCode('1300'),
         accountName: 'Merchandise & Spares Inventory',
         debit: order.totalTransferValueMvr,
         credit: 0,
-        description: `Receive stock into ${order.destinationWarehouseCode}`,
+        narration: `Receive stock into ${order.destinationWarehouseCode}`,
       },
       {
         id: 'str-02',
         accountCode: '1350',
+        accountId: 'acc-1350',
+        accountClass: accountClassForCode('1350'),
         accountName: 'Goods-in-Transit (Sea Freight Inter-Island)',
         debit: 0,
         credit: order.totalTransferValueMvr,
-        description: `Clear In-Transit inventory upon dock verification`,
+        narration: `Clear In-Transit inventory upon dock verification`,
       },
     ],
     totalDebit: order.totalTransferValueMvr,
@@ -226,7 +235,7 @@ export function receiveStockTransfer(
     postedBy: 'System / Warehouse Engine',
     postedAt: new Date().toISOString(),
     tenantId,
-    status: 'RECEIVED',
+    status: 'POSTED',
   };
 
   return {

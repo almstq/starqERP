@@ -123,7 +123,7 @@ export interface JobOrder {
   location?: string;
 }
 
-export type InvoiceStatus = 'Draft' | 'Sent' | 'Partially Paid' | 'Paid' | 'Overdue';
+export type InvoiceStatus = 'Draft' | 'Sent' | 'Partially Paid' | 'Paid' | 'Overdue' | 'Cancelled';
 
 export interface InvoiceLineItem {
   id: string;
@@ -155,6 +155,33 @@ export interface Invoice {
   status: InvoiceStatus;
   notes?: string;
   bankDetails: string;
+  /**
+   * Settlement allocations recorded against this invoice (SERP-294).
+   * Optional: every consumer already guards with `(invoice.payments || [])`,
+   * and invoices created before settlement allocation existed have none.
+   */
+  payments?: InvoicePaymentAllocation[];
+  /**
+   * Allocation state derived from `payments` (SERP-294). Distinct from `status`:
+   * `status` is the invoice lifecycle (Draft/Sent/Overdue/Cancelled...), while
+   * this is purely how much of it has been settled. src/lib/settlement.ts sets
+   * both, and they are deliberately not the same vocabulary.
+   */
+  paymentStatus?: 'Unpaid' | 'Partial' | 'Paid';
+}
+
+/** One payment allocated against an invoice. See src/lib/settlement.ts. */
+export interface InvoicePaymentAllocation {
+  id: string;
+  amount: number;
+  invoiceId?: string;
+  invoiceNumber?: string;
+  paymentDate?: string;
+  /** Free text: settlement sources include 'Credit Note' and 'Customer Advance', which are not PaymentMethod values. */
+  paymentMethod?: string;
+  reference?: string;
+  customerName?: string;
+  recordedBy?: string;
 }
 
 export type PaymentMethod =
@@ -571,6 +598,11 @@ export interface AuditLogEntry {
   ipAddress: string;
   location: string;
   timestamp: string;
+  /**
+   * Free-form context, mirroring the `metadata` jsonb column on
+   * public.audit_events. AuditLogView renders it behind a presence guard.
+   */
+  metadata?: Record<string, unknown>;
 }
 
 // Aliases for component convenience

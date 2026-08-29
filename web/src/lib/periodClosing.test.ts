@@ -1,3 +1,4 @@
+import { accountClassForCode } from '../domain/accounts';
 import { describe, it, expect } from 'vitest';
 import {
   generateFiscalPeriods,
@@ -80,9 +81,15 @@ describe('SERP-295: Accounting Period Lock & Year-End Roll-Forward Engine', () =
         narration: 'Commercial overhaul revenue',
         source: 'INVOICE',
         lines: [
-          { id: '1', accountCode: '1200', accountName: 'Accounts Receivable', debit: 50000, credit: 0 },
-          { id: '2', accountCode: '4000', accountName: 'Operating & Service Revenue', debit: 0, credit: 50000 },
+          { id: '1', accountCode: '1200', accountId: 'acc-1200', accountClass: accountClassForCode('1200'), accountName: 'Accounts Receivable', debit: 50000, credit: 0 },
+          { id: '2', accountCode: '4000', accountId: 'acc-4000', accountClass: accountClassForCode('4000'), accountName: 'Operating & Service Revenue', debit: 0, credit: 50000 },
         ],
+        totalDebit: 50000,
+        totalCredit: 50000,
+        isBalanced: true,
+        postedBy: 'Test Harness',
+        postedAt: '2026-06-15T00:00:00.000Z',
+        tenantId: 'tenant-test',
         status: 'POSTED',
       },
       // 2. COGS Posting: DR 5000 COGS 20,000 (CR 1300 Inventory 20,000)
@@ -93,9 +100,15 @@ describe('SERP-295: Accounting Period Lock & Year-End Roll-Forward Engine', () =
         narration: 'Material parts cost',
         source: 'BILL',
         lines: [
-          { id: '3', accountCode: '5000', accountName: 'Cost of Goods Sold', debit: 20000, credit: 0 },
-          { id: '4', accountCode: '1300', accountName: 'Raw Materials Inventory', debit: 0, credit: 20000 },
+          { id: '3', accountCode: '5000', accountId: 'acc-5000', accountClass: accountClassForCode('5000'), accountName: 'Cost of Goods Sold', debit: 20000, credit: 0 },
+          { id: '4', accountCode: '1300', accountId: 'acc-1300', accountClass: accountClassForCode('1300'), accountName: 'Raw Materials Inventory', debit: 0, credit: 20000 },
         ],
+        totalDebit: 20000,
+        totalCredit: 20000,
+        isBalanced: true,
+        postedBy: 'Test Harness',
+        postedAt: '2026-07-20T00:00:00.000Z',
+        tenantId: 'tenant-test',
         status: 'POSTED',
       },
       // 3. Operating Expense: DR 6000 Rent & Utilities 10,000 (CR 1010 Bank 10,000)
@@ -106,9 +119,15 @@ describe('SERP-295: Accounting Period Lock & Year-End Roll-Forward Engine', () =
         narration: 'Dockyard rent',
         source: 'EXPENSE',
         lines: [
-          { id: '5', accountCode: '6000', accountName: 'Operating & Administrative Expenses', debit: 10000, credit: 0 },
-          { id: '6', accountCode: '1010', accountName: 'BML Operations Account', debit: 0, credit: 10000 },
+          { id: '5', accountCode: '6000', accountId: 'acc-6000', accountClass: accountClassForCode('6000'), accountName: 'Operating & Administrative Expenses', debit: 10000, credit: 0 },
+          { id: '6', accountCode: '1010', accountId: 'acc-1010', accountClass: accountClassForCode('1010'), accountName: 'BML Operations Account', debit: 0, credit: 10000 },
         ],
+        totalDebit: 10000,
+        totalCredit: 10000,
+        isBalanced: true,
+        postedBy: 'Test Harness',
+        postedAt: '2026-08-01T00:00:00.000Z',
+        tenantId: 'tenant-test',
         status: 'POSTED',
       },
     ];
