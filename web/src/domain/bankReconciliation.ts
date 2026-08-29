@@ -2,7 +2,7 @@ import type { JournalEntry } from './journals';
 import { accountClassForCode } from './accounts';
 export interface BankAccountConfig {
   id: string;
-  accountCode: string; // e.g. "1010", "1020", "1030"
+  accountCode: string; // canonical bank codes: "1111" BML MVR, "1112" BML USD, "1113" MIB MVR
   accountName: string; // e.g. "Bank of Maldives (BML MVR)"
   bankName: 'BML' | 'MIB' | 'CASH' | 'OTHER';
   accountNumber: string; // e.g. "7730000123456"
@@ -338,7 +338,7 @@ export function autoMatchStatementLines(
  */
 export function createBankAdjustmentEntry(params: {
   statementLine: BankStatementLine;
-  bankAccountCode: string; // e.g. "1010"
+  bankAccountCode: string; // canonical bank code, e.g. "1111" BML MVR Main
   adjustmentType: 'bank_fee' | 'interest_income';
   narration?: string;
   tenantId: string;
@@ -354,7 +354,7 @@ export function createBankAdjustmentEntry(params: {
     throw new Error(`Cannot create ${adjustmentType} with non-positive amount`);
   }
 
-  const feeAccountCode = '6300'; // Bank Charges & Fees
+  const feeAccountCode = '6310'; // Bank & Merchant Gateway Fees — canonical chart, see docs/specs/CHART_OF_ACCOUNTS_SPECIFICATION.md
   const interestAccountCode = '8000'; // Interest Income
 
   const lines = isFee

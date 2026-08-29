@@ -124,10 +124,10 @@ export function generateCreditNoteJournals(params: {
     if (cn.subtotal > 0) {
       lines.push({
         id: `${cn.id}-rev`,
-        accountCode: '4000',
-        accountId: 'acc-4000',
-        accountClass: accountClassForCode('4000'),
-        accountName: 'Operating & Service Revenue (Reversal)',
+        accountCode: '4110',
+        accountId: 'acc-4110',
+        accountClass: accountClassForCode('4110'),
+        accountName: 'Workshop & Job Labor Revenue',
         debit: Math.round(cn.subtotal * 100) / 100,
         credit: 0,
         narration: `Credit Note ${cn.creditNoteNumber} - ${cn.reason || 'Sales Allowance'} (${cn.customerName})`,
@@ -138,10 +138,10 @@ export function generateCreditNoteJournals(params: {
     if (cn.taxAmount > 0 && params.isGstRegistered !== false) {
       lines.push({
         id: `${cn.id}-gst`,
-        accountCode: '2200',
-        accountId: 'acc-2200',
-        accountClass: accountClassForCode('2200'),
-        accountName: 'Output GST Payable (Reversal)',
+        accountCode: '2121',
+        accountId: 'acc-2121',
+        accountClass: accountClassForCode('2121'),
+        accountName: 'MIRA Output GST Payable',
         debit: Math.round(cn.taxAmount * 100) / 100,
         credit: 0,
         narration: `GST Reversal on Credit Note ${cn.creditNoteNumber}`,
@@ -151,10 +151,10 @@ export function generateCreditNoteJournals(params: {
     // 3. Credit Accounts Receivable (Reducing customer balance)
     lines.push({
       id: `${cn.id}-ar`,
-      accountCode: '1200',
-      accountId: 'acc-1200',
-      accountClass: accountClassForCode('1200'),
-      accountName: 'Accounts Receivable',
+      accountCode: '1210',
+      accountId: 'acc-1210',
+      accountClass: accountClassForCode('1210'),
+      accountName: 'Trade Debtors Control Account',
       debit: 0,
       credit: Math.round(cn.totalAmount * 100) / 100,
       narration: `Credit Note Issued: ${cn.creditNoteNumber} - ${cn.customerName}`,
@@ -183,8 +183,8 @@ export function generateCreditNoteJournals(params: {
  * Generates authoritative journals for Customer Advance deposits.
  *
  * Accounting Entry:
- *   DR 1000 / 1010 (Bank Account / Cash)              - Received Amount
- *   CR 2300 (Customer Advances / Unearned Revenue)   - Liability Holding
+ *   DR 1114 Petty Cash Fund / 1111 BML MVR Main   - Received Amount
+ *   CR 2150 Customer Advances & Deposits          - Liability Holding
  */
 export function generateCustomerAdvanceJournals(params: {
   advances: CustomerAdvance[];
@@ -199,10 +199,10 @@ export function generateCustomerAdvanceJournals(params: {
       // 1. Debit Cash/Bank
       {
         id: `${adv.id}-bank`,
-        accountCode: adv.paymentMethod === 'Cash' ? '1000' : '1010',
-        accountId: `acc-${adv.paymentMethod === 'Cash' ? '1000' : '1010'}`,
-        accountClass: accountClassForCode(adv.paymentMethod === 'Cash' ? '1000' : '1010'),
-        accountName: adv.paymentMethod === 'Cash' ? 'Petty Cash' : 'BML Operations Account',
+        accountCode: adv.paymentMethod === 'Cash' ? '1114' : '1111',
+        accountId: `acc-${adv.paymentMethod === 'Cash' ? '1114' : '1111'}`,
+        accountClass: accountClassForCode(adv.paymentMethod === 'Cash' ? '1114' : '1111'),
+        accountName: adv.paymentMethod === 'Cash' ? 'Petty Cash Fund' : 'Bank of Maldives (BML) MVR Main',
         debit: Math.round(adv.amount * 100) / 100,
         credit: 0,
         narration: `Customer Advance Received: ${adv.receiptNumber} from ${adv.customerName}`,
@@ -210,9 +210,9 @@ export function generateCustomerAdvanceJournals(params: {
       // 2. Credit Customer Advance Liability
       {
         id: `${adv.id}-adv-liab`,
-        accountCode: '2300',
-        accountId: 'acc-2300',
-        accountClass: accountClassForCode('2300'),
+        accountCode: '2150',
+        accountId: 'acc-2150',
+        accountClass: accountClassForCode('2150'),
         accountName: 'Customer Advances & Deposits',
         debit: 0,
         credit: Math.round(adv.amount * 100) / 100,
@@ -261,9 +261,9 @@ export function generateSettlementAllocationJournals(params: {
       // 1. Debit Customer Advance Liability (releasing the holding liability)
       {
         id: `${alloc.id}-dr-adv`,
-        accountCode: '2300',
-        accountId: 'acc-2300',
-        accountClass: accountClassForCode('2300'),
+        accountCode: '2150',
+        accountId: 'acc-2150',
+        accountClass: accountClassForCode('2150'),
         accountName: 'Customer Advances & Deposits',
         debit: Math.round(alloc.allocatedAmount * 100) / 100,
         credit: 0,
@@ -272,10 +272,10 @@ export function generateSettlementAllocationJournals(params: {
       // 2. Credit Accounts Receivable (clearing the invoice receivable balance)
       {
         id: `${alloc.id}-cr-ar`,
-        accountCode: '1200',
-        accountId: 'acc-1200',
-        accountClass: accountClassForCode('1200'),
-        accountName: 'Accounts Receivable',
+        accountCode: '1210',
+        accountId: 'acc-1210',
+        accountClass: accountClassForCode('1210'),
+        accountName: 'Trade Debtors Control Account',
         debit: 0,
         credit: Math.round(alloc.allocatedAmount * 100) / 100,
         narration: `Invoice ${alloc.targetInvoiceNumber} settled via Advance ${alloc.sourceNumber}`,

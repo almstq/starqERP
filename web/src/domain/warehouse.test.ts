@@ -49,8 +49,8 @@ describe('SERP-013: Multi-Warehouse & Inter-Island Stock Transfer Engine', () =>
     expect(dispatched.status).toBe('DISPATCHED');
     expect(dispatched.dispatchJournal).toBeDefined();
     expect(dispatched.dispatchJournal?.isBalanced).toBe(true);
-    expect(dispatched.dispatchJournal?.lines.find((l) => l.accountCode === '1350')?.debit).toBe(30000);
-    expect(dispatched.dispatchJournal?.lines.find((l) => l.accountCode === '1300')?.credit).toBe(30000);
+    expect(dispatched.dispatchJournal?.lines.find((l) => l.accountCode === '1320')?.debit).toBe(30000);
+    expect(dispatched.dispatchJournal?.lines.find((l) => l.accountCode === '1310')?.credit).toBe(30000);
   });
 
   it('generates a balanced Receipt journal clearing In-Transit upon destination delivery', () => {
@@ -70,8 +70,8 @@ describe('SERP-013: Multi-Warehouse & Inter-Island Stock Transfer Engine', () =>
     expect(received.status).toBe('RECEIVED');
     expect(received.receiptJournal).toBeDefined();
     expect(received.receiptJournal?.isBalanced).toBe(true);
-    expect(received.receiptJournal?.lines.find((l) => l.accountCode === '1300')?.debit).toBe(30000);
-    expect(received.receiptJournal?.lines.find((l) => l.accountCode === '1350')?.credit).toBe(30000);
+    expect(received.receiptJournal?.lines.find((l) => l.accountCode === '1310')?.debit).toBe(30000);
+    expect(received.receiptJournal?.lines.find((l) => l.accountCode === '1320')?.credit).toBe(30000);
   });
 
   it('detects low stock reorder alerts across warehouse locations', () => {

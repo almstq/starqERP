@@ -45,8 +45,8 @@ describe('SERP-014: Manufacturing & Bill of Materials (BOM) Engine', () => {
     expect(started.status).toBe('IN_PROGRESS');
     expect(started.issueJournal).toBeDefined();
     expect(started.issueJournal?.isBalanced).toBe(true);
-    expect(started.issueJournal?.lines.find((l) => l.accountCode === '1400')?.debit).toBe(155700);
-    expect(started.issueJournal?.lines.find((l) => l.accountCode === '1300')?.credit).toBe(98200);
+    expect(started.issueJournal?.lines.find((l) => l.accountCode === '1330')?.debit).toBe(155700);
+    expect(started.issueJournal?.lines.find((l) => l.accountCode === '1310')?.credit).toBe(98200);
   });
 
   it('completes production with finished goods receipt and accounts for scrap waste', () => {
@@ -70,8 +70,8 @@ describe('SERP-014: Manufacturing & Bill of Materials (BOM) Engine', () => {
     expect(completed.status).toBe('COMPLETED');
     expect(completed.scrapExpenseMvr).toBe(77850);
     expect(completed.completionJournal?.isBalanced).toBe(true);
-    expect(completed.completionJournal?.lines.find((l) => l.accountCode === '1300')?.debit).toBe(77850);
-    expect(completed.completionJournal?.lines.find((l) => l.accountCode === '5100')?.debit).toBe(77850);
-    expect(completed.completionJournal?.lines.find((l) => l.accountCode === '1400')?.credit).toBe(155700);
+    expect(completed.completionJournal?.lines.find((l) => l.accountCode === '1310')?.debit).toBe(77850);
+    expect(completed.completionJournal?.lines.find((l) => l.accountCode === '5220')?.debit).toBe(77850);
+    expect(completed.completionJournal?.lines.find((l) => l.accountCode === '1330')?.credit).toBe(155700);
   });
 });

@@ -121,6 +121,6 @@ describe('SERP-319: MIRA Tourism GST (16% TGSTA) and Green Tax Engine', () => {
     expect(je?.isBalanced).toBe(true);
     expect(je?.totalDebit).toBe(647.64);
     expect(je?.totalCredit).toBe(647.64);
-    expect(je?.lines[1].accountCode).toBe('2160'); // Green Tax Payable (MIRA)
+    expect(je?.lines[1].accountCode).toBe('2123'); // Green Tax Payable (MIRA)
   });
 });

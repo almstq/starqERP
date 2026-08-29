@@ -101,8 +101,8 @@ describe('SERP-011: Maldives Employment Act & MRPS Pension Payroll Engine', () =
     expect(je?.isBalanced).toBe(true);
     expect(je?.totalDebit).toBe(run.totalCompanyCost);
     expect(je?.totalCredit).toBe(run.totalCompanyCost);
-    expect(je?.lines.find((l) => l.accountCode === '2170')?.credit).toBe(3500); // MRPS 14% (1750 + 1750)
-    expect(je?.lines.find((l) => l.accountCode === '2180')?.credit).toBe(53250); // Total Net Pay
+    expect(je?.lines.find((l) => l.accountCode === '2130')?.credit).toBe(3500); // MRPS 14% (1750 + 1750)
+    expect(je?.lines.find((l) => l.accountCode === '2140')?.credit).toBe(53250); // Total Net Pay
   });
 
   it('generates compliant BML Bulk Payroll CSV export', () => {

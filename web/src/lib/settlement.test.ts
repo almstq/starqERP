@@ -92,9 +92,9 @@ describe('SERP-294: Credit Notes, Customer Advances & Settlement Engine', () => 
     expect(je.source).toBe('CREDIT_NOTE');
 
     // Verify double-entry balance: Debits (Revenue 5,000 + GST 400) = Credit (AR 5,400)
-    const revDebit = je.lines.find((l) => l.accountCode === '4000')?.debit;
-    const gstDebit = je.lines.find((l) => l.accountCode === '2200')?.debit;
-    const arCredit = je.lines.find((l) => l.accountCode === '1200')?.credit;
+    const revDebit = je.lines.find((l) => l.accountCode === '4110')?.debit;
+    const gstDebit = je.lines.find((l) => l.accountCode === '2121')?.debit;
+    const arCredit = je.lines.find((l) => l.accountCode === '1210')?.credit;
 
     expect(revDebit).toBe(5000);
     expect(gstDebit).toBe(400);
@@ -132,8 +132,8 @@ describe('SERP-294: Credit Notes, Customer Advances & Settlement Engine', () => 
     expect(je.entryNumber).toBe('JE-ADV-2026-001');
 
     // Debits (Bank 15,000) = Credits (Customer Advance Liability 15,000)
-    const bankDebit = je.lines.find((l) => l.accountCode === '1010')?.debit;
-    const advCredit = je.lines.find((l) => l.accountCode === '2300')?.credit;
+    const bankDebit = je.lines.find((l) => l.accountCode === '1111')?.debit;
+    const advCredit = je.lines.find((l) => l.accountCode === '2150')?.credit;
 
     expect(bankDebit).toBe(15000);
     expect(advCredit).toBe(15000);
@@ -222,7 +222,7 @@ describe('SERP-294: Credit Notes, Customer Advances & Settlement Engine', () => 
     });
 
     expect(allocJournals.length).toBe(2);
-    expect(allocJournals[0].lines.find((l) => l.accountCode === '2300')?.debit).toBe(5000);
-    expect(allocJournals[0].lines.find((l) => l.accountCode === '1200')?.credit).toBe(5000);
+    expect(allocJournals[0].lines.find((l) => l.accountCode === '2150')?.debit).toBe(5000);
+    expect(allocJournals[0].lines.find((l) => l.accountCode === '1210')?.credit).toBe(5000);
   });
 });

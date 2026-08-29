@@ -197,8 +197,8 @@ export function createPayrollAccrualJournal(run: PayrollRun, tenantId: string): 
     // 1. Debit Gross Salaries Expense (Account 6200)
     {
       id: 'pl-01',
-      accountCode: '6200',
-      accountName: 'Salaries & Staff Wages',
+      accountCode: '6110',
+      accountName: 'Staff Base Salaries & Allowances',
       debit: round2(run.totalGrossPay - run.totalRamadanAllowance),
       credit: 0,
       description: `Basic & Allowances Payroll for ${run.periodName}`,
@@ -209,8 +209,8 @@ export function createPayrollAccrualJournal(run: PayrollRun, tenantId: string): 
   if (run.totalRamadanAllowance > 0) {
     lines.push({
       id: 'pl-02',
-      accountCode: '6220',
-      accountName: 'Ramadan Allowance Expense',
+      accountCode: '6110',
+      accountName: 'Staff Base Salaries & Allowances',
       debit: run.totalRamadanAllowance,
       credit: 0,
       description: `Statutory Ramadan Allowance for ${run.periodName}`,
@@ -221,7 +221,7 @@ export function createPayrollAccrualJournal(run: PayrollRun, tenantId: string): 
   if (run.totalEmployerPension > 0) {
     lines.push({
       id: 'pl-03',
-      accountCode: '6210',
+      accountCode: '6120',
       accountName: 'Employer Pension Contribution (MRPS 7%)',
       debit: run.totalEmployerPension,
       credit: 0,
@@ -233,8 +233,8 @@ export function createPayrollAccrualJournal(run: PayrollRun, tenantId: string): 
   if (run.totalMrpsPensionPayable > 0) {
     lines.push({
       id: 'pl-04',
-      accountCode: '2170',
-      accountName: 'Maldives Retirement Pension Payable (MRPS)',
+      accountCode: '2130',
+      accountName: 'MPAO / MRPS Pension Contributions Payable',
       debit: 0,
       credit: run.totalMrpsPensionPayable,
       description: `MRPS Pension Liability (7% Emp + 7% Empr)`,
@@ -244,7 +244,7 @@ export function createPayrollAccrualJournal(run: PayrollRun, tenantId: string): 
   // 5. Credit Net Salaries Payable (Account 2180)
   lines.push({
     id: 'pl-05',
-    accountCode: '2180',
+    accountCode: '2140',
     accountName: 'Net Salaries & Wages Payable',
     debit: 0,
     credit: run.totalNetPayable,

@@ -207,15 +207,15 @@ export function createGreenTaxJournalEntry(ret: MiraTgstReturn, tenantId: string
     lines: [
       {
         id: `gt-line-dr`,
-        accountCode: '1100', // Accounts Receivable (or Guest Ledger)
-        accountName: 'Accounts Receivable / Guest Ledger',
+        accountCode: '1210', // Accounts Receivable (or Guest Ledger)
+        accountName: 'Trade Debtors Control Account',
         debit: mvrAmount,
         credit: 0,
         description: `Green Tax Collected (${ret.totalTouristBedNights} nights)`,
       },
       {
         id: `gt-line-cr`,
-        accountCode: '2160', // Green Tax Payable to MIRA
+        accountCode: '2123', // Green Tax Payable to MIRA
         accountName: 'Green Tax Payable (MIRA)',
         debit: 0,
         credit: mvrAmount,

@@ -102,7 +102,7 @@ Transaction Date,Details,Withdrawal,Deposit,Balance,Ref No
     expect(journal.isBalanced).toBe(true);
     expect(journal.totalDebit).toBe(150);
     expect(journal.totalCredit).toBe(150);
-    expect(journal.lines[0].accountCode).toBe('6300'); // Bank fees
+    expect(journal.lines[0].accountCode).toBe('6310'); // Bank fees
     expect(journal.lines[1].accountCode).toBe('1010'); // BML Bank MVR
   });
 

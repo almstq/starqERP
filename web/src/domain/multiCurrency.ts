@@ -122,15 +122,15 @@ export function calculateRealizedFxGainLoss(params: {
   if (transactionType === 'AR_COLLECTION') {
     if (isGain) {
       journalLines.push(
-        { id: 'l1', accountCode: '1010', accountName: 'BML MVR Account', debit: settledMvr, credit: 0, description: `Bank Settlement (${foreignAmount} ${currency} @ ${settlementRate})` },
-        { id: 'l2', accountCode: '1100', accountName: 'Accounts Receivable', debit: 0, credit: originalMvr, description: `AR Invoice Clearing (${foreignAmount} ${currency} @ ${originalRate})` },
-        { id: 'l3', accountCode: '4200', accountName: 'Realized Foreign Exchange Gain', debit: 0, credit: absDiff, description: `FX Gain on ${reference}` }
+        { id: 'l1', accountCode: '1111', accountName: 'Bank of Maldives (BML) MVR Main', debit: settledMvr, credit: 0, description: `Bank Settlement (${foreignAmount} ${currency} @ ${settlementRate})` },
+        { id: 'l2', accountCode: '1210', accountName: 'Trade Debtors Control Account', debit: 0, credit: originalMvr, description: `AR Invoice Clearing (${foreignAmount} ${currency} @ ${originalRate})` },
+        { id: 'l3', accountCode: '4310', accountName: 'Realized Foreign Exchange Gain', debit: 0, credit: absDiff, description: `FX Gain on ${reference}` }
       );
     } else {
       journalLines.push(
-        { id: 'l1', accountCode: '1010', accountName: 'BML MVR Account', debit: settledMvr, credit: 0, description: `Bank Settlement (${foreignAmount} ${currency} @ ${settlementRate})` },
-        { id: 'l2', accountCode: '7100', accountName: 'Realized Foreign Exchange Loss', debit: absDiff, credit: 0, description: `FX Loss on ${reference}` },
-        { id: 'l3', accountCode: '1100', accountName: 'Accounts Receivable', debit: 0, credit: originalMvr, description: `AR Invoice Clearing (${foreignAmount} ${currency} @ ${originalRate})` }
+        { id: 'l1', accountCode: '1111', accountName: 'Bank of Maldives (BML) MVR Main', debit: settledMvr, credit: 0, description: `Bank Settlement (${foreignAmount} ${currency} @ ${settlementRate})` },
+        { id: 'l2', accountCode: '6410', accountName: 'Realized Foreign Exchange Loss', debit: absDiff, credit: 0, description: `FX Loss on ${reference}` },
+        { id: 'l3', accountCode: '1210', accountName: 'Trade Debtors Control Account', debit: 0, credit: originalMvr, description: `AR Invoice Clearing (${foreignAmount} ${currency} @ ${originalRate})` }
       );
     }
   } else {
@@ -138,16 +138,16 @@ export function calculateRealizedFxGainLoss(params: {
     if (isGain) {
       // Paid less MVR
       journalLines.push(
-        { id: 'l1', accountCode: '2000', accountName: 'Accounts Payable', debit: originalMvr, credit: 0, description: `AP Bill Clearing (${foreignAmount} ${currency} @ ${originalRate})` },
-        { id: 'l2', accountCode: '1010', accountName: 'BML MVR Account', debit: 0, credit: settledMvr, description: `Bank Settlement (${foreignAmount} ${currency} @ ${settlementRate})` },
-        { id: 'l3', accountCode: '4200', accountName: 'Realized Foreign Exchange Gain', debit: 0, credit: absDiff, description: `FX Gain on ${reference}` }
+        { id: 'l1', accountCode: '2110', accountName: 'Accounts Payable (Trade Creditors)', debit: originalMvr, credit: 0, description: `AP Bill Clearing (${foreignAmount} ${currency} @ ${originalRate})` },
+        { id: 'l2', accountCode: '1111', accountName: 'Bank of Maldives (BML) MVR Main', debit: 0, credit: settledMvr, description: `Bank Settlement (${foreignAmount} ${currency} @ ${settlementRate})` },
+        { id: 'l3', accountCode: '4310', accountName: 'Realized Foreign Exchange Gain', debit: 0, credit: absDiff, description: `FX Gain on ${reference}` }
       );
     } else {
       // Paid more MVR
       journalLines.push(
-        { id: 'l1', accountCode: '2000', accountName: 'Accounts Payable', debit: originalMvr, credit: 0, description: `AP Bill Clearing (${foreignAmount} ${currency} @ ${originalRate})` },
-        { id: 'l2', accountCode: '7100', accountName: 'Realized Foreign Exchange Loss', debit: absDiff, credit: 0, description: `FX Loss on ${reference}` },
-        { id: 'l3', accountCode: '1010', accountName: 'BML MVR Account', debit: 0, credit: settledMvr, description: `Bank Settlement (${foreignAmount} ${currency} @ ${settlementRate})` }
+        { id: 'l1', accountCode: '2110', accountName: 'Accounts Payable (Trade Creditors)', debit: originalMvr, credit: 0, description: `AP Bill Clearing (${foreignAmount} ${currency} @ ${originalRate})` },
+        { id: 'l2', accountCode: '6410', accountName: 'Realized Foreign Exchange Loss', debit: absDiff, credit: 0, description: `FX Loss on ${reference}` },
+        { id: 'l3', accountCode: '1111', accountName: 'Bank of Maldives (BML) MVR Main', debit: 0, credit: settledMvr, description: `Bank Settlement (${foreignAmount} ${currency} @ ${settlementRate})` }
       );
     }
   }

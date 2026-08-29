@@ -31,7 +31,7 @@ describe('SERP-318: Multi-Currency, MMA Rates & FX Gain/Loss Engine', () => {
     expect(result.settledMvrAmount).toBe(156000);
     expect(result.fxDifferenceMvr).toBe(1800); // +1,800 MVR Gain
     expect(result.journalEntry.isBalanced).toBe(true);
-    expect(result.journalEntry.lines.find(l => l.accountCode === '4200')?.credit).toBe(1800);
+    expect(result.journalEntry.lines.find(l => l.accountCode === '4310')?.credit).toBe(1800);
   });
 
   it('calculates Realized FX Loss when AP supplier bill is paid at higher exchange rate', () => {
@@ -51,7 +51,7 @@ describe('SERP-318: Multi-Currency, MMA Rates & FX Gain/Loss Engine', () => {
     expect(result.originalMvrAmount).toBe(77100);
     expect(result.settledMvrAmount).toBe(78500);
     expect(result.journalEntry.isBalanced).toBe(true);
-    expect(result.journalEntry.lines.find(l => l.accountCode === '7100')?.debit).toBe(1400); // 1,400 Loss
+    expect(result.journalEntry.lines.find(l => l.accountCode === '6410')?.debit).toBe(1400); // 1,400 Loss
   });
 
   it('calculates Period-End Unrealized FX revaluation for USD bank account', () => {

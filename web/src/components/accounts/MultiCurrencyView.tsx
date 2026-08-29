@@ -79,8 +79,8 @@ export const MultiCurrencyView: React.FC<{
   };
 
   const revalResult: UnrealizedRevaluationResult = calculateUnrealizedRevaluation({
-    accountCode: '1020',
-    accountName: 'BML USD Operating Account',
+    accountCode: '1112',
+    accountName: 'Bank of Maldives (BML) USD Account',
     currency: 'USD',
     foreignBalance: usdBankBalance,
     bookMvrBalance: usdBookMvr,

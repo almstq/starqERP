@@ -154,10 +154,10 @@ export function createJobCompletionCogsJournal(sheet: JobCostSheet, tenantId: st
     // 1. Debit COGS - Job Costs (Account 5000)
     {
       id: 'cogs-01',
-      accountCode: '5000',
-      accountId: 'acc-5000',
-      accountClass: accountClassForCode('5000'),
-      accountName: 'Cost of Goods & Services Sold (COGS)',
+      accountCode: '5110',
+      accountId: 'acc-5110',
+      accountClass: accountClassForCode('5110'),
+      accountName: 'Cost of Parts & Materials Consumed',
       debit: sheet.totalActualCost,
       credit: 0,
       narration: `Capitalized Job Cost Realization for ${sheet.jobCode} (${sheet.projectName})`,
@@ -165,10 +165,10 @@ export function createJobCompletionCogsJournal(sheet: JobCostSheet, tenantId: st
     // 2. Credit Work-in-Progress WIP (Account 1400)
     {
       id: 'cogs-02',
-      accountCode: '1400',
-      accountId: 'acc-1400',
-      accountClass: accountClassForCode('1400'),
-      accountName: 'Work-in-Progress (WIP Inventory)',
+      accountCode: '1330',
+      accountId: 'acc-1330',
+      accountClass: accountClassForCode('1330'),
+      accountName: 'Work-in-Progress (WIP)',
       debit: 0,
       credit: sheet.totalActualCost,
       narration: `Clear WIP Asset upon job completion for ${sheet.jobCode}`,

@@ -68,6 +68,6 @@ describe('SERP-319: MIRA Tourism GST (16%) & Green Tax Interface', () => {
     expect(onAddJournalMock).toHaveBeenCalled();
     const createdJe = onAddJournalMock.mock.calls[0][0];
     expect(createdJe.isBalanced).toBe(true);
-    expect(createdJe.lines[1].accountCode).toBe('2160'); // Green Tax Payable (MIRA)
+    expect(createdJe.lines[1].accountCode).toBe('2123'); // Green Tax Payable (MIRA)
   });
 });

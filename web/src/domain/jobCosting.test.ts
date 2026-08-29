@@ -55,7 +55,7 @@ describe('SERP-012: Projects & Job-Costing Absorption Engine', () => {
     expect(je?.isBalanced).toBe(true);
     expect(je?.totalDebit).toBe(62725);
     expect(je?.totalCredit).toBe(62725);
-    expect(je?.lines.find((l) => l.accountCode === '5000')?.debit).toBe(62725);
-    expect(je?.lines.find((l) => l.accountCode === '1400')?.credit).toBe(62725);
+    expect(je?.lines.find((l) => l.accountCode === '5110')?.debit).toBe(62725);
+    expect(je?.lines.find((l) => l.accountCode === '1330')?.credit).toBe(62725);
   });
 });
