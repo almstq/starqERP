@@ -165,33 +165,17 @@ const encoder = new TextEncoder();
 const anonymousWindows = new Map<string, { count: number; resetAt: number }>();
 
 type Json = Record<string, unknown>;
-type Session = {
-  person_uuid: string;
-  person_key: string;
-  display_label: string;
-  organisation_id: string;
-  book_id?: string | null;
-  seats: string[];
-  acting_as: string;
-  csrf: string;
-  exp: number;
-  allowed_entities?: string[];
-  organisations?: {
+type OperableOrganisation = {
+  id: string;
+  slug: string;
+  name: string;
+  books?: {
     id: string;
-    slug: string;
+    code: string;
     name: string;
-    books?: {
-      id: string;
-      code: string;
-      name: string;
-      is_default: boolean;
-      archetype_id: string;
-    }[];
+    is_default: boolean;
+    archetype_id: string;
   }[];
-  platform_entitlement?: {
-    operator_role: string;
-    mfa_verified: boolean;
-  } | null;
 };
 type AllowPerson = {
   person_id?: string;
@@ -482,13 +466,19 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
 
   // 1. Identity lookup or creation in public.persons
   let personUuid: string;
-  const existingBySub = await db.from("persons").select("id, person_key, display_label, status")
+  const existingBySub = await db.from("persons").select("id, person_key, display_label, status, verified_email")
     .eq("external_subject", claims.sub).maybeSingle();
 
   if (existingBySub.data) {
     personUuid = existingBySub.data.id as string;
     personKey = personKey ?? existingBySub.data.person_key;
     displayLabel = existingBySub.data.display_label ?? displayLabel;
+    if (existingBySub.data.verified_email !== normalizedEmail) {
+      const identityUpdate = await db.from("persons").update({ verified_email: normalizedEmail })
+        .eq("id", personUuid)
+        .eq("external_subject", claims.sub);
+      if (identityUpdate.error) throw new Error("identity_email_binding_failed");
+    }
   } else if (personKey) {
     const existingByKey = await db.from("persons").select("id, external_subject, status")
       .eq("person_key", personKey).maybeSingle();
@@ -498,6 +488,7 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
     const personWrite = await db.from("persons").upsert({
       person_key: personKey,
       external_subject: claims.sub,
+      verified_email: normalizedEmail,
       display_label: displayLabel,
       status: "active",
     }, { onConflict: "person_key" }).select("id").single();
@@ -509,6 +500,7 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
     const personWrite = await db.from("persons").insert({
       person_key: newKey,
       external_subject: claims.sub,
+      verified_email: normalizedEmail,
       display_label: claims.name,
       status: "active",
     }).select("id, person_key").single();
@@ -548,8 +540,7 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
       for (const invite of pendingInvites.data) {
         await db.rpc("accept_staff_invitation", {
           p_invitation_id: invite.id,
-          p_person_id: personUuid,
-          p_verified_email: normalizedEmail,
+          p_authenticated_person_id: personUuid,
         });
       }
     }
@@ -572,11 +563,11 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
   }
 
   // Find existing memberships
-  const membershipsRes = await db.from("memberships").select("id, organisation_id, role, organisations(id, slug, legal_name, status)")
+  const membershipsRes = await db.from("memberships").select("id, organisation_id, role_id, organisations(id, slug, legal_name, status)")
     .eq("person_id", personUuid)
     .eq("status", "active");
 
-  const memberRows = membershipsRes.data ?? [];
+  const memberRows = [...(membershipsRes.data ?? [])];
 
   if (!orgId && memberRows.length > 0) {
     orgId = memberRows[0].organisation_id as string;
@@ -590,6 +581,9 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
     }, { onConflict: "organisation_id,person_id" }).select("id").single();
     if (!membershipWrite.error && membershipWrite.data?.id) {
       const membershipId = membershipWrite.data.id as string;
+      if (!memberRows.some((membership) => membership.id === membershipId)) {
+        memberRows.push({ id: membershipId, organisation_id: orgId, role_id: null, organisations: [] });
+      }
       const seatRows = seats.map((seat) => ({ membership_id: membershipId, seat_code: seat }));
       for (const row of seatRows) {
         const safe = seatWriteIsSafe(row);
@@ -614,8 +608,17 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
     const orgRes = await db.from("organisations").select("id, slug, legal_name, status")
       .eq("id", oId).eq("status", "active").maybeSingle();
     if (orgRes.data) {
-      const booksRes = await db.from("books").select("id, code, name, is_default, archetype_id, status")
-        .eq("organisation_id", oId).eq("status", "active").order("is_default", { ascending: false });
+      const membership = memberRows.find((row) => row.organisation_id === oId);
+      const bookMemberships = membership
+        ? await db.from("book_memberships").select("book_id")
+          .eq("organisation_id", oId).eq("membership_id", membership.id)
+        : { data: [] as { book_id: string }[] };
+      const allowedBookIds = (bookMemberships.data ?? []).map((row) => row.book_id);
+      const booksRes = allowedBookIds.length > 0
+        ? await db.from("books").select("id, code, name, is_default, archetype_id, status")
+          .eq("organisation_id", oId).in("id", allowedBookIds).eq("status", "active")
+          .order("is_default", { ascending: false })
+        : { data: [] as { id: string; code: string; name: string; is_default: boolean; archetype_id: string }[] };
 
       resolvedOrgs.push({
         id: orgRes.data.id,
@@ -635,13 +638,8 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
   // Resolve default active book
   let defaultBookId: string | null = null;
   if (orgId) {
-    const bookLookup = await db.from("books").select("id")
-      .eq("organisation_id", orgId).eq("is_default", true).eq("status", "active").maybeSingle();
-    defaultBookId = bookLookup.data?.id ?? null;
-  }
-
-  if (seats.length === 0) {
-    seats = ["managing_director"];
+    const allowedBooks = resolvedOrgs.find((organisation) => organisation.id === orgId)?.books ?? [];
+    defaultBookId = allowedBooks.find((book) => book.is_default)?.id ?? allowedBooks[0]?.id ?? null;
   }
 
   // 4. Resolve applicant's pending/latest business application
@@ -669,7 +667,7 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
     // Platform schema isolation
   }
 
-  const preferred = entry?.default_seat && seats.includes(entry.default_seat) ? entry.default_seat : seats[0];
+  const preferred = entry?.default_seat && seats.includes(entry.default_seat) ? entry.default_seat : (seats[0] ?? "");
 
   return {
     person_uuid: personUuid,
@@ -790,6 +788,22 @@ Deno.serve(async (req: Request) => {
 
       const orgCheck = await db.from("organisations").select("id, slug, legal_name").eq("id", targetOrgId).eq("status", "active").maybeSingle();
       if (!orgCheck.data) return json(403, { ok: false, error: "organisation_access_denied" }, origin);
+
+      const membershipCheck = await db.from("memberships").select("id")
+        .eq("organisation_id", targetOrgId)
+        .eq("person_id", session.person_uuid)
+        .eq("status", "active")
+        .maybeSingle();
+      if (!membershipCheck.data) return json(403, { ok: false, error: "organisation_access_denied" }, origin);
+      const membershipId = membershipCheck.data.id;
+
+      if (!targetBookId) return json(403, { ok: false, error: "book_access_denied" }, origin);
+      const bookMembershipCheck = await db.from("book_memberships").select("id")
+        .eq("organisation_id", targetOrgId)
+        .eq("membership_id", membershipId)
+        .eq("book_id", targetBookId)
+        .maybeSingle();
+      if (!bookMembershipCheck.data) return json(403, { ok: false, error: "book_access_denied" }, origin);
 
       const updated: Session = {
         ...session,
@@ -1055,6 +1069,7 @@ Deno.serve(async (req: Request) => {
     if (req.method === "GET" && path === "/api/ops/invoices") {
       const { data, error } = await db.from("commercial_documents").select("*")
         .eq("organisation_id", session.organisation_id)
+        .eq("book_id", session.book_id)
         .eq("document_type", "sales_invoice")
         .order("created_at", { ascending: false });
       if (error) throw new Error("invoices_query_failed");
@@ -1064,6 +1079,7 @@ Deno.serve(async (req: Request) => {
     if (req.method === "GET" && path === "/api/ops/expenses") {
       const { data, error } = await db.from("commercial_documents").select("*")
         .eq("organisation_id", session.organisation_id)
+        .eq("book_id", session.book_id)
         .eq("document_type", "direct_expense")
         .order("created_at", { ascending: false });
       if (error) throw new Error("expenses_query_failed");
@@ -1073,6 +1089,7 @@ Deno.serve(async (req: Request) => {
     if (req.method === "GET" && path === "/api/ops/payments") {
       const { data, error } = await db.from("commercial_documents").select("*")
         .eq("organisation_id", session.organisation_id)
+        .eq("book_id", session.book_id)
         .in("document_type", ["receipt", "payment"])
         .order("created_at", { ascending: false });
       if (error) throw new Error("payments_query_failed");
@@ -1082,6 +1099,7 @@ Deno.serve(async (req: Request) => {
     if (req.method === "GET" && path === "/api/ops/purchase-orders") {
       const { data, error } = await db.from("commercial_documents").select("*")
         .eq("organisation_id", session.organisation_id)
+        .eq("book_id", session.book_id)
         .eq("document_type", "purchase_order")
         .order("created_at", { ascending: false });
       if (error) throw new Error("purchase_orders_query_failed");
@@ -1103,6 +1121,7 @@ Deno.serve(async (req: Request) => {
     if (req.method === "GET" && path === "/api/ops/jobs") {
       const { data, error } = await db.from("garage_jobs").select("*")
         .eq("organisation_id", session.organisation_id)
+        .eq("book_id", session.book_id)
         .order("opened_at", { ascending: false });
       if (error) throw new Error("jobs_query_failed");
       return json(200, { ok: true, jobs: data ?? [] }, origin);
@@ -1112,6 +1131,7 @@ Deno.serve(async (req: Request) => {
       const limit = Math.min(Number(new URL(req.url).searchParams.get("limit") ?? "50"), 200);
       const { data, error } = await db.from("audit_events").select("*")
         .eq("organisation_id", session.organisation_id)
+        .eq("book_id", session.book_id)
         .order("occurred_at", { ascending: false })
         .limit(limit);
       if (error) throw new Error("audit_query_failed");
@@ -1146,6 +1166,12 @@ Deno.serve(async (req: Request) => {
     // =========================================================================
     // Staff Invitation & Authorization Lifecycle Routes (SERP-286)
     // =========================================================================
+    const invitationRoute = path === "/api/tenant/invitations"
+      || /^\/api\/tenant\/invitations\/[^/]+\/(resend|revoke)$/.test(path);
+    if (invitationRoute && !session.seats.includes("managing_director")) {
+      return json(403, { ok: false, error: "invitation_admin_required" }, origin);
+    }
+
     if (req.method === "GET" && path === "/api/tenant/invitations") {
       const { data, error } = await db.from("invitations")
         .select("*, persons:invited_by(display_label)")
@@ -1161,13 +1187,44 @@ Deno.serve(async (req: Request) => {
 
       const email = String(body.email ?? "").trim().toLowerCase();
       const name = String(body.name ?? "").trim();
-      const roleId = String(body.role_id ?? "viewer").trim();
+      const roleId = String(body.role_id ?? "").trim();
       const jobTitle = body.job_title ? String(body.job_title).trim() : null;
       const phone = body.phone ? String(body.phone).trim() : null;
-      const bookIds = Array.isArray(body.book_ids) ? body.book_ids : [];
-      const locationIds = Array.isArray(body.location_ids) ? body.location_ids : [];
+      const bookIds = Array.isArray(body.book_ids) ? [...new Set(body.book_ids.map(String))] : [];
+      const locationIds = Array.isArray(body.location_ids) ? [...new Set(body.location_ids.map(String))] : [];
 
       if (!email || !name) return json(400, { ok: false, error: "email_and_name_required" }, origin);
+      if (!uuid(roleId)) return json(400, { ok: false, error: "valid_role_required" }, origin);
+      if (bookIds.some((id) => !uuid(id)) || locationIds.some((id) => !uuid(id))) {
+        return json(400, { ok: false, error: "invalid_invitation_scope" }, origin);
+      }
+
+      const roleCheck = await db.from("roles").select("id")
+        .eq("id", roleId)
+        .eq("organisation_id", session.organisation_id)
+        .eq("active", true)
+        .maybeSingle();
+      if (!roleCheck.data) return json(400, { ok: false, error: "valid_role_required" }, origin);
+
+      if (bookIds.length > 0) {
+        const bookScope = await db.from("books").select("id")
+          .eq("organisation_id", session.organisation_id)
+          .eq("status", "active")
+          .in("id", bookIds);
+        if (bookScope.error || (bookScope.data ?? []).length !== bookIds.length) {
+          return json(400, { ok: false, error: "invalid_invitation_book_scope" }, origin);
+        }
+      }
+
+      if (locationIds.length > 0) {
+        const locationScope = await db.from("locations").select("id")
+          .eq("organisation_id", session.organisation_id)
+          .eq("active", true)
+          .in("id", locationIds);
+        if (locationScope.error || (locationScope.data ?? []).length !== locationIds.length) {
+          return json(400, { ok: false, error: "invalid_invitation_location_scope" }, origin);
+        }
+      }
 
       // Duplicate check in pending invitations
       const existingInvite = await db.from("invitations").select("id")
@@ -1238,6 +1295,7 @@ Deno.serve(async (req: Request) => {
     if (req.method === "POST" && path === "/api/ops/event") {
       const body = await readJson(req);
       if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+      if (!session.organisation_id) return json(403, { ok: false, error: "organisation_context_required" }, origin);
       const commandKey = req.headers.get("x-idempotency-key");
       if (!uuid(commandKey)) return json(428, { ok: false, error: "valid_idempotency_key_required" }, origin);
 
