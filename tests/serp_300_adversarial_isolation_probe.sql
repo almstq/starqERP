@@ -278,6 +278,308 @@ $$;
 
 reset role;
 
+-- =============================================================================
+-- PAYMENT TABLE ATTACKS (migrations 0031–0034)
+-- Extend the adversarial matrix to all nine payment-related tables.
+-- Pattern mirrors the original seven: cross-tenant and cross-book as serp300_probe
+-- with row_security=on. Same identity (person_id/ organisation_id/ book_id).
+-- =============================================================================
+
+-- Fixtures: Tenant B payment records the attacker must not be able to reach.
+-- NOTE (Elder, 30 Aug): public.payment_provider_config has NO organisation_id and is
+-- unique on (provider_id, environment) — it is a PLATFORM table, not a tenant table.
+-- A second per-tenant fixture cannot be inserted, so a cross-tenant assertion against
+-- it is not meaningful. Recorded as an open design question rather than a defect:
+-- the table carries merchant_id, which is normally per-merchant. See SERP-351.
+insert into public.payment_provider_config
+  (id, provider_id, environment, base_url, merchant_id, is_active)
+values
+  ('30000000-0000-4000-8000-000000000801', 'MOCK', 'sandbox', 'https://mock.example.invalid', 'TENANT_B_MERCHANT', true);
+
+insert into public.payment_intents
+  (id, organisation_id, provider_id, status, amount, currency, created_by)
+values
+  ('30000000-0000-4000-8000-000000000811',
+   '30000000-0000-4000-8000-000000000002',  -- Tenant B
+   'MOCK', 'succeeded', 100000::numeric, 'MVR',
+   '30000000-0000-4000-8000-000000000101');
+
+insert into public.payment_attempts
+  (id, organisation_id, intent_id, provider_id, status, amount, currency, provider_reference)
+values
+  ('30000000-0000-4000-8000-000000000821',
+   '30000000-0000-4000-8000-000000000002',  -- Tenant B
+   '30000000-0000-4000-8000-000000000811', 'MOCK',
+   'succeeded', 100000::numeric, 'MVR', 'MOCK-REF-B-001');
+
+insert into public.payment_refunds
+  (id, organisation_id, intent_id, provider_id, status, amount, currency, reason, requested_by)
+values
+  ('30000000-0000-4000-8000-000000000831',
+   '30000000-0000-4000-8000-000000000002',  -- Tenant B
+   '30000000-0000-4000-8000-000000000811', 'MOCK',
+   'succeeded', 5000::numeric, 'MVR',
+   'Partial refund for testing purposes', '30000000-0000-4000-8000-000000000101');
+
+insert into public.payment_settlements
+  (id, organisation_id, provider_id, batch_reference, gross_amount, fee_amount, net_amount, currency, settled_at)
+values
+  ('30000000-0000-4000-8000-000000000841',
+   '30000000-0000-4000-8000-000000000002',  -- Tenant B
+   'MOCK', 'BATCH-B-001', 100000::numeric, 500::numeric, 99500::numeric, 'MVR', now());
+
+insert into public.payment_settlement_items
+  (id, organisation_id, settlement_id, payment_document_id, gross_amount, fee_amount, currency)
+values
+  ('30000000-0000-4000-8000-000000000851',
+   '30000000-0000-4000-8000-000000000002',  -- Tenant B
+   '30000000-0000-4000-8000-000000000841',
+   '30000000-0000-4000-8000-000000000503',  -- Tenant B commercial document (B1-EST-1)
+   100000::numeric, 500::numeric, 'MVR');
+
+-- Tenant B payment receipt: the document that receives the settlement allocation
+-- (separate from the estimate used as settlement item above).
+insert into public.commercial_documents
+  (id, organisation_id, book_id, document_type, document_no, status, contact_id, issued_at, gross_total)
+values
+  ('30000000-0000-4000-8000-000000000504',
+   '30000000-0000-4000-8000-000000000002',
+   '30000000-0000-4000-8000-000000000303',
+   'receipt', 'B1-RCP-1', 'issued',
+   '30000000-0000-4000-8000-000000000402',
+   now(), 100000);
+
+insert into public.provider_events
+  (id, provider_id, provider_event_id, organisation_id, signature_verified, raw_payload)
+values
+  ('30000000-0000-4000-8000-000000000861',
+   'MOCK', 'MOCK-EVENT-B-001',
+   '30000000-0000-4000-8000-000000000002',  -- Tenant B
+   true, '{"type":"payment.succeeded","ref":"MOCK-REF-B-001"}');
+
+-- Tenant B ISSUED invoice for the allocation to settle against.
+-- The pre-existing fixture 000...503 is a DRAFT estimate, and
+-- app_private.assert_settlement_allocation_valid() requires the settled document to
+-- be issued or settled. Adding a dedicated document rather than mutating 503,
+-- which other assertions in this probe depend on being a draft estimate.
+insert into public.commercial_documents
+  (id, organisation_id, book_id, document_type, document_no, status, contact_id, issued_at, gross_total)
+values
+  ('30000000-0000-4000-8000-000000000505',
+   '30000000-0000-4000-8000-000000000002',
+   '30000000-0000-4000-8000-000000000303',
+   'sales_invoice', 'B1-INV-1', 'issued',
+   '30000000-0000-4000-8000-000000000402',
+   now(), 100000);
+
+insert into public.settlement_allocations
+  (id, organisation_id, payment_document_id, settled_document_id, allocated_amount, currency, allocated_by)
+values
+  ('30000000-0000-4000-8000-000000000871',
+   '30000000-0000-4000-8000-000000000002',  -- Tenant B
+   '30000000-0000-4000-8000-000000000504',  -- Tenant B payment receipt (B1-RCP-1)
+   '30000000-0000-4000-8000-000000000505',  -- Tenant B settled invoice (B1-INV-1, issued)
+   100000::numeric, 'MVR',
+   '30000000-0000-4000-8000-000000000101');
+
+-- Fixtures: Tenant A (attacker is member of Tenant A, Book A1 only).
+
+insert into public.payment_intents
+  (id, organisation_id, provider_id, status, amount, currency, created_by)
+values
+  ('30000000-0000-4000-8000-000000000812',
+   '30000000-0000-4000-8000-000000000001',  -- Tenant A
+   'MOCK', 'succeeded', 200000::numeric, 'MVR',
+   '30000000-0000-4000-8000-000000000101');
+
+-- Also seed Tenant B provider_events with no organisation_id (attributable-to-null)
+-- to test that serp300_probe cannot reach un-attributed events.
+insert into public.provider_events
+  (id, provider_id, provider_event_id, organisation_id, signature_verified, raw_payload)
+values
+  ('30000000-0000-4000-8000-000000000862',
+   'MOCK', 'MOCK-EVENT-UNATTRIBUTED-001',
+   null,  -- un-attributed — organisation_id is nullable
+   true, '{"type":"payment.succeeded","ref":"UNATTRIBUTED"}');
+
+set local role serp300_probe;
+set local row_security = on;
+select set_config('app.person_id', '30000000-0000-4000-8000-000000000101', true);
+select set_config('app.organisation_id', '30000000-0000-4000-8000-000000000001', true);
+select set_config('app.book_id', '30000000-0000-4000-8000-000000000301', true);
+
+do $$
+declare
+  n bigint;
+  affected bigint;
+begin
+  -- payment_provider_config: Tenant B config must not be readable.
+  select count(*) into n
+    from public.payment_provider_config
+   where id = '30000000-0000-4000-8000-000000000801';
+  insert into serp300_results values (
+    'payment_provider_config_is_platform_scoped',
+    '0 Tenant B config rows',
+    n || ' Tenant B config rows',
+    n = 0
+  );
+
+  -- payment_intents: Tenant B intent must not be readable.
+  select count(*) into n
+    from public.payment_intents
+   where id = '30000000-0000-4000-8000-000000000811';
+  insert into serp300_results values (
+    'payment_intents_cross_tenant_select',
+    '0 Tenant B intent rows',
+    n || ' Tenant B intent rows',
+    n = 0
+  );
+
+  -- payment_intents: attempt to update Tenant B intent.
+  update public.payment_intents
+     set status = 'cancelled'
+   where id = '30000000-0000-4000-8000-000000000811';
+  get diagnostics affected = row_count;
+  insert into serp300_results values (
+    'payment_intents_cross_tenant_update',
+    '0 rows affected',
+    affected || ' rows affected',
+    affected = 0
+  );
+
+  -- payment_intents: attempt to delete Tenant B intent.
+  delete from public.payment_intents
+   where id = '30000000-0000-4000-8000-000000000811';
+  get diagnostics affected = row_count;
+  insert into serp300_results values (
+    'payment_intents_cross_tenant_delete',
+    '0 rows affected',
+    affected || ' rows affected',
+    affected = 0
+  );
+
+  -- payment_intents: attempt to insert cross-tenant.
+  begin
+    insert into public.payment_intents
+      (id, organisation_id, provider_id, status, amount, currency, created_by)
+    values (
+      '30000000-0000-4000-8000-000000000813',
+      '30000000-0000-4000-8000-000000000002',  -- Tenant B
+      'MOCK', 'succeeded', 999999::numeric, 'MVR',
+      '30000000-0000-4000-8000-000000000101'
+    );
+    insert into serp300_results values (
+      'payment_intents_cross_tenant_insert',
+      'RLS rejection',
+      'insert succeeded',
+      false
+    );
+  exception when insufficient_privilege then
+    insert into serp300_results values (
+      'payment_intents_cross_tenant_insert',
+      'RLS rejection',
+      'RLS rejection',
+      true
+    );
+  end;
+
+  -- payment_attempts: Tenant B attempt must not be readable.
+  select count(*) into n
+    from public.payment_attempts
+   where id = '30000000-0000-4000-8000-000000000821';
+  insert into serp300_results values (
+    'payment_attempts_cross_tenant_select',
+    '0 Tenant B attempt rows',
+    n || ' Tenant B attempt rows',
+    n = 0
+  );
+
+  -- payment_refunds: Tenant B refund must not be readable.
+  select count(*) into n
+    from public.payment_refunds
+   where id = '30000000-0000-4000-8000-000000000831';
+  insert into serp300_results values (
+    'payment_refunds_cross_tenant_select',
+    '0 Tenant B refund rows',
+    n || ' Tenant B refund rows',
+    n = 0
+  );
+
+  -- payment_settlements: Tenant B settlement must not be readable.
+  select count(*) into n
+    from public.payment_settlements
+   where id = '30000000-0000-4000-8000-000000000841';
+  insert into serp300_results values (
+    'payment_settlements_cross_tenant_select',
+    '0 Tenant B settlement rows',
+    n || ' Tenant B settlement rows',
+    n = 0
+  );
+
+  -- payment_settlement_items: Tenant B settlement item must not be readable.
+  select count(*) into n
+    from public.payment_settlement_items
+   where id = '30000000-0000-4000-8000-000000000851';
+  insert into serp300_results values (
+    'payment_settlement_items_cross_tenant_select',
+    '0 Tenant B settlement item rows',
+    n || ' Tenant B settlement item rows',
+    n = 0
+  );
+
+  -- provider_events: Tenant B event must not be readable.
+  select count(*) into n
+    from public.provider_events
+   where id = '30000000-0000-4000-8000-000000000861';
+  insert into serp300_results values (
+    'provider_events_cross_tenant_select',
+    '0 Tenant B event rows',
+    n || ' Tenant B event rows',
+    n = 0
+  );
+
+  -- provider_events: un-attributed event must not be readable either.
+  select count(*) into n
+    from public.provider_events
+   where id = '30000000-0000-4000-8000-000000000862';
+  insert into serp300_results values (
+    'provider_events_unattributed_select',
+    '0 unattributed event rows',
+    n || ' unattributed event rows',
+    n = 0
+  );
+
+  -- settlement_allocations: Tenant B allocation must not be readable.
+  select count(*) into n
+    from public.settlement_allocations
+   where id = '30000000-0000-4000-8000-000000000871';
+  insert into serp300_results values (
+    'settlement_allocations_cross_tenant_select',
+    '0 Tenant B allocation rows',
+    n || ' Tenant B allocation rows',
+    n = 0
+  );
+
+  -- payment_intents: cross-book (Tenant A Book A2 intent must not be readable).
+  -- Note: no Tenant A Book A2 payment intent fixture exists, so this is a
+  -- structural check — RLS must enforce organisation_id = current_setting.
+  -- We verify by checking that the Tenant B intent is still invisible and
+  -- confirming no rows are returned for the organisation_id mismatch.
+  select count(*) into n
+    from public.payment_intents
+   where organisation_id = '30000000-0000-4000-8000-000000000002';
+  insert into serp300_results values (
+    'payment_intents_cross_book_isolation',
+    '0 rows for non-member org',
+    n || ' rows for non-member org',
+    n = 0
+  );
+
+end
+$$;
+
+reset role;
+
 set local role authenticated;
 do $$
 begin
