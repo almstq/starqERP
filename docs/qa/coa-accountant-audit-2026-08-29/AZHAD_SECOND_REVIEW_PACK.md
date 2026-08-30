@@ -6,6 +6,36 @@
 
 ---
 
+## 0. The question the founder wants answered before any of the rest
+
+This one is not about the software. It is a records question, and only you can answer it.
+
+> **Were either of these identifiers ever used on a real invoice, a GST return, a TGST return, or
+> any other filing sent to MIRA or to a customer?**
+>
+> - `1099882GST501`
+> - `1002345GST501`
+>
+> **If yes: which document, and on what date?**
+
+Both were fabricated TINs that appeared on statutory surfaces in the product — the GST-201 view, the
+tourism GST view, the dashboard, and the tourism GST engine itself, which invented one even when the
+caller passed an empty string. They have now been removed and a test prevents their return.
+
+**But removing them from the code fixes nothing that has already left the building.** If either
+number reached a real filing, that is a correction to MIRA and a records matter, not a code fix, and
+it needs handling on a different timetable to everything else in this pack.
+
+We have deliberately NOT tried to infer the answer from the repository. The repository can only show
+what the software would have printed; it cannot show what was actually sent, signed, or filed. That
+is your side of the line.
+
+Worth stating plainly: **Starq Technologies is not GST-registered** — migration `202608250017`
+records `gst_general` as `not_registered` — so any GST identifier the product displayed was fiction
+by construction, whatever it looked like.
+
+---
+
 ## Why you are seeing this again
 
 On 29 August you inspected the live Chart of Accounts and raised four things. All four were real.
