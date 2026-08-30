@@ -40,6 +40,7 @@ import {
   OrganisationApplication,
 } from '../data/mockData';
 import { telemetry } from '../services/telemetry';
+import { applyMovement } from '../domain/inventoryValuation';
 import { dispatchCommand, apiGet } from '../services/apiGateway';
 import { useAuth } from './AuthContext';
 import { getArchetype, ArchetypeDefinition, ArchetypeTerminology, ArchetypeId, ARCHETYPES } from '../domain/archetypes';
@@ -2131,11 +2132,27 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setInventory((prev) =>
       prev.map((i) => {
         if (i.id === itemId) {
-          const newQty = i.quantityOnHand + quantity;
+          /**
+           * SERP-309 — WEIGHTED AVERAGE, not "the latest price wins".
+           *
+           * This line used to read `unitCost: cost !== undefined ? cost : i.unitCost`,
+           * so receiving stock REPLACED the unit cost of everything on hand
+           * with the price of the newest delivery. Hold 100 filters bought at
+           * MVR 10, take in 10 more at MVR 50 because the cheap supplier was
+           * out, and all 110 were carried at 50: the inventory asset jumped by
+           * MVR 4,000 on a purchase that cost 500, and the same error ran into
+           * cost of sales the moment any of it was issued. Every individual
+           * number was correct, which is why nothing ever reported it.
+           */
+          const priced = applyMovement(
+            { quantityOnHand: i.quantityOnHand, averageCost: i.unitCost, value: i.quantityOnHand * i.unitCost },
+            { quantity, kind: 'receipt', unitCost: cost !== undefined ? cost : i.unitCost },
+          ).state;
+          const newQty = priced.quantityOnHand;
           return {
             ...i,
             quantityOnHand: newQty,
-            unitCost: cost !== undefined ? cost : i.unitCost,
+            unitCost: priced.averageCost,
             stockStatus: newQty > i.reorderLevel ? 'In Stock' : 'Low Stock',
             lastRestockedDate: new Date().toISOString().split('T')[0]
           };
