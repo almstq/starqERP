@@ -1248,21 +1248,17 @@ export const INITIAL_AI_INSIGHTS: AIAssistantInsight[] = [
   }
 ];
 
-export const MONTHLY_SALES_CHART_DATA = [
-  { month: 'Mar', revenue: 142000, expenses: 78000, profit: 64000 },
-  { month: 'Apr', revenue: 168000, expenses: 84000, profit: 84000 },
-  { month: 'May', revenue: 155000, expenses: 81000, profit: 74000 },
-  { month: 'Jun', revenue: 198000, expenses: 96000, profit: 102000 },
-  { month: 'Jul', revenue: 215000, expenses: 102000, profit: 113000 },
-  { month: 'Aug (MTD)', revenue: 173700, expenses: 88400, profit: 85300 }
-];
-
-export const SERVICE_BREAKDOWN_DATA = [
-  { name: 'Full Body Repaint', value: 42, color: '#3b82f6' },
-  { name: 'Vinyl Wraps & Liveries', value: 28, color: '#8b5cf6' },
-  { name: 'Ceramic & Detailing', value: 16, color: '#10b981' },
-  { name: 'Panel & Scratch Repair', value: 14, color: '#f59e0b' }
-];
+// MONTHLY_SALES_CHART_DATA and SERVICE_BREAKDOWN_DATA were REMOVED by SERP-288.
+//
+// They were six months of invented trading (MVR 1,051,700) and a car-workshop
+// service mix, and the dashboard switched to them as soon as a tenant entered
+// ONE invoice — so somebody else's numbers appeared under the heading
+// "Financial Performance (MVR)", gated on the tenant's own activity so that
+// they looked earned. Both series are now derived from the tenant's records in
+// src/domain/dashboardSeries.ts, and are empty when the tenant is empty.
+//
+// Do not reintroduce them. src/test/serp_288_no_synthetic_dashboard_series.test.ts
+// fails if a hard-coded revenue series comes back.
 
 // ----------------------------------------------------
 // MULTI-TENANT ORGANISATIONS (Maldives SMEs)
