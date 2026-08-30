@@ -21,14 +21,14 @@ here rather than acting on it.
 
 | | |
 |---|---|
-| Tasks | **362** |
-| Done | **143** (**39.50%**) |
+| Tasks | **363** |
+| Done | **143** (**39.39%**) |
 | In progress | 28 — **26 of them `review_pending`** |
 | Blocked | 9 |
 | Epics | 23 |
 
-**Read the completion number correctly.** It moved 41.81% → 39.50% today
-*because 20 tasks were added, not because anything regressed.* Done did not
+**Read the completion number correctly.** It moved 41.81% → 39.39% today
+*because 21 tasks were added, not because anything regressed.* Done did not
 change. Board completion is **not** a measure of usable product: see §6.
 
 ---
@@ -112,8 +112,9 @@ Ordered. The first two are not Elder's to do.
    is to move at all.
 4. **`SERP-379`** — settle the SERP-300 contradiction. Tenant isolation is
    release-blocking and is currently *claimed* rather than *proven*.
-5. **`SERP-366`** — the MFA stub, see §6. P0, unblocked, small, and it gets
-   more dangerous as identity work starts.
+5. **`SERP-381`** — make the MFA stub fail closed, see §6b. P0, **no
+   dependencies at all**, small, and it gets more dangerous as identity
+   work starts. Real TOTP is `SERP-366` and needs the account layer.
 6. **Then** Starq Account Phase A (`SERP-361`), which cannot start before
    `SERP-037` is accepted, the three PRs merge, and `SERP-369` is ruled.
 
@@ -132,7 +133,7 @@ executed, and the run hit a leftover `serp300_probe` role. Under the standing
 rule **an inconclusive result is a failing result.** Elder did not re-status
 it: governance rule 6 forbids overwriting another worker's task.
 
-**b · The MFA validator accepts almost anything.**
+**b · The MFA validator accepts almost anything.** *(`SERP-381` now, `SERP-366` later.)*
 `contracts/commands.ts:1953` `validateMfaChallenge` returns `valid: true` for
 **any 6-digit code** except three hard-coded test values. No secret, no
 time-step check, no MFA table in any of the 36 migrations. It is called
@@ -140,7 +141,8 @@ time-step check, no MFA table in any of the 36 migrations. It is called
 `starq-api/index.ts:524` hard-codes `mfa_verified: false`. So
 `operator_principals.mfa_required` (default true) is a flag with no mechanism.
 **Not a live vulnerability — a landmine.** It looks finished and has green
-tests. Recorded as `SERP-366`.
+tests. Recorded as `SERP-381` (fail closed, startable now) and
+`SERP-366` (real TOTP, needs the account layer).
 
 **c · Nine components are implemented and unreachable.** See `SERP-234` and
 the register in `tests/component_reachability.test.mjs`. Eight of them have
@@ -210,9 +212,10 @@ Task decomposition for ADR 010, with the letter-to-id mapping:
 
 These need no Elder context and no Founder ruling:
 
-- **`SERP-366`** — make the MFA stub fail closed, then real TOTP. Red-first
-  test required: the current stub must be *shown* to accept a wrong code
-  before the fix.
+- **`SERP-381`** — make the MFA stub fail closed. **No dependencies, no
+  schema, no Founder ruling.** Red-first test required: the current stub
+  must be *shown* to accept a wrong code before the fix. Real TOTP is
+  `SERP-366` and waits for the account layer.
 - **`SERP-337`** — RLS revalidation (codex).
 - **`SERP-298`** — platform console (codex).
 - **`SERP-014`** — Stage 10 manufacturing (antigravity).
