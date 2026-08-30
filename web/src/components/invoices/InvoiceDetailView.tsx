@@ -7,14 +7,25 @@ import {
   Printer,
   CheckCircle2,
   AlertTriangle,
+  Globe,
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { Surface, Button, Badge } from '../ui';
+import { BilingualInvoicePrintView } from './BilingualInvoicePrintView';
+import { toInvoicePrintData } from '../../lib/invoicePrint';
 
 export const InvoiceDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { invoices, jobs, payments, formatMVR, setIsRecordPaymentOpen } = useERP();
+  const { invoices, jobs, payments, formatMVR, setIsRecordPaymentOpen, currentTenant } = useERP();
+
+  /**
+   * SERP-234 — the Dhivehi/English tax invoice was built and tested but no
+   * route or component imported it, so no user could reach it. This toggle is
+   * that missing door. It is read-only: it changes which body is rendered and
+   * printed, and writes nothing.
+   */
+  const [showBilingual, setShowBilingual] = React.useState(false);
 
   const invoice = invoices.find(
     (inv) => inv.id === id || inv.invoiceNumber.toLowerCase() === id?.toLowerCase(),
@@ -100,6 +111,17 @@ export const InvoiceDetailView: React.FC = () => {
             </Button>
           )}
           <Button
+            variant={showBilingual ? 'filled' : 'outlined'}
+            size="sm"
+            onClick={() => setShowBilingual((on) => !on)}
+            icon={<Globe size={16} />}
+            aria-label="Toggle Dhivehi and English invoice"
+            aria-pressed={showBilingual}
+            data-testid="toggle-bilingual-invoice"
+          >
+            <span>{showBilingual ? 'Standard Invoice' : 'Dhivehi / English'}</span>
+          </Button>
+          <Button
             variant="outlined"
             size="sm"
             onClick={() => window.print()}
@@ -111,8 +133,15 @@ export const InvoiceDetailView: React.FC = () => {
         </div>
       </div>
 
+      {showBilingual && (
+        <BilingualInvoicePrintView invoice={toInvoicePrintData(invoice, currentTenant)} />
+      )}
+
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div
+        className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"
+        hidden={showBilingual}
+      >
         {/* Left Column (8 cols): Line items, Customer details, Billing terms */}
         <div className="lg:col-span-8 space-y-6">
           {/* Customer & Job Links */}
