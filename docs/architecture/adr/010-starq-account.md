@@ -180,7 +180,7 @@ while doing that.
 |---|---|
 | Linking | Requires an authenticated session on the target account **and** proof on the incoming identity. Email match never suffices. |
 | Unlinking | Refused if it would leave zero usable methods. Audited. |
-| Recovery | Must not require any single external provider. Needs a Founder ruling on the fallback channel — see Blockers. |
+| Recovery | **RULED — `SERP-369`, Founder, 30 Aug 2026.** Primary: **verified Starq recovery email** (Starq-verified, never provider-asserted). Secondary: **Starq-generated recovery codes**, independent of the email channel. **No login provider — Google, Apple, Microsoft — may ever be the recovery authority**; a provider may authenticate, it may never authorise a recovery. Passkeys and verified phone must be addable later **without changing the Starq Account identity**. Phone is **not** mandatory for initial launch. Sensitive recovery and account-takeover actions require additional verification, auditability, cooldown/protection controls, and **manual support escalation** where assurance is insufficient. |
 | Sessions | Server-side records; revocable individually and in bulk. The signed cookie becomes a *reference* to a session, not the session itself. |
 | Assurance | Each session carries an assurance level derived from the method used. Sensitive commands may demand a minimum. |
 | Step-up | Re-authentication raises assurance on the existing session; it does not mint a new identity. |
@@ -206,11 +206,23 @@ This is the state that makes "sign up" safe to open later.
 
 ## Blockers and unknowns
 
-1. **Recovery channel is a Founder decision.** Email-only recovery re-creates
-   the single-provider dependency this ADR exists to remove. Alternatives
-   (recovery codes, a second linked provider, an operator-assisted flow with
-   audit) have materially different support and abuse profiles. **No
-   implementation should start until this is ruled.**
+1. ~~Recovery channel is a Founder decision.~~ **RULED 30 Aug 2026 —
+   `SERP-369`. No longer a blocker.**
+   - **Primary:** verified **Starq** recovery email — Starq-verified,
+     never provider-asserted.
+   - **Secondary:** **Starq-generated recovery codes**, independent of
+     the email channel.
+   - **Forbidden:** Google, Apple, Microsoft or any login provider as the
+     **recovery authority**. A provider may authenticate; it may never
+     authorise a recovery.
+   - **Must stay possible:** passkeys and verified phone added later
+     **without changing the Starq Account identity**.
+   - **Controls:** sensitive recovery and account-takeover actions require
+     additional verification, auditability, cooldown/protection controls,
+     and **manual support escalation** where assurance is insufficient.
+   - **Not required at launch:** phone.
+
+   `SERP-370` carries this verbatim as its acceptance criteria.
 2. **The allowlist must retire.** Its removal is a prerequisite for Phase D,
    and it overlaps SERP-287, which is already open.
 3. **eFaas / national identity is unassessed.** Not a dependency; must not be

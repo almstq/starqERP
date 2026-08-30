@@ -50,7 +50,7 @@ The letters above are this document's shorthand. The canonical rows are:
 | — | **`SERP-366`** | **Real TOTP — replaces the accept-all stub** |
 | S2 | `SERP-367` | Passkeys |
 | C2 | `SERP-368` | Link and unlink |
-| — | **`SERP-369`** | **Founder ruling — recovery channel (BLOCKED)** |
+| — | **`SERP-369`** | **Recovery channel — RULED 30 Aug 2026** |
 | — | `SERP-370` | Recovery flows |
 | O1/C1 | `SERP-371` | Onboarding, profile, consent |
 | — | `SERP-372` | Invitations re-pointed at accounts |
@@ -64,8 +64,12 @@ The letters above are this document's shorthand. The canonical rows are:
 `SERP-366` and `SERP-369` have no letter above because neither was in
 the first draft. `SERP-366` was found while researching the ADR and is
 described in full in the commit that added it; `SERP-369` was promoted
-from a footnote to a blocking row because it is a Founder ruling, not a
-task anyone can work.
+from a footnote to its own row because it is a Founder ruling, not a
+task anyone can work. **It was ruled the same day** — see above.
+
+`SERP-381` is also absent from the letters: it is the immediate,
+dependency-free half of `SERP-366`, split out after the cold-start
+test showed `SERP-366` was not reachable as startable work.
 
 ---
 
@@ -204,9 +208,12 @@ organisation relationship.
 
 ## Blocked, and named as such
 
-- **Recovery channel — Founder ruling required.** Email-only recovery
-  re-creates the single-provider dependency the whole ADR exists to
-  remove. Nothing in Phase C or later should start before this is ruled.
+- ~~Recovery channel — Founder ruling required.~~ **RULED 30 Aug 2026.**
+  Verified Starq recovery email primary; Starq-generated recovery codes
+  secondary and independent; **no login provider is ever the recovery
+  authority**; passkeys and verified phone addable later without
+  changing the account identity; phone not required at launch. See
+  `SERP-369`, `SERP-370` and ADR 010. **No longer a blocker.**
 - **SERP-037** (backup and scratch-restore) must be proven before A1.
 - **eFaas / national identity** — unassessed. Not a dependency. Must not
   be precluded by any decision above.
