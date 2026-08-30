@@ -802,7 +802,7 @@ export const DashboardView: React.FC = () => {
                 }`}
               >
                 {currentTenant?.gstStatus === 'registered'
-                  ? `8% GST (${currentTenant.tinNumber || 'Registered'})`
+                  ? (currentTenant.tinNumber ? `8% GST (${currentTenant.tinNumber})` : '8% GST — TIN not recorded')
                   : 'Non-GST Registered'}
               </span>
             </div>

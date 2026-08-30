@@ -9,7 +9,7 @@ export interface MiraGstBoxDetails {
 
 export interface MiraGst201Return {
   returnId: string;
-  tin: string; // Taxpayer Identification Number, e.g. "1002345GST501"
+  tin: string; // Taxpayer Identification Number. Empty when not recorded — never invented.
   legalName: string; // e.g. "Club Ignition Pvt Ltd"
   taxPeriod: string; // YYYY-MM, e.g. "2026-08"
   periodStartDate: string;

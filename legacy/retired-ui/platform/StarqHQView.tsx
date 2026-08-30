@@ -407,7 +407,7 @@ export const StarqHQView: React.FC = () => {
                         </td>
                         <td className="py-3 px-3">
                           <Badge variant={t.gstStatus === 'registered' ? 'accent' : 'neutral'} size="sm">
-                            {t.gstStatus === 'registered' ? `8% GST (${t.tinNumber || 'Registered'})` : '0% GST (Non-Reg)'}
+                            {t.gstStatus === 'registered' ? (t.tinNumber ? `8% GST (${t.tinNumber})` : '8% GST — TIN not recorded') : '0% GST (Non-Reg)'}
                           </Badge>
                         </td>
                         <td className="py-3 px-4 text-right">

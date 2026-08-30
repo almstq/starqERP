@@ -161,7 +161,7 @@ export const BilingualInvoicePrintView: React.FC<{
               H. Starq Tower, Boduthakurufaanu Magu, Male 20026, Maldives
             </div>
             <div className="text-[11px] font-mono font-bold text-slate-800">
-              TIN / ޓީ.އައި.އެން: {currentTenant.tinNumber || '1002345GST501'}
+              TIN / ޓީ.އައި.އެން: {currentTenant.tinNumber || '—'}
             </div>
           </div>
 
