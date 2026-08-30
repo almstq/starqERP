@@ -24,25 +24,19 @@ import {
   PermissionAction,
   PaymentMethod
 } from '../types/erp';
+// SERP-288 — FOURTEEN demo datasets used to be imported here and NONE of them
+// was referenced. Every transactional state below already initialises to [], so
+// they were dead — but dead in the worst possible place: in scope, in the live
+// context, one keystroke from being wired back in by anyone who saw
+// INITIAL_INVOICES available and reasonably assumed it was meant to be used.
+// A tenant surface should not have another business's invoices within reach.
+// Removed, not merely left unused. They remain exported from mockData for the
+// tests and demo fixtures that legitimately want them.
 import {
-  INITIAL_CUSTOMERS,
-  INITIAL_JOBS,
-  INITIAL_INVOICES,
-  INITIAL_PAYMENTS,
-  INITIAL_EXPENSES,
-  INITIAL_INVENTORY,
-  INITIAL_STOCK_MOVEMENTS,
-  INITIAL_SUPPLIERS,
-  INITIAL_PURCHASE_ORDERS,
-  INITIAL_ALERTS,
-  INITIAL_AI_INSIGHTS,
   INITIAL_STAFF,
   INITIAL_TENANTS,
   INITIAL_ROLES,
   INITIAL_USERS,
-  INITIAL_WORKFLOW_STAGES,
-  CLINIC_WORKFLOW_PRESET,
-  BOATYARD_WORKFLOW_PRESET,
   OrganisationApplication,
 } from '../data/mockData';
 import { telemetry } from '../services/telemetry';
@@ -782,13 +776,25 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return;
     }
     const list: AIAssistantInsight[] = [];
-    if (invoices.some((i) => i.status === 'Overdue')) {
+    const overdue = invoices.filter((i) => i.status === 'Overdue');
+    const overdueCount = overdue.length;
+    const overdueValue = overdue.reduce(
+      (sum, i) => sum + (i.totalAmount - (i.amountPaid || 0)), 0,
+    );
+    if (overdueCount > 0) {
       list.push({
         id: 'ai-rec-overdue',
         category: 'Cash Flow',
         title: 'Overdue Receivables Acceleration',
         impact: 'High Impact',
-        description: 'Sending automated WhatsApp statement reminders to overdue fleet accounts accelerates settlement turnaround by up to 40%.',
+        // SERP-288 — this read "accelerates settlement turnaround by up to 40%".
+        // There is no such measurement anywhere in this system; the figure was
+        // invented, and it was shown under the label "High Impact" to any tenant
+        // with one overdue invoice. An AI recommendation carrying a fabricated
+        // statistic is the SERP-237 defect again: a plausible number a reader
+        // takes as a finding. It now states the action and the amount the system
+        // ACTUALLY KNOWS, and claims no effect it cannot measure.
+        description: `${overdueCount} invoice${overdueCount === 1 ? '' : 's'} totalling MVR ${overdueValue.toLocaleString()} ${overdueCount === 1 ? 'is' : 'are'} past due. Sending a statement of account is the usual next step.`,
         recommendedAction: 'Send Statement of Account',
         actionButtonLabel: 'Send Statements',
       });
