@@ -1,18 +1,27 @@
 # Starq Account — proposed SERP tasks
 
-**Author:** Elder · **Date:** 30 Aug 2026 · **Status:** PROPOSAL — not applied to the board
+**Author:** Elder · **Date:** 30 Aug 2026 · **Status:** APPLIED to the SSOT
 
 Authority: [`ADR 010 — Starq Account`](adr/010-starq-account.md).
 
-> **Why this is a file and not board rows.** The Nexus board is SSOT and
-> Vision currently holds the repo-vs-board verification. Writing eleven
-> tasks into `starq-erp-tasks.json` mid-audit would put new rows under
-> someone else's reconciliation. These are ready to apply verbatim once
-> the Founder accepts ADR 010 and Vision's sweep is closed.
+> **Applied 30 Aug 2026 on Founder direction.** This file was first
+> written as a proposal held *off* the board, because Vision holds the
+> open repo-vs-board reconciliation. The Founder directed that the whole
+> requirement be represented on the canonical Kanban rather than held in
+> a document, so it was applied: **epic `SERP-E12` and tasks
+> `SERP-361`–`SERP-378`** are now in
+> `starqNexus/data/starq-erp-tasks.json`.
 >
-> The board stands at **143 / 342 = 41.81%**. Adding eleven tasks moves it
-> to **143 / 353 = 40.51%** before any work is done. That drop is correct
-> and should not be avoided by hiding the work.
+> The edit was verified purely additive: **0 pre-existing tasks
+> modified, 0 removed, no other top-level key changed**, `done`
+> unchanged at 143.
+>
+> The board moved **342 → 360 tasks**, so completion reads
+> **41.81% → 39.72%**. That drop is real. It is the cost of
+> representing work honestly and must not be avoided by keeping the
+> requirement off the board.
+>
+> Task text below is the authored source; the board rows are canonical.
 
 ## Sequencing
 
@@ -26,6 +35,37 @@ Authority: [`ADR 010 — Starq Account`](adr/010-starq-account.md).
 Nothing starts before the two hard gates. **A1 does not begin while PRs
 #25–#27 are unmerged** — it adds migrations, and merge order is already
 load-bearing.
+
+### Board ids
+
+The letters above are this document's shorthand. The canonical rows are:
+
+| here | board | |
+|---|---|---|
+| A1 | `SERP-361` | Account schema |
+| A2 | `SERP-362` | Backfill + reconciliation |
+| B1 | `SERP-363` | Resolve identity through the account |
+| B2 | `SERP-364` | Server-side sessions |
+| S1 | `SERP-365` | Assurance and step-up |
+| — | **`SERP-366`** | **Real TOTP — replaces the accept-all stub** |
+| S2 | `SERP-367` | Passkeys |
+| C2 | `SERP-368` | Link and unlink |
+| — | **`SERP-369`** | **Founder ruling — recovery channel (BLOCKED)** |
+| — | `SERP-370` | Recovery flows |
+| O1/C1 | `SERP-371` | Onboarding, profile, consent |
+| — | `SERP-372` | Invitations re-pointed at accounts |
+| D1 | `SERP-373` | Retire the allowlist |
+| — | `SERP-374` | Migrate pilot users, rehearsed |
+| D2 | `SERP-375` | Enforce `account_id` |
+| — | `SERP-376` | Identity audit |
+| — | `SERP-377` | Adversarial identity suite |
+| — | `SERP-378` | Android parity |
+
+`SERP-366` and `SERP-369` have no letter above because neither was in
+the first draft. `SERP-366` was found while researching the ADR and is
+described in full in the commit that added it; `SERP-369` was promoted
+from a footnote to a blocking row because it is a Founder ruling, not a
+task anyone can work.
 
 ---
 
