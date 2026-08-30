@@ -38,6 +38,14 @@ export interface ConsolidatedFinancialReport {
   // Inter-Company Elimination Adjustments
   eliminatedInterBranchRevenue: number;
   eliminatedInterBranchCharges: number;
+  /**
+   * Inter-branch revenue less inter-branch charges. MUST BE ZERO — the same
+   * transfer seen from both ends. Anything else means a transfer was recorded
+   * in one branch and not the other, and this is how much. Surfaced rather than
+   * absorbed; see the note in generateConsolidatedReport.
+   */
+  interBranchImbalance: number;
+  interBranchReconciled: boolean;
 
   // Final Consolidated Figures
   consolidatedRevenue: number;
@@ -110,8 +118,23 @@ export function generateConsolidatedReport(params: {
     aggNetInc += b.netIncome;
   }
 
-  // Inter-branch eliminations: Inter-branch revenues and charges cancel out exactly
+  /**
+   * SERP-316 — the imbalance is REPORTED, not absorbed.
+   *
+   * This read `Math.min(aggIntRev, aggIntExp)` under a comment asserting that
+   * the two "cancel out exactly". They must, because every inter-branch charge
+   * is one branch's revenue and another's cost — the same transfer seen from
+   * both ends. WHEN THEY DO NOT, SOMETHING IS RECORDED ON ONE SIDE ONLY, and
+   * that discrepancy is the single most valuable thing a consolidation
+   * produces. Taking the smaller of the two made the number agree by discarding
+   * the difference: the failure the report exists to detect was the failure it
+   * silently absorbed, and the statement balanced perfectly while being untrue.
+   *
+   * The elimination is still the matched portion — that part is honest — but
+   * the residue now travels with the report so a reader cannot fail to see it.
+   */
   const eliminationAmount = round2(Math.min(aggIntRev, aggIntExp));
+  const interBranchImbalance = round2(aggIntRev - aggIntExp);
 
   const consolidatedRevenue = round2(aggExtRev);
   const consolidatedCogs = round2(aggCogs);
@@ -136,6 +159,8 @@ export function generateConsolidatedReport(params: {
     aggregatedNetIncome: round2(aggNetInc),
     eliminatedInterBranchRevenue: eliminationAmount,
     eliminatedInterBranchCharges: eliminationAmount,
+    interBranchImbalance,
+    interBranchReconciled: interBranchImbalance === 0,
     consolidatedRevenue,
     consolidatedCogs,
     consolidatedGrossProfit,
