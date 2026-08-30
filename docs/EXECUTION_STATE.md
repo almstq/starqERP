@@ -22,12 +22,12 @@ here rather than acting on it.
 | | |
 |---|---|
 | Tasks | **363** |
-| Done | **143** (**39.39%**) |
+| Done | **144** (**39.67%**) |
 | In progress | 28 — **26 of them `review_pending`** |
-| Blocked | 9 |
+| Blocked | 8 |
 | Epics | 23 |
 
-**Read the completion number correctly.** It moved 41.81% → 39.39% today
+**Read the completion number correctly.** It moved 41.81% → 39.67% today
 *because 21 tasks were added, not because anything regressed.* Done did not
 change. Board completion is **not** a measure of usable product: see §6.
 
@@ -37,7 +37,7 @@ change. Board completion is **not** a measure of usable product: see §6.
 
 **This project is review-starved, not work-starved.**
 
-26 tasks sit `review_pending`. Five more are blocked on a **Founder ruling**.
+26 tasks sit `review_pending`. Four more are blocked on a **Founder ruling**.
 Three PRs have been green and unmerged since this morning. Adding
 implementation widens the queue; it does not move the product.
 
@@ -72,7 +72,7 @@ with zero UI-only and zero DB-only codes.
 
 ## 4 · Blocked, and who can unblock it
 
-**Only the Founder can move these five:**
+**Only the Founder can move these four:**
 
 | Task | Ruling needed |
 |---|---|
@@ -80,7 +80,6 @@ with zero UI-only and zero DB-only codes.
 | `SERP-238` | Re-scope: removing foundation-engine client traces |
 | `SERP-338` | Google OAuth clients are in two different projects — needs the Google Cloud console |
 | `SERP-351` | Merchant identity / provider registry. **The schema currently expresses the model that needs an MMA licence, so proceeding is choosing it** |
-| `SERP-369` | **Account recovery channel.** New today. Nothing downstream of it starts until ruled |
 
 Analysis for each is already delivered under `workspaces/elder/`. **Do not
 infer the Founder's answer on any of them.**
@@ -108,26 +107,28 @@ Ordered. The first two are not Elder's to do.
    pass reaches ~49% *with no new engineering* — but only the ones that pass.
    Do not batch-close: three tasks were found marked `done` on 29 Aug with no
    work in the product.
-3. **Rule on the five Founder items** above, `SERP-369` first if Starq Account
-   is to move at all.
+3. **Rule on the four Founder items** above.
 4. **`SERP-379`** — settle the SERP-300 contradiction. Tenant isolation is
    release-blocking and is currently *claimed* rather than *proven*.
 5. **`SERP-381`** — make the MFA stub fail closed, see §6b. P0, **no
    dependencies at all**, small, and it gets more dangerous as identity
    work starts. Real TOTP is `SERP-366` and needs the account layer.
 6. **Then** Starq Account Phase A (`SERP-361`), which cannot start before
-   `SERP-037` is accepted, the three PRs merge, and `SERP-369` is ruled.
+   `SERP-037` is accepted and the three PRs merge. **`SERP-369` is ruled**
+   — recovery is settled, see §11.
 
 **Starq Account is mandatory but it is not next.** It is correctly positioned
-and triple-gated. Treating "mandatory" as "immediate" would start a schema
+and still gated on `SERP-037` and the merges. Treating "mandatory" as "immediate" would start a schema
 migration while three migration-bearing PRs are unmerged.
 
 ---
 
 ## 6 · Evidence gaps and contradictions — read before trusting the board
 
-**a · `SERP-300` says done; the re-run was inconclusive.** Recorded as
-`SERP-379`. Vision re-ran the adversarial isolation probe on 30 Aug and
+**a · RELEASE-BLOCKING RED GATE — `SERP-300` says done; isolation is
+NOT proven.** Recorded as `SERP-379`, and as the **first entry in the
+board's `standing_rules`** so it cannot be missed. **Do not read
+`SERP-300` = done as proof that tenant isolation passed.** Vision re-ran the adversarial isolation probe on 30 Aug and
 reported *"COULD NOT FULLY ASSERT PASS"* — the 16/16 matrix was not fully
 executed, and the run hit a leftover `serp300_probe` role. Under the standing
 rule **an inconclusive result is a failing result.** Elder did not re-status
@@ -241,3 +242,27 @@ and anything that would re-status another worker's task.
   reproduces the identical defect backwards. Tourism GST must resolve by time
   of supply from `tax_rate_schedules`; migration `0017` is authoritative.
 - **An inconclusive result is a failing result.**
+
+
+---
+
+## 11 · Founder rulings recorded
+
+**`SERP-369` — account recovery. RULED 30 Aug 2026.** No longer open.
+
+- **Primary channel:** verified **Starq** recovery email — Starq-verified,
+  never provider-asserted.
+- **Secondary:** **Starq-generated recovery codes**, independent of the
+  email channel.
+- **Forbidden:** Google, Apple, Microsoft or any login provider as the
+  **recovery authority**. A provider may authenticate; it may never
+  authorise a recovery.
+- **Must stay possible:** passkeys and verified phone added later
+  **without changing the Starq Account identity**.
+- **Controls:** sensitive recovery and account-takeover actions require
+  additional verification, auditability, cooldown/protection controls,
+  and **manual support escalation** where assurance is insufficient.
+- **Not required at launch:** phone.
+
+Carried into `SERP-370` as acceptance criteria and into ADR 010's
+security model. Any document still calling this open is stale.
