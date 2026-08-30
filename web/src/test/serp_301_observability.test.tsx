@@ -122,7 +122,17 @@ describe('SERP-301 #3 — frontend errors captured without exposing stack traces
   it('teardown removes the listeners rather than leaking them', () => {
     const teardown = installGlobalErrorReporting(window);
     teardown();
-    window.dispatchEvent(new ErrorEvent('error', { error: new Error('after teardown') }));
+    // NO `error` PAYLOAD, deliberately. Dispatching an ErrorEvent that carries a
+    // real Error makes jsdom rethrow it as an uncaught exception once no
+    // listener remains to consume it — which is the correct behaviour, and it
+    // turned this assertion into a CI failure while the assertion itself passed:
+    // vitest reported `419 passed | 1 error` and exited 1. A test that proves
+    // its point and reddens the build has not proved its point.
+    //
+    // The assertion is unweakened. If the listener were still attached it would
+    // report `error_kind: 'Error'` via the ?? fallback in installGlobalErrorReporting
+    // and this buffer would not be empty.
+    window.dispatchEvent(new ErrorEvent('error', { message: 'after teardown' }));
     expect(telemetry.getBufferedEvents()).toHaveLength(0);
   });
 });
