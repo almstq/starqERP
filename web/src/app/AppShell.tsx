@@ -163,6 +163,9 @@ export const AppShell: React.FC = () => {
   const { themeMode, setThemeMode, resolvedTheme } = useTheme();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [collapsedModuleMenus, setCollapsedModuleMenus] = useState<Set<string>>(() => new Set());
+  const [mobileExpandedModuleMenus, setMobileExpandedModuleMenus] = useState<Set<string>>(
+    () => new Set(MODULE_SUBNAV[location.pathname] ? [location.pathname] : []),
+  );
   const [tenantMenuOpen, setTenantMenuOpen] = useState(false);
   const [platformTab, setPlatformTab] = useState<PlatformTabId>('overview');
   const { pendingApplications } = useERP();
@@ -508,7 +511,7 @@ export const AppShell: React.FC = () => {
                   const inModule = location.pathname.startsWith(to);
                   const searchParams = new URLSearchParams(location.search);
                   const currentTab = searchParams.get('tab') || subnav?.[0]?.id;
-                  const isExpanded = Boolean(subnav && inModule && !collapsedModuleMenus.has(to));
+                  const isExpanded = Boolean(subnav && mobileExpandedModuleMenus.has(to));
 
                   return (
                     <div key={to} className="flex flex-col">
@@ -522,22 +525,13 @@ export const AppShell: React.FC = () => {
                             setMobileDrawerOpen(false);
                             return;
                           }
-                          if (inModule) {
-                            event.preventDefault();
-                            setCollapsedModuleMenus((current) => {
-                              const next = new Set(current);
-                              if (next.has(to)) next.delete(to); else next.add(to);
-                              return next;
-                            });
-                          } else {
-                            setCollapsedModuleMenus((current) => {
-                              const next = new Set(current);
-                            next.delete(to);
+                          event.preventDefault();
+                          setMobileExpandedModuleMenus((current) => {
+                            const next = new Set(current);
+                            if (next.has(to)) next.delete(to); else next.add(to);
                             return next;
                           });
-                          setMobileDrawerOpen(false);
-                        }
-                      }}
+                        }}
                         className={({ isActive }) =>
                           `group relative overflow-hidden flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--md-sys-shape-corner-full)] text-xs font-medium transition-all duration-150 ${
                             isActive ? 'font-semibold' : ''
