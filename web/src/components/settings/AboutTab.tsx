@@ -17,6 +17,7 @@ import { Button, Surface, Badge } from '../ui';
 import { StarqERPBrand, StarqCorporateBrand } from '../brand/StarqLogo';
 import { useTheme } from '../../context/ThemeContext';
 import { AboutInfoCard, AboutSpecItem } from './about/AboutPrimitives';
+import { AboutLegalDialog } from './about/AboutLegalDialog';
 
 export const AboutTab: React.FC = () => {
   const { themeMode, resolvedTheme } = useTheme();
@@ -203,73 +204,49 @@ export const AboutTab: React.FC = () => {
       </div>
 
       {/* Modal Information Surfaces */}
-      {activeDialog && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.45)', backdropFilter: 'blur(3px)' }}
-          onClick={() => setActiveDialog(null)}
-        >
-          <div
-            className="w-full max-w-lg p-6 rounded-[var(--md-sys-shape-corner-large)] shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150"
-            style={{
-              backgroundColor: 'var(--md-sys-color-surface-container-high)',
-              color: 'var(--md-sys-color-on-surface)',
-              border: '1px solid var(--md-sys-color-outline-variant)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-3">
-              <h4 className="text-sm font-bold capitalize">
-                {activeDialog === 'privacy' && 'Privacy Summary'}
-                {activeDialog === 'terms' && 'Service Terms Summary'}
-                {activeDialog === 'licenses' && 'Open Source Software Attributions'}
-              </h4>
-              <Badge variant="neutral" size="sm">Legal Notice</Badge>
-            </div>
+      <AboutLegalDialog
+        open={activeDialog !== null}
+        onClose={() => setActiveDialog(null)}
+        title={
+          (activeDialog === 'privacy' && 'Privacy Summary') ||
+          (activeDialog === 'terms' && 'Service Terms Summary') ||
+          (activeDialog === 'licenses' && 'Open Source Software Attributions') ||
+          ''
+        }
+      >
+        {activeDialog === 'privacy' && (
+          <>
+            <p>
+              starqERP enforces strict multi-tenant isolation via database Row-Level Security (RLS) policies and tenant-bound session authorization. Operational ledgers, customer records, and financial transactions are scoped strictly to the authenticated organization.
+            </p>
+            <p>
+              starqAI operates strictly within the active tenant session boundary: conversational prompts and business context are processed for operational assistance and are not shared across organizations.
+            </p>
+          </>
+        )}
 
-            <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] leading-relaxed space-y-2 max-h-72 overflow-y-auto pr-1">
-              {activeDialog === 'privacy' && (
-                <>
-                  <p>
-                    starqERP enforces strict multi-tenant isolation via database Row-Level Security (RLS) policies and tenant-bound session authorization. Operational ledgers, customer records, and financial transactions are scoped strictly to the authenticated organization.
-                  </p>
-                  <p>
-                    starqAI operates strictly within the active tenant session boundary: conversational prompts and business context are processed for operational assistance and are not shared across organizations.
-                  </p>
-                </>
-              )}
+        {activeDialog === 'terms' && (
+          <>
+            <p>
+              Licensed by Starq Technologies Pvt Ltd for enterprise operation under the Maldivian legal jurisdiction. MIRA tax calculation rules provide a configurable baseline in accordance with the Goods and Services Tax Act (Law No. 10/2011) and require statutory accounting verification for live filings.
+            </p>
+            <p>
+              Organizations maintain full provenance, auditability, and legal ownership of all transactional data created within the platform.
+            </p>
+          </>
+        )}
 
-              {activeDialog === 'terms' && (
-                <>
-                  <p>
-                    Licensed by Starq Technologies Pvt Ltd for enterprise operation under the Maldivian legal jurisdiction. MIRA tax calculation rules provide a configurable baseline in accordance with the Goods and Services Tax Act (Law No. 10/2011) and require statutory accounting verification for live filings.
-                  </p>
-                  <p>
-                    Organizations maintain full provenance, auditability, and legal ownership of all transactional data created within the platform.
-                  </p>
-                </>
-              )}
-
-              {activeDialog === 'licenses' && (
-                <>
-                  <p>
-                    starqERP incorporates open source software including React, Vite, Lucide Icons, and Material Color Utilities under the MIT and Apache 2.0 licenses.
-                  </p>
-                  <p>
-                    Full attribution manifests and third-party license notices are preserved in the repository root compliance directory.
-                  </p>
-                </>
-              )}
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <Button variant="filled" size="xs" onClick={() => setActiveDialog(null)}>
-                <span>Close</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+        {activeDialog === 'licenses' && (
+          <>
+            <p>
+              starqERP incorporates open source software including React, Vite, Lucide Icons, and Material Color Utilities under the MIT and Apache 2.0 licenses.
+            </p>
+            <p>
+              Full attribution manifests and third-party license notices are preserved in the repository root compliance directory.
+            </p>
+          </>
+        )}
+      </AboutLegalDialog>
     </div>
   );
 };
