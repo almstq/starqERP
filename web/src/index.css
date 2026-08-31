@@ -87,6 +87,91 @@
   font-feature-settings: "tnum" 1, "zero" 1;
 }
 
+/* ── Finance legacy-surface light-mode compatibility ────────────────────────
+   Older accounting and statutory-report panels predate the shared token layer
+   and explicitly use midnight Tailwind colors. Keep their dark presentation
+   intact, but translate those local utilities to the daylight token system so
+   light mode never renders white-on-pale text or dark-only data tables. */
+html.light .finance-light-compat .bg-\[\#0a0f1d\],
+html.light .finance-light-compat .bg-slate-950 {
+  background-color: var(--md-sys-color-surface-container-lowest);
+}
+
+html.light .finance-light-compat .bg-slate-900,
+html.light .finance-light-compat .bg-slate-900\/60,
+html.light .finance-light-compat .bg-slate-900\/80,
+html.light .finance-light-compat .bg-slate-800 {
+  background-color: var(--md-sys-color-surface-container-high);
+}
+
+html.light .finance-light-compat .bg-emerald-950\/20 {
+  background-color: #ecfdf5;
+}
+
+html.light .finance-light-compat .bg-amber-950\/20 {
+  background-color: #fffbeb;
+}
+
+html.light .finance-light-compat .bg-purple-950\/20 {
+  background-color: #f3e8ff;
+}
+
+html.light .finance-light-compat .bg-rose-950\/30 {
+  background-color: #fff1f2;
+}
+
+html.light .finance-light-compat .border-slate-800,
+html.light .finance-light-compat .border-slate-800\/80,
+html.light .finance-light-compat .border-slate-800\/60,
+html.light .finance-light-compat .border-slate-700 {
+  border-color: var(--md-sys-color-outline-variant);
+}
+
+html.light .finance-light-compat .divide-slate-800\/60 > :not([hidden]) ~ :not([hidden]),
+html.light .finance-light-compat .divide-slate-800\/50 > :not([hidden]) ~ :not([hidden]),
+html.light .finance-light-compat .divide-slate-800\/40 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--md-sys-color-outline-variant);
+}
+
+html.light .finance-light-compat .text-white,
+html.light .finance-light-compat .text-slate-200,
+html.light .finance-light-compat .text-slate-300 {
+  color: var(--md-sys-color-on-surface);
+}
+
+html.light .finance-light-compat .text-slate-400 {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+html.light .finance-light-compat .text-slate-500 {
+  color: var(--text-muted);
+}
+
+html.light .finance-light-compat .text-sky-300,
+html.light .finance-light-compat .text-sky-400 {
+  color: #0369a1;
+}
+
+html.light .finance-light-compat .text-emerald-300,
+html.light .finance-light-compat .text-emerald-400 {
+  color: #047857;
+}
+
+html.light .finance-light-compat .text-amber-300,
+html.light .finance-light-compat .text-amber-400 {
+  color: #b45309;
+}
+
+html.light .finance-light-compat .text-purple-300,
+html.light .finance-light-compat .text-purple-400 {
+  color: #7e22ce;
+}
+
+html.light .finance-light-compat .text-rose-300,
+html.light .finance-light-compat .text-rose-400 {
+  color: #be123c;
+}
+
 /* ── M3 Quantum Card Elevation with Specular Glare ─────────────────────────── */
 .dark [style*="var(--md-sys-color-surface-container)"],
 .dark [style*="var(--md-sys-color-surface-container-low)"],

@@ -84,7 +84,7 @@ export const MiraGst201View: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6" data-testid="mira-gst-201-view">
+    <div className="space-y-6 finance-light-compat" data-testid="mira-gst-201-view">
       {/* 1. Official Form Header & Controls */}
       <Surface className="p-6 rounded-2xl border border-slate-800 bg-[#0a0f1d]">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

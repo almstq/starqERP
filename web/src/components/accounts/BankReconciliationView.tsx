@@ -258,7 +258,7 @@ Date,Description,Debit,Credit,Balance,Reference
   }, [statement, filterMode, searchQuery]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 finance-light-compat">
       {/* 1. Header & Bank Account Selector */}
       <Surface className="p-6 rounded-2xl border border-slate-800 bg-[#0a0f1d]">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

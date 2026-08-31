@@ -74,7 +74,7 @@ export const CashFlowStatementView: React.FC<{
   };
 
   return (
-    <div className="space-y-6" data-testid="cash-flow-statement-view">
+    <div className="space-y-6 finance-light-compat" data-testid="cash-flow-statement-view">
       {/* Header & KPI Summary */}
       <Surface className="p-6 rounded-2xl border border-slate-800 bg-[#0a0f1d]">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

@@ -625,7 +625,7 @@ export const AppShell: React.FC = () => {
       <div className="flex min-w-0 flex-1 flex-col w-full">
         {/* TopAppBar */}
         <header
-          className="flex items-center gap-2 sm:gap-3 px-3 sm:px-6 py-2.5 shrink-0 h-14 sm:h-16 w-full"
+          className="sticky top-0 z-40 flex items-center gap-2 sm:gap-3 px-3 sm:px-6 py-2.5 shrink-0 h-14 sm:h-16 w-full shadow-sm"
           style={{
             backgroundColor: 'var(--md-sys-color-surface-container)',
             borderBottom: '1px solid var(--md-sys-color-outline-variant)',
