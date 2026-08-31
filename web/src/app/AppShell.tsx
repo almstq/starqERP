@@ -79,20 +79,25 @@ export function useMaterialWindowClass(): MaterialWindowClass {
 }
 
 const NAV = [
-  { to: '/',            label: 'Dashboard',        Icon: LayoutDashboard, end: true },
-  { to: '/customers',   label: 'Customers',        Icon: Users },
-  { to: '/jobs',        label: 'Jobs / Work Orders', Icon: Wrench },
-  { to: '/invoices',    label: 'Invoices',         Icon: FileText },
-  { to: '/payments',    label: 'Payments',         Icon: CreditCard },
-  { to: '/expenses',    label: 'Expenses',         Icon: Receipt },
-  { to: '/accounts',    label: 'Chart of Accounts', Icon: Landmark },
-  { to: '/inventory',   label: 'Inventory',        Icon: Package },
-  { to: '/purchasing',  label: 'Purchasing',       Icon: ShoppingCart },
-  { to: '/suppliers',   label: 'Suppliers',        Icon: Truck },
-  { to: '/reports',     label: 'Reports',          Icon: BarChart3 },
-  { to: '/audit',       label: 'Audit Trail',      Icon: ShieldCheck },
-  { to: '/settings',    label: 'Settings',         Icon: SettingsIcon },
+  { to: '/',            label: 'Dashboard',        Icon: LayoutDashboard, end: true, section: 'workspace' as const },
+  { to: '/customers',   label: 'Customers',        Icon: Users, section: 'workspace' as const },
+  { to: '/jobs',        label: 'Jobs / Work Orders', Icon: Wrench, section: 'workspace' as const },
+  { to: '/invoices',    label: 'Invoices',         Icon: FileText, section: 'workspace' as const },
+  { to: '/payments',    label: 'Payments',         Icon: CreditCard, section: 'workspace' as const },
+  { to: '/expenses',    label: 'Expenses',         Icon: Receipt, section: 'workspace' as const },
+  { to: '/accounts',    label: 'Chart of Accounts', Icon: Landmark, section: 'workspace' as const },
+  { to: '/inventory',   label: 'Inventory',        Icon: Package, section: 'workspace' as const },
+  { to: '/purchasing',  label: 'Purchasing',       Icon: ShoppingCart, section: 'workspace' as const },
+  { to: '/suppliers',   label: 'Suppliers',        Icon: Truck, section: 'workspace' as const },
+  { to: '/reports',     label: 'Reports',          Icon: BarChart3, section: 'workspace' as const },
+  { to: '/audit',       label: 'Audit Trail',      Icon: ShieldCheck, section: 'system' as const },
+  { to: '/settings',    label: 'Settings',         Icon: SettingsIcon, section: 'system' as const },
 ];
+
+const NAV_SECTION_LABEL: Record<'workspace' | 'system', string> = {
+  workspace: 'Workspace',
+  system: 'System / Administration',
+};
 
 export const PLATFORM_NAV: Array<{
   id: PlatformTabId;
@@ -297,15 +302,31 @@ export const AppShell: React.FC = () => {
               );
             })
           ) : (
-            NAV.map(({ to, label, Icon, end }) => {
+            NAV.map(({ to, label, Icon, end, section }, index) => {
               const subnav = MODULE_SUBNAV[to];
               const inModule = location.pathname.startsWith(to);
               const searchParams = new URLSearchParams(location.search);
               const currentTab = searchParams.get('tab') || subnav?.[0]?.id;
               const isExpanded = Boolean(subnav && inModule && !collapsedModuleMenus.has(to));
+              const showSectionDivider = index > 0 && NAV[index - 1].section !== section;
 
               return (
-                <div key={to} className="flex flex-col">
+                <React.Fragment key={to}>
+                  {showSectionDivider && (
+                    <div
+                      className="mt-3 mb-1 pt-3 px-3.5"
+                      style={{ borderTop: '1px solid var(--md-sys-color-outline-variant)' }}
+                      aria-hidden="true"
+                    >
+                      <span
+                        className="text-[10px] font-bold uppercase tracking-wider"
+                        style={{ color: 'var(--md-sys-color-on-surface-variant)', opacity: 0.7 }}
+                      >
+                        {NAV_SECTION_LABEL[section]}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex flex-col">
                   <NavLink
                     to={to}
                     end={end}
@@ -330,7 +351,7 @@ export const AppShell: React.FC = () => {
                     className={({ isActive }) =>
                       `group relative overflow-hidden flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--md-sys-shape-corner-full)] text-xs font-medium transition-all duration-150 ${
                         isActive ? 'font-semibold' : ''
-                      }`
+                      } ${section === 'system' && !isActive ? 'opacity-80' : ''}`
                     }
                     style={({ isActive }) =>
                       isActive
@@ -348,7 +369,7 @@ export const AppShell: React.FC = () => {
                       className="absolute inset-0 pointer-events-none rounded-[inherit] transition-opacity duration-150 opacity-0 group-hover:opacity-[var(--md-sys-state-hover-opacity)] group-active:opacity-[var(--md-sys-state-pressed-opacity)] bg-current"
                       aria-hidden="true"
                     />
-                    <Icon size={17} strokeWidth={1.9} aria-hidden="true" className="relative z-10 shrink-0" />
+                    <Icon size={17} strokeWidth={section === 'system' ? 1.7 : 1.9} aria-hidden="true" className="relative z-10 shrink-0" />
                     <span className="relative z-10 truncate flex-1">{label}</span>
                     {subnav && (
                       <ChevronDown
@@ -385,7 +406,8 @@ export const AppShell: React.FC = () => {
                       })}
                     </div>
                   )}
-                </div>
+                  </div>
+                </React.Fragment>
               );
             })
           )}
@@ -506,15 +528,31 @@ export const AppShell: React.FC = () => {
                   );
                 })
               ) : (
-                NAV.map(({ to, label, Icon, end }) => {
+                NAV.map(({ to, label, Icon, end, section }, index) => {
                   const subnav = MODULE_SUBNAV[to];
                   const inModule = location.pathname.startsWith(to);
                   const searchParams = new URLSearchParams(location.search);
                   const currentTab = searchParams.get('tab') || subnav?.[0]?.id;
                   const isExpanded = Boolean(subnav && mobileExpandedModuleMenus.has(to));
+                  const showSectionDivider = index > 0 && NAV[index - 1].section !== section;
 
                   return (
-                    <div key={to} className="flex flex-col">
+                    <React.Fragment key={to}>
+                      {showSectionDivider && (
+                        <div
+                          className="mt-3 mb-1 pt-3 px-3.5"
+                          style={{ borderTop: '1px solid var(--md-sys-color-outline-variant)' }}
+                          aria-hidden="true"
+                        >
+                          <span
+                            className="text-[10px] font-bold uppercase tracking-wider"
+                            style={{ color: 'var(--md-sys-color-on-surface-variant)', opacity: 0.7 }}
+                          >
+                            {NAV_SECTION_LABEL[section]}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex flex-col">
                       <NavLink
                         key={to}
                         to={to}
@@ -535,7 +573,7 @@ export const AppShell: React.FC = () => {
                         className={({ isActive }) =>
                           `group relative overflow-hidden flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--md-sys-shape-corner-full)] text-xs font-medium transition-all duration-150 ${
                             isActive ? 'font-semibold' : ''
-                          }`
+                          } ${section === 'system' && !isActive ? 'opacity-80' : ''}`
                         }
                         style={({ isActive }) =>
                           isActive
@@ -553,7 +591,7 @@ export const AppShell: React.FC = () => {
                           className="absolute inset-0 pointer-events-none rounded-[inherit] transition-opacity duration-150 opacity-0 group-hover:opacity-[var(--md-sys-state-hover-opacity)] group-active:opacity-[var(--md-sys-state-pressed-opacity)] bg-current"
                           aria-hidden="true"
                         />
-                        <Icon size={17} strokeWidth={1.9} aria-hidden="true" className="relative z-10 shrink-0" />
+                        <Icon size={17} strokeWidth={section === 'system' ? 1.7 : 1.9} aria-hidden="true" className="relative z-10 shrink-0" />
                         <span className="relative z-10 truncate flex-1">{label}</span>
                         {subnav && (
                           <ChevronDown
@@ -591,7 +629,8 @@ export const AppShell: React.FC = () => {
                           })}
                         </div>
                       )}
-                    </div>
+                      </div>
+                    </React.Fragment>
                   );
                 })
               )}

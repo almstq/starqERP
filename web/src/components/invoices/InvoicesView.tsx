@@ -415,8 +415,8 @@ export const InvoicesView: React.FC = () => {
       ) : activeTab === 'credits_advances' ? (
         /* Credit Notes & Advances Table */
         <Surface variant="filled" level={1} padding="md" className="space-y-4" data-testid="credits-advances-table">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="min-w-0">
               <h2 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] uppercase tracking-wider">
                 Credit Notes & Customer Advance Deposits
               </h2>
@@ -432,6 +432,7 @@ export const InvoicesView: React.FC = () => {
                 setIsCreditNoteModalOpen(true);
               }}
               icon={<Plus size={14} />}
+              className="shrink-0 whitespace-nowrap self-start sm:self-auto"
             >
               <span>Issue Credit Note</span>
             </Button>
@@ -529,8 +530,8 @@ export const InvoicesView: React.FC = () => {
       ) : (
         /* Settlement Allocations Log Table */
         <Surface variant="filled" level={1} padding="md" className="space-y-4" data-testid="allocations-table">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="min-w-0">
               <h2 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] uppercase tracking-wider">
                 Settlement Allocations Ledger
               </h2>
@@ -543,6 +544,7 @@ export const InvoicesView: React.FC = () => {
               size="sm"
               onClick={() => setIsSettlementModalOpen(true)}
               icon={<Sparkles size={14} />}
+              className="shrink-0 whitespace-nowrap self-start sm:self-auto"
             >
               <span>New Allocation</span>
             </Button>
