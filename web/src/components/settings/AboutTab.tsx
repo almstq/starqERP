@@ -16,6 +16,7 @@ import { STARQ_ERP_CANONICAL_METADATA, getFormattedProductVersion } from '../../
 import { Button, Surface, Badge } from '../ui';
 import { StarqERPBrand, StarqCorporateBrand } from '../brand/StarqLogo';
 import { useTheme } from '../../context/ThemeContext';
+import { AboutInfoCard, AboutSpecItem } from './about/AboutPrimitives';
 
 export const AboutTab: React.FC = () => {
   const { themeMode, resolvedTheme } = useTheme();
@@ -86,14 +87,7 @@ export const AboutTab: React.FC = () => {
 
         {/* Core Attributes Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div
-            className="p-4 rounded-[var(--md-sys-shape-corner-medium)] space-y-2.5"
-            style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)' }}
-          >
-            <div className="flex items-center gap-2 text-[var(--md-sys-color-primary)] font-semibold">
-              <Scale size={15} />
-              <span>Corporate Entity & Platform Builder</span>
-            </div>
+          <AboutInfoCard icon={<Scale size={15} />} title="Corporate Entity & Platform Builder" spacing="space-y-2.5">
             <StarqCorporateBrand
               variant="compact"
               size="md"
@@ -103,23 +97,16 @@ export const AboutTab: React.FC = () => {
             <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
               Built and maintained by Starq Technologies Pvt Ltd under the Maldivian legal jurisdiction.
             </p>
-          </div>
+          </AboutInfoCard>
 
-          <div
-            className="p-4 rounded-[var(--md-sys-shape-corner-medium)] space-y-1.5"
-            style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)' }}
-          >
-            <div className="flex items-center gap-2 text-[var(--md-sys-color-primary)] font-semibold">
-              <Sparkles size={15} />
-              <span>Embedded AI Capability</span>
-            </div>
+          <AboutInfoCard icon={<Sparkles size={15} />} title="Embedded AI Capability" spacing="space-y-1.5">
             <div className="font-bold text-sm text-[var(--md-sys-color-on-surface)]">
               {meta.embeddedAiName}
             </div>
             <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
               Context-aware Maldivian tax & operational assistant built natively into starqERP.
             </p>
-          </div>
+          </AboutInfoCard>
         </div>
       </Surface>
 
@@ -131,33 +118,20 @@ export const AboutTab: React.FC = () => {
         </h3>
 
         <dl className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6 text-xs">
-          <div>
-            <dt className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-medium">Canonical Product Name</dt>
-            <dd className="font-semibold text-[var(--md-sys-color-on-surface)] mt-0.5">{meta.productName}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-medium">Design System SSOT</dt>
-            <dd className="font-semibold text-[var(--md-sys-color-on-surface)] mt-0.5">Google Material 3 (M3 Expressive)</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-medium">Base Ledger Currency</dt>
-            <dd className="font-semibold text-[var(--md-sys-color-on-surface)] mt-0.5">{meta.baseCurrency} (Maldivian Rufiyaa)</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-medium">Jurisdiction</dt>
-            <dd className="font-semibold text-[var(--md-sys-color-on-surface)] mt-0.5">{meta.legalJurisdiction}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-medium">Technical Support</dt>
-            <dd className="font-semibold text-[var(--md-sys-color-on-surface)] mt-0.5 flex items-center gap-1">
-              <Mail size={12} className="text-[var(--md-sys-color-primary)]" />
-              <a href={`mailto:${meta.contactEmail}`} className="hover:underline">{meta.contactEmail}</a>
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-medium">Tax Compliance Baseline</dt>
-            <dd className="font-semibold text-[var(--md-sys-color-on-surface)] mt-0.5">MIRA Tax Framework (Configurable GST / DEC-073; requires statutory verification)</dd>
-          </div>
+          <AboutSpecItem label="Canonical Product Name" value={meta.productName} />
+          <AboutSpecItem label="Design System SSOT" value="Google Material 3 (M3 Expressive)" />
+          <AboutSpecItem label="Base Ledger Currency" value={`${meta.baseCurrency} (Maldivian Rufiyaa)`} />
+          <AboutSpecItem label="Jurisdiction" value={meta.legalJurisdiction} />
+          <AboutSpecItem
+            label="Technical Support"
+            value={
+              <span className="flex items-center gap-1">
+                <Mail size={12} className="text-[var(--md-sys-color-primary)]" />
+                <a href={`mailto:${meta.contactEmail}`} className="hover:underline">{meta.contactEmail}</a>
+              </span>
+            }
+          />
+          <AboutSpecItem label="Tax Compliance Baseline" value="MIRA Tax Framework (Configurable GST / DEC-073; requires statutory verification)" />
         </dl>
       </Surface>
 
