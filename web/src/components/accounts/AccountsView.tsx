@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Building2,
   ChevronRight,
@@ -58,7 +59,17 @@ export const AccountsView: React.FC = () => {
   // silently behaved as 'not registered'.
   const isGstRegistered = currentTenant?.gstStatus === 'registered';
 
-  const [activeTab, setActiveTab] = useState<'chart_of_accounts' | 'general_ledger' | 'periods' | 'bank_reconciliation' | 'multi_currency'>('chart_of_accounts');
+  type AccountSection = 'chart_of_accounts' | 'general_ledger' | 'periods' | 'bank_reconciliation' | 'multi_currency';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedSection = searchParams.get('tab') as AccountSection | null;
+  const activeTab: AccountSection = ['chart_of_accounts', 'general_ledger', 'periods', 'bank_reconciliation', 'multi_currency'].includes(requestedSection || '')
+    ? requestedSection as AccountSection
+    : 'chart_of_accounts';
+  const setActiveTab = (section: AccountSection) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', section);
+    setSearchParams(next);
+  };
 
   // Accounting Periods State
   const [periods, setPeriods] = useState<AccountingPeriod[]>(() => {
@@ -292,84 +303,6 @@ export const AccountsView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
-          {/* Segmented View Switcher */}
-          <div className="p-1 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center gap-1">
-            <button
-              type="button"
-              data-testid="coa-tab-btn"
-              onClick={() => {
-                setActiveTab('chart_of_accounts');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                activeTab === 'chart_of_accounts'
-                  ? 'bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-primary)] shadow-sm'
-                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-              }`}
-            >
-              <Building2 size={14} />
-              <span>Chart of Accounts</span>
-            </button>
-            <button
-              type="button"
-              data-testid="gl-tab-btn"
-              onClick={() => {
-                setActiveTab('general_ledger');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                activeTab === 'general_ledger'
-                  ? 'bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-primary)] shadow-sm'
-                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-              }`}
-            >
-              <BookOpen size={14} />
-              <span>General Ledger</span>
-            </button>
-            <button
-              type="button"
-              data-testid="periods-tab-btn"
-              onClick={() => {
-                setActiveTab('periods');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                activeTab === 'periods'
-                  ? 'bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-primary)] shadow-sm'
-                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-              }`}
-            >
-              <Lock size={14} />
-              <span>Period Lock & Year-End</span>
-            </button>
-            <button
-              type="button"
-              data-testid="bank-recon-tab-btn"
-              onClick={() => {
-                setActiveTab('bank_reconciliation');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                activeTab === 'bank_reconciliation'
-                  ? 'bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-primary)] shadow-sm'
-                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-              }`}
-            >
-              <Landmark size={14} />
-              <span>Bank Reconciliation</span>
-            </button>
-            <button
-              type="button"
-              data-testid="multi-currency-tab-btn"
-              onClick={() => {
-                setActiveTab('multi_currency');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                activeTab === 'multi_currency'
-                  ? 'bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-primary)] shadow-sm'
-                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-              }`}
-            >
-              <Globe size={14} />
-              <span>Multi-Currency & FX</span>
-            </button>
-          </div>
 
           <Button
             variant="tonal"

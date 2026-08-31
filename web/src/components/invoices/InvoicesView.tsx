@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Receipt,
   Search,
@@ -51,7 +51,17 @@ export const InvoicesView: React.FC = () => {
     currentTenant,
   } = useERP();
 
-  const [activeTab, setActiveTab] = useState<'invoices' | 'credits_advances' | 'allocations'>('invoices');
+  type InvoiceSection = 'invoices' | 'credits_advances' | 'allocations';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedSection = searchParams.get('tab') as InvoiceSection | null;
+  const activeTab: InvoiceSection = ['invoices', 'credits_advances', 'allocations'].includes(requestedSection || '')
+    ? requestedSection as InvoiceSection
+    : 'invoices';
+  const setActiveTab = (section: InvoiceSection) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', section);
+    setSearchParams(next);
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
 
@@ -313,46 +323,6 @@ export const InvoicesView: React.FC = () => {
         </ActionGroup>
       </div>
 
-      {/* Segmented Tab Switcher */}
-      <div className="flex p-1 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] w-fit">
-        <button
-          onClick={() => setActiveTab('invoices')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-            activeTab === 'invoices'
-              ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] shadow-xs border border-[var(--md-sys-color-primary)]'
-              : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-          }`}
-        >
-          <Receipt size={14} />
-          <span>Commercial Invoices ({invoices.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('credits_advances')}
-          data-testid="credits-advances-tab-btn"
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-            activeTab === 'credits_advances'
-              ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] shadow-xs border border-[var(--md-sys-color-primary)]'
-              : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-          }`}
-        >
-          <FileText size={14} />
-          <span>Credit Notes & Advances ({creditNotes.length + advances.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('allocations')}
-          data-testid="allocations-tab-btn"
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-            activeTab === 'allocations'
-              ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] shadow-xs border border-[var(--md-sys-color-primary)]'
-              : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-          }`}
-        >
-          <Sparkles size={14} />
-          <span>Settlement Allocations ({allocations.length})</span>
-        </button>
-      </div>
 
       {/* KPI Cards */}
       <ResponsiveGrid columns="auto" minItemWidth="200px" gap="sm">

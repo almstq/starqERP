@@ -122,6 +122,30 @@ export const SETTINGS_SUBNAV = [
   { id: 'about',     label: 'About starqERP',      Icon: Info },
 ];
 
+const MODULE_SUBNAV: Record<string, typeof SETTINGS_SUBNAV> = {
+  '/settings': SETTINGS_SUBNAV,
+  '/accounts': [
+    { id: 'chart_of_accounts', label: 'Chart of Accounts', Icon: Landmark },
+    { id: 'general_ledger', label: 'General Ledger', Icon: FileText },
+    { id: 'periods', label: 'Period Lock & Year-End', Icon: ShieldCheck },
+    { id: 'bank_reconciliation', label: 'Bank Reconciliation', Icon: CreditCard },
+    { id: 'multi_currency', label: 'Multi-Currency & FX', Icon: Sparkles },
+  ],
+  '/reports': [
+    { id: 'statements', label: 'Financial Statements', Icon: FileText },
+    { id: 'aging', label: 'AR / AP Aging', Icon: CreditCard },
+    { id: 'analytics', label: 'Operational Analytics', Icon: BarChart3 },
+    { id: 'mira_gst_201', label: 'MIRA GST-201', Icon: Receipt },
+    { id: 'mira_tgst_16', label: '16% TGST & Green Tax', Icon: Building2 },
+    { id: 'cash_flow', label: 'Cash Flow (IFRS)', Icon: Activity },
+  ],
+  '/invoices': [
+    { id: 'invoices', label: 'Commercial Invoices', Icon: FileText },
+    { id: 'credits_advances', label: 'Credit Notes & Advances', Icon: Receipt },
+    { id: 'allocations', label: 'Settlement Allocations', Icon: Sparkles },
+  ],
+};
+
 export const AppShell: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -138,6 +162,7 @@ export const AppShell: React.FC = () => {
   const { session, logout } = useAuth();
   const { themeMode, setThemeMode, resolvedTheme } = useTheme();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [collapsedModuleMenus, setCollapsedModuleMenus] = useState<Set<string>>(() => new Set());
   const [tenantMenuOpen, setTenantMenuOpen] = useState(false);
   const [platformTab, setPlatformTab] = useState<PlatformTabId>('overview');
   const { pendingApplications } = useERP();
@@ -270,16 +295,35 @@ export const AppShell: React.FC = () => {
             })
           ) : (
             NAV.map(({ to, label, Icon, end }) => {
-              const isSettings = to === '/settings';
-              const inSettings = location.pathname.startsWith('/settings');
+              const subnav = MODULE_SUBNAV[to];
+              const inModule = location.pathname.startsWith(to);
               const searchParams = new URLSearchParams(location.search);
-              const currentTab = searchParams.get('tab') || 'profile';
+              const currentTab = searchParams.get('tab') || subnav?.[0]?.id;
+              const isExpanded = Boolean(subnav && inModule && !collapsedModuleMenus.has(to));
 
               return (
                 <div key={to} className="flex flex-col">
                   <NavLink
                     to={to}
                     end={end}
+                    aria-expanded={subnav ? isExpanded : undefined}
+                    onClick={(event) => {
+                      if (!subnav) return;
+                      if (inModule) {
+                        event.preventDefault();
+                        setCollapsedModuleMenus((current) => {
+                          const next = new Set(current);
+                          if (next.has(to)) next.delete(to); else next.add(to);
+                          return next;
+                        });
+                      } else {
+                        setCollapsedModuleMenus((current) => {
+                          const next = new Set(current);
+                          next.delete(to);
+                          return next;
+                        });
+                      }
+                    }}
                     className={({ isActive }) =>
                       `group relative overflow-hidden flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--md-sys-shape-corner-full)] text-xs font-medium transition-all duration-150 ${
                         isActive ? 'font-semibold' : ''
@@ -303,11 +347,11 @@ export const AppShell: React.FC = () => {
                     />
                     <Icon size={17} strokeWidth={1.9} aria-hidden="true" className="relative z-10 shrink-0" />
                     <span className="relative z-10 truncate flex-1">{label}</span>
-                    {isSettings && (
+                    {subnav && (
                       <ChevronDown
                         size={14}
                         className={`relative z-10 transition-transform duration-200 ${
-                          inSettings
+                          isExpanded
                             ? 'rotate-180 text-[var(--md-sys-color-primary)]'
                             : 'text-[var(--md-sys-color-on-surface-variant)]/60'
                         }`}
@@ -315,18 +359,19 @@ export const AppShell: React.FC = () => {
                     )}
                   </NavLink>
 
-                  {/* Sub-Navigation nested under Settings */}
-                  {isSettings && inSettings && (
-                    <div className="ml-5 pl-2.5 my-1 flex flex-col gap-0.5 border-l border-[var(--md-sys-color-outline-variant)]/60 animate-in fade-in duration-150">
-                      {SETTINGS_SUBNAV.map((sub) => {
+                  {/* Persistent module destinations use the same nested sidebar language. */}
+                  {subnav && isExpanded && (
+                    <div className="ml-5 pl-3 my-1 flex flex-col gap-0.5 border-l-2 border-[var(--md-sys-color-outline-variant)]/70 animate-in fade-in duration-150" aria-label={`${label} sections`}>
+                      {subnav.map((sub) => {
                         const isSubActive = currentTab === sub.id;
                         return (
                           <NavLink
                             key={sub.id}
-                            to={`/settings?tab=${sub.id}`}
-                            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--md-sys-shape-corner-small)] text-[11px] transition-colors ${
+                            to={`${to}?tab=${sub.id}`}
+                            aria-current={isSubActive ? 'page' : undefined}
+                            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--md-sys-shape-corner-small)] text-[11px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--md-sys-color-primary)] ${
                               isSubActive
-                                ? 'font-bold bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
+                                ? 'font-bold bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] shadow-xs'
                                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:text-[var(--md-sys-color-on-surface)]'
                             }`}
                           >
@@ -459,10 +504,11 @@ export const AppShell: React.FC = () => {
                 })
               ) : (
                 NAV.map(({ to, label, Icon, end }) => {
-                  const isSettings = to === '/settings';
-                  const inSettings = location.pathname.startsWith('/settings');
+                  const subnav = MODULE_SUBNAV[to];
+                  const inModule = location.pathname.startsWith(to);
                   const searchParams = new URLSearchParams(location.search);
-                  const currentTab = searchParams.get('tab') || 'profile';
+                  const currentTab = searchParams.get('tab') || subnav?.[0]?.id;
+                  const isExpanded = Boolean(subnav && inModule && !collapsedModuleMenus.has(to));
 
                   return (
                     <div key={to} className="flex flex-col">
@@ -470,7 +516,28 @@ export const AppShell: React.FC = () => {
                         key={to}
                         to={to}
                         end={end}
-                        onClick={() => setMobileDrawerOpen(false)}
+                        aria-expanded={subnav ? isExpanded : undefined}
+                        onClick={(event) => {
+                          if (!subnav) {
+                            setMobileDrawerOpen(false);
+                            return;
+                          }
+                          if (inModule) {
+                            event.preventDefault();
+                            setCollapsedModuleMenus((current) => {
+                              const next = new Set(current);
+                              if (next.has(to)) next.delete(to); else next.add(to);
+                              return next;
+                            });
+                          } else {
+                            setCollapsedModuleMenus((current) => {
+                              const next = new Set(current);
+                            next.delete(to);
+                            return next;
+                          });
+                          setMobileDrawerOpen(false);
+                        }
+                      }}
                         className={({ isActive }) =>
                           `group relative overflow-hidden flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--md-sys-shape-corner-full)] text-xs font-medium transition-all duration-150 ${
                             isActive ? 'font-semibold' : ''
@@ -494,11 +561,11 @@ export const AppShell: React.FC = () => {
                         />
                         <Icon size={17} strokeWidth={1.9} aria-hidden="true" className="relative z-10 shrink-0" />
                         <span className="relative z-10 truncate flex-1">{label}</span>
-                        {isSettings && (
+                        {subnav && (
                           <ChevronDown
                             size={14}
                             className={`relative z-10 transition-transform duration-200 ${
-                              inSettings
+                              isExpanded
                                 ? 'rotate-180 text-[var(--md-sys-color-primary)]'
                                 : 'text-[var(--md-sys-color-on-surface-variant)]/60'
                             }`}
@@ -506,19 +573,20 @@ export const AppShell: React.FC = () => {
                         )}
                       </NavLink>
 
-                      {/* Sub-Navigation nested under Settings in mobile drawer */}
-                      {isSettings && inSettings && (
-                        <div className="ml-5 pl-2.5 my-1 flex flex-col gap-0.5 border-l border-[var(--md-sys-color-outline-variant)]/60 animate-in fade-in duration-150">
-                          {SETTINGS_SUBNAV.map((sub) => {
+                      {/* Persistent module destinations use the same nested sidebar language. */}
+                      {subnav && isExpanded && (
+                        <div className="ml-5 pl-3 my-1 flex flex-col gap-0.5 border-l-2 border-[var(--md-sys-color-outline-variant)]/70 animate-in fade-in duration-150" aria-label={`${label} sections`}>
+                          {subnav.map((sub) => {
                             const isSubActive = currentTab === sub.id;
                             return (
                               <NavLink
                                 key={sub.id}
-                                to={`/settings?tab=${sub.id}`}
-                                onClick={() => setMobileDrawerOpen(false)}
-                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--md-sys-shape-corner-small)] text-[11px] transition-colors ${
-                                  isSubActive
-                                    ? 'font-bold bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
+                              to={`${to}?tab=${sub.id}`}
+                              onClick={() => setMobileDrawerOpen(false)}
+                              aria-current={isSubActive ? 'page' : undefined}
+                              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--md-sys-shape-corner-small)] text-[11px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--md-sys-color-primary)] ${
+                                isSubActive
+                                  ? 'font-bold bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] shadow-xs'
                                     : 'text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:text-[var(--md-sys-color-on-surface)]'
                                 }`}
                               >

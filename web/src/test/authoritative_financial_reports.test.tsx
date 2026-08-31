@@ -1,14 +1,14 @@
 import React from 'react';
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ReportsView } from '../components/reports/ReportsView';
 import { ERPProvider } from '../context/ERPContext';
 import { AuthProvider } from '../context/AuthContext';
 
-const renderReportsView = () => {
+const renderReportsView = (entry = '/reports') => {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[entry]}>
       <AuthProvider>
         <ERPProvider>
           <ReportsView />
@@ -52,20 +52,12 @@ describe('SERP-292: Authoritative Trial Balance & Balance Sheet Reporting', () =
     expect(screen.getByText('Balanced (Δ MVR 0.00)')).toBeInTheDocument();
   });
 
-  it('switches between Financial Statements and Operational Analytics tabs', () => {
-    renderReportsView();
-
-    // Switch to Operational Analytics tab
-    const analyticsTab = screen.getByRole('button', { name: /Operational Analytics/i });
-    fireEvent.click(analyticsTab);
+  it('renders the requested persistent report section from a deep link', () => {
+    renderReportsView('/reports?tab=analytics');
 
     expect(screen.getByText('Monthly Revenue vs Expenses (MVR)')).toBeInTheDocument();
     expect(screen.getByText('Labor & Service Value Breakdown')).toBeInTheDocument();
 
-    // Switch back to Financial Statements
-    const statementsTab = screen.getByRole('button', { name: /Financial Statements/i });
-    fireEvent.click(statementsTab);
-
-    expect(screen.getByTestId('trial-balance-section')).toBeInTheDocument();
+    expect(screen.queryByTestId('trial-balance-section')).not.toBeInTheDocument();
   });
 });

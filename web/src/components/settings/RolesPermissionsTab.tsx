@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -26,6 +26,7 @@ export const RolesPermissionsTab: React.FC = () => {
   const [newRoleName, setNewRoleName] = useState('');
   const [newRoleDesc, setNewRoleDesc] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const rolePickerRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const selectedRole = roles.find((r) => r.id === selectedRoleId) || roles[0];
 
@@ -176,18 +177,33 @@ export const RolesPermissionsTab: React.FC = () => {
         </button>
       </div>
 
-      {/* Role Picker Pills */}
+      {/* Entity-mode selector: role profiles, not module navigation. */}
       <div className="w-full max-w-full overflow-x-auto no-scrollbar scrollbar-none pb-2 pt-1">
-        <div className="flex items-center gap-2 min-w-max">
+        <div className="flex items-center gap-2 min-w-max" role="radiogroup" aria-label="Role profile">
           {roles.map((role) => {
             const isSelected = role.id === selectedRole.id;
             const userCount = users.filter((u) => u.roleId === role.id).length;
+            const focusRole = (direction: -1 | 1) => {
+              const nextIndex = (roles.findIndex((candidate) => candidate.id === role.id) + direction + roles.length) % roles.length;
+              setSelectedRoleId(roles[nextIndex].id);
+              rolePickerRefs.current[nextIndex]?.focus();
+            };
             return (
               <button
                 key={role.id}
+                ref={(element) => { rolePickerRefs.current[roles.indexOf(role)] = element; }}
                 type="button"
+                role="radio"
+                aria-checked={isSelected}
+                tabIndex={isSelected ? 0 : -1}
                 onClick={() => setSelectedRoleId(role.id)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all border cursor-pointer ${
+                onKeyDown={(event) => {
+                  if (event.key === 'ArrowRight') { event.preventDefault(); focusRole(1); }
+                  if (event.key === 'ArrowLeft') { event.preventDefault(); focusRole(-1); }
+                  if (event.key === 'Home') { event.preventDefault(); rolePickerRefs.current[0]?.focus(); }
+                  if (event.key === 'End') { event.preventDefault(); rolePickerRefs.current[roles.length - 1]?.focus(); }
+                }}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all border cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--md-sys-color-primary)] ${
                   isSelected
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-500/20'
                     : 'bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline-variant)] dark:hover:border-[var(--md-sys-color-outline-variant)]'

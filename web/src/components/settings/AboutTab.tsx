@@ -40,6 +40,28 @@ export const AboutTab: React.FC = () => {
         buildTime,
         environment,
         embeddedAi: meta.embeddedAiName,
+        frontend: {
+          react: '19',
+          reactDom: '19',
+          router: '7',
+          vite: '6',
+          typescript: '5.8',
+          tailwind: '4',
+          designSystem: 'Starq UI — Material 3 Expressive',
+          themeAuthority: 'web/src/theme.css and currently rendered runtime',
+          uiArchitecture: 'Starq-owned M3 primitives · product-local composition',
+          interactionStandard: 'Accessibility-first · keyboard/focus managed · shadcn-quality polish',
+          icons: 'Lucide React',
+          charts: 'Recharts',
+          forms: 'native/local-domain state',
+          tables: 'Starq Table/DataTable + direct HTML tables',
+          packageManager: 'npm',
+          importAlias: '@/* → src/*',
+          headlessRuntime: 'none required',
+          shadcnRuntime: 'not mandatory',
+          registry: 'none',
+          publicationModel: 'private ERP canonical; public ERP derived only',
+        },
         company: meta.companyName,
         jurisdiction: meta.legalJurisdiction,
         contact: meta.contactEmail,
@@ -120,7 +142,10 @@ export const AboutTab: React.FC = () => {
 
         <dl className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6 text-xs">
           <AboutSpecItem label="Canonical Product Name" value={meta.productName} />
-          <AboutSpecItem label="Design System SSOT" value="Google Material 3 (M3 Expressive)" />
+          <AboutSpecItem label="Design System" value="Starq UI — Material 3 Expressive" />
+          <AboutSpecItem label="Frontend Stack" value="React 19 · TypeScript 5.8 · Vite 6 · Tailwind CSS 4" />
+          <AboutSpecItem label="UI Architecture" value="Starq-owned M3 primitives · product-local composition" />
+          <AboutSpecItem label="Interaction Standard" value="Accessibility-first · keyboard/focus managed · shadcn-quality polish" />
           <AboutSpecItem label="Base Ledger Currency" value={`${meta.baseCurrency} (Maldivian Rufiyaa)`} />
           <AboutSpecItem label="Jurisdiction" value={meta.legalJurisdiction} />
           <AboutSpecItem

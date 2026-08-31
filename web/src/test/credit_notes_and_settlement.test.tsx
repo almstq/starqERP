@@ -6,9 +6,9 @@ import { InvoicesView } from '../components/invoices/InvoicesView';
 import { ERPProvider } from '../context/ERPContext';
 import { AuthProvider } from '../context/AuthContext';
 
-const renderInvoicesView = () => {
+const renderInvoicesView = (entry = '/invoices') => {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[entry]}>
       <AuthProvider>
         <ERPProvider>
           <InvoicesView />
@@ -54,19 +54,13 @@ describe('SERP-294: Credit Notes & Settlement Allocation UI', () => {
     });
   });
 
-  it('switches between Invoices, Credit Notes & Advances, and Settlement Allocations tabs', () => {
-    renderInvoicesView();
-
-    // Switch to Credit Notes & Advances tab
-    const creditsTab = screen.getByTestId('credits-advances-tab-btn');
-    fireEvent.click(creditsTab);
+  it('renders persistent invoice subsections from deep links', () => {
+    renderInvoicesView('/invoices?tab=credits_advances');
 
     expect(screen.getByTestId('credits-advances-table')).toBeInTheDocument();
     expect(screen.getByText('Credit Notes & Customer Advance Deposits')).toBeInTheDocument();
 
-    // Switch to Settlement Allocations tab
-    const allocTab = screen.getByTestId('allocations-tab-btn');
-    fireEvent.click(allocTab);
+    renderInvoicesView('/invoices?tab=allocations');
 
     expect(screen.getByTestId('allocations-table')).toBeInTheDocument();
     expect(screen.getByText('Settlement Allocations Ledger')).toBeInTheDocument();
