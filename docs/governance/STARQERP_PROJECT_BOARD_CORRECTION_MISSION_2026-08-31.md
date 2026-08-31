@@ -41,4 +41,15 @@ Executed read-only checks in `starqNexus`:
 
 ## Completion boundary
 
-V5 and V6 are PASS. The V1 WC2026 provenance item is resolved as Founder-authorized cleanup. The mission cannot mark V4 PASS or dispatch coding while the two dependency contradictions lack a Founder-proven canonical disposition and the live roster has no confirmed independent workers.
+V5 and V6 are PASS. The V1 WC2026 provenance item is resolved as Founder-authorized cleanup. The two V4 dependency contradictions were subsequently resolved by Founder rulings DEC-115 and DEC-116.
+
+## P0 final closure — 31 August 2026
+
+- **SERP-226:** DEC-115 waives planned SERP-221 as its pre-work dependency only. SERP-226 remains `next`; SERP-221 remains `planned`, valid, and uncompleted. The former dependency and waiver are retained in SERP-226 notes.
+- **SERP-380:** DEC-116 waives in-progress SERP-234 as its pre-work dependency only. SERP-380 remains `next`; SERP-234 remains `in_progress`, valid, and subject to its own acceptance obligations. The former dependency and waiver are retained in SERP-380 notes.
+- **V4 rerun:** PASS. The board generator defines blocking semantics exclusively through `depends_on`; all seven `next` rows have no unresolved `depends_on` blocker. SERP-339's distinct legacy `dependencies` reference list remains intact as non-blocking acceptance context.
+- **Canonical board:** unchanged at 382 total; 146 done; 192 planned; 28 in progress; 9 blocked; 7 next; 26 review-pending; 38.22% completion.
+- **Nexus evidence:** `075eb1b57482144e570b00ef4fd44922be1cdbc2` (`nexus/orgspace`, pushed) contains only the two canonical dependency-waiver corrections and regenerated ERP projection. All 15 projections pass.
+- **Separate follow-up observation:** the ignored generated library index still triggers two public-tier third-party-name findings (Nashid and Naleez). Founder explicitly ruled those non-P0 blockers; they were not changed or included in this closure.
+
+P0 board-convergence correction is **CLOSED**. This authorises dispatch from the verified seven-row `next` queue subject to normal worker eligibility and acceptance boundaries; it does not start product implementation, merge to `main`, or close any product task.
