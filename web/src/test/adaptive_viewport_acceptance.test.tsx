@@ -156,6 +156,28 @@ describe('Adaptive Viewport & Layout Acceptance (SERP-ADAPTIVE)', () => {
       expect(navScope.getByRole('link', { name: /Support & Help/i })).toBeInTheDocument();
       expect(navScope.getByRole('link', { name: /About starqERP/i })).toBeInTheDocument();
     });
+
+    it('expands persistent Reports destinations from a deep link in the desktop sidebar', () => {
+      setWindowDimensions(1600, 900);
+
+      render(
+        <MemoryRouter initialEntries={['/reports?tab=cash_flow']}>
+          <ThemeProvider>
+            <AuthProvider>
+              <ERPProvider>
+                <AppShell />
+              </ERPProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </MemoryRouter>
+      );
+
+      const navScope = within(screen.getByRole('navigation', { name: /Modules/i }));
+      const cashFlow = navScope.getByRole('link', { name: /Cash Flow \(IFRS\)/i });
+      expect(cashFlow).toHaveAttribute('href', '/reports?tab=cash_flow');
+      expect(cashFlow).toHaveAttribute('aria-current', 'page');
+      expect(navScope.getByRole('link', { name: /MIRA GST-201/i })).toBeInTheDocument();
+    });
   });
 
   describe('Login Surface Compact Preservation', () => {

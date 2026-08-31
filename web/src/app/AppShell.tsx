@@ -79,20 +79,25 @@ export function useMaterialWindowClass(): MaterialWindowClass {
 }
 
 const NAV = [
-  { to: '/',            label: 'Dashboard',        Icon: LayoutDashboard, end: true },
-  { to: '/customers',   label: 'Customers',        Icon: Users },
-  { to: '/jobs',        label: 'Jobs / Work Orders', Icon: Wrench },
-  { to: '/invoices',    label: 'Invoices',         Icon: FileText },
-  { to: '/payments',    label: 'Payments',         Icon: CreditCard },
-  { to: '/expenses',    label: 'Expenses',         Icon: Receipt },
-  { to: '/accounts',    label: 'Chart of Accounts', Icon: Landmark },
-  { to: '/inventory',   label: 'Inventory',        Icon: Package },
-  { to: '/purchasing',  label: 'Purchasing',       Icon: ShoppingCart },
-  { to: '/suppliers',   label: 'Suppliers',        Icon: Truck },
-  { to: '/reports',     label: 'Reports',          Icon: BarChart3 },
-  { to: '/audit',       label: 'Audit Trail',      Icon: ShieldCheck },
-  { to: '/settings',    label: 'Settings',         Icon: SettingsIcon },
+  { to: '/',            label: 'Dashboard',        Icon: LayoutDashboard, end: true, section: 'workspace' as const },
+  { to: '/customers',   label: 'Customers',        Icon: Users, section: 'workspace' as const },
+  { to: '/jobs',        label: 'Jobs / Work Orders', Icon: Wrench, section: 'workspace' as const },
+  { to: '/invoices',    label: 'Invoices',         Icon: FileText, section: 'workspace' as const },
+  { to: '/payments',    label: 'Payments',         Icon: CreditCard, section: 'workspace' as const },
+  { to: '/expenses',    label: 'Expenses',         Icon: Receipt, section: 'workspace' as const },
+  { to: '/accounts',    label: 'Chart of Accounts', Icon: Landmark, section: 'workspace' as const },
+  { to: '/inventory',   label: 'Inventory',        Icon: Package, section: 'workspace' as const },
+  { to: '/purchasing',  label: 'Purchasing',       Icon: ShoppingCart, section: 'workspace' as const },
+  { to: '/suppliers',   label: 'Suppliers',        Icon: Truck, section: 'workspace' as const },
+  { to: '/reports',     label: 'Reports',          Icon: BarChart3, section: 'workspace' as const },
+  { to: '/audit',       label: 'Audit Trail',      Icon: ShieldCheck, section: 'system' as const },
+  { to: '/settings',    label: 'Settings',         Icon: SettingsIcon, section: 'system' as const },
 ];
+
+const NAV_SECTION_LABEL: Record<'workspace' | 'system', string> = {
+  workspace: 'Workspace',
+  system: 'System / Administration',
+};
 
 export const PLATFORM_NAV: Array<{
   id: PlatformTabId;
@@ -122,6 +127,30 @@ export const SETTINGS_SUBNAV = [
   { id: 'about',     label: 'About starqERP',      Icon: Info },
 ];
 
+const MODULE_SUBNAV: Record<string, typeof SETTINGS_SUBNAV> = {
+  '/settings': SETTINGS_SUBNAV,
+  '/accounts': [
+    { id: 'chart_of_accounts', label: 'Chart of Accounts', Icon: Landmark },
+    { id: 'general_ledger', label: 'General Ledger', Icon: FileText },
+    { id: 'periods', label: 'Period Lock & Year-End', Icon: ShieldCheck },
+    { id: 'bank_reconciliation', label: 'Bank Reconciliation', Icon: CreditCard },
+    { id: 'multi_currency', label: 'Multi-Currency & FX', Icon: Sparkles },
+  ],
+  '/reports': [
+    { id: 'statements', label: 'Financial Statements', Icon: FileText },
+    { id: 'aging', label: 'AR / AP Aging', Icon: CreditCard },
+    { id: 'analytics', label: 'Operational Analytics', Icon: BarChart3 },
+    { id: 'mira_gst_201', label: 'MIRA GST-201', Icon: Receipt },
+    { id: 'mira_tgst_16', label: '16% TGST & Green Tax', Icon: Building2 },
+    { id: 'cash_flow', label: 'Cash Flow (IFRS)', Icon: Activity },
+  ],
+  '/invoices': [
+    { id: 'invoices', label: 'Commercial Invoices', Icon: FileText },
+    { id: 'credits_advances', label: 'Credit Notes & Advances', Icon: Receipt },
+    { id: 'allocations', label: 'Settlement Allocations', Icon: Sparkles },
+  ],
+};
+
 export const AppShell: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -138,6 +167,10 @@ export const AppShell: React.FC = () => {
   const { session, logout } = useAuth();
   const { themeMode, setThemeMode, resolvedTheme } = useTheme();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [collapsedModuleMenus, setCollapsedModuleMenus] = useState<Set<string>>(() => new Set());
+  const [mobileExpandedModuleMenus, setMobileExpandedModuleMenus] = useState<Set<string>>(
+    () => new Set(MODULE_SUBNAV[location.pathname] ? [location.pathname] : []),
+  );
   const [tenantMenuOpen, setTenantMenuOpen] = useState(false);
   const [platformTab, setPlatformTab] = useState<PlatformTabId>('overview');
   const { pendingApplications } = useERP();
@@ -269,21 +302,56 @@ export const AppShell: React.FC = () => {
               );
             })
           ) : (
-            NAV.map(({ to, label, Icon, end }) => {
-              const isSettings = to === '/settings';
-              const inSettings = location.pathname.startsWith('/settings');
+            NAV.map(({ to, label, Icon, end, section }, index) => {
+              const subnav = MODULE_SUBNAV[to];
+              const inModule = location.pathname.startsWith(to);
               const searchParams = new URLSearchParams(location.search);
-              const currentTab = searchParams.get('tab') || 'profile';
+              const currentTab = searchParams.get('tab') || subnav?.[0]?.id;
+              const isExpanded = Boolean(subnav && inModule && !collapsedModuleMenus.has(to));
+              const showSectionDivider = index > 0 && NAV[index - 1].section !== section;
 
               return (
-                <div key={to} className="flex flex-col">
+                <React.Fragment key={to}>
+                  {showSectionDivider && (
+                    <div
+                      className="mt-3 mb-1 pt-3 px-3.5"
+                      style={{ borderTop: '1px solid var(--md-sys-color-outline-variant)' }}
+                      aria-hidden="true"
+                    >
+                      <span
+                        className="text-[10px] font-bold uppercase tracking-wider"
+                        style={{ color: 'var(--md-sys-color-on-surface-variant)', opacity: 0.7 }}
+                      >
+                        {NAV_SECTION_LABEL[section]}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex flex-col">
                   <NavLink
                     to={to}
                     end={end}
+                    aria-expanded={subnav ? isExpanded : undefined}
+                    onClick={(event) => {
+                      if (!subnav) return;
+                      if (inModule) {
+                        event.preventDefault();
+                        setCollapsedModuleMenus((current) => {
+                          const next = new Set(current);
+                          if (next.has(to)) next.delete(to); else next.add(to);
+                          return next;
+                        });
+                      } else {
+                        setCollapsedModuleMenus((current) => {
+                          const next = new Set(current);
+                          next.delete(to);
+                          return next;
+                        });
+                      }
+                    }}
                     className={({ isActive }) =>
                       `group relative overflow-hidden flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--md-sys-shape-corner-full)] text-xs font-medium transition-all duration-150 ${
                         isActive ? 'font-semibold' : ''
-                      }`
+                      } ${section === 'system' && !isActive ? 'opacity-80' : ''}`
                     }
                     style={({ isActive }) =>
                       isActive
@@ -301,13 +369,13 @@ export const AppShell: React.FC = () => {
                       className="absolute inset-0 pointer-events-none rounded-[inherit] transition-opacity duration-150 opacity-0 group-hover:opacity-[var(--md-sys-state-hover-opacity)] group-active:opacity-[var(--md-sys-state-pressed-opacity)] bg-current"
                       aria-hidden="true"
                     />
-                    <Icon size={17} strokeWidth={1.9} aria-hidden="true" className="relative z-10 shrink-0" />
+                    <Icon size={17} strokeWidth={section === 'system' ? 1.7 : 1.9} aria-hidden="true" className="relative z-10 shrink-0" />
                     <span className="relative z-10 truncate flex-1">{label}</span>
-                    {isSettings && (
+                    {subnav && (
                       <ChevronDown
                         size={14}
                         className={`relative z-10 transition-transform duration-200 ${
-                          inSettings
+                          isExpanded
                             ? 'rotate-180 text-[var(--md-sys-color-primary)]'
                             : 'text-[var(--md-sys-color-on-surface-variant)]/60'
                         }`}
@@ -315,18 +383,19 @@ export const AppShell: React.FC = () => {
                     )}
                   </NavLink>
 
-                  {/* Sub-Navigation nested under Settings */}
-                  {isSettings && inSettings && (
-                    <div className="ml-5 pl-2.5 my-1 flex flex-col gap-0.5 border-l border-[var(--md-sys-color-outline-variant)]/60 animate-in fade-in duration-150">
-                      {SETTINGS_SUBNAV.map((sub) => {
+                  {/* Persistent module destinations use the same nested sidebar language. */}
+                  {subnav && isExpanded && (
+                    <div className="ml-5 pl-3 my-1 flex flex-col gap-0.5 border-l-2 border-[var(--md-sys-color-outline-variant)]/70 animate-in fade-in duration-150" aria-label={`${label} sections`}>
+                      {subnav.map((sub) => {
                         const isSubActive = currentTab === sub.id;
                         return (
                           <NavLink
                             key={sub.id}
-                            to={`/settings?tab=${sub.id}`}
-                            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--md-sys-shape-corner-small)] text-[11px] transition-colors ${
+                            to={`${to}?tab=${sub.id}`}
+                            aria-current={isSubActive ? 'page' : undefined}
+                            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--md-sys-shape-corner-small)] text-[11px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--md-sys-color-primary)] ${
                               isSubActive
-                                ? 'font-bold bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
+                                ? 'font-bold bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] shadow-xs'
                                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:text-[var(--md-sys-color-on-surface)]'
                             }`}
                           >
@@ -337,7 +406,8 @@ export const AppShell: React.FC = () => {
                       })}
                     </div>
                   )}
-                </div>
+                  </div>
+                </React.Fragment>
               );
             })
           )}
@@ -458,23 +528,52 @@ export const AppShell: React.FC = () => {
                   );
                 })
               ) : (
-                NAV.map(({ to, label, Icon, end }) => {
-                  const isSettings = to === '/settings';
-                  const inSettings = location.pathname.startsWith('/settings');
+                NAV.map(({ to, label, Icon, end, section }, index) => {
+                  const subnav = MODULE_SUBNAV[to];
+                  const inModule = location.pathname.startsWith(to);
                   const searchParams = new URLSearchParams(location.search);
-                  const currentTab = searchParams.get('tab') || 'profile';
+                  const currentTab = searchParams.get('tab') || subnav?.[0]?.id;
+                  const isExpanded = Boolean(subnav && mobileExpandedModuleMenus.has(to));
+                  const showSectionDivider = index > 0 && NAV[index - 1].section !== section;
 
                   return (
-                    <div key={to} className="flex flex-col">
+                    <React.Fragment key={to}>
+                      {showSectionDivider && (
+                        <div
+                          className="mt-3 mb-1 pt-3 px-3.5"
+                          style={{ borderTop: '1px solid var(--md-sys-color-outline-variant)' }}
+                          aria-hidden="true"
+                        >
+                          <span
+                            className="text-[10px] font-bold uppercase tracking-wider"
+                            style={{ color: 'var(--md-sys-color-on-surface-variant)', opacity: 0.7 }}
+                          >
+                            {NAV_SECTION_LABEL[section]}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex flex-col">
                       <NavLink
                         key={to}
                         to={to}
                         end={end}
-                        onClick={() => setMobileDrawerOpen(false)}
+                        aria-expanded={subnav ? isExpanded : undefined}
+                        onClick={(event) => {
+                          if (!subnav) {
+                            setMobileDrawerOpen(false);
+                            return;
+                          }
+                          event.preventDefault();
+                          setMobileExpandedModuleMenus((current) => {
+                            const next = new Set(current);
+                            if (next.has(to)) next.delete(to); else next.add(to);
+                            return next;
+                          });
+                        }}
                         className={({ isActive }) =>
                           `group relative overflow-hidden flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--md-sys-shape-corner-full)] text-xs font-medium transition-all duration-150 ${
                             isActive ? 'font-semibold' : ''
-                          }`
+                          } ${section === 'system' && !isActive ? 'opacity-80' : ''}`
                         }
                         style={({ isActive }) =>
                           isActive
@@ -492,13 +591,13 @@ export const AppShell: React.FC = () => {
                           className="absolute inset-0 pointer-events-none rounded-[inherit] transition-opacity duration-150 opacity-0 group-hover:opacity-[var(--md-sys-state-hover-opacity)] group-active:opacity-[var(--md-sys-state-pressed-opacity)] bg-current"
                           aria-hidden="true"
                         />
-                        <Icon size={17} strokeWidth={1.9} aria-hidden="true" className="relative z-10 shrink-0" />
+                        <Icon size={17} strokeWidth={section === 'system' ? 1.7 : 1.9} aria-hidden="true" className="relative z-10 shrink-0" />
                         <span className="relative z-10 truncate flex-1">{label}</span>
-                        {isSettings && (
+                        {subnav && (
                           <ChevronDown
                             size={14}
                             className={`relative z-10 transition-transform duration-200 ${
-                              inSettings
+                              isExpanded
                                 ? 'rotate-180 text-[var(--md-sys-color-primary)]'
                                 : 'text-[var(--md-sys-color-on-surface-variant)]/60'
                             }`}
@@ -506,19 +605,20 @@ export const AppShell: React.FC = () => {
                         )}
                       </NavLink>
 
-                      {/* Sub-Navigation nested under Settings in mobile drawer */}
-                      {isSettings && inSettings && (
-                        <div className="ml-5 pl-2.5 my-1 flex flex-col gap-0.5 border-l border-[var(--md-sys-color-outline-variant)]/60 animate-in fade-in duration-150">
-                          {SETTINGS_SUBNAV.map((sub) => {
+                      {/* Persistent module destinations use the same nested sidebar language. */}
+                      {subnav && isExpanded && (
+                        <div className="ml-5 pl-3 my-1 flex flex-col gap-0.5 border-l-2 border-[var(--md-sys-color-outline-variant)]/70 animate-in fade-in duration-150" aria-label={`${label} sections`}>
+                          {subnav.map((sub) => {
                             const isSubActive = currentTab === sub.id;
                             return (
                               <NavLink
                                 key={sub.id}
-                                to={`/settings?tab=${sub.id}`}
-                                onClick={() => setMobileDrawerOpen(false)}
-                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--md-sys-shape-corner-small)] text-[11px] transition-colors ${
-                                  isSubActive
-                                    ? 'font-bold bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]'
+                              to={`${to}?tab=${sub.id}`}
+                              onClick={() => setMobileDrawerOpen(false)}
+                              aria-current={isSubActive ? 'page' : undefined}
+                              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--md-sys-shape-corner-small)] text-[11px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--md-sys-color-primary)] ${
+                                isSubActive
+                                  ? 'font-bold bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] shadow-xs'
                                     : 'text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:text-[var(--md-sys-color-on-surface)]'
                                 }`}
                               >
@@ -529,7 +629,8 @@ export const AppShell: React.FC = () => {
                           })}
                         </div>
                       )}
-                    </div>
+                      </div>
+                    </React.Fragment>
                   );
                 })
               )}
@@ -557,7 +658,7 @@ export const AppShell: React.FC = () => {
       <div className="flex min-w-0 flex-1 flex-col w-full">
         {/* TopAppBar */}
         <header
-          className="flex items-center gap-2 sm:gap-3 px-3 sm:px-6 py-2.5 shrink-0 h-14 sm:h-16 w-full"
+          className="sticky top-0 z-40 flex items-center gap-2 sm:gap-3 px-3 sm:px-6 py-2.5 shrink-0 h-14 sm:h-16 w-full shadow-sm"
           style={{
             backgroundColor: 'var(--md-sys-color-surface-container)',
             borderBottom: '1px solid var(--md-sys-color-outline-variant)',

@@ -6,9 +6,9 @@ import { AccountsView } from '../components/accounts/AccountsView';
 import { ERPProvider } from '../context/ERPContext';
 import { AuthProvider } from '../context/AuthContext';
 
-const renderAccountsView = () => {
+const renderAccountsView = (entry = '/accounts?tab=periods') => {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[entry]}>
       <AuthProvider>
         <ERPProvider>
           <AccountsView />
@@ -23,14 +23,8 @@ describe('SERP-295: Accounting Period Lock & Year-End Close UI', () => {
     localStorage.clear();
   });
 
-  it('renders AccountsView, switches to Period Lock tab, and displays 12 fiscal periods', () => {
+  it('renders the persistent Period Lock destination and displays 12 fiscal periods', () => {
     renderAccountsView();
-
-    expect(screen.getByTestId('chart-of-accounts-view')).toBeInTheDocument();
-
-    // Switch to Period Lock tab
-    const periodTab = screen.getByTestId('periods-tab-btn');
-    fireEvent.click(periodTab);
 
     expect(screen.getByTestId('period-management-view')).toBeInTheDocument();
     expect(screen.getByText('Open Accounting Periods')).toBeInTheDocument();
@@ -42,9 +36,6 @@ describe('SERP-295: Accounting Period Lock & Year-End Close UI', () => {
 
   it('locks a period and unlocks via audited workflow', async () => {
     renderAccountsView();
-
-    const periodTab = screen.getByTestId('periods-tab-btn');
-    fireEvent.click(periodTab);
 
     // Lock March 2026
     const lockMarchBtn = screen.getByTestId('lock-btn-period-2026-03');
@@ -78,9 +69,6 @@ describe('SERP-295: Accounting Period Lock & Year-End Close UI', () => {
 
   it('opens Year-End Close Wizard and displays roll-forward preview', () => {
     renderAccountsView();
-
-    const periodTab = screen.getByTestId('periods-tab-btn');
-    fireEvent.click(periodTab);
 
     const yearEndBtn = screen.getByTestId('open-year-end-modal-btn');
     fireEvent.click(yearEndBtn);

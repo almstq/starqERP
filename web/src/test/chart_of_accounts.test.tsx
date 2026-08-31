@@ -14,9 +14,9 @@ import {
 } from '../domain/accounts';
 import { DEFAULT_CHART_OF_ACCOUNTS } from '../data/defaultChartOfAccounts';
 
-const renderAccountsView = () => {
+const renderAccountsView = (entry = '/accounts') => {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[entry]}>
       <AuthProvider>
         <ERPProvider>
           <AccountsView />
@@ -86,6 +86,13 @@ describe('AccountsView Component & Interactions', () => {
     expect(screen.getByTestId('account-row-2000')).toBeInTheDocument();
     expect(screen.getByTestId('account-row-3000')).toBeInTheDocument();
     expect(screen.getByTestId('account-row-4000')).toBeInTheDocument();
+  });
+
+  it('renders a persistent ledger section from a deep link', () => {
+    renderAccountsView('/accounts?tab=multi_currency');
+
+    expect(screen.getByText('Multi-Currency & MMA Exchange Rates')).toBeInTheDocument();
+    expect(screen.queryByTestId('account-row-1000')).not.toBeInTheDocument();
   });
 
   it('filters accounts by classification tab', () => {

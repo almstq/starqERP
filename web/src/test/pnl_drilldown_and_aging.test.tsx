@@ -6,9 +6,9 @@ import { ReportsView } from '../components/reports/ReportsView';
 import { ERPProvider } from '../context/ERPContext';
 import { AuthProvider } from '../context/AuthContext';
 
-const renderReportsView = () => {
+const renderReportsView = (entry = '/reports') => {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[entry]}>
       <AuthProvider>
         <ERPProvider>
           <ReportsView />
@@ -55,12 +55,8 @@ describe('SERP-293: Authoritative P&L Drilldowns & AR/AP Aging Matrices', () => 
     });
   });
 
-  it('switches to AR / AP Aging tab and displays aging matrices and bucket breakdowns', () => {
-    renderReportsView();
-
-    // Switch to AR / AP Aging tab
-    const agingTab = screen.getByRole('button', { name: /AR \/ AP Aging/i });
-    fireEvent.click(agingTab);
+  it('renders AR / AP Aging from its persistent deep link', () => {
+    renderReportsView('/reports?tab=aging');
 
     // Verify Aging Matrices View rendered
     expect(screen.getByTestId('aging-matrices-view')).toBeInTheDocument();
