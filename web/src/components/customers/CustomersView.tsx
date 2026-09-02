@@ -34,8 +34,12 @@ export const CustomersView: React.FC = () => {
   const {
     customers,
     setIsNewCustomerOpen,
-    formatMVR
+    formatMVR,
+    currentArchetype,
+    currentTerms,
   } = useERP();
+
+  const isAutomotive = currentArchetype?.terminology?.showVehicleFields ?? false;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('All');
@@ -45,11 +49,13 @@ export const CustomersView: React.FC = () => {
     const matchesSearch =
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.phone.includes(searchQuery) ||
-      c.vehicles.some(
-        (v) =>
-          v.plateNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          v.model.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      (c.email && c.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (isAutomotive &&
+        c.vehicles.some(
+          (v) =>
+            v.plateNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            v.model.toLowerCase().includes(searchQuery.toLowerCase())
+        ));
     const matchesType = filterType === 'All' || c.type === filterType;
     const matchesIsland = filterIsland === 'All' || c.island.includes(filterIsland);
     return matchesSearch && matchesType && matchesIsland;
@@ -67,8 +73,8 @@ export const CustomersView: React.FC = () => {
   const columns: ColumnDef<Customer>[] = [
     {
       key: 'name',
-      header: 'Customer & Contact',
-      width: '28%',
+      header: `${currentTerms.customer} & Contact`,
+      width: isAutomotive ? '28%' : '34%',
       render: (c) => (
         <div className="flex items-center gap-2.5 min-w-0">
           <div
@@ -95,7 +101,7 @@ export const CustomersView: React.FC = () => {
     {
       key: 'type',
       header: 'Type & Location',
-      width: '18%',
+      width: isAutomotive ? '18%' : '24%',
       hideOn: 'compact',
       render: (c) => (
         <div className="min-w-0">
@@ -106,28 +112,32 @@ export const CustomersView: React.FC = () => {
         </div>
       ),
     },
-    {
-      key: 'vehicles',
-      header: 'Vehicles',
-      width: '22%',
-      hideOn: 'medium',
-      render: (c) => (
-        <div className="flex flex-wrap gap-1 min-w-0">
-          {c.vehicles.map((v, i) => (
-            <span
-              key={i}
-              className="mono-num text-[10px] font-semibold px-1.5 py-0.5 rounded-[var(--md-sys-shape-corner-extra-small)]"
-              style={{
-                backgroundColor: 'var(--md-sys-color-surface-container-high)',
-                color: 'var(--md-sys-color-on-surface-variant)',
-              }}
-            >
-              {v.plateNumber}
-            </span>
-          ))}
-        </div>
-      ),
-    },
+    ...(isAutomotive
+      ? [
+          {
+            key: 'vehicles',
+            header: 'Vehicles',
+            width: '22%',
+            hideOn: 'medium' as const,
+            render: (c: Customer) => (
+              <div className="flex flex-wrap gap-1 min-w-0">
+                {c.vehicles.map((v, i) => (
+                  <span
+                    key={i}
+                    className="mono-num text-[10px] font-semibold px-1.5 py-0.5 rounded-[var(--md-sys-shape-corner-extra-small)]"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                      color: 'var(--md-sys-color-on-surface-variant)',
+                    }}
+                  >
+                    {v.plateNumber}
+                  </span>
+                ))}
+              </div>
+            ),
+          },
+        ]
+      : []),
     {
       key: 'activeJobsCount',
       header: 'Active',
@@ -136,7 +146,7 @@ export const CustomersView: React.FC = () => {
       render: (c) =>
         c.activeJobsCount > 0 ? (
           <Badge variant="accent" size="sm">
-            {c.activeJobsCount} Jobs
+            {c.activeJobsCount} {currentTerms.orders}
           </Badge>
         ) : (
           <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">0</span>
@@ -190,14 +200,16 @@ export const CustomersView: React.FC = () => {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 min-w-0">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] truncate">
-              Customer Accounts & Fleets
+              {currentTerms.customers} & Accounts
             </h1>
             <Badge variant="neutral" size="sm">
               {customers.length} Profiles
             </Badge>
           </div>
           <p className="mt-0.5 text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">
-            Client directory, registered assets, job histories, and outstanding receivables
+            {isAutomotive
+              ? 'Client directory, registered assets, job histories, and outstanding receivables'
+              : 'Directory of client accounts, contracts, order histories, and outstanding balances'}
           </p>
         </div>
 
@@ -208,7 +220,7 @@ export const CustomersView: React.FC = () => {
             onClick={() => setIsNewCustomerOpen(true)}
             icon={<Plus size={15} />}
           >
-            <span>Add Customer</span>
+            <span>Add {currentTerms.customer}</span>
           </Button>
         </ActionGroup>
       </div>
@@ -219,7 +231,11 @@ export const CustomersView: React.FC = () => {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by customer name, phone, plate # or model…"
+            placeholder={
+              isAutomotive
+                ? 'Search by customer name, phone, plate # or model…'
+                : `Search by ${currentTerms.customer.toLowerCase()} name, phone, email…`
+            }
             icon={<Search size={14} />}
           />
         </div>
