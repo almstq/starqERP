@@ -43,8 +43,6 @@ const ENTRY_POINTS = ['app/router.tsx', 'main.tsx'];
  */
 const KNOWN_DARK = {
   // --- Superseded duplicates: a live equivalent is already routed. Archive. ---
-  'components/platform/StarqHQView.tsx':
-    'Superseded by StarqHQShell + its ten panels, which ARE routed. Rival implementation; archive, do not wire.',
   'components/onboarding/OrganisationSetupModal.tsx':
     'Superseded by RegisterOrganisationModal, which AppShell renders. Rival implementation; archive, do not wire.',
 
