@@ -93,8 +93,11 @@ export const MiraTgstView: React.FC<{
       greenTaxStays,
       periodYear: selectedYear,
       periodMonth: selectedMonth,
-      tin: currentTenant.tinNumber || '1002345GST501',
-      legalEntityName: currentTenant.name || 'Maldives Safari & Resort Services Pvt Ltd',
+      // SERP-237: no fabricated TIN on a statutory return. See MiraGst201View.
+      tin: currentTenant.tinNumber || '',
+      // SERP-237: no invented legal entity name on a statutory return. This is
+      // the twin of the MiraGst201View fix — the same defect, one file over.
+      legalEntityName: currentTenant.name || '',
       usdToMvrRate: 15.42,
     });
   }, [invoices, expenses, greenTaxStays, selectedYear, selectedMonth, currentTenant]);

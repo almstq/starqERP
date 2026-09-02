@@ -37,7 +37,7 @@ import {
 import { useERP } from '../../context/ERPContext';
 import { Badge } from '../common/Badge';
 import { Surface, Button } from '../ui';
-import { MONTHLY_SALES_CHART_DATA, SERVICE_BREAKDOWN_DATA } from '../../data/mockData';
+import { buildMonthlyPerformance, buildServiceMix } from '../../domain/dashboardSeries';
 import { DEFAULT_CHART_OF_ACCOUNTS } from '../../data/defaultChartOfAccounts';
 import { AccountRecord } from '../../domain/accounts';
 import {
@@ -58,6 +58,16 @@ import { CashFlowStatementView } from './CashFlowStatementView';
 export const ReportsView: React.FC = () => {
   const navigate = useNavigate();
   const { formatMVR, invoices, payments, expenses, purchaseOrders, jobs, staff, currentTenant, currentBook } = useERP();
+
+  // SERP-288 — both analytics charts were fed by hard-coded arrays in mockData.
+  // They are now the tenant's own records, and empty when the tenant is empty.
+  const monthlyPerformance = React.useMemo(
+    () => buildMonthlyPerformance(invoices, expenses),
+    [invoices, expenses],
+  );
+  const serviceMix = React.useMemo(() => buildServiceMix(jobs), [jobs]);
+  const hasTrading = monthlyPerformance.some((p) => p.revenue !== 0 || p.expenses !== 0);
+
 
   const [dateRange, setDateRange] = useState('This Year (2026)');
   const [selectedBookFilter, setSelectedBookFilter] = useState<'CONSOLIDATED' | 'CURRENT_BOOK'>('CONSOLIDATED');
@@ -569,20 +579,27 @@ export const ReportsView: React.FC = () => {
                 <h3 className="text-sm font-bold text-[var(--md-sys-color-on-surface)]">
                   Monthly Revenue vs Expenses (MVR)
                 </h3>
-                <Badge variant="neutral" size="sm">FY2026</Badge>
+                <Badge variant="neutral" size="sm">Last 6 months</Badge>
               </div>
               <div className="h-64 w-full">
+                {!hasTrading ? (
+                  <div className="h-full flex items-center justify-center text-center text-xs text-[var(--md-sys-color-on-surface-variant)] px-6">
+                    No revenue or expenses recorded in the last six months. This chart is built
+                    from issued invoices and recorded expenses — it stays empty until there are some.
+                  </div>
+                ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={MONTHLY_SALES_CHART_DATA}>
+                  <BarChart data={monthlyPerformance}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--md-sys-color-outline-variant)" opacity={0.3} />
                     <XAxis dataKey="month" stroke="var(--md-sys-color-outline)" fontSize={11} />
                     <YAxis stroke="var(--md-sys-color-outline)" fontSize={11} tickFormatter={(v) => `${v / 1000}k`} />
                     <Tooltip contentStyle={{ backgroundColor: 'var(--md-sys-color-surface-container)', borderColor: 'var(--md-sys-color-outline-variant)' }} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="sales" name="Sales Revenue" fill="var(--md-sys-color-primary)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="revenue" name="Revenue (excl. GST)" fill="var(--md-sys-color-primary)" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="expenses" name="Operating Expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+                )}
               </div>
             </Surface>
 
@@ -591,18 +608,25 @@ export const ReportsView: React.FC = () => {
                 <h3 className="text-sm font-bold text-[var(--md-sys-color-on-surface)]">
                   Labor & Service Value Breakdown
                 </h3>
-                <Badge variant="neutral" size="sm">Volume</Badge>
+                <Badge variant="neutral" size="sm">By value</Badge>
               </div>
               <div className="h-64 w-full">
+                {serviceMix.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-center text-xs text-[var(--md-sys-color-on-surface-variant)] px-6">
+                    No service value recorded yet. This breakdown is built from approved job
+                    orders, weighted by value.
+                  </div>
+                ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={SERVICE_BREAKDOWN_DATA} layout="vertical">
+                  <BarChart data={serviceMix} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--md-sys-color-outline-variant)" opacity={0.3} />
                     <XAxis type="number" stroke="var(--md-sys-color-outline)" fontSize={11} />
-                    <YAxis dataKey="category" type="category" stroke="var(--md-sys-color-outline)" fontSize={10} width={90} />
+                    <YAxis dataKey="name" type="category" stroke="var(--md-sys-color-outline)" fontSize={10} width={90} />
                     <Tooltip contentStyle={{ backgroundColor: 'var(--md-sys-color-surface-container)', borderColor: 'var(--md-sys-color-outline-variant)' }} />
-                    <Bar dataKey="value" name="Service Value" fill="#38bdf8" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="amount" name="Service Value (MVR)" fill="#38bdf8" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+                )}
               </div>
             </Surface>
           </div>

@@ -183,7 +183,10 @@ export function calculateMiraTgstReturn(params: CalculateTgstParams): MiraTgstRe
 
   return {
     returnId: `MIRA-TGST-${taxPeriod}-${tin || 'TAX'}`,
-    tin: tin || '1002345GST501',
+    // SERP-237: the engine must not invent a TIN either. A view passing an
+    // empty string was still getting a fabricated identifier back, which is how
+    // a fake number reaches a return even after the UI is cleaned up.
+    tin: tin || '',
     legalEntityName,
     taxPeriod,
     periodStartDate,

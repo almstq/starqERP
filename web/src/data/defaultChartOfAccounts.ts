@@ -145,6 +145,24 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
     description: 'General ledger control account for all unpaid customer sales invoices.',
   },
   {
+    id: 'coa-1220',
+    code: '1220',
+    name: 'Due From Related Book',
+    accountClass: 'ASSET',
+    subtype: 'ACCOUNTS_RECEIVABLE',
+    parentId: 'coa-1200',
+    level: 3,
+    currency: 'MVR',
+    status: 'ACTIVE',
+    balance: 0,
+    isSystem: true,
+    description:
+      'SERP-316. What this book is owed by another book of the SAME legal entity — ST to SD, and back. ' +
+      'Not a trade debtor: the entity cannot owe itself money in any statutory sense, so this balance ' +
+      'must be eliminated on consolidation and must never appear on an external balance sheet. It must ' +
+      'agree exactly with 2160 across all books; a difference means a transfer was recorded on one side only.',
+  },
+  {
     id: 'coa-1300',
     code: '1300',
     name: 'Inventory and Stock Assets',
@@ -455,6 +473,23 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
     balance: 0,
     isSystem: true,
     description: 'Money received before delivery. A liability until earned; never recognised as revenue on receipt.',
+  },
+  {
+    id: 'coa-2160',
+    code: '2160',
+    name: 'Due To Related Book',
+    accountClass: 'LIABILITY',
+    subtype: 'CURRENT_LIABILITY',
+    parentId: 'coa-2100',
+    level: 2,
+    currency: 'MVR',
+    status: 'ACTIVE',
+    balance: 0,
+    isSystem: true,
+    description:
+      'SERP-316. The mirror of 1220 — what this book owes another book of the same legal entity. ' +
+      'Eliminated on consolidation. The sum of 1220 across all books must equal the sum of 2160; the ' +
+      'consolidation reports any difference rather than absorbing it.',
   },
 
   // ==========================================
