@@ -304,7 +304,7 @@ export const CreateJobModal: React.FC = () => {
           </div>
         ) : (
           <div className="p-3.5 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] space-y-2.5">
-            <div className="text-xs font-bold text-blue-600 uppercase tracking-wider">
+            <div className="text-xs font-bold text-[var(--md-sys-color-primary)] uppercase tracking-wider">
               Project & Deliverable Scope
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -316,7 +316,7 @@ export const CreateJobModal: React.FC = () => {
                   value={projectRef}
                   onChange={(e) => setProjectRef(e.target.value.toUpperCase())}
                   placeholder="e.g. STQ-PRJ-2026-01"
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-blue-600 font-mono font-semibold focus:outline-none focus:border-blue-500"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-primary)] font-mono font-semibold focus:outline-none focus:border-[var(--md-sys-color-primary)]"
                 />
               </div>
               <div>
@@ -326,7 +326,7 @@ export const CreateJobModal: React.FC = () => {
                   value={milestoneTarget}
                   onChange={(e) => setMilestoneTarget(e.target.value)}
                   placeholder="e.g. Architecture Milestone 1"
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-[var(--md-sys-color-primary)]"
                 />
               </div>
             </div>
