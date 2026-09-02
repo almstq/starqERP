@@ -46,7 +46,7 @@ export interface MiraGst201Return {
     customerName: string;
     taxableAmount: number;
     gstAmount: number;
-    type: 'standard_8' | 'tourism_16' | 'zero_rated' | 'exempt';
+    type: 'standard' | 'tourism' | 'zero_rated' | 'exempt';
   }>;
   purchaseAuditLines: Array<{
     id: string;
@@ -217,7 +217,7 @@ export function calculateMiraGst201Return(params: CalculateMiraGstParams): MiraG
         customerName: inv.customerName || 'Customer',
         taxableAmount: subtotal,
         gstAmount: tax,
-        type: 'tourism_16',
+        type: 'tourism',
       });
     } else {
       // General Sector 8% Standard Rated Supply
@@ -231,7 +231,7 @@ export function calculateMiraGst201Return(params: CalculateMiraGstParams): MiraG
         customerName: inv.customerName || 'Customer',
         taxableAmount: subtotal,
         gstAmount: tax,
-        type: 'standard_8',
+        type: 'standard',
       });
     }
   }
@@ -366,7 +366,7 @@ export function generateMiraConnectCsv(ret: MiraGst201Return): string {
     [],
     ['BOX_NUMBER', 'BOX_DESCRIPTION', 'VALUE_MVR', 'TAX_MVR'],
     ['Box 1 & 2', 'Standard Rated Supplies (8%)', ret.box1_standardSupplies8Value.toFixed(2), ret.box2_standardSupplies8Tax.toFixed(2)],
-    ['Box 3 & 4', 'Tourism Sector Supplies (16%)', ret.box3_tourismSupplies16Value.toFixed(2), ret.box4_tourismSupplies16Tax.toFixed(2)],
+    ['Box 3 & 4', 'Tourism Sector Supplies', ret.box3_tourismSupplies16Value.toFixed(2), ret.box4_tourismSupplies16Tax.toFixed(2)],
     ['Box 5', 'Zero-Rated Supplies', ret.box5_zeroRatedSuppliesValue.toFixed(2), '0.00'],
     ['Box 6', 'Exempt Supplies', ret.box6_exemptSuppliesValue.toFixed(2), '0.00'],
     ['Box 7', 'Total Output Tax', '', ret.box7_totalOutputTax.toFixed(2)],
