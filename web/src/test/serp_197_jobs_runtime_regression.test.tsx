@@ -58,10 +58,10 @@ describe('SERP-197 / SERP-145: Jobs Runtime & CreateJobModal Permission Contract
     );
 
     // Modal title should be present
-    expect(screen.getByText(/Create New Job Order \/ Work Ticket/i)).toBeDefined();
+    expect(screen.getByText(/Create New (Job Order \/ Work Ticket|Work Order)/i)).toBeDefined();
     
-    // Create & Assign to Bay button should be enabled for active admin
-    const submitBtn = screen.getByText(/Create & Assign to Bay/i);
+    // Action button should be enabled for active admin
+    const submitBtn = screen.getByText(/Create (& Assign to Bay|& Schedule Work Order)/i);
     expect(submitBtn).toBeDefined();
     expect((submitBtn as HTMLButtonElement).disabled).toBe(false);
   });

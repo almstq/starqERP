@@ -47,7 +47,11 @@ export const JobDetailView: React.FC = () => {
     workflowStages,
     customers,
     generateJobInvoice,
+    currentArchetype,
+    currentTerms,
   } = useERP();
+
+  const isAutomotive = currentArchetype?.terminology?.showVehicleFields ?? false;
 
   const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false);
   const [selectedInventoryId, setSelectedInventoryId] = useState(inventory[0]?.id || '');
@@ -129,7 +133,7 @@ export const JobDetailView: React.FC = () => {
               </Badge>
             </div>
             <p className="text-xs mt-0.5 text-[var(--md-sys-color-on-surface-variant)] truncate">
-              {job.serviceType} • Bay: {job.bayNumber || 'Main Bay'}
+              {job.serviceType} • {currentTerms.facility}: {job.location || job.bayNumber || currentTerms.facility}
             </p>
           </div>
         </div>
@@ -207,21 +211,37 @@ export const JobDetailView: React.FC = () => {
                 </span>
               </div>
 
-              {job.vehicle && (
+              {isAutomotive ? (
+                job.vehicle && (
+                  <div className="space-y-1 min-w-0">
+                    <span className="block text-[11px] font-medium" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                      Vehicle / Vessel Asset
+                    </span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="mono-num font-bold text-sm truncate" style={{ color: 'var(--md-sys-color-primary)' }}>
+                        {job.vehicle.plateNumber}
+                      </span>
+                      <span className="font-medium text-[var(--md-sys-color-on-surface)] truncate">
+                        {job.vehicle.make} {job.vehicle.model}
+                      </span>
+                    </div>
+                    <span className="block text-[11px] text-[var(--md-sys-color-on-surface-variant)] truncate">
+                      Color: {job.vehicle.color} {job.vehicle.year ? `• ${job.vehicle.year}` : ''}
+                    </span>
+                  </div>
+                )
+              ) : (
                 <div className="space-y-1 min-w-0">
                   <span className="block text-[11px] font-medium" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                    Vehicle / Vessel Asset
+                    {currentTerms.primaryAsset} / Reference
                   </span>
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="mono-num font-bold text-sm truncate" style={{ color: 'var(--md-sys-color-primary)' }}>
-                      {job.vehicle.plateNumber}
-                    </span>
-                    <span className="font-medium text-[var(--md-sys-color-on-surface)] truncate">
-                      {job.vehicle.make} {job.vehicle.model}
+                      {job.projectRef || job.serviceType || 'Standard Engagement'}
                     </span>
                   </div>
                   <span className="block text-[11px] text-[var(--md-sys-color-on-surface-variant)] truncate">
-                    Color: {job.vehicle.color} {job.vehicle.year ? `• ${job.vehicle.year}` : ''}
+                    {currentTerms.facility}: {job.location || job.bayNumber || currentTerms.facility}
                   </span>
                 </div>
               )}
@@ -229,7 +249,7 @@ export const JobDetailView: React.FC = () => {
 
             <div className="pt-3 min-w-0" style={{ borderTop: '1px solid var(--md-sys-color-outline-variant)' }}>
               <span className="block text-[11px] font-medium" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                Requested Scope of Work
+                {isAutomotive ? 'Requested Scope of Work' : 'Scope of Work & Deliverables'}
               </span>
               <p className="mt-1 text-xs leading-relaxed text-[var(--md-sys-color-on-surface)]">{job.requestedWork}</p>
               {job.specialInstructions && (

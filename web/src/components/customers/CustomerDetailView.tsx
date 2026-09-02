@@ -15,7 +15,8 @@ import { JobOrder, Invoice } from '../../types/erp';
 export const CustomerDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { customers, jobs, invoices, formatMVR } = useERP();
+  const { customers, jobs, invoices, formatMVR, currentArchetype, currentTerms } = useERP();
+  const isAutomotive = currentArchetype?.terminology?.showVehicleFields ?? false;
 
   const [activeTab, setActiveTab] = useState<'overview' | 'vehicles' | 'jobs' | 'invoices' | 'notes'>('overview');
 
@@ -239,21 +240,23 @@ export const CustomerDetailView: React.FC = () => {
 
         <Surface variant="outlined" padding="sm" className="space-y-1">
           <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] block">
-            Active Work Orders
+            Active {currentTerms.orders}
           </span>
           <div className="text-lg font-bold font-mono mono-num text-[var(--md-sys-color-primary)]">
             {customerJobs.filter((j) => !['Completed', 'Paid'].includes(j.status)).length} Active
           </div>
         </Surface>
 
-        <Surface variant="outlined" padding="sm" className="space-y-1">
-          <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] block">
-            Registered Vehicles
-          </span>
-          <div className="text-lg font-bold font-mono mono-num text-[var(--md-sys-color-on-surface)]">
-            {customer.vehicles.length} Units
-          </div>
-        </Surface>
+        {isAutomotive && (
+          <Surface variant="outlined" padding="sm" className="space-y-1">
+            <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] block">
+              Registered Vehicles
+            </span>
+            <div className="text-lg font-bold font-mono mono-num text-[var(--md-sys-color-on-surface)]">
+              {customer.vehicles.length} Units
+            </div>
+          </Surface>
+        )}
       </div>
 
       {/* Navigation Tabs */}
@@ -264,8 +267,10 @@ export const CustomerDetailView: React.FC = () => {
         <div className="flex gap-4 min-w-max">
           {[
             { id: 'overview', label: 'Overview' },
-            { id: 'vehicles', label: `Vehicles (${customer.vehicles.length})` },
-            { id: 'jobs', label: `Work Orders (${customerJobs.length})` },
+            ...(isAutomotive
+              ? [{ id: 'vehicles', label: `Vehicles (${customer.vehicles.length})` }]
+              : []),
+            { id: 'jobs', label: `${currentTerms.orders} (${customerJobs.length})` },
             { id: 'invoices', label: `Invoices (${customerInvoices.length})` },
             { id: 'notes', label: 'Notes & Preferences' },
           ].map((tab) => (
@@ -333,42 +338,44 @@ export const CustomerDetailView: React.FC = () => {
             </div>
           </Surface>
 
-          <Surface variant="outlined" padding="md" className="space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">
-              Registered Vehicles
-            </h3>
-            <div className="space-y-2">
-              {customer.vehicles.map((v, idx) => (
-                <div
-                  key={idx}
-                  className="p-3 rounded-[var(--md-sys-shape-corner-medium)] border flex items-center justify-between text-xs"
-                  style={{
-                    backgroundColor: 'var(--md-sys-color-surface-container-low)',
-                    borderColor: 'var(--md-sys-color-outline-variant)',
-                  }}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Car size={16} className="text-[var(--md-sys-color-primary)]" />
-                    <div>
-                      <span className="font-mono font-bold block text-[var(--md-sys-color-primary)]">
-                        {v.plateNumber}
-                      </span>
-                      <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
-                        {v.make} {v.model} ({v.color})
-                      </span>
+          {isAutomotive && customer.vehicles.length > 0 && (
+            <Surface variant="outlined" padding="md" className="space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">
+                Registered Vehicles
+              </h3>
+              <div className="space-y-2">
+                {customer.vehicles.map((v, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-[var(--md-sys-shape-corner-medium)] border flex items-center justify-between text-xs"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                    }}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Car size={16} className="text-[var(--md-sys-color-primary)]" />
+                      <div>
+                        <span className="font-mono font-bold block text-[var(--md-sys-color-primary)]">
+                          {v.plateNumber}
+                        </span>
+                        <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
+                          {v.make} {v.model} ({v.color})
+                        </span>
+                      </div>
                     </div>
+                    <Badge variant="neutral" size="sm">
+                      {v.type}
+                    </Badge>
                   </div>
-                  <Badge variant="neutral" size="sm">
-                    {v.type}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </Surface>
+                ))}
+              </div>
+            </Surface>
+          )}
         </div>
       )}
 
-      {activeTab === 'vehicles' && (
+      {isAutomotive && activeTab === 'vehicles' && (
         <Surface variant="outlined" padding="md" className="space-y-4">
           <div
             className="flex items-center justify-between border-b pb-3"
