@@ -24,28 +24,23 @@ import {
   PermissionAction,
   PaymentMethod
 } from '../types/erp';
+// SERP-288 — FOURTEEN demo datasets used to be imported here and NONE of them
+// was referenced. Every transactional state below already initialises to [], so
+// they were dead — but dead in the worst possible place: in scope, in the live
+// context, one keystroke from being wired back in by anyone who saw
+// INITIAL_INVOICES available and reasonably assumed it was meant to be used.
+// A tenant surface should not have another business's invoices within reach.
+// Removed, not merely left unused. They remain exported from mockData for the
+// tests and demo fixtures that legitimately want them.
 import {
-  INITIAL_CUSTOMERS,
-  INITIAL_JOBS,
-  INITIAL_INVOICES,
-  INITIAL_PAYMENTS,
-  INITIAL_EXPENSES,
-  INITIAL_INVENTORY,
-  INITIAL_STOCK_MOVEMENTS,
-  INITIAL_SUPPLIERS,
-  INITIAL_PURCHASE_ORDERS,
-  INITIAL_ALERTS,
-  INITIAL_AI_INSIGHTS,
   INITIAL_STAFF,
   INITIAL_TENANTS,
   INITIAL_ROLES,
   INITIAL_USERS,
-  INITIAL_WORKFLOW_STAGES,
-  CLINIC_WORKFLOW_PRESET,
-  BOATYARD_WORKFLOW_PRESET,
   OrganisationApplication,
 } from '../data/mockData';
 import { telemetry } from '../services/telemetry';
+import { applyMovement } from '../domain/inventoryValuation';
 import { dispatchCommand, apiGet } from '../services/apiGateway';
 import { useAuth } from './AuthContext';
 import { getArchetype, ArchetypeDefinition, ArchetypeTerminology, ArchetypeId, ARCHETYPES } from '../domain/archetypes';
@@ -782,13 +777,25 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return;
     }
     const list: AIAssistantInsight[] = [];
-    if (invoices.some((i) => i.status === 'Overdue')) {
+    const overdue = invoices.filter((i) => i.status === 'Overdue');
+    const overdueCount = overdue.length;
+    const overdueValue = overdue.reduce(
+      (sum, i) => sum + (i.totalAmount - (i.amountPaid || 0)), 0,
+    );
+    if (overdueCount > 0) {
       list.push({
         id: 'ai-rec-overdue',
         category: 'Cash Flow',
         title: 'Overdue Receivables Acceleration',
         impact: 'High Impact',
-        description: 'Sending automated WhatsApp statement reminders to overdue fleet accounts accelerates settlement turnaround by up to 40%.',
+        // SERP-288 — this read "accelerates settlement turnaround by up to 40%".
+        // There is no such measurement anywhere in this system; the figure was
+        // invented, and it was shown under the label "High Impact" to any tenant
+        // with one overdue invoice. An AI recommendation carrying a fabricated
+        // statistic is the SERP-237 defect again: a plausible number a reader
+        // takes as a finding. It now states the action and the amount the system
+        // ACTUALLY KNOWS, and claims no effect it cannot measure.
+        description: `${overdueCount} invoice${overdueCount === 1 ? '' : 's'} totalling MVR ${overdueValue.toLocaleString()} ${overdueCount === 1 ? 'is' : 'are'} past due. Sending a statement of account is the usual next step.`,
         recommendedAction: 'Send Statement of Account',
         actionButtonLabel: 'Send Statements',
       });
@@ -2125,11 +2132,27 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setInventory((prev) =>
       prev.map((i) => {
         if (i.id === itemId) {
-          const newQty = i.quantityOnHand + quantity;
+          /**
+           * SERP-309 — WEIGHTED AVERAGE, not "the latest price wins".
+           *
+           * This line used to read `unitCost: cost !== undefined ? cost : i.unitCost`,
+           * so receiving stock REPLACED the unit cost of everything on hand
+           * with the price of the newest delivery. Hold 100 filters bought at
+           * MVR 10, take in 10 more at MVR 50 because the cheap supplier was
+           * out, and all 110 were carried at 50: the inventory asset jumped by
+           * MVR 4,000 on a purchase that cost 500, and the same error ran into
+           * cost of sales the moment any of it was issued. Every individual
+           * number was correct, which is why nothing ever reported it.
+           */
+          const priced = applyMovement(
+            { quantityOnHand: i.quantityOnHand, averageCost: i.unitCost, value: i.quantityOnHand * i.unitCost },
+            { quantity, kind: 'receipt', unitCost: cost !== undefined ? cost : i.unitCost },
+          ).state;
+          const newQty = priced.quantityOnHand;
           return {
             ...i,
             quantityOnHand: newQty,
-            unitCost: cost !== undefined ? cost : i.unitCost,
+            unitCost: priced.averageCost,
             stockStatus: newQty > i.reorderLevel ? 'In Stock' : 'Low Stock',
             lastRestockedDate: new Date().toISOString().split('T')[0]
           };

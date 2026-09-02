@@ -18,6 +18,7 @@ import {
   type Principal,
   type SeatCode,
 } from "../_shared/commands.ts";
+import { logRequest, severityFor } from "../_shared/observability.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -347,6 +348,15 @@ async function securityEvent(
   outcome: "accepted" | "rejected" | "blocked" | "error",
   session: Session | null,
   metadata: Json = {},
+  /**
+   * SERP-301 — the request id, so this row and the id the caller was handed can
+   * actually be joined. Until now a `request_id` was minted per request and
+   * returned in error bodies but NEVER reached this table: the operator had
+   * rows with no request id, the user had a request id with no row, and support
+   * had a correlation id that correlated nothing. Optional so the existing call
+   * sites keep compiling; every one of them now passes it.
+   */
+  requestId?: string,
 ): Promise<void> {
   try {
     const sourceHash = await hash(sourceKey(req));
@@ -357,7 +367,7 @@ async function securityEvent(
       event_type: eventType,
       outcome,
       source_hash: sourceHash,
-      metadata,
+      metadata: requestId ? { ...(metadata as Record<string, unknown>), request_id: requestId } : metadata,
     });
   } catch {
     // Security logging failure must not disclose credentials or database detail.
@@ -716,14 +726,54 @@ function uuid(value: string | null): boolean {
   return !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-Deno.serve(async (req: Request) => {
+/**
+ * SERP-301 — what the request actually did, for the log line.
+ *
+ * The wrapper below cannot read the outcome out of a Response without consuming
+ * its body, so the handler records it here as it goes. `outcome` stays "ok"
+ * unless something refuses.
+ */
+interface Observed {
+  outcome: string;
+  personUuid: string | null;
+  organisationId: string | null;
+}
+
+async function handleRequest(req: Request, requestId: string, observed: Observed): Promise<Response> {
   const origin = req.headers.get("origin");
   const path = routePath(req.url);
-  const requestId = crypto.randomUUID();
-  if (origin && !isOriginAllowed(origin)) return json(403, { ok: false, error: "origin_denied", request_id: requestId }, origin);
+
+  /**
+   * Refuse, RECORD, and return — in that order, in one place.
+   *
+   * Before SERP-301 this boundary returned `csrf_mismatch` from THIRTEEN
+   * separate places and none of them recorded anything. Nor did origin_denied,
+   * seat_not_granted, organisation_access_denied or book_access_denied. The
+   * system had a security_events table, a securityEvent() helper, and the
+   * highest-signal events it can possibly observe — a rejected CSRF token,
+   * somebody reaching for an organisation they do not belong to — were dropped
+   * at the point of observation. Built, never wired: the signature defect of
+   * this codebase.
+   *
+   * It is a helper rather than thirteen added lines because thirteen added
+   * lines become fourteen silent returns the next time somebody adds a route.
+   */
+  const deny = async (
+    status: number,
+    code: string,
+    session: Session | null = null,
+    metadata: Json = {},
+  ): Promise<Response> => {
+    observed.outcome = code;
+    await securityEvent(req, `api.${code}`, status === 429 ? "blocked" : "rejected", session,
+      { ...(metadata as Record<string, unknown>), path } as Json, requestId);
+    return json(status, { ok: false, error: code, request_id: requestId }, origin);
+  };
+  if (origin && !isOriginAllowed(origin)) return await deny(403, "origin_denied", null, { origin });
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(origin) });
   if (!anonymousRateAllowed(sourceKey(req))) {
-    await securityEvent(req, "api.rate_limit", "blocked", null);
+    observed.outcome = "rate_limited";
+    await securityEvent(req, "api.rate_limit", "blocked", null, { path } as Json, requestId);
     return json(429, { ok: false, error: "rate_limited", request_id: requestId }, origin, { "retry-after": "60" });
   }
 
@@ -752,8 +802,16 @@ Deno.serve(async (req: Request) => {
 
     const signedSession = await readSession(req);
     const session = signedSession ? await refreshSessionAuthority(signedSession) : null;
+    // SERP-301 — person_uuid and organisation_id on every subsequent log line.
+    // The person UUID, never an email or a name: an operational log is not a
+    // place to accumulate a directory of the client's staff.
+    if (session) {
+      observed.personUuid = session.person_uuid;
+      observed.organisationId = session.organisation_id ?? null;
+    }
     if (!session) {
-      await securityEvent(req, "auth.session", "rejected", null, { path });
+      observed.outcome = "unauthenticated";
+      await securityEvent(req, "auth.session", "rejected", null, { path }, requestId);
       return json(401, { ok: false, error: "unauthenticated", request_id: requestId }, origin, {
         "set-cookie": cookie("", 0),
       });
@@ -765,16 +823,16 @@ Deno.serve(async (req: Request) => {
 
     if (req.method === "POST" && path === "/api/auth/logout") {
       const body = await readJson(req);
-      if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
       await securityEvent(req, "auth.logout", "accepted", session);
       return json(200, { ok: true }, origin, { "set-cookie": cookie("", 0) });
     }
 
     if (req.method === "POST" && path === "/api/auth/seat") {
       const body = await readJson(req);
-      if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
       const seat = String(body.seat ?? "");
-      if (!session.seats.includes(seat)) return json(403, { ok: false, error: "seat_not_granted" }, origin);
+      if (!session.seats.includes(seat)) return await deny(403, "seat_not_granted", session);
       const updated: Session = { ...session, acting_as: seat, csrf: crypto.randomUUID(), exp: Math.floor(Date.now() / 1000) + SESSION_SECONDS };
       await securityEvent(req, "auth.seat", "accepted", updated, { seat });
       return json(200, { ok: true, user: userDto(updated) }, origin, { "set-cookie": cookie(await signSession(updated)) });
@@ -782,28 +840,28 @@ Deno.serve(async (req: Request) => {
 
     if (req.method === "POST" && (path === "/api/auth/context" || path === "/api/auth/switch-context")) {
       const body = await readJson(req);
-      if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
       const targetOrgId = String(body.organisation_id ?? session.organisation_id);
       const targetBookId = body.book_id ? String(body.book_id) : session.book_id;
 
       const orgCheck = await db.from("organisations").select("id, slug, legal_name").eq("id", targetOrgId).eq("status", "active").maybeSingle();
-      if (!orgCheck.data) return json(403, { ok: false, error: "organisation_access_denied" }, origin);
+      if (!orgCheck.data) return await deny(403, "organisation_access_denied", session);
 
       const membershipCheck = await db.from("memberships").select("id")
         .eq("organisation_id", targetOrgId)
         .eq("person_id", session.person_uuid)
         .eq("status", "active")
         .maybeSingle();
-      if (!membershipCheck.data) return json(403, { ok: false, error: "organisation_access_denied" }, origin);
+      if (!membershipCheck.data) return await deny(403, "organisation_access_denied", session);
       const membershipId = membershipCheck.data.id;
 
-      if (!targetBookId) return json(403, { ok: false, error: "book_access_denied" }, origin);
+      if (!targetBookId) return await deny(403, "book_access_denied", session);
       const bookMembershipCheck = await db.from("book_memberships").select("id")
         .eq("organisation_id", targetOrgId)
         .eq("membership_id", membershipId)
         .eq("book_id", targetBookId)
         .maybeSingle();
-      if (!bookMembershipCheck.data) return json(403, { ok: false, error: "book_access_denied" }, origin);
+      if (!bookMembershipCheck.data) return await deny(403, "book_access_denied", session);
 
       const updated: Session = {
         ...session,
@@ -821,7 +879,7 @@ Deno.serve(async (req: Request) => {
     // =========================================================================
     if (req.method === "POST" && path === "/api/onboarding/apply") {
       const body = await readJson(req);
-      if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
 
       const name = String(body.name ?? "").trim();
       if (!name) return json(400, { ok: false, error: "business_name_required" }, origin);
@@ -888,7 +946,7 @@ Deno.serve(async (req: Request) => {
     if (path.startsWith("/api/platform/")) {
       if (!session.platform_entitlement) {
         await securityEvent(req, "platform.access", "rejected", session, { path, reason: "platform_entitlement_required" });
-        return json(403, { ok: false, error: "platform_entitlement_required" }, origin);
+        return await deny(403, "platform_entitlement_required", session);
       }
 
       if (req.method === "GET" && path === "/api/platform/tenants") {
@@ -901,10 +959,10 @@ Deno.serve(async (req: Request) => {
 
       if (req.method === "POST" && path === "/api/platform/tenants/provision") {
         if (session.platform_entitlement.operator_role !== "platform_admin") {
-          return json(403, { ok: false, error: "platform_admin_required" }, origin);
+          return await deny(403, "platform_admin_required", session);
         }
         const body = await readJson(req);
-        if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+        if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
         const requestKey = req.headers.get("x-idempotency-key");
         if (!uuid(requestKey)) return json(400, { ok: false, error: "valid_idempotency_key_required" }, origin);
         const { csrf: _csrf, ...command } = body;
@@ -919,10 +977,10 @@ Deno.serve(async (req: Request) => {
 
       if (req.method === "POST" && path.match(/^\/api\/platform\/tenants\/[^\/]+\/status$/)) {
         if (session.platform_entitlement.operator_role !== "platform_admin") {
-          return json(403, { ok: false, error: "platform_admin_required" }, origin);
+          return await deny(403, "platform_admin_required", session);
         }
         const body = await readJson(req);
-        if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+        if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
         const organisationId = path.split("/")[4];
         const requestKey = req.headers.get("x-idempotency-key");
         if (!uuid(organisationId)) return json(400, { ok: false, error: "invalid_organisation_id" }, origin);
@@ -951,7 +1009,7 @@ Deno.serve(async (req: Request) => {
 
       if (req.method === "POST" && path.match(/^\/api\/platform\/applications\/[^\/]+\/approve$/)) {
         const body = await readJson(req);
-        if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+        if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
 
         const appId = path.split("/")[4];
         if (!uuid(appId)) return json(400, { ok: false, error: "invalid_application_id" }, origin);
@@ -972,7 +1030,7 @@ Deno.serve(async (req: Request) => {
 
       if (req.method === "POST" && path.match(/^\/api\/platform\/applications\/[^\/]+\/reject$/)) {
         const body = await readJson(req);
-        if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+        if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
 
         const appId = path.split("/")[4];
         if (!uuid(appId)) return json(400, { ok: false, error: "invalid_application_id" }, origin);
@@ -995,7 +1053,7 @@ Deno.serve(async (req: Request) => {
 
       if (req.method === "POST" && path.match(/^\/api\/platform\/applications\/[^\/]+\/request-info$/)) {
         const body = await readJson(req);
-        if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+        if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
 
         const appId = path.split("/")[4];
         if (!uuid(appId)) return json(400, { ok: false, error: "invalid_application_id" }, origin);
@@ -1169,7 +1227,7 @@ Deno.serve(async (req: Request) => {
     const invitationRoute = path === "/api/tenant/invitations"
       || /^\/api\/tenant\/invitations\/[^/]+\/(resend|revoke)$/.test(path);
     if (invitationRoute && !session.seats.includes("managing_director")) {
-      return json(403, { ok: false, error: "invitation_admin_required" }, origin);
+      return await deny(403, "invitation_admin_required", session);
     }
 
     if (req.method === "GET" && path === "/api/tenant/invitations") {
@@ -1183,7 +1241,7 @@ Deno.serve(async (req: Request) => {
 
     if (req.method === "POST" && path === "/api/tenant/invitations") {
       const body = await readJson(req);
-      if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
 
       const email = String(body.email ?? "").trim().toLowerCase();
       const name = String(body.name ?? "").trim();
@@ -1255,7 +1313,7 @@ Deno.serve(async (req: Request) => {
 
     if (req.method === "POST" && path.match(/^\/api\/tenant\/invitations\/[^\/]+\/resend$/)) {
       const body = await readJson(req);
-      if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
 
       const invId = path.split("/")[4];
       const { data: updated, error } = await db.from("invitations")
@@ -1276,7 +1334,7 @@ Deno.serve(async (req: Request) => {
 
     if (req.method === "POST" && path.match(/^\/api\/tenant\/invitations\/[^\/]+\/revoke$/)) {
       const body = await readJson(req);
-      if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
 
       const invId = path.split("/")[4];
       const { error } = await db.from("invitations")
@@ -1294,7 +1352,7 @@ Deno.serve(async (req: Request) => {
 
     if (req.method === "POST" && path === "/api/ops/event") {
       const body = await readJson(req);
-      if (!csrfValid(req, body, session)) return json(400, { ok: false, error: "csrf_mismatch" }, origin);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
       if (!session.organisation_id) return json(403, { ok: false, error: "organisation_context_required" }, origin);
       const commandKey = req.headers.get("x-idempotency-key");
       if (!uuid(commandKey)) return json(428, { ok: false, error: "valid_idempotency_key_required" }, origin);
@@ -1380,6 +1438,59 @@ Deno.serve(async (req: Request) => {
       internal_code: code.slice(0, 300),
       path,
     });
+    observed.outcome = publicCode;
     return json(publicCode === "payload_too_large" ? 413 : 400, { ok: false, error: publicCode, request_id: requestId }, origin);
   }
+}
+
+/**
+ * SERP-301 — one structured log line per request, whatever happens.
+ *
+ * WRAPPED RATHER THAN THREADED. The handler has some sixty return sites; adding
+ * a log call to each is sixty chances to miss one, and the one that gets missed
+ * is always the failure path nobody exercised. Wrapping means a response cannot
+ * leave this function unobserved — including one thrown from outside the
+ * handler's own try, which previously would have produced a bare 500 with no
+ * record anywhere.
+ */
+Deno.serve(async (req: Request) => {
+  const requestId = crypto.randomUUID();
+  const startedAt = Date.now();
+  const observed: Observed = { outcome: "ok", personUuid: null, organisationId: null };
+  const path = routePath(req.url);
+
+  let response: Response;
+  try {
+    response = await handleRequest(req, requestId, observed);
+  } catch (error) {
+    // The handler has its own try/catch; this is the net under it. A logging
+    // wrapper that can itself 500 unobserved would be worse than no wrapper.
+    observed.outcome = "unhandled_exception";
+    logRequest({
+      request_id: requestId,
+      person_uuid: observed.personUuid,
+      organisation_id: observed.organisationId,
+      method: req.method,
+      path,
+      status: 500,
+      outcome: "unhandled_exception",
+      latency_ms: Date.now() - startedAt,
+      severity: "error",
+      detail: { kind: error instanceof Error ? error.name : "unknown" },
+    });
+    return json(500, { ok: false, error: "request_failed", request_id: requestId }, req.headers.get("origin"));
+  }
+
+  logRequest({
+    request_id: requestId,
+    person_uuid: observed.personUuid,
+    organisation_id: observed.organisationId,
+    method: req.method,
+    path,
+    status: response.status,
+    outcome: observed.outcome,
+    latency_ms: Date.now() - startedAt,
+    severity: severityFor(observed.outcome, response.status),
+  });
+  return response;
 });

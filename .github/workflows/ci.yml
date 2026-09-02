@@ -63,6 +63,9 @@ jobs:
       - name: UI Adaptive Layout & Responsive Architecture Gate
         run: node tests/ui_responsive_system.test.mjs
 
+      - name: Component Reachability Gate (SERP-234)
+        run: node tests/component_reachability.test.mjs
+
       - name: Deno Contract Test Suite (164 tests)
         run: deno test --allow-read tests/contract/commands_test.ts
 

@@ -33,7 +33,7 @@ import {
 } from 'recharts';
 import { useERP } from '../../context/ERPContext';
 import { useAuth } from '../../context/AuthContext';
-import { MONTHLY_SALES_CHART_DATA, SERVICE_BREAKDOWN_DATA } from '../../data/mockData';
+import { buildMonthlyPerformance, buildServiceMix } from '../../domain/dashboardSeries';
 import { StarqHQShell } from '../platform/StarqHQShell';
 import {
   Button,
@@ -67,6 +67,9 @@ export const DashboardView: React.FC = () => {
     triggerAIInsightAction,
     jobs,
     invoices,
+    // SERP-288: the dashboard never had expenses in scope, which is precisely
+    // why its "Operating Surplus" line could only ever have been fabricated.
+    expenses,
     payments,
     formatMVR,
     setIsCreateJobOpen,
@@ -77,6 +80,13 @@ export const DashboardView: React.FC = () => {
   if (activePlane === 'platform') {
     return <StarqHQShell />;
   }
+
+  // SERP-288 — this chart used to switch to a hard-coded six-month series the
+  // moment the tenant had one invoice, so somebody else's MVR 1.05m appeared to
+  // be theirs. It is now their own invoices and expenses, and stays flat when
+  // they are flat.
+  const monthlyPerformance = buildMonthlyPerformance(invoices, expenses);
+  const serviceMix = buildServiceMix(jobs);
 
   const activeJobs = jobs.filter((j) => !['Completed', 'Paid'].includes(j.status));
 
@@ -701,7 +711,7 @@ export const DashboardView: React.FC = () => {
               <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface)] truncate">
                 Financial Performance (MVR)
               </h2>
-              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">Revenue & Operating Surplus</p>
+              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">Revenue (excl. GST) &amp; Operating Surplus &middot; last 6 months</p>
             </div>
             <div className="flex items-center gap-3 text-xs shrink-0">
               <span className="flex items-center gap-1.5 text-[var(--md-sys-color-on-surface-variant)]">
@@ -715,14 +725,7 @@ export const DashboardView: React.FC = () => {
 
           <div className="h-56 sm:h-60 w-full pt-2 min-w-0">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={invoices.length > 0 ? MONTHLY_SALES_CHART_DATA : [
-                { month: 'Jan', revenue: 0, expenses: 0, profit: 0 },
-                { month: 'Feb', revenue: 0, expenses: 0, profit: 0 },
-                { month: 'Mar', revenue: 0, expenses: 0, profit: 0 },
-                { month: 'Apr', revenue: 0, expenses: 0, profit: 0 },
-                { month: 'May', revenue: 0, expenses: 0, profit: 0 },
-                { month: 'Jun', revenue: 0, expenses: 0, profit: 0 },
-              ]}>
+              <AreaChart data={monthlyPerformance}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--md-sys-color-primary)" stopOpacity={0.4} />
@@ -758,8 +761,8 @@ export const DashboardView: React.FC = () => {
               Service Mix Distribution
             </h2>
             <div className="mt-3.5 space-y-2.5 text-xs min-w-0">
-              {jobs.length > 0 ? (
-                SERVICE_BREAKDOWN_DATA.map((srv, i) => (
+              {serviceMix.length > 0 ? (
+                serviceMix.map((srv, i) => (
                   <div key={i} className="space-y-1 min-w-0">
                     <div className="flex items-center justify-between text-xs min-w-0">
                       <span className="font-medium text-[var(--md-sys-color-on-surface)] truncate">{srv.name}</span>
@@ -775,7 +778,7 @@ export const DashboardView: React.FC = () => {
                 ))
               ) : (
                 <div className="text-center py-6 text-xs text-[var(--md-sys-color-on-surface-variant)]">
-                  No service breakdown recorded yet. Create a job order to track service categories.
+                  No service value recorded yet. Approve a job order to track service categories.
                 </div>
               )}
             </div>
@@ -802,7 +805,7 @@ export const DashboardView: React.FC = () => {
                 }`}
               >
                 {currentTenant?.gstStatus === 'registered'
-                  ? `8% GST (${currentTenant.tinNumber || 'Registered'})`
+                  ? (currentTenant.tinNumber ? `8% GST (${currentTenant.tinNumber})` : '8% GST — TIN not recorded')
                   : 'Non-GST Registered'}
               </span>
             </div>

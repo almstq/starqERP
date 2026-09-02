@@ -55,9 +55,48 @@ describe('SERP-292: Authoritative Trial Balance & Balance Sheet Reporting', () =
   it('renders the requested persistent report section from a deep link', () => {
     renderReportsView('/reports?tab=analytics');
 
+    expect(screen.getByText('Operational Analytics')).toBeInTheDocument();
+    expect(screen.getByText('Revenue vs expense trends, service margin mix, and workload metrics from operational transactions')).toBeInTheDocument();
     expect(screen.getByText('Monthly Revenue vs Expenses (MVR)')).toBeInTheDocument();
     expect(screen.getByText('Labor & Service Value Breakdown')).toBeInTheDocument();
 
     expect(screen.queryByTestId('trial-balance-section')).not.toBeInTheDocument();
+  });
+
+  it('isolates MIRA GST-201 tab with dedicated header and without operational analytics charts', () => {
+    renderReportsView('/reports?tab=mira_gst_201');
+
+    // Header updates dynamically
+    expect(screen.getByRole('heading', { level: 1, name: 'MIRA GST-201 Tax Return' })).toBeInTheDocument();
+    expect(screen.getByText('Authoritative Maldives Inland Revenue Authority GST-201 tax return working papers and reconciliations')).toBeInTheDocument();
+
+    // Operational Analytics charts are NOT rendered
+    expect(screen.queryByText('Monthly Revenue vs Expenses (MVR)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Labor & Service Value Breakdown')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('trial-balance-section')).not.toBeInTheDocument();
+  });
+
+  it('isolates 16% TGST & Green Tax tab with dedicated header and without operational analytics charts', () => {
+    renderReportsView('/reports?tab=mira_tgst_16');
+
+    // Header updates dynamically
+    expect(screen.getByRole('heading', { level: 1, name: '16% TGST & Green Tax' })).toBeInTheDocument();
+    expect(screen.getByText('Tourism goods and services tax (TGST) ledger tracking, green tax obligations, and statutory filings')).toBeInTheDocument();
+
+    // Operational Analytics charts are NOT rendered
+    expect(screen.queryByText('Monthly Revenue vs Expenses (MVR)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Labor & Service Value Breakdown')).not.toBeInTheDocument();
+  });
+
+  it('isolates Cash Flow tab with dedicated header and without operational analytics charts', () => {
+    renderReportsView('/reports?tab=cash_flow');
+
+    // Header updates dynamically
+    expect(screen.getByRole('heading', { level: 1, name: 'Statement of Cash Flows' })).toBeInTheDocument();
+    expect(screen.getByText('Operating, investing, and financing cash flow analysis derived directly from general ledger journals')).toBeInTheDocument();
+
+    // Operational Analytics charts are NOT rendered
+    expect(screen.queryByText('Monthly Revenue vs Expenses (MVR)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Labor & Service Value Breakdown')).not.toBeInTheDocument();
   });
 });

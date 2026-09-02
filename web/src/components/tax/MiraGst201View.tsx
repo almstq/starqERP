@@ -49,8 +49,12 @@ export const MiraGst201View: React.FC = () => {
       })),
       periodYear: selectedYear,
       periodMonth: selectedMonth,
-      tin: currentTenant.tinNumber || (isGstRegistered ? '1002345GST501' : ''),
-      legalEntityName: currentTenant.name || 'Commercial Legal Entity Pvt Ltd',
+      // SERP-237: NEVER fabricate a statutory identifier. An invented TIN on a
+      // GST-201 is a false declaration to MIRA, and an invented legal entity
+      // name is worse. If the tenant has not recorded them, the return shows
+      // them as absent and the operator supplies them before filing.
+      tin: currentTenant.tinNumber || '',
+      legalEntityName: currentTenant.name || '',
       isGstRegistered,
     });
   }, [invoices, expenses, purchaseOrders, selectedYear, selectedMonth, currentTenant, isGstRegistered]);

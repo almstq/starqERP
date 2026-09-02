@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, Scale, AlertCircle, CheckCircle2, FileText, Info, Sparkles } from 'lucide-react';
+import { postingControlFor } from '../../domain/postingControl';
 import { Modal } from '../common/Modal';
 import { Button, Badge, Surface } from '../ui';
 import { AccountRecord, CLASS_LABELS } from '../../domain/accounts';
@@ -42,23 +43,33 @@ export const ManualJournalModal: React.FC<ManualJournalModalProps> = ({
   const [reference, setReference] = useState('');
   const [narration, setNarration] = useState('');
 
+  // SERP-345: default to accounts a user may actually POST to. This modal used to
+  // default to activeAccounts[0] and [1], which are the class root (1000 Assets)
+  // and a grouping (1100 Current Assets) — both headers that hold no balance.
+  // The posting gate now rejects those, and it was right to: the default itself
+  // was the defect.
+  const postableAccounts = useMemo(
+    () => activeAccounts.filter((a) => postingControlFor(a, accounts) === 'postable'),
+    [activeAccounts, accounts],
+  );
+
   const [lines, setLines] = useState<DraftLine[]>([
     {
       id: 'line-1',
-      accountId: activeAccounts[0]?.id || '',
-      accountCode: activeAccounts[0]?.code || '',
-      accountName: activeAccounts[0]?.name || '',
-      accountClass: activeAccounts[0]?.accountClass || 'ASSET',
+      accountId: postableAccounts[0]?.id || '',
+      accountCode: postableAccounts[0]?.code || '',
+      accountName: postableAccounts[0]?.name || '',
+      accountClass: postableAccounts[0]?.accountClass || 'ASSET',
       narration: '',
       debit: '',
       credit: '',
     },
     {
       id: 'line-2',
-      accountId: activeAccounts[1]?.id || '',
-      accountCode: activeAccounts[1]?.code || '',
-      accountName: activeAccounts[1]?.name || '',
-      accountClass: activeAccounts[1]?.accountClass || 'REVENUE',
+      accountId: postableAccounts[1]?.id || '',
+      accountCode: postableAccounts[1]?.code || '',
+      accountName: postableAccounts[1]?.name || '',
+      accountClass: postableAccounts[1]?.accountClass || 'REVENUE',
       narration: '',
       debit: '',
       credit: '',

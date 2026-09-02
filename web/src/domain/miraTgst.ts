@@ -1,3 +1,5 @@
+import { rateMatchesBand, taxOnExclusive, taxWithinInclusive } from './taxRates';
+
 export interface GreenTaxStayRecord {
   id: string;
   guestName: string;
@@ -23,9 +25,9 @@ export interface MiraTgstReturn {
   filingDueDate: string; // 28th of following month
   currency: 'MVR';
   
-  // TGST 16% Output Tax
+  // Tourism GST output tax, at the rate in force on each supply date
   totalTourismTaxableSuppliesMvr: number;
-  totalTgstOutputTaxMvr: number; // Supplies * 16%
+  totalTgstOutputTaxMvr: number; // Supplies x the rate in force at time of supply
 
   // Deductible Tourism Input Tax
   totalTourismPurchasesMvr: number;
@@ -78,7 +80,9 @@ const DEFAULT_USD_MVR_RATE = 15.42;
 const OFFICIAL_GREEN_TAX_RATE_USD = 6.0;
 
 /**
- * Calculates official MIRA Tourism GST (16%) and Green Tax return schedule.
+ * Calculates the official MIRA Tourism GST and Green Tax return schedule.
+ * The TGST rate is resolved per supply date from domain/taxRates.ts, never fixed
+ * for the period: a return spanning 30 June / 1 July 2025 computes both 16% and 17%.
  */
 export function calculateMiraTgstReturn(params: CalculateTgstParams): MiraTgstReturn {
   const {
@@ -102,7 +106,10 @@ export function calculateMiraTgstReturn(params: CalculateTgstParams): MiraTgstRe
   const nextYear = periodMonth === 12 ? periodYear + 1 : periodYear;
   const filingDueDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-28`;
 
-  // 1. Calculate 16% TGST Output Tax
+  // 1. Tourism GST output tax, at the rate in force on each supply date.
+  //    SERP-342: the rate is resolved per invoice by time of supply, not applied
+  //    as a single period constant. A June-2025 and a July-2025 supply in the same
+  //    return compute at 16% and 17% respectively, from this one code path.
   let totalTourismSupplies = 0;
   let totalTgstOutput = 0;
 
@@ -111,9 +118,11 @@ export function calculateMiraTgstReturn(params: CalculateTgstParams): MiraTgstRe
     const invDate = inv.issueDate || inv.createdAt?.slice(0, 10) || '';
     if (invDate < periodStartDate || invDate > periodEndDate) continue;
 
-    if (inv.isTourismSector || inv.gstRate === 0.16) {
+    if (inv.isTourismSector || rateMatchesBand('gst_tourism', invDate, inv.gstRate)) {
       const subtotal = Number(inv.subtotal) || 0;
-      const tax = inv.taxAmount !== undefined ? Number(inv.taxAmount) : round2(subtotal * 0.16);
+      const tax = inv.taxAmount !== undefined
+        ? Number(inv.taxAmount)
+        : taxOnExclusive('gst_tourism', invDate, subtotal);
       totalTourismSupplies += subtotal;
       totalTgstOutput += tax;
     }
@@ -130,7 +139,11 @@ export function calculateMiraTgstReturn(params: CalculateTgstParams): MiraTgstRe
 
     if (exp.isTourismSector) {
       const totalAmt = Number(exp.amount) || 0;
-      const taxAmt = exp.taxAmount !== undefined ? Number(exp.taxAmount) : round2(totalAmt * (16 / 116));
+      // Reverse charge on a tax-inclusive amount: rate/(1+rate). At 16% that is
+      // the familiar 16/116; at 17% it becomes 17/117. Neither is hard-coded.
+      const taxAmt = exp.taxAmount !== undefined
+        ? Number(exp.taxAmount)
+        : taxWithinInclusive('gst_tourism', expDate, totalAmt);
       const taxable = round2(totalAmt - taxAmt);
       totalTourismPurchases += taxable;
       totalTgstInput += taxAmt;
@@ -170,7 +183,10 @@ export function calculateMiraTgstReturn(params: CalculateTgstParams): MiraTgstRe
 
   return {
     returnId: `MIRA-TGST-${taxPeriod}-${tin || 'TAX'}`,
-    tin: tin || '1002345GST501',
+    // SERP-237: the engine must not invent a TIN either. A view passing an
+    // empty string was still getting a fabricated identifier back, which is how
+    // a fake number reaches a return even after the UI is cleaned up.
+    tin: tin || '',
     legalEntityName,
     taxPeriod,
     periodStartDate,
