@@ -53,7 +53,7 @@ export const BankReconciliationView: React.FC<{
   candidateTransactions?: ERPReconciliationCandidate[];
   onAddAdjustmentJournal?: (entry: JournalEntry) => void;
 }> = ({ journals, candidateTransactions, onAddAdjustmentJournal }) => {
-  const { invoices, payments, expenses, formatMVR } = useERP();
+  const { invoices, payments, expenses, formatMVR, currentTenant } = useERP();
 
   const [selectedAccount, setSelectedAccount] = useState<BankAccountOption>(BANK_ACCOUNTS[0]);
   const [statement, setStatement] = useState<BankStatement | null>(null);
@@ -216,7 +216,7 @@ Date,Description,Debit,Credit,Balance,Reference
       bankAccountCode: selectedAccount.code,
       adjustmentType,
       narration: adjustmentNarration,
-      tenantId: 'tenant-club-ignition',
+      tenantId: currentTenant?.id || 'tenant-starq',
     });
 
     if (onAddAdjustmentJournal) {
