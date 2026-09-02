@@ -18,20 +18,37 @@ export const CreatePOModal: React.FC = () => {
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState(
     new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0]
   );
-  const [notes, setNotes] = useState('Deliver to Ignition Ink Garage Phase 2 Gate 1.');
+  const [notes, setNotes] = useState('');
 
-  const [items, setItems] = useState<POLineItem[]>([
-    {
-      id: 'po-item-1',
-      inventoryId: inventory[0]?.id || 'inv-1',
-      itemName: inventory[0]?.name || 'Nippon Paint Auto Basecoat',
-      quantity: 5,
-      unit: inventory[0]?.unit || 'Liters',
-      unitCost: inventory[0]?.unitCost || 1450,
-      totalCost: 5 * (inventory[0]?.unitCost || 1450),
-      receivedQuantity: 0
+  const [items, setItems] = useState<POLineItem[]>(() => {
+    const first = inventory[0];
+    if (first) {
+      return [
+        {
+          id: 'po-item-1',
+          inventoryId: first.id,
+          itemName: first.name,
+          quantity: 1,
+          unit: first.unit || 'pcs',
+          unitCost: first.unitCost || 0,
+          totalCost: first.unitCost || 0,
+          receivedQuantity: 0,
+        },
+      ];
     }
-  ]);
+    return [
+      {
+        id: 'po-item-1',
+        inventoryId: '',
+        itemName: 'Standard Inventory Item',
+        quantity: 1,
+        unit: 'pcs',
+        unitCost: 0,
+        totalCost: 0,
+        receivedQuantity: 0,
+      },
+    ];
+  });
 
   const handleAddItem = () => {
     const defaultItem = inventory[1] || inventory[0];
@@ -39,14 +56,14 @@ export const CreatePOModal: React.FC = () => {
       ...items,
       {
         id: `po-item-${Date.now()}`,
-        inventoryId: defaultItem.id,
-        itemName: defaultItem.name,
-        quantity: 3,
-        unit: defaultItem.unit,
-        unitCost: defaultItem.unitCost,
-        totalCost: 3 * defaultItem.unitCost,
-        receivedQuantity: 0
-      }
+        inventoryId: defaultItem?.id || '',
+        itemName: defaultItem?.name || 'Standard Inventory Item',
+        quantity: 1,
+        unit: defaultItem?.unit || 'pcs',
+        unitCost: defaultItem?.unitCost || 0,
+        totalCost: defaultItem?.unitCost || 0,
+        receivedQuantity: 0,
+      },
     ]);
   };
 
@@ -235,11 +252,13 @@ export const CreatePOModal: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Delivery Instructions & Notes</label>
+          <label htmlFor="po-delivery-notes" className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">Delivery Instructions & Notes</label>
           <input
+            id="po-delivery-notes"
             type="text"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+            placeholder="e.g. Standard delivery to primary office or receiving warehouse..."
             className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
           />
         </div>
