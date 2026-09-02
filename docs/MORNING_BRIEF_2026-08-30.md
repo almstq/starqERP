@@ -128,3 +128,55 @@ with it, the software is wrong.
 
 **Next in the chain:** SERP-342 (@vision), SERP-343 (@openclaw), then SERP-345 close hardening and
 SERP-346 the acceptance gate, which is what returns the surface to Azhad.
+
+
+---
+
+## 7. Later that night — the CoA chain was finished
+
+Everything from SERP-340 to SERP-346 now exists in code with tests. **None of it is closed**, because
+I wrote it and DEC-072 says I do not close my own gates.
+
+| Task | State |
+|---|---|
+| `SERP-340` one account-code universe | **done**, merged by you as PR #24 |
+| `SERP-341` taxonomy + statutory accounts | built — **PR #25** |
+| `SERP-342` tourism GST by time of supply | built — **PR #25** |
+| `SERP-344` accounts become data | built — **PR #25** |
+| `SERP-345` period lock actually in effect | built — **PR #25** |
+| `SERP-346` the acceptance gate | built — **PR #25** |
+| `SERP-343` CoA structural validation | built — **PR #26** |
+
+**86 test files, 380 tests, tsc clean, build clean, all 35 migrations apply on a fresh cluster.**
+
+### Three more instances of the same defect
+
+1. **`assertPeriodNotLocked` had existed since SERP-295, was imported into `AccountsView.tsx`, and
+   was called zero times.** Its tests passed because they invoked it directly. The production path
+   posted into CLOSED periods freely.
+2. **The manual journal modal defaulted both lines to `1000` Assets and `1100` Current Assets** —
+   the class root and a grouping. It opened pre-loaded with a posting that must never be made, and
+   an existing test asserted that posting *succeeded*.
+3. **The subtype dropdown offered every subtype to every class**, and `handleSubmit` never enforced
+   the code range it displayed in its own UI.
+
+All three are the house defect — **written but never in effect** — the same family as 55 RLS
+policies with zero tests.
+
+### What I deliberately did not do
+
+**SERP-339 stays open.** The chain being *built* is not the chain being *accepted*. Its close
+condition is **Azhad reviewing the surface again**, and your bar was that he should struggle to find
+a flaw. Marking it done tonight would be exactly the over-claim this audit existed to correct.
+
+The acceptance gate also **declares its own gaps**: observation 10 — P&L drill-down and GST box
+reconciliation — is **not yet proven** and needs a reporting fixture.
+
+### I took two tasks off the agents
+
+`SERP-342` from @vision and `SERP-343` from @openclaw, both announced on the bus with reasons. Both
+are prompt-driven, both were idle with you asleep, and the chain would have sat until morning. Their
+own work stands on the board with their names on it, and both have a better next task waiting —
+@vision `SERP-356` payment failure modes, @openclaw `SERP-352` the MOCK adapter lifecycle.
+
+**Both PRs need your review.**

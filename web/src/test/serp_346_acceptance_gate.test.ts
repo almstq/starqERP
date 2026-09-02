@@ -236,10 +236,15 @@ describe('SERP-346 — finance kernel acceptance gate', () => {
       const elsewhere = {
         observation_2_3_4_database_half: 'tests/serp_344_posting_control_probe.sql',
         observation_8_registration_status: 'migration 202608250017 app_private.calculate_line_tax',
-        observation_10_pnl_and_gst_reconciliation: 'NOT YET PROVEN — needs SERP-343 validation and a reporting fixture',
+        observation_9_arithmetic_and_10_reconciliation: 'PROVEN — src/test/serp_346_reconciliation.test.ts, 19 assertions against a posted ledger',
         tenant_isolation: 'tests/serp_300_adversarial_isolation_probe.sql, 29/29',
+        azhad_second_review: 'OUTSTANDING — the actual close condition for SERP-339. Code passing its own tests is not acceptance.',
       };
-      expect(elsewhere.observation_10_pnl_and_gst_reconciliation).toMatch(/NOT YET PROVEN/);
+      // Nothing in the twelve is now unproven at the domain level. The remaining
+      // dependency is external: Azhad has not re-reviewed the surface, and that
+      // — not this suite — is the close condition for SERP-339.
+      expect(elsewhere.observation_9_arithmetic_and_10_reconciliation).toMatch(/PROVEN/);
+      expect(elsewhere.azhad_second_review).toMatch(/OUTSTANDING/);
     });
   });
 });
