@@ -55,6 +55,35 @@ import { MiraGst201View } from '../tax/MiraGst201View';
 import { MiraTgstView } from '../tax/MiraTgstView';
 import { CashFlowStatementView } from './CashFlowStatementView';
 
+export type ReportSection = 'statements' | 'aging' | 'analytics' | 'mira_gst_201' | 'mira_tgst_16' | 'cash_flow';
+
+export const REPORT_TAB_HEADERS: Record<ReportSection, { title: string; subtitle: string }> = {
+  statements: {
+    title: 'Reports & Financial Statements',
+    subtitle: 'Standard 2-column Trial Balance, authoritative Balance Sheet, P&L with drilldowns, and AR/AP aging',
+  },
+  aging: {
+    title: 'AR & AP Aging Analysis',
+    subtitle: 'Accounts receivable and payable aging matrices, credit exposure, and counterparty settlement horizons',
+  },
+  analytics: {
+    title: 'Operational Analytics',
+    subtitle: 'Revenue vs expense trends, service margin mix, and workload metrics from operational transactions',
+  },
+  mira_gst_201: {
+    title: 'MIRA GST-201 Tax Return',
+    subtitle: 'Authoritative Maldives Inland Revenue Authority GST-201 tax return working papers and reconciliations',
+  },
+  mira_tgst_16: {
+    title: '16% TGST & Green Tax',
+    subtitle: 'Tourism goods and services tax (TGST) ledger tracking, green tax obligations, and statutory filings',
+  },
+  cash_flow: {
+    title: 'Statement of Cash Flows',
+    subtitle: 'Operating, investing, and financing cash flow analysis derived directly from general ledger journals',
+  },
+};
+
 export const ReportsView: React.FC = () => {
   const navigate = useNavigate();
   const { formatMVR, invoices, payments, expenses, purchaseOrders, jobs, staff, currentTenant, currentBook } = useERP();
@@ -71,7 +100,6 @@ export const ReportsView: React.FC = () => {
 
   const [dateRange, setDateRange] = useState('This Year (2026)');
   const [selectedBookFilter, setSelectedBookFilter] = useState<'CONSOLIDATED' | 'CURRENT_BOOK'>('CONSOLIDATED');
-  type ReportSection = 'statements' | 'aging' | 'analytics' | 'mira_gst_201' | 'mira_tgst_16' | 'cash_flow';
   const [searchParams] = useSearchParams();
   const requestedSection = searchParams.get('tab') as ReportSection | null;
   const activeReportTab: ReportSection = ['statements', 'aging', 'analytics', 'mira_gst_201', 'mira_tgst_16', 'cash_flow'].includes(requestedSection || '')
@@ -207,14 +235,14 @@ export const ReportsView: React.FC = () => {
         <div className="space-y-1 min-w-0 flex-1">
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)]">
-              Reports & Financial Statements
+              {REPORT_TAB_HEADERS[activeReportTab].title}
             </h1>
             <Badge variant="neutral" size="sm">
               {currentTenant.name}
             </Badge>
           </div>
           <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
-            Standard 2-column Trial Balance, authoritative Balance Sheet, P&L with drilldowns, and AR/AP aging
+            {REPORT_TAB_HEADERS[activeReportTab].subtitle}
           </p>
         </div>
 
@@ -570,7 +598,7 @@ export const ReportsView: React.FC = () => {
           asOfDate={new Date().toISOString().split('T')[0]}
           formatMVR={formatMVR}
         />
-      ) : (
+      ) : activeReportTab === 'analytics' ? (
         /* Operational Analytics Tab */
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -631,13 +659,9 @@ export const ReportsView: React.FC = () => {
             </Surface>
           </div>
         </div>
-      )}
-
-      {activeReportTab === 'mira_gst_201' && (
+      ) : activeReportTab === 'mira_gst_201' ? (
         <MiraGst201View />
-      )}
-
-      {activeReportTab === 'mira_tgst_16' && (
+      ) : activeReportTab === 'mira_tgst_16' ? (
         <MiraTgstView
           onAddJournalEntry={(je) => {
             // manualJournals above is a useMemo over localStorage, not state, so
@@ -651,11 +675,9 @@ export const ReportsView: React.FC = () => {
             }
           }}
         />
-      )}
-
-      {activeReportTab === 'cash_flow' && (
+      ) : activeReportTab === 'cash_flow' ? (
         <CashFlowStatementView journals={allJournals} />
-      )}
+      ) : null}
 
       {/* Interactive P&L Drilldown Drawer */}
       <DrilldownDrawer
