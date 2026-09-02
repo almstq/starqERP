@@ -1943,12 +1943,17 @@ export interface MfaVerificationResult {
     | 'mfa_unverified'
     | 'invalid_mfa_code'
     | 'missing_mfa_secret'
-    | 'empty_code';
+    | 'empty_code'
+    | 'totp_not_implemented';
 }
 
 /**
- * Validates an MFA challenge submission against an active TOTP secret or single-use recovery codes.
+ * Validates an MFA challenge submission against single-use recovery codes.
  * Ensures that privileged actions without verified MFA elevation are rejected with explicit error codes.
+ *
+ * SERP-381: The 6-digit TOTP path is intentionally failed closed with 'totp_not_implemented'.
+ * Real cryptographic TOTP verification requires the Starq Account schema/secrets layer (SERP-366).
+ * Recovery codes are validated directly against caller-supplied recoveryCodes.
  */
 export function validateMfaChallenge(params: MfaVerificationParams): MfaVerificationResult {
   const { code, recoveryCodes = [], sessionMfaVerified, isPrivileged } = params;
@@ -1977,19 +1982,9 @@ export function validateMfaChallenge(params: MfaVerificationParams): MfaVerifica
     };
   }
 
-  // 2. Check TOTP format (6 digits)
+  // 2. Check TOTP format (6 digits) - fail closed (SERP-381)
   if (/^\d{6}$/.test(cleaned)) {
-    // In mock/test environments, standard test codes '123456', '000000', '999999',
-    // or any valid 6-digit number matching deterministic time-step window is accepted.
-    // Invalid test rejection codes: '000001', '999998' when simulated as invalid.
-    if (cleaned === '000001' || cleaned === '999998' || cleaned === '000002') {
-      return { valid: false, error: 'invalid_mfa_code' };
-    }
-    return {
-      valid: true,
-      isRecoveryCodeUsed: false,
-      remainingRecoveryCodes: [...recoveryCodes],
-    };
+    return { valid: false, error: 'totp_not_implemented' };
   }
 
   return { valid: false, error: 'invalid_mfa_code' };
