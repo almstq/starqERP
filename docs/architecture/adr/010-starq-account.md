@@ -2,9 +2,9 @@
 
 ## Status
 
-**Proposed.** Founder direction is settled (Starq Account is mandatory); the
-architecture below is the proposal and needs Founder acceptance before any
-migration is written.
+**Accepted (DEC-108 / F10).** Founder direction and architecture accepted.
+Rule 2 wording clarified to ensure provider authentication never silently creates
+or establishes a Starq Account.
 
 > Numbered 010 deliberately. ADR 001 already references ADR 002–005 by name
 > (AI-Native Control Plane, Deterministic Base Verification, Immutable Audit
@@ -109,8 +109,8 @@ starq_accounts        one row per human, permanent, Starq-owned
 
 1. **A provider subject may never be the primary key of a human.** It is an
    attribute of an identity row.
-2. **Authentication establishes an identity; it does not create an account.**
-   Account creation is a Starq act, with profile and consent collected.
+2. **Provider authentication proves control of an AUTHENTICATION IDENTITY; Starq Account establishment is a SEPARATE Starq-controlled onboarding action.**
+   A successful authentication exchange with an external provider establishes only that the caller controls that provider identity. It does not silently create, infer, or establish the canonical Starq Account. Account establishment is an explicit Starq-governed onboarding act with profile collection and statutory consent.
 3. **Linking requires proof of control of the account**, never merely a
    matching email address. Email match may *offer* a link; it may not perform
    one. (Email is provider-asserted and, for some providers, mutable.)
