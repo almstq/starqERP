@@ -161,6 +161,14 @@ NOTES_DIR = os.path.join(HERE, "ops", "notes")
 MAX_NOTE_APPEND = 4000
 
 
+def _safe_engine_path(path: str, root: str) -> str:
+    resolved = os.path.realpath(path)
+    base = os.path.realpath(root)
+    if resolved != base and not resolved.startswith(base + os.sep):
+        raise ValueError(f"engine path escaped approved directory: {resolved}")
+    return resolved
+
+
 def _notes_slug(entity) -> str:
     if entity == "STARQ":
         return "starq"
@@ -170,7 +178,7 @@ def _notes_slug(entity) -> str:
 
 
 def _notes_path(entity) -> str:
-    return os.path.join(NOTES_DIR, f"{_notes_slug(entity)}.txt")
+    return _safe_engine_path(os.path.join(NOTES_DIR, f"{_notes_slug(entity)}.txt"), NOTES_DIR)
 
 
 def load_local_notes(entity) -> str:
@@ -761,7 +769,7 @@ def save_receipt_artefact(filename: str, data: bytes, period: str, kind: str) ->
     name = f"{period or 'none'}_{kind or 'other'}_{stamp}_{_safe_receipt_name(filename)}"
     dest = os.path.join(RECEIPTS_DIR, name)
     root = os.path.abspath(RECEIPTS_DIR)
-    path = os.path.abspath(dest)
+    path = _safe_engine_path(os.path.abspath(dest), RECEIPTS_DIR)
     if path != root and not path.startswith(root + os.sep):
         raise ValueError("artefact path escaped receipts dir")
     with open(path, "wb") as f:
@@ -775,7 +783,7 @@ def save_receipt_stub(fields: dict) -> str:
     kind = (fields.get("kind") or "other").strip()
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     name = f"{period}_{kind}_{stamp}.txt"
-    dest = os.path.join(RECEIPTS_DIR, name)
+    dest = _safe_engine_path(os.path.join(RECEIPTS_DIR, name), RECEIPTS_DIR)
     lines = [
         f"kind={kind}",
         f"item_id={(fields.get('item_id') or '').strip()}",
@@ -4233,7 +4241,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def send_asset(self, name):
         ctype = ASSET_FILES.get(name)
-        path = os.path.join(ASSETS_DIR, name) if ctype else None
+        path = _safe_engine_path(os.path.join(ASSETS_DIR, name), ASSETS_DIR) if ctype else None
         if not ctype or not os.path.isfile(path):
             self.send_error(404, "No such asset")
             return

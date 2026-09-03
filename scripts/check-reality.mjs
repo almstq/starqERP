@@ -14,6 +14,16 @@ const DEFAULT_LEGACY_ENGINE = process.env.LEGACY_ENGINE_PATH || path.resolve(ROO
 const DEFAULT_ALLOWLIST = 'D:/StarqTech/_secrets/starqBooks-allowlist.json';
 const DEFAULT_DEFINES = 'D:/StarqTech/_secrets/starq-erp-r0-build-defines.json';
 
+function readTextFile(filePath, allowedRoots) {
+  const resolved = path.resolve(filePath);
+  const allowed = allowedRoots.some((root) => {
+    const base = path.resolve(root);
+    return resolved === base || resolved.startsWith(`${base}${path.sep}`);
+  });
+  if (!allowed) throw new Error(`refusing to read outside an approved root: ${resolved}`);
+  return fs.readFileSync(resolved, 'utf8');
+}
+
 export function checkSeatOccupancy(opts = {}) {
   const root = opts.root || ROOT;
   const allowlistPath = opts.allowlistPath || DEFAULT_ALLOWLIST;
@@ -25,8 +35,8 @@ export function checkSeatOccupancy(opts = {}) {
   }
 
   const contractPath = path.join(root, 'contracts', 'commands.ts');
-  const contract = opts.contractContent || fs.readFileSync(contractPath, 'utf8');
-  const people = (opts.allowlistData || JSON.parse(fs.readFileSync(allowlistPath, 'utf8'))).people ?? [];
+  const contract = opts.contractContent || readTextFile(contractPath, [root]);
+  const people = (opts.allowlistData || JSON.parse(readTextFile(allowlistPath, [path.dirname(allowlistPath)]))).people ?? [];
   const held = new Set(
     people.filter((p) => p.status !== 'disabled' && p.status !== 'test_not_loginable')
       .flatMap((p) => p.seats ?? []),
@@ -63,9 +73,9 @@ export function checkRequiredHeaders(opts = {}) {
   if (!opts.clientContent && !fs.existsSync(clientPath)) {
     return { state: 'SKIP', name: NAME, detail: `retired client reference not found at ${clientPath}` };
   }
-  const client = opts.clientContent || fs.readFileSync(clientPath, 'utf8');
+  const client = opts.clientContent || readTextFile(clientPath, [legacyEngine]);
   const edgePath = path.join(root, 'supabase', 'functions', 'starq-api', 'index.ts');
-  const edge = opts.edgeContent || fs.readFileSync(edgePath, 'utf8');
+  const edge = opts.edgeContent || readTextFile(edgePath, [root]);
 
   const problems = [];
   for (const header of ['x-starq-client-kind', 'x-idempotency-key', 'x-csrf-token']) {
@@ -96,7 +106,7 @@ export function checkOauthIdentity(opts = {}) {
     return { state: 'SKIP', name: NAME, detail: 'build defines not present on this machine' };
   }
 
-  const d = opts.definesData || JSON.parse(fs.readFileSync(definesPath, 'utf8'));
+  const d = opts.definesData || JSON.parse(readTextFile(definesPath, [path.dirname(definesPath)]));
   const web = d.GOOGLE_SERVER_CLIENT_ID ?? '';
   const android = d.GOOGLE_ANDROID_CLIENT_ID ?? '';
   const problems = [];
@@ -107,7 +117,7 @@ export function checkOauthIdentity(opts = {}) {
   }
 
   if (opts.envContent || fs.existsSync(envPath)) {
-    const content = opts.envContent || fs.readFileSync(envPath, 'utf8');
+    const content = opts.envContent || readTextFile(envPath, [path.dirname(envPath)]);
     const m = content.match(/^STARQBOOKS_GOOGLE_CLIENT_ID\s*=\s*(.+)$/m);
     const portalWeb = m ? m[1].trim().replace(/^["']|["']$/g, '') : '';
     if (portalWeb && web && portalWeb !== web) {
@@ -133,7 +143,7 @@ export function checkGatewayDeclared(opts = {}) {
   if (!opts.configContent && !fs.existsSync(configPath)) {
     return { state: 'FAIL', name: NAME, detail: 'supabase/config.toml is missing — the deploy will use platform defaults and the clients send no apikey' };
   }
-  const toml = opts.configContent || fs.readFileSync(configPath, 'utf8');
+  const toml = opts.configContent || readTextFile(configPath, [root]);
   if (!/\[functions\.starq-api\]/.test(toml)) {
     return { state: 'FAIL', name: NAME, detail: 'config.toml has no [functions.starq-api] section' };
   }
@@ -148,7 +158,7 @@ export function checkCookieScope(opts = {}) {
   const edgePath = path.join(root, 'supabase', 'functions', 'starq-api', 'index.ts');
   const NAME = 'Cookie scope — the web client is cross-site and must receive the cookie';
   
-  const edge = opts.edgeContent || fs.readFileSync(edgePath, 'utf8');
+  const edge = opts.edgeContent || readTextFile(edgePath, [root]);
   const m = edge.match(/SameSite=(\w+)/);
   if (!m) return { state: 'FAIL', name: NAME, detail: 'no SameSite attribute found on the session cookie' };
   if (m[1] === 'Strict') {
@@ -170,9 +180,9 @@ export function checkPortalContractDrift(opts = {}) {
     return { state: 'SKIP', name: NAME, detail: `auth.py not found at ${authPath}` };
   }
 
-  const py = opts.authContent || fs.readFileSync(authPath, 'utf8');
+  const py = opts.authContent || readTextFile(authPath, [legacyEngine]);
   const contractPath = path.join(root, 'contracts', 'commands.ts');
-  const ts = opts.contractContent || fs.readFileSync(contractPath, 'utf8');
+  const ts = opts.contractContent || readTextFile(contractPath, [root]);
   const problems = [];
 
   const pySeatsBlock = py.match(/^SEATS\s*=\s*\{([\s\S]*?)^\}/m);

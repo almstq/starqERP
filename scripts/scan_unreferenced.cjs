@@ -16,12 +16,21 @@ function getFiles(dir) {
   return results;
 }
 
-const allFiles = getFiles('d:/StarqTech/starqERP/web/src');
+const WEB_SRC = path.resolve('d:/StarqTech/starqERP/web/src');
+function readRepoFile(filePath) {
+  const resolved = path.resolve(filePath);
+  if (resolved !== WEB_SRC && !resolved.startsWith(`${WEB_SRC}${path.sep}`)) {
+    throw new Error(`refusing to read outside web/src: ${resolved}`);
+  }
+  return fs.readFileSync(resolved, 'utf8');
+}
+
+const allFiles = getFiles(WEB_SRC);
 console.log('Total files under web/src:', allFiles.length);
 
 const imports = new Set();
 allFiles.forEach(f => {
-  const content = fs.readFileSync(f, 'utf8');
+  const content = readRepoFile(f);
   const regex = /from\s+['"]([^'"]+)['"]/g;
   let match;
   while ((match = regex.exec(content)) !== null) {

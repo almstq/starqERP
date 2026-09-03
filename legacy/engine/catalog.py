@@ -15,6 +15,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CATALOG_DIR = os.path.join(HERE, "ops", "catalog")
 ACCOUNTS_CSV = os.path.join(HERE, "accounts.csv")
 ALLOWED_MISSING = set()
+
+
+def _safe_catalog_path(name: str) -> str:
+    path = os.path.realpath(os.path.join(CATALOG_DIR, name))
+    root = os.path.realpath(CATALOG_DIR)
+    if path != root and not path.startswith(root + os.sep):
+        raise ValueError(f"catalog path escaped catalog directory: {path}")
+    return path
 RECURRING_RECEIPT_KINDS = frozenset({"rent", "electricity", "water"})
 RECEIPT_EVENT_TYPES = frozenset({"RECEIPT", "BILL"})
 GARAGE_RECEIPT_KINDS = frozenset({"purchase", "parts", "consumable"})
@@ -24,7 +32,7 @@ ALL_RECEIPT_KINDS = (
 
 
 def _read(name: str, default):
-    path = os.path.join(CATALOG_DIR, name)
+    path = _safe_catalog_path(name)
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)

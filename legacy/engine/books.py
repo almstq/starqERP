@@ -40,6 +40,14 @@ DB = os.path.join(HERE, "books.db")
 ACCOUNTS_CSV = os.path.join(HERE, "accounts.csv")
 JOURNAL_DIR = os.path.join(HERE, "journals")
 
+
+def _safe_journal_path(path: str) -> str:
+    resolved = os.path.realpath(path)
+    root = os.path.realpath(JOURNAL_DIR)
+    if resolved != root and not resolved.startswith(root + os.sep):
+        raise LedgerError(f"journal path escaped journals directory: {resolved}")
+    return resolved
+
 # Signed convention: debits positive, credits negative.
 # Accounts whose natural balance is a credit are negated for display.
 NATURAL_CREDIT = {"LIABILITY", "EQUITY", "INCOME"}
@@ -137,6 +145,7 @@ def account_allows(acc: dict, entity: str) -> bool:
 
 def parse_journal(path: str, accounts: dict, name: str | None = None,
                   only_entity: str | None = None) -> list:
+    path = _safe_journal_path(path)
     entries: list[Entry] = []
     current: Entry | None = None
     errors: list[str] = []
