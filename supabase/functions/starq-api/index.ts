@@ -239,7 +239,13 @@ async function readSession(req: Request): Promise<Session | null> {
   try {
     const session = JSON.parse(new TextDecoder().decode(fromBase64Url(payload))) as Session;
     if (!session.exp || session.exp <= Math.floor(Date.now() / 1000)) return null;
-    if (!session.organisation_id || !uuid(session.organisation_id) || !session.person_uuid || !session.acting_as) return null;
+    // SERP-401-F3: allow organisation_id to be absent for applicant sessions (zero orgs).
+    // Tenant sessions still require a valid UUID; applicant sessions have organisation_id: null
+    // and are distinguished downstream by the null value itself.
+    if (session.organisation_id && !uuid(session.organisation_id)) return null;
+    if (!session.person_uuid) return null;
+    // Tenant sessions must carry a seat; applicant sessions (organisation_id null) may have acting_as="" by design.
+    if (session.organisation_id && !session.acting_as) return null;
     return session;
   } catch {
     return null;
@@ -247,6 +253,21 @@ async function readSession(req: Request): Promise<Session | null> {
 }
 
 async function refreshSessionAuthority(session: Session): Promise<Session | null> {
+  // SERP-401-F3: applicants with zero organisations have no organisation_id.
+  // api_session_authority requires a valid org and returns active:false for null,
+  // which caused refreshSessionAuthority to return null → 401 → cookie cleared →
+  // all onboarding API calls fail for brand-new external users.
+  // Fix: if no organisation_id, verify the person exists and is active instead.
+  if (!session.organisation_id) {
+    const { data: person } = await db
+      .from("persons")
+      .select("id")
+      .eq("id", session.person_uuid)
+      .eq("status", "active")
+      .maybeSingle();
+    return person ? { ...session, seats: [] } : null;
+  }
+
   const { data, error } = await db.rpc("api_session_authority", {
     target_org: session.organisation_id,
     target_person: session.person_uuid,
