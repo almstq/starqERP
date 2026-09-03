@@ -250,13 +250,7 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
           </div>
 
           {submitError && (
-            <p className="text-xs text-rose-600" role="alert">
-              {submitError}
-            </p>
-          )}
-
-          {submitError && (
-            <p className="text-xs font-semibold" style={{ color: 'var(--md-sys-color-error, #b3261e)' }}>
+            <p className="text-xs font-semibold" role="alert" style={{ color: 'var(--md-sys-color-error, #b3261e)' }}>
               {submitError}
             </p>
           )}
