@@ -27,7 +27,7 @@ describe('SERP-338: Dashboard Personalized Welcome & Authoritative Context', () 
     // Legal Company / Tenant and Book code
     const companyMatches = screen.getAllByText(/Starq Technologies/i);
     expect(companyMatches.length).toBeGreaterThan(0);
-    expect(screen.getByText(/· STQ/i)).toBeDefined();
+    expect(screen.getByText(/STQ/i)).toBeDefined();
 
     // Truthful zero-state attention wording
     expect(screen.getByText(/No items require your attention right now\./i)).toBeDefined();

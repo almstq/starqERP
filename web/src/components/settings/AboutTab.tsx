@@ -16,6 +16,8 @@ import { STARQ_ERP_CANONICAL_METADATA, getFormattedProductVersion } from '../../
 import { Button, Surface, Badge } from '../ui';
 import { StarqERPBrand, StarqCorporateBrand } from '../brand/StarqLogo';
 import { useTheme } from '../../context/ThemeContext';
+import { AboutInfoCard, AboutSpecItem } from './about/AboutPrimitives';
+import { AboutLegalDialog } from './about/AboutLegalDialog';
 
 export const AboutTab: React.FC = () => {
   const { themeMode, resolvedTheme } = useTheme();
@@ -38,6 +40,28 @@ export const AboutTab: React.FC = () => {
         buildTime,
         environment,
         embeddedAi: meta.embeddedAiName,
+        frontend: {
+          react: '19',
+          reactDom: '19',
+          router: '7',
+          vite: '6',
+          typescript: '5.8',
+          tailwind: '4',
+          designSystem: 'Starq UI — Material 3 Expressive',
+          themeAuthority: 'web/src/theme.css and currently rendered runtime',
+          uiArchitecture: 'Starq-owned M3 primitives · product-local composition',
+          interactionStandard: 'Accessibility-first · keyboard/focus managed · shadcn-quality polish',
+          icons: 'Lucide React',
+          charts: 'Recharts',
+          forms: 'native/local-domain state',
+          tables: 'Starq Table/DataTable + direct HTML tables',
+          packageManager: 'npm',
+          importAlias: '@/* → src/*',
+          headlessRuntime: 'none required',
+          shadcnRuntime: 'not mandatory',
+          registry: 'none',
+          publicationModel: 'private ERP canonical; public ERP derived only',
+        },
         company: meta.companyName,
         jurisdiction: meta.legalJurisdiction,
         contact: meta.contactEmail,
@@ -86,14 +110,7 @@ export const AboutTab: React.FC = () => {
 
         {/* Core Attributes Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div
-            className="p-4 rounded-[var(--md-sys-shape-corner-medium)] space-y-2.5"
-            style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)' }}
-          >
-            <div className="flex items-center gap-2 text-[var(--md-sys-color-primary)] font-semibold">
-              <Scale size={15} />
-              <span>Corporate Entity & Platform Builder</span>
-            </div>
+          <AboutInfoCard icon={<Scale size={15} />} title="Corporate Entity & Platform Builder" spacing="space-y-2.5">
             <StarqCorporateBrand
               variant="compact"
               size="md"
@@ -103,23 +120,16 @@ export const AboutTab: React.FC = () => {
             <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
               Built and maintained by Starq Technologies Pvt Ltd under the Maldivian legal jurisdiction.
             </p>
-          </div>
+          </AboutInfoCard>
 
-          <div
-            className="p-4 rounded-[var(--md-sys-shape-corner-medium)] space-y-1.5"
-            style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)' }}
-          >
-            <div className="flex items-center gap-2 text-[var(--md-sys-color-primary)] font-semibold">
-              <Sparkles size={15} />
-              <span>Embedded AI Capability</span>
-            </div>
+          <AboutInfoCard icon={<Sparkles size={15} />} title="Embedded AI Capability" spacing="space-y-1.5">
             <div className="font-bold text-sm text-[var(--md-sys-color-on-surface)]">
               {meta.embeddedAiName}
             </div>
             <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
               Context-aware Maldivian tax & operational assistant built natively into starqERP.
             </p>
-          </div>
+          </AboutInfoCard>
         </div>
       </Surface>
 
@@ -131,33 +141,23 @@ export const AboutTab: React.FC = () => {
         </h3>
 
         <dl className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6 text-xs">
-          <div>
-            <dt className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-medium">Canonical Product Name</dt>
-            <dd className="font-semibold text-[var(--md-sys-color-on-surface)] mt-0.5">{meta.productName}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-medium">Design System SSOT</dt>
-            <dd className="font-semibold text-[var(--md-sys-color-on-surface)] mt-0.5">Google Material 3 (M3 Expressive)</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-medium">Base Ledger Currency</dt>
-            <dd className="font-semibold text-[var(--md-sys-color-on-surface)] mt-0.5">{meta.baseCurrency} (Maldivian Rufiyaa)</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-medium">Jurisdiction</dt>
-            <dd className="font-semibold text-[var(--md-sys-color-on-surface)] mt-0.5">{meta.legalJurisdiction}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-medium">Technical Support</dt>
-            <dd className="font-semibold text-[var(--md-sys-color-on-surface)] mt-0.5 flex items-center gap-1">
-              <Mail size={12} className="text-[var(--md-sys-color-primary)]" />
-              <a href={`mailto:${meta.contactEmail}`} className="hover:underline">{meta.contactEmail}</a>
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-medium">Tax Compliance Baseline</dt>
-            <dd className="font-semibold text-[var(--md-sys-color-on-surface)] mt-0.5">MIRA Tax Framework (Configurable GST / DEC-073; requires statutory verification)</dd>
-          </div>
+          <AboutSpecItem label="Canonical Product Name" value={meta.productName} />
+          <AboutSpecItem label="Design System" value="Starq UI — Material 3 Expressive" />
+          <AboutSpecItem label="Frontend Stack" value="React 19 · TypeScript 5.8 · Vite 6 · Tailwind CSS 4" />
+          <AboutSpecItem label="UI Architecture" value="Starq-owned M3 primitives · product-local composition" />
+          <AboutSpecItem label="Interaction Standard" value="Accessibility-first · keyboard/focus managed · shadcn-quality polish" />
+          <AboutSpecItem label="Base Ledger Currency" value={`${meta.baseCurrency} (Maldivian Rufiyaa)`} />
+          <AboutSpecItem label="Jurisdiction" value={meta.legalJurisdiction} />
+          <AboutSpecItem
+            label="Technical Support"
+            value={
+              <span className="flex items-center gap-1">
+                <Mail size={12} className="text-[var(--md-sys-color-primary)]" />
+                <a href={`mailto:${meta.contactEmail}`} className="hover:underline">{meta.contactEmail}</a>
+              </span>
+            }
+          />
+          <AboutSpecItem label="Tax Compliance Baseline" value="MIRA Tax Framework (Configurable GST / DEC-073; requires statutory verification)" />
         </dl>
       </Surface>
 
@@ -229,73 +229,49 @@ export const AboutTab: React.FC = () => {
       </div>
 
       {/* Modal Information Surfaces */}
-      {activeDialog && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.45)', backdropFilter: 'blur(3px)' }}
-          onClick={() => setActiveDialog(null)}
-        >
-          <div
-            className="w-full max-w-lg p-6 rounded-[var(--md-sys-shape-corner-large)] shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150"
-            style={{
-              backgroundColor: 'var(--md-sys-color-surface-container-high)',
-              color: 'var(--md-sys-color-on-surface)',
-              border: '1px solid var(--md-sys-color-outline-variant)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-3">
-              <h4 className="text-sm font-bold capitalize">
-                {activeDialog === 'privacy' && 'Privacy Summary'}
-                {activeDialog === 'terms' && 'Service Terms Summary'}
-                {activeDialog === 'licenses' && 'Open Source Software Attributions'}
-              </h4>
-              <Badge variant="neutral" size="sm">Legal Notice</Badge>
-            </div>
+      <AboutLegalDialog
+        open={activeDialog !== null}
+        onClose={() => setActiveDialog(null)}
+        title={
+          (activeDialog === 'privacy' && 'Privacy Summary') ||
+          (activeDialog === 'terms' && 'Service Terms Summary') ||
+          (activeDialog === 'licenses' && 'Open Source Software Attributions') ||
+          ''
+        }
+      >
+        {activeDialog === 'privacy' && (
+          <>
+            <p>
+              starqERP enforces strict multi-tenant isolation via database Row-Level Security (RLS) policies and tenant-bound session authorization. Operational ledgers, customer records, and financial transactions are scoped strictly to the authenticated organization.
+            </p>
+            <p>
+              starqAI operates strictly within the active tenant session boundary: conversational prompts and business context are processed for operational assistance and are not shared across organizations.
+            </p>
+          </>
+        )}
 
-            <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] leading-relaxed space-y-2 max-h-72 overflow-y-auto pr-1">
-              {activeDialog === 'privacy' && (
-                <>
-                  <p>
-                    starqERP enforces strict multi-tenant isolation via database Row-Level Security (RLS) policies and tenant-bound session authorization. Operational ledgers, customer records, and financial transactions are scoped strictly to the authenticated organization.
-                  </p>
-                  <p>
-                    starqAI operates strictly within the active tenant session boundary: conversational prompts and business context are processed for operational assistance and are not shared across organizations.
-                  </p>
-                </>
-              )}
+        {activeDialog === 'terms' && (
+          <>
+            <p>
+              Licensed by Starq Technologies Pvt Ltd for enterprise operation under the Maldivian legal jurisdiction. MIRA tax calculation rules provide a configurable baseline in accordance with the Goods and Services Tax Act (Law No. 10/2011) and require statutory accounting verification for live filings.
+            </p>
+            <p>
+              Organizations maintain full provenance, auditability, and legal ownership of all transactional data created within the platform.
+            </p>
+          </>
+        )}
 
-              {activeDialog === 'terms' && (
-                <>
-                  <p>
-                    Licensed by Starq Technologies Pvt Ltd for enterprise operation under the Maldivian legal jurisdiction. MIRA tax calculation rules provide a configurable baseline in accordance with the Goods and Services Tax Act (Law No. 10/2011) and require statutory accounting verification for live filings.
-                  </p>
-                  <p>
-                    Organizations maintain full provenance, auditability, and legal ownership of all transactional data created within the platform.
-                  </p>
-                </>
-              )}
-
-              {activeDialog === 'licenses' && (
-                <>
-                  <p>
-                    starqERP incorporates open source software including React, Vite, Lucide Icons, and Material Color Utilities under the MIT and Apache 2.0 licenses.
-                  </p>
-                  <p>
-                    Full attribution manifests and third-party license notices are preserved in the repository root compliance directory.
-                  </p>
-                </>
-              )}
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <Button variant="filled" size="xs" onClick={() => setActiveDialog(null)}>
-                <span>Close</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+        {activeDialog === 'licenses' && (
+          <>
+            <p>
+              starqERP incorporates open source software including React, Vite, Lucide Icons, and Material Color Utilities under the MIT and Apache 2.0 licenses.
+            </p>
+            <p>
+              Full attribution manifests and third-party license notices are preserved in the repository root compliance directory.
+            </p>
+          </>
+        )}
+      </AboutLegalDialog>
     </div>
   );
 };

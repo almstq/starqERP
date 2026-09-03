@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   BarChart3,
   TrendingUp,
@@ -37,7 +37,7 @@ import {
 import { useERP } from '../../context/ERPContext';
 import { Badge } from '../common/Badge';
 import { Surface, Button } from '../ui';
-import { MONTHLY_SALES_CHART_DATA, SERVICE_BREAKDOWN_DATA } from '../../data/mockData';
+import { buildMonthlyPerformance, buildServiceMix } from '../../domain/dashboardSeries';
 import { DEFAULT_CHART_OF_ACCOUNTS } from '../../data/defaultChartOfAccounts';
 import { AccountRecord } from '../../domain/accounts';
 import {
@@ -55,13 +55,56 @@ import { MiraGst201View } from '../tax/MiraGst201View';
 import { MiraTgstView } from '../tax/MiraTgstView';
 import { CashFlowStatementView } from './CashFlowStatementView';
 
+export type ReportSection = 'statements' | 'aging' | 'analytics' | 'mira_gst_201' | 'mira_tgst_16' | 'cash_flow';
+
+export const REPORT_TAB_HEADERS: Record<ReportSection, { title: string; subtitle: string }> = {
+  statements: {
+    title: 'Reports & Financial Statements',
+    subtitle: 'Standard 2-column Trial Balance, authoritative Balance Sheet, P&L with drilldowns, and AR/AP aging',
+  },
+  aging: {
+    title: 'AR & AP Aging Analysis',
+    subtitle: 'Accounts receivable and payable aging matrices, credit exposure, and counterparty settlement horizons',
+  },
+  analytics: {
+    title: 'Operational Analytics',
+    subtitle: 'Revenue vs expense trends, service margin mix, and workload metrics from operational transactions',
+  },
+  mira_gst_201: {
+    title: 'MIRA GST-201 Tax Return',
+    subtitle: 'Authoritative Maldives Inland Revenue Authority GST-201 tax return working papers and reconciliations',
+  },
+  mira_tgst_16: {
+    title: '16% TGST & Green Tax',
+    subtitle: 'Tourism goods and services tax (TGST) ledger tracking, green tax obligations, and statutory filings',
+  },
+  cash_flow: {
+    title: 'Statement of Cash Flows',
+    subtitle: 'Operating, investing, and financing cash flow analysis derived directly from general ledger journals',
+  },
+};
+
 export const ReportsView: React.FC = () => {
   const navigate = useNavigate();
   const { formatMVR, invoices, payments, expenses, purchaseOrders, jobs, staff, currentTenant, currentBook } = useERP();
 
+  // SERP-288 — both analytics charts were fed by hard-coded arrays in mockData.
+  // They are now the tenant's own records, and empty when the tenant is empty.
+  const monthlyPerformance = React.useMemo(
+    () => buildMonthlyPerformance(invoices, expenses),
+    [invoices, expenses],
+  );
+  const serviceMix = React.useMemo(() => buildServiceMix(jobs), [jobs]);
+  const hasTrading = monthlyPerformance.some((p) => p.revenue !== 0 || p.expenses !== 0);
+
+
   const [dateRange, setDateRange] = useState('This Year (2026)');
   const [selectedBookFilter, setSelectedBookFilter] = useState<'CONSOLIDATED' | 'CURRENT_BOOK'>('CONSOLIDATED');
-  const [activeReportTab, setActiveReportTab] = useState<'statements' | 'aging' | 'analytics' | 'mira_gst_201' | 'mira_tgst_16' | 'cash_flow'>('statements');
+  const [searchParams] = useSearchParams();
+  const requestedSection = searchParams.get('tab') as ReportSection | null;
+  const activeReportTab: ReportSection = ['statements', 'aging', 'analytics', 'mira_gst_201', 'mira_tgst_16', 'cash_flow'].includes(requestedSection || '')
+    ? requestedSection as ReportSection
+    : 'statements';
   const [drilldownAccount, setDrilldownAccount] = useState<DrilldownAccountDetails | null>(null);
 
   const isGstRegistered = currentTenant.gstStatus === 'registered';
@@ -192,95 +235,18 @@ export const ReportsView: React.FC = () => {
         <div className="space-y-1 min-w-0 flex-1">
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)]">
-              Reports & Financial Statements
+              {REPORT_TAB_HEADERS[activeReportTab].title}
             </h1>
             <Badge variant="neutral" size="sm">
               {currentTenant.name}
             </Badge>
           </div>
           <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
-            Standard 2-column Trial Balance, authoritative Balance Sheet, P&L with drilldowns, and AR/AP aging
+            {REPORT_TAB_HEADERS[activeReportTab].subtitle}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 min-w-0">
-          {/* Segmented Tab Switcher */}
-          <div className="flex p-1 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)]">
-            <button
-              onClick={() => setActiveReportTab('statements')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeReportTab === 'statements'
-                  ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] shadow-xs border border-[var(--md-sys-color-primary)]'
-                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-              }`}
-            >
-              <Scale className="w-3.5 h-3.5" />
-              <span>Financial Statements</span>
-            </button>
-
-            <button
-              onClick={() => setActiveReportTab('aging')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeReportTab === 'aging'
-                  ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] shadow-xs border border-[var(--md-sys-color-primary)]'
-                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-              }`}
-            >
-              <Clock className="w-3.5 h-3.5" />
-              <span>AR / AP Aging</span>
-            </button>
-
-            <button
-              onClick={() => setActiveReportTab('analytics')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeReportTab === 'analytics'
-                  ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] shadow-xs border border-[var(--md-sys-color-primary)]'
-                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-              }`}
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              <span>Operational Analytics</span>
-            </button>
-
-            <button
-              data-testid="mira-gst-tab-btn"
-              onClick={() => setActiveReportTab('mira_gst_201')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeReportTab === 'mira_gst_201'
-                  ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] shadow-xs border border-[var(--md-sys-color-primary)]'
-                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              <span>MIRA GST-201</span>
-            </button>
-
-            <button
-              data-testid="mira-tgst-tab-btn"
-              onClick={() => setActiveReportTab('mira_tgst_16')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeReportTab === 'mira_tgst_16'
-                  ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] shadow-xs border border-[var(--md-sys-color-primary)]'
-                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-              }`}
-            >
-              <Palmtree className="w-3.5 h-3.5" />
-              <span>16% TGST & Green Tax</span>
-            </button>
-
-            <button
-              data-testid="cash-flow-tab-btn"
-              onClick={() => setActiveReportTab('cash_flow')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeReportTab === 'cash_flow'
-                  ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] shadow-xs border border-[var(--md-sys-color-primary)]'
-                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-              }`}
-            >
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>Cash Flow (IFRS)</span>
-            </button>
-          </div>
 
           {/* Operating Book / Entity Selector */}
           <select
@@ -632,7 +598,7 @@ export const ReportsView: React.FC = () => {
           asOfDate={new Date().toISOString().split('T')[0]}
           formatMVR={formatMVR}
         />
-      ) : (
+      ) : activeReportTab === 'analytics' ? (
         /* Operational Analytics Tab */
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -641,20 +607,27 @@ export const ReportsView: React.FC = () => {
                 <h3 className="text-sm font-bold text-[var(--md-sys-color-on-surface)]">
                   Monthly Revenue vs Expenses (MVR)
                 </h3>
-                <Badge variant="neutral" size="sm">FY2026</Badge>
+                <Badge variant="neutral" size="sm">Last 6 months</Badge>
               </div>
               <div className="h-64 w-full">
+                {!hasTrading ? (
+                  <div className="h-full flex items-center justify-center text-center text-xs text-[var(--md-sys-color-on-surface-variant)] px-6">
+                    No revenue or expenses recorded in the last six months. This chart is built
+                    from issued invoices and recorded expenses — it stays empty until there are some.
+                  </div>
+                ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={MONTHLY_SALES_CHART_DATA}>
+                  <BarChart data={monthlyPerformance}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--md-sys-color-outline-variant)" opacity={0.3} />
                     <XAxis dataKey="month" stroke="var(--md-sys-color-outline)" fontSize={11} />
                     <YAxis stroke="var(--md-sys-color-outline)" fontSize={11} tickFormatter={(v) => `${v / 1000}k`} />
                     <Tooltip contentStyle={{ backgroundColor: 'var(--md-sys-color-surface-container)', borderColor: 'var(--md-sys-color-outline-variant)' }} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="sales" name="Sales Revenue" fill="var(--md-sys-color-primary)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="revenue" name="Revenue (excl. GST)" fill="var(--md-sys-color-primary)" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="expenses" name="Operating Expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+                )}
               </div>
             </Surface>
 
@@ -663,29 +636,32 @@ export const ReportsView: React.FC = () => {
                 <h3 className="text-sm font-bold text-[var(--md-sys-color-on-surface)]">
                   Labor & Service Value Breakdown
                 </h3>
-                <Badge variant="neutral" size="sm">Volume</Badge>
+                <Badge variant="neutral" size="sm">By value</Badge>
               </div>
               <div className="h-64 w-full">
+                {serviceMix.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-center text-xs text-[var(--md-sys-color-on-surface-variant)] px-6">
+                    No service value recorded yet. This breakdown is built from approved job
+                    orders, weighted by value.
+                  </div>
+                ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={SERVICE_BREAKDOWN_DATA} layout="vertical">
+                  <BarChart data={serviceMix} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--md-sys-color-outline-variant)" opacity={0.3} />
                     <XAxis type="number" stroke="var(--md-sys-color-outline)" fontSize={11} />
-                    <YAxis dataKey="category" type="category" stroke="var(--md-sys-color-outline)" fontSize={10} width={90} />
+                    <YAxis dataKey="name" type="category" stroke="var(--md-sys-color-outline)" fontSize={10} width={90} />
                     <Tooltip contentStyle={{ backgroundColor: 'var(--md-sys-color-surface-container)', borderColor: 'var(--md-sys-color-outline-variant)' }} />
-                    <Bar dataKey="value" name="Service Value" fill="#38bdf8" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="amount" name="Service Value (MVR)" fill="#38bdf8" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+                )}
               </div>
             </Surface>
           </div>
         </div>
-      )}
-
-      {activeReportTab === 'mira_gst_201' && (
+      ) : activeReportTab === 'mira_gst_201' ? (
         <MiraGst201View />
-      )}
-
-      {activeReportTab === 'mira_tgst_16' && (
+      ) : activeReportTab === 'mira_tgst_16' ? (
         <MiraTgstView
           onAddJournalEntry={(je) => {
             // manualJournals above is a useMemo over localStorage, not state, so
@@ -699,11 +675,9 @@ export const ReportsView: React.FC = () => {
             }
           }}
         />
-      )}
-
-      {activeReportTab === 'cash_flow' && (
+      ) : activeReportTab === 'cash_flow' ? (
         <CashFlowStatementView journals={allJournals} />
-      )}
+      ) : null}
 
       {/* Interactive P&L Drilldown Drawer */}
       <DrilldownDrawer

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Building2,
   ChevronRight,
@@ -43,7 +44,8 @@ import { GeneralLedgerView } from './GeneralLedgerView';
 import { PeriodManagementView } from './PeriodManagementView';
 import { BankReconciliationView } from './BankReconciliationView';
 import { MultiCurrencyView } from './MultiCurrencyView';
-import { AccountingPeriod, generateFiscalPeriods, assertPeriodNotLocked } from '../../domain/periods';
+import { AccountingPeriod, generateFiscalPeriods } from '../../domain/periods';
+import { assertJournalPostable, PostingActor } from '../../domain/postingControl';
 import { Badge, Surface, Button } from '../ui';
 import { useERP } from '../../context/ERPContext';
 import {
@@ -58,7 +60,17 @@ export const AccountsView: React.FC = () => {
   // silently behaved as 'not registered'.
   const isGstRegistered = currentTenant?.gstStatus === 'registered';
 
-  const [activeTab, setActiveTab] = useState<'chart_of_accounts' | 'general_ledger' | 'periods' | 'bank_reconciliation' | 'multi_currency'>('chart_of_accounts');
+  type AccountSection = 'chart_of_accounts' | 'general_ledger' | 'periods' | 'bank_reconciliation' | 'multi_currency';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedSection = searchParams.get('tab') as AccountSection | null;
+  const activeTab: AccountSection = ['chart_of_accounts', 'general_ledger', 'periods', 'bank_reconciliation', 'multi_currency'].includes(requestedSection || '')
+    ? requestedSection as AccountSection
+    : 'chart_of_accounts';
+  const setActiveTab = (section: AccountSection) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', section);
+    setSearchParams(next);
+  };
 
   // Accounting Periods State
   const [periods, setPeriods] = useState<AccountingPeriod[]>(() => {
@@ -78,6 +90,7 @@ export const AccountsView: React.FC = () => {
     localStorage.setItem('starq:accounting_periods:v1', JSON.stringify(updated));
   };
   const [selectedLedgerAccountId, setSelectedLedgerAccountId] = useState<string | null>(null);
+  const [postingError, setPostingError] = useState<string | null>(null);
 
   const [accounts, setAccounts] = useState<AccountRecord[]>(() => {
     const saved = localStorage.getItem('starq:chart_of_accounts:v1');
@@ -146,7 +159,24 @@ export const AccountsView: React.FC = () => {
     }
   };
 
-  const handleSaveManualJournal = (entry: JournalEntry) => {
+  /**
+   * The ONLY path by which a journal reaches state. Every caller goes through
+   * here so the posting gate cannot be bypassed by adding another button.
+   *
+   * SERP-345: before this, assertPeriodNotLocked was imported into this file and
+   * called zero times — a journal could be posted into a CLOSED period and
+   * nothing stopped it. The guard existed and was never in effect.
+   */
+  const postJournal = (entry: JournalEntry, actor: PostingActor = 'user') => {
+    try {
+      assertJournalPostable({ entry, periods, accounts, actor });
+    } catch (err) {
+      // Surface the reason rather than throwing out of an event handler, which
+      // would leave the user with a modal that silently refuses to close.
+      setPostingError(err instanceof Error ? err.message : 'Posting rejected.');
+      return;
+    }
+    setPostingError(null);
     setManualJournals((prev) => {
       const next = [entry, ...prev];
       try {
@@ -157,6 +187,8 @@ export const AccountsView: React.FC = () => {
       return next;
     });
   };
+
+  const handleSaveManualJournal = (entry: JournalEntry) => postJournal(entry, 'user');
 
   // Toggle single node expansion
   const toggleExpand = (id: string) => {
@@ -279,6 +311,23 @@ export const AccountsView: React.FC = () => {
 
   return (
     <div className="space-y-6" data-testid="chart-of-accounts-view">
+      {postingError && (
+        <div
+          role="alert"
+          data-testid="posting-rejected"
+          className="flex items-start gap-3 rounded-lg border border-[var(--md-sys-color-error)] bg-[var(--md-sys-color-error-container)] p-4 text-[var(--md-sys-color-on-error-container)]"
+        >
+          <span className="font-semibold shrink-0">Posting rejected</span>
+          <span className="text-sm">{postingError}</span>
+          <button
+            type="button"
+            onClick={() => setPostingError(null)}
+            className="ml-auto text-sm underline shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       {/* Header with View Mode Switcher and Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -292,84 +341,6 @@ export const AccountsView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
-          {/* Segmented View Switcher */}
-          <div className="p-1 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center gap-1">
-            <button
-              type="button"
-              data-testid="coa-tab-btn"
-              onClick={() => {
-                setActiveTab('chart_of_accounts');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                activeTab === 'chart_of_accounts'
-                  ? 'bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-primary)] shadow-sm'
-                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-              }`}
-            >
-              <Building2 size={14} />
-              <span>Chart of Accounts</span>
-            </button>
-            <button
-              type="button"
-              data-testid="gl-tab-btn"
-              onClick={() => {
-                setActiveTab('general_ledger');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                activeTab === 'general_ledger'
-                  ? 'bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-primary)] shadow-sm'
-                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-              }`}
-            >
-              <BookOpen size={14} />
-              <span>General Ledger</span>
-            </button>
-            <button
-              type="button"
-              data-testid="periods-tab-btn"
-              onClick={() => {
-                setActiveTab('periods');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                activeTab === 'periods'
-                  ? 'bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-primary)] shadow-sm'
-                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-              }`}
-            >
-              <Lock size={14} />
-              <span>Period Lock & Year-End</span>
-            </button>
-            <button
-              type="button"
-              data-testid="bank-recon-tab-btn"
-              onClick={() => {
-                setActiveTab('bank_reconciliation');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                activeTab === 'bank_reconciliation'
-                  ? 'bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-primary)] shadow-sm'
-                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-              }`}
-            >
-              <Landmark size={14} />
-              <span>Bank Reconciliation</span>
-            </button>
-            <button
-              type="button"
-              data-testid="multi-currency-tab-btn"
-              onClick={() => {
-                setActiveTab('multi_currency');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                activeTab === 'multi_currency'
-                  ? 'bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-primary)] shadow-sm'
-                  : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-              }`}
-            >
-              <Globe size={14} />
-              <span>Multi-Currency & FX</span>
-            </button>
-          </div>
 
           <Button
             variant="tonal"
@@ -426,8 +397,9 @@ export const AccountsView: React.FC = () => {
           journals={allJournals}
           accounts={accounts}
           onClosingJournalPosted={(closingJe) => {
-            const updated = [closingJe, ...manualJournals];
-            setManualJournals(updated);
+            // The close is the one process permitted to write Retained Earnings
+            // and to post into the period it is closing.
+            postJournal(closingJe, 'system');
           }}
           formatMVR={formatMVR}
         />
@@ -435,15 +407,17 @@ export const AccountsView: React.FC = () => {
         <BankReconciliationView
           journals={allJournals}
           onAddAdjustmentJournal={(adjJe) => {
-            const updated = [adjJe, ...manualJournals];
-            setManualJournals(updated);
+            // Bank reconciliation books fees and interest against its own
+            // control accounts, so it posts as the owning engine.
+            postJournal(adjJe, 'system');
           }}
         />
       ) : activeTab === 'multi_currency' ? (
         <MultiCurrencyView
           onAddJournalEntry={(fxJe) => {
-            const updated = [fxJe, ...manualJournals];
-            setManualJournals(updated);
+            // Realised FX gain and loss are system accounts written by the
+            // settlement engine.
+            postJournal(fxJe, 'system');
           }}
         />
       ) : (

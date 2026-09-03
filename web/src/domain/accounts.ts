@@ -24,6 +24,7 @@ export type AccountSubtype =
   | 'ACCOUNTS_RECEIVABLE'
   | 'INVENTORY'
   | 'PREPAID_EXPENSE'
+  | 'INPUT_TAX_RECOVERABLE'
   | 'FIXED_ASSET'
   | 'ACCUMULATED_DEPRECIATION'
   | 'NON_CURRENT_ASSET'
@@ -31,6 +32,8 @@ export type AccountSubtype =
   | 'ACCOUNTS_PAYABLE'
   | 'CREDIT_CARD'
   | 'TAX_PAYABLE'
+  | 'PENSION_PAYABLE'
+  | 'WITHHOLDING_TAX_PAYABLE'
   | 'ACCRUED_EXPENSES'
   | 'LONG_TERM_LIABILITY'
   | 'OWNERS_EQUITY'
@@ -45,7 +48,8 @@ export type AccountSubtype =
   | 'COST_OF_GOODS_SOLD'
   | 'OPERATING_EXPENSE'
   | 'PAYROLL_EXPENSE'
-  | 'RENT_AND_UTILITIES'
+  | 'RENT_AND_LEASE'
+  | 'UTILITIES'
   | 'BANK_FEES_AND_CHARGES'
   | 'MARKETING_EXPENSE'
   | 'TAX_EXPENSE'
@@ -97,6 +101,7 @@ export const SUBTYPE_LABELS: Record<AccountSubtype, string> = {
   ACCOUNTS_RECEIVABLE: 'Accounts Receivable (Trade Debtors)',
   INVENTORY: 'Inventory & Stock Asset',
   PREPAID_EXPENSE: 'Prepayments & Deposits',
+  INPUT_TAX_RECOVERABLE: 'Input Tax Recoverable (MIRA)',
   FIXED_ASSET: 'Property, Plant & Equipment',
   ACCUMULATED_DEPRECIATION: 'Accumulated Depreciation',
   NON_CURRENT_ASSET: 'Non-Current Asset',
@@ -104,6 +109,8 @@ export const SUBTYPE_LABELS: Record<AccountSubtype, string> = {
   ACCOUNTS_PAYABLE: 'Accounts Payable (Trade Creditors)',
   CREDIT_CARD: 'Credit Card & Short Loans',
   TAX_PAYABLE: 'MIRA Tax & GST Payable',
+  PENSION_PAYABLE: 'MPAO / Pension Contributions Payable',
+  WITHHOLDING_TAX_PAYABLE: 'MIRA Withholding Tax Payable',
   ACCRUED_EXPENSES: 'Accrued Liabilities',
   LONG_TERM_LIABILITY: 'Long-Term Borrowings',
   OWNERS_EQUITY: 'Owner / Partner Capital',
@@ -118,7 +125,8 @@ export const SUBTYPE_LABELS: Record<AccountSubtype, string> = {
   COST_OF_GOODS_SOLD: 'Cost of Goods Sold (COGS)',
   OPERATING_EXPENSE: 'General & Administrative Expense',
   PAYROLL_EXPENSE: 'Salaries & Staff Benefits',
-  RENT_AND_UTILITIES: 'Rent, Power & Internet',
+  RENT_AND_LEASE: 'Premises Rent & Lease',
+  UTILITIES: 'Electricity, Water & Utilities',
   BANK_FEES_AND_CHARGES: 'Bank & Merchant Gateway Fees',
   MARKETING_EXPENSE: 'Advertising & Marketing',
   TAX_EXPENSE: 'Statutory Taxes & Green Tax',

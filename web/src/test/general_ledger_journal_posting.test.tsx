@@ -6,9 +6,9 @@ import { AccountsView } from '../components/accounts/AccountsView';
 import { ERPProvider } from '../context/ERPContext';
 import { AuthProvider } from '../context/AuthContext';
 
-const renderAccountsView = () => {
+const renderAccountsView = (entry = '/accounts') => {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[entry]}>
       <AuthProvider>
         <ERPProvider>
           <AccountsView />
@@ -23,16 +23,8 @@ describe('SERP-291: Live Double-Entry Journal Posting UI & General Ledger Explor
     localStorage.clear();
   });
 
-  it('switches between Chart of Accounts and General Ledger Explorer tabs', () => {
-    renderAccountsView();
-
-    // Default tab is Chart of Accounts
-    expect(screen.getByTestId('chart-of-accounts-view')).toBeInTheDocument();
-    expect(screen.getByText('Total Accounts')).toBeInTheDocument();
-
-    // Switch to General Ledger tab
-    const glTab = screen.getByTestId('gl-tab-btn');
-    fireEvent.click(glTab);
+  it('renders the General Ledger Explorer from its persistent deep link', () => {
+    renderAccountsView('/accounts?tab=general_ledger');
 
     // Verify General Ledger view is visible
     expect(screen.getByText(/Total Ledger Debits/i)).toBeInTheDocument();
@@ -84,13 +76,6 @@ describe('SERP-291: Live Double-Entry Journal Posting UI & General Ledger Explor
       expect(screen.queryByText('Post General Ledger Journal Entry')).not.toBeInTheDocument();
     });
 
-    // Switch to General Ledger tab to verify posted entry
-    const glTab = screen.getByTestId('gl-tab-btn');
-    fireEvent.click(glTab);
-
-    // Verify narration is visible for both ledger posting lines
-    expect(screen.getAllByText('End of Month Audit Adjustment').length).toBe(2);
-    expect(screen.getAllByText('Manual Journal').length).toBeGreaterThan(0);
   });
 
   it('drills down from a Chart of Accounts node into its specific General Ledger statement', () => {

@@ -33,7 +33,7 @@ import {
 } from 'recharts';
 import { useERP } from '../../context/ERPContext';
 import { useAuth } from '../../context/AuthContext';
-import { MONTHLY_SALES_CHART_DATA, SERVICE_BREAKDOWN_DATA } from '../../data/mockData';
+import { buildMonthlyPerformance, buildServiceMix } from '../../domain/dashboardSeries';
 import { StarqHQShell } from '../platform/StarqHQShell';
 import {
   Button,
@@ -67,6 +67,9 @@ export const DashboardView: React.FC = () => {
     triggerAIInsightAction,
     jobs,
     invoices,
+    // SERP-288: the dashboard never had expenses in scope, which is precisely
+    // why its "Operating Surplus" line could only ever have been fabricated.
+    expenses,
     payments,
     formatMVR,
     setIsCreateJobOpen,
@@ -77,6 +80,13 @@ export const DashboardView: React.FC = () => {
   if (activePlane === 'platform') {
     return <StarqHQShell />;
   }
+
+  // SERP-288 — this chart used to switch to a hard-coded six-month series the
+  // moment the tenant had one invoice, so somebody else's MVR 1.05m appeared to
+  // be theirs. It is now their own invoices and expenses, and stays flat when
+  // they are flat.
+  const monthlyPerformance = buildMonthlyPerformance(invoices, expenses);
+  const serviceMix = buildServiceMix(jobs);
 
   const activeJobs = jobs.filter((j) => !['Completed', 'Paid'].includes(j.status));
 
@@ -192,53 +202,70 @@ export const DashboardView: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 pb-12 w-full min-w-0">
-      {/* Top Banner / Welcome with Tenant Identity, Personalized Welcome & Quick Actions */}
-      <Surface variant="filled" level={1} padding="md" className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
-        <div className="flex items-center gap-3.5 min-w-0">
-          {currentTenant.logoUrl ? (
-            <img
-              src={currentTenant.logoUrl}
-              alt={currentTenant.name}
-              className="w-12 h-12 rounded-xl object-contain p-1 border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] shrink-0"
-            />
-          ) : (
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border border-[var(--md-sys-color-outline-variant)]"
-              style={{
-                backgroundColor: 'var(--md-sys-color-primary-container)',
-                color: 'var(--md-sys-color-on-primary-container)',
-              }}
-            >
-              {(currentBook?.code || currentTenant.name.slice(0, 2)).toUpperCase()}
-            </div>
-          )}
-          <div className="space-y-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] truncate">
+      {/* Welcome card: greeting, operating context, attention summary and actions reflow independently. */}
+      <Surface variant="filled" level={1} padding="md" className="grid gap-5 min-w-0 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="min-w-0 space-y-4">
+          <section className="flex items-start gap-3.5 min-w-0" aria-labelledby="welcome-greeting">
+            {currentTenant.logoUrl ? (
+              <img
+                src={currentTenant.logoUrl}
+                alt={currentTenant.name}
+                className="w-12 h-12 rounded-xl object-contain p-1 border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] shrink-0"
+              />
+            ) : (
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border border-[var(--md-sys-color-outline-variant)]"
+                style={{ backgroundColor: 'var(--md-sys-color-primary-container)', color: 'var(--md-sys-color-on-primary-container)' }}
+              >
+                {(currentBook?.code || currentTenant.name.slice(0, 2)).toUpperCase()}
+              </div>
+            )}
+            <div className="min-w-0 space-y-1">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Your workspace</p>
+              <h1 id="welcome-greeting" className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] break-words">
                 {greeting}, {preferredName}
               </h1>
-              <Badge variant="neutral" size="sm">
-                {currentBook?.name ? `${currentBook.name} · ${currentArchetype.name}` : currentArchetype.name}
-              </Badge>
-              <Badge variant="positive" size="sm">
-                Live Book
-              </Badge>
             </div>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--md-sys-color-on-surface-variant)]">
-              <span className="font-semibold text-[var(--md-sys-color-on-surface)] truncate">
-                {companyName} · {bookCode}
-              </span>
-              <span className="hidden sm:inline text-[var(--md-sys-color-outline)]">•</span>
-              <span className={attentionCount > 0 ? "font-medium text-[var(--md-sys-color-error)]" : "text-[var(--md-sys-color-on-surface-variant)]"}>
-                {attentionCount === 0
-                  ? 'No items require your attention right now.'
-                  : `${attentionCount} ${attentionCount === 1 ? 'item requires' : 'items require'} your attention today.`}
-              </span>
+          </section>
+
+          <section className="border-l-2 border-[var(--md-sys-color-primary)]/35 pl-3.5 min-w-0" aria-labelledby="book-context-heading">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 id="book-context-heading" className="text-xs font-semibold text-[var(--md-sys-color-on-surface)]">Open operating context</h2>
+              <Badge variant="positive" size="sm">Live Book</Badge>
             </div>
-          </div>
+            <div className="mt-1.5 flex flex-wrap gap-2 min-w-0">
+              {currentTenant.books.slice(0, 3).map((book) => (
+                <div
+                  key={book.id}
+                  className={`min-w-0 max-w-full rounded-[var(--md-sys-shape-corner-small)] px-2.5 py-1.5 text-xs ${
+                    book.id === currentBook?.id
+                      ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)]'
+                      : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]'
+                  }`}
+                >
+                  <span className="font-semibold break-words">{companyName} · {book.name}</span>
+                  <span className="ml-1.5 font-mono text-[10px] opacity-75">{book.code}</span>
+                </div>
+              ))}
+            </div>
+            {currentTenant.books.length > 3 && (
+              <p className="mt-1.5 text-[11px] text-[var(--md-sys-color-on-surface-variant)]">+{currentTenant.books.length - 3} more available book{currentTenant.books.length === 4 ? '' : 's'}</p>
+            )}
+          </section>
+
+          <section className="flex items-start gap-2 border-t border-[var(--md-sys-color-outline-variant)] pt-3 min-w-0" aria-live="polite">
+            {attentionCount > 0 ? <AlertTriangle size={15} className="mt-0.5 shrink-0 text-[var(--md-sys-color-error)]" /> : <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-[var(--positive)]" />}
+            <p className={`text-xs leading-relaxed ${attentionCount > 0 ? 'font-medium text-[var(--md-sys-color-error)]' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}>
+              {attentionCount === 0
+                ? 'No items require your attention right now.'
+                : `${attentionCount} ${attentionCount === 1 ? 'item requires' : 'items require'} your attention today.`}
+            </p>
+          </section>
         </div>
 
-        <ActionGroup align="right" className="shrink-0">
+        <section className="border-t border-[var(--md-sys-color-outline-variant)] pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0 min-w-0" aria-label="Quick actions">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Quick actions</p>
+          <ActionGroup align="right" className="shrink-0">
           <Button
             variant="filled"
             size="sm"
@@ -263,7 +290,8 @@ export const DashboardView: React.FC = () => {
           >
             <span>starqAI</span>
           </Button>
-        </ActionGroup>
+          </ActionGroup>
+        </section>
       </Surface>
 
       {/* Primary KPI Grid (Fluid auto-fit, container-safe, never forced 2 cols) */}
@@ -683,7 +711,7 @@ export const DashboardView: React.FC = () => {
               <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface)] truncate">
                 Financial Performance (MVR)
               </h2>
-              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">Revenue & Operating Surplus</p>
+              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">Revenue (excl. GST) &amp; Operating Surplus &middot; last 6 months</p>
             </div>
             <div className="flex items-center gap-3 text-xs shrink-0">
               <span className="flex items-center gap-1.5 text-[var(--md-sys-color-on-surface-variant)]">
@@ -697,14 +725,7 @@ export const DashboardView: React.FC = () => {
 
           <div className="h-56 sm:h-60 w-full pt-2 min-w-0">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={invoices.length > 0 ? MONTHLY_SALES_CHART_DATA : [
-                { month: 'Jan', revenue: 0, expenses: 0, profit: 0 },
-                { month: 'Feb', revenue: 0, expenses: 0, profit: 0 },
-                { month: 'Mar', revenue: 0, expenses: 0, profit: 0 },
-                { month: 'Apr', revenue: 0, expenses: 0, profit: 0 },
-                { month: 'May', revenue: 0, expenses: 0, profit: 0 },
-                { month: 'Jun', revenue: 0, expenses: 0, profit: 0 },
-              ]}>
+              <AreaChart data={monthlyPerformance}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--md-sys-color-primary)" stopOpacity={0.4} />
@@ -740,8 +761,8 @@ export const DashboardView: React.FC = () => {
               Service Mix Distribution
             </h2>
             <div className="mt-3.5 space-y-2.5 text-xs min-w-0">
-              {jobs.length > 0 ? (
-                SERVICE_BREAKDOWN_DATA.map((srv, i) => (
+              {serviceMix.length > 0 ? (
+                serviceMix.map((srv, i) => (
                   <div key={i} className="space-y-1 min-w-0">
                     <div className="flex items-center justify-between text-xs min-w-0">
                       <span className="font-medium text-[var(--md-sys-color-on-surface)] truncate">{srv.name}</span>
@@ -757,7 +778,7 @@ export const DashboardView: React.FC = () => {
                 ))
               ) : (
                 <div className="text-center py-6 text-xs text-[var(--md-sys-color-on-surface-variant)]">
-                  No service breakdown recorded yet. Create a job order to track service categories.
+                  No service value recorded yet. Approve a job order to track service categories.
                 </div>
               )}
             </div>
@@ -784,7 +805,7 @@ export const DashboardView: React.FC = () => {
                 }`}
               >
                 {currentTenant?.gstStatus === 'registered'
-                  ? `8% GST (${currentTenant.tinNumber || 'Registered'})`
+                  ? (currentTenant.tinNumber ? `8% GST (${currentTenant.tinNumber})` : '8% GST — TIN not recorded')
                   : 'Non-GST Registered'}
               </span>
             </div>

@@ -110,5 +110,7 @@ describe('SERP-296: Bank Reconciliation Interface', () => {
     expect(onAddJournalMock).toHaveBeenCalled();
     const createdJe: JournalEntry = onAddJournalMock.mock.calls[0][0];
     expect(createdJe.isBalanced).toBe(true);
+    expect(createdJe.tenantId).toBe('tenant-starq');
+    expect(createdJe.tenantId).not.toBe('tenant-club-ignition');
   });
 });

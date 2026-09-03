@@ -1865,14 +1865,28 @@ Deno.test('SERP-268: validateMfaChallenge enforces 2FA requirement on un-elevate
   assertEquals(res.error, 'mfa_required');
 });
 
-Deno.test('SERP-268: validateMfaChallenge accepts valid 6-digit TOTP token', () => {
+// SERP-381: After the fix, no 6-digit code is accepted by the TOTP path; it returns
+// an explicit not-implemented error ('totp_not_implemented') instead of silently admitting users.
+Deno.test('SERP-381: validateMfaChallenge fails closed on 6-digit TOTP token (totp_not_implemented)', () => {
   const res = validateMfaChallenge({
     code: '123456',
     isPrivileged: true,
     sessionMfaVerified: false,
   });
-  assertEquals(res.valid, true);
-  assertEquals(res.isRecoveryCodeUsed, false);
+  assertEquals(res.valid, false);
+  assertEquals(res.error, 'totp_not_implemented');
+});
+
+Deno.test('SERP-381: validateMfaChallenge fails closed on any arbitrary 6-digit code', () => {
+  for (const code of ['654321', '000000', '999999', '111111', '000001', '999998', '000002']) {
+    const res = validateMfaChallenge({
+      code,
+      isPrivileged: true,
+      sessionMfaVerified: false,
+    });
+    assertEquals(res.valid, false);
+    assertEquals(res.error, 'totp_not_implemented');
+  }
 });
 
 Deno.test('SERP-268: validateMfaChallenge consumes single-use emergency recovery code', () => {
@@ -1889,9 +1903,9 @@ Deno.test('SERP-268: validateMfaChallenge consumes single-use emergency recovery
   assert(!res.remainingRecoveryCodes?.includes('REC1-9921'));
 });
 
-Deno.test('SERP-268: validateMfaChallenge rejects invalid/expired token codes', () => {
+Deno.test('SERP-268 / SERP-381: validateMfaChallenge rejects invalid non-6-digit token codes', () => {
   const res = validateMfaChallenge({
-    code: '000001',
+    code: 'BADCODE',
     isPrivileged: true,
     sessionMfaVerified: false,
   });

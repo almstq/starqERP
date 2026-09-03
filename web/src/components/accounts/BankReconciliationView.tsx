@@ -53,7 +53,7 @@ export const BankReconciliationView: React.FC<{
   candidateTransactions?: ERPReconciliationCandidate[];
   onAddAdjustmentJournal?: (entry: JournalEntry) => void;
 }> = ({ journals, candidateTransactions, onAddAdjustmentJournal }) => {
-  const { invoices, payments, expenses, formatMVR } = useERP();
+  const { invoices, payments, expenses, formatMVR, currentTenant } = useERP();
 
   const [selectedAccount, setSelectedAccount] = useState<BankAccountOption>(BANK_ACCOUNTS[0]);
   const [statement, setStatement] = useState<BankStatement | null>(null);
@@ -216,7 +216,7 @@ Date,Description,Debit,Credit,Balance,Reference
       bankAccountCode: selectedAccount.code,
       adjustmentType,
       narration: adjustmentNarration,
-      tenantId: 'tenant-club-ignition',
+      tenantId: currentTenant?.id || 'tenant-starq',
     });
 
     if (onAddAdjustmentJournal) {
@@ -258,7 +258,7 @@ Date,Description,Debit,Credit,Balance,Reference
   }, [statement, filterMode, searchQuery]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 finance-light-compat">
       {/* 1. Header & Bank Account Selector */}
       <Surface className="p-6 rounded-2xl border border-slate-800 bg-[#0a0f1d]">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
