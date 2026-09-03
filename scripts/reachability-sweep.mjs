@@ -46,6 +46,30 @@ const INTENTIONALLY_UNMOUNTED = {
   // Known and owned elsewhere — deliberately NOT re-litigated here.
   'App.tsx': 'KNOWN, owned by SERP-192 — a second stale router covering 10 views while main.tsx mounts app/router.tsx. Left to that task, not duplicated here.',
   'InvoiceDetailModal.tsx': 'KNOWN, owned by SERP-192 — imported nowhere and carries a fabricated MIRA TIN. Left to that task.',
+
+  // --- DEC-103 / SERP-393 / Gate F4: Capability screens deliberately held pending backend schema ---
+  'components/payroll/PayrollManagementView.tsx': 'HOLD under DEC-103 / SERP-393: No payroll/employee table or command. Fixture-seeded.',
+  'components/inventory/MultiWarehouseView.tsx': 'HOLD under DEC-103 / SERP-393: No warehouse or stock_transfer table. Fixture-seeded.',
+  'components/manufacturing/ProductionOrderView.tsx': 'HOLD under DEC-103 / SERP-393: No production_order or BOM table. Fixture-seeded.',
+  'components/projects/JobCostingView.tsx': 'HOLD under DEC-103 / SERP-393: No job_cost table or command. Fixture-seeded.',
+  'components/sales/CreditDunningView.tsx': 'HOLD under DEC-103 / SERP-393: No credit_profile or dunning table. Fixture-seeded.',
+  'components/reports/ConsolidatedReportingView.tsx': 'HOLD under DEC-103 / SERP-393: No branch table or consolidation ledger. Fixture-seeded.',
+  'components/banking/AiReconciliationView.tsx': 'HOLD under DEC-103 / SERP-393: No bank statement table or OCR service. Mock OCR text.',
+  'components/admin/AgentRegistryView.tsx': 'HOLD under DEC-103 / SERP-393: Belongs to platform plane (StarqHQShell/SERP-099), not tenant router.',
+  'components/onboarding/OrganisationSetupModal.tsx': 'RETIRE under DEC-103 / SERP-393: Superseded duplicate of RegisterOrganisationModal.',
+
+  // --- DEC-103 / SERP-393: Domain support modules for held capability screens ---
+  'domain/agentRegistry.ts': 'HOLD under DEC-103 / SERP-393: Domain definitions for held AgentRegistryView.',
+  'domain/aiReconciliation.ts': 'HOLD under DEC-103 / SERP-393: Mock OCR parser for held AiReconciliationView.',
+  'domain/consolidatedBranches.ts': 'HOLD under DEC-103 / SERP-393: Static branch constants for held ConsolidatedReportingView.',
+  'domain/creditDunning.ts': 'HOLD under DEC-103 / SERP-393: Domain types for held CreditDunningView.',
+  'domain/interBookTransfers.ts': 'HOLD under DEC-103 / SERP-393: Domain rules for inter-book transfers pending reporting UI.',
+  'domain/jobCosting.ts': 'HOLD under DEC-103 / SERP-393: Job costing domain calculations for held JobCostingView.',
+  'domain/landedCost.ts': 'HOLD under DEC-103 / SERP-393: Landed cost allocation logic pending purchasing UI.',
+  'domain/manufacturing.ts': 'HOLD under DEC-103 / SERP-393: BOM calculations for held ProductionOrderView.',
+  'domain/payroll.ts': 'HOLD under DEC-103 / SERP-393: Pension & salary calculations for held PayrollManagementView.',
+  'domain/threeWayMatch.ts': 'HOLD under DEC-103 / SERP-393: 3-way matching logic pending AP workflow UI.',
+  'domain/warehouse.ts': 'HOLD under DEC-103 / SERP-393: Warehouse transfer domain logic for held MultiWarehouseView.',
 };
 
 function listSourceFiles(dir) {
