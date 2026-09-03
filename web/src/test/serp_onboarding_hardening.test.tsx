@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { RegisterOrganisationModal } from '../components/onboarding/RegisterOrganisationModal';
@@ -8,6 +8,10 @@ import { AuthProvider } from '../context/AuthContext';
 import { ThemeProvider } from '../context/ThemeContext';
 
 describe('Onboarding Hardening Slice (SERP Onboarding Hardening)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('renders phone input with optional label, privacy notice, and subtle support link', () => {
     render(
       <MemoryRouter>
@@ -22,10 +26,7 @@ describe('Onboarding Hardening Slice (SERP Onboarding Hardening)', () => {
     );
 
     // 1. Phone input has 'Phone Number (Optional)' label and is not marked required
-    const phoneLabel = screen.getByText('Phone Number (Optional)');
-    expect(phoneLabel).toBeDefined();
-
-    const phoneInput = phoneLabel.nextElementSibling as HTMLInputElement;
+    const phoneInput = screen.getByLabelText('Phone Number (Optional)') as HTMLInputElement;
     expect(phoneInput).toBeDefined();
     expect(phoneInput.required).toBe(false);
 

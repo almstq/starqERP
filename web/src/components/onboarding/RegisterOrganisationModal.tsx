@@ -245,10 +245,12 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
+              <label htmlFor="applicant-phone" className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
                 Phone Number (Optional)
               </label>
               <input
+                id="applicant-phone"
+                name="phone"
                 type="text"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
