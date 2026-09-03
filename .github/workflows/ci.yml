@@ -66,6 +66,12 @@ jobs:
       - name: Component Reachability Gate (SERP-234)
         run: node tests/component_reachability.test.mjs
 
+      - name: Reachability Sweep Strict Gate (SERP-392)
+        run: node scripts/reachability-sweep.mjs --strict
+
+      - name: Reachability Ratchet Enforcement Gate (SERP-392)
+        run: node tests/serp_392_reachability_ratchet.test.mjs
+
       - name: Deno Contract Test Suite (164 tests)
         run: deno test --allow-read tests/contract/commands_test.ts
 
