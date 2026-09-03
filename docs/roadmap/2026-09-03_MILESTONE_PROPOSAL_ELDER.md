@@ -131,6 +131,8 @@ So my job here isn't to invent milestones — it's to say, grounded in the actua
 
 ### Window 0 — 03 Sep 2026: Control-Tower Reset
 
+**Status note (added per GitHub Copilot review feedback, afternoon 03 Sep):** the exit-criteria bullets immediately below are a snapshot of what was true when this section was first drafted that morning, left unedited by design (see the "Update, afternoon 03 Sep 2026" note near the top of this document for why). By afternoon, all four items are closed. **Do not read the bullets below as current status — read the top-of-document update for that.**
+
 - **Specific outcome:** One accurate snapshot of every active lane's owner, reviewer, and next evidence step; no stale Founder request sitting unanswered.
 - **Measurable evidence / acceptance test:** A single message or doc listing, per active task, {owner, reviewer, next_action} with no gaps — this document plus the bus history from today's session already constitutes that evidence for the tasks it covers.
 - **Accountable owner:** Elder (compiled this reset). **Independent reviewer:** Nexus (cross-checks against canonical SSOT — already doing this per seq #579).
