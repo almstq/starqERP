@@ -244,6 +244,8 @@ async function readSession(req: Request): Promise<Session | null> {
     // and are distinguished downstream by the null value itself.
     if (session.organisation_id && !uuid(session.organisation_id)) return null;
     if (!session.person_uuid) return null;
+    // Tenant sessions must carry a seat; applicant sessions (organisation_id null) may have acting_as="" by design.
+    if (session.organisation_id && !session.acting_as) return null;
     return session;
   } catch {
     return null;
