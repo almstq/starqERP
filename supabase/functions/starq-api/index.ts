@@ -247,6 +247,21 @@ async function readSession(req: Request): Promise<Session | null> {
 }
 
 async function refreshSessionAuthority(session: Session): Promise<Session | null> {
+  // SERP-401-F3: applicants with zero organisations have no organisation_id.
+  // api_session_authority requires a valid org and returns active:false for null,
+  // which caused refreshSessionAuthority to return null → 401 → cookie cleared →
+  // all onboarding API calls fail for brand-new external users.
+  // Fix: if no organisation_id, verify the person exists and is active instead.
+  if (!session.organisation_id) {
+    const { data: person } = await db
+      .from("persons")
+      .select("id")
+      .eq("id", session.person_uuid)
+      .eq("status", "active")
+      .maybeSingle();
+    return person ? { ...session, seats: [] } : null;
+  }
+
   const { data, error } = await db.rpc("api_session_authority", {
     target_org: session.organisation_id,
     target_person: session.person_uuid,
