@@ -7,6 +7,8 @@
 
 **Update, same day:** Founder approved (bus seq #581) proceeding with a dated SMART-goal calendar built on the four milestones below, using the approved planning-target windows from seq #581. That calendar is the "Dated SMART Calendar" section near the end of this document. Per the founder's own words: "These are now approved planning targets, not permission to bypass evidence, review, security, Founder, or deployment gates."
 
+**Update, afternoon 03 Sep 2026 (per Cursor's independent review, bus seq #677):** everything named as still-open in Window 0 below has since closed on `origin/main`. SERP-241 re-certified PASS by VS Code (board commit `9f81a66`); SERP-351/394/395 merged (`c32cdf6`); SERP-382 Finding 1 merged and canonically closed (`04aaa0a`). Window 0 is done. Live board state as of this update: 162/382 done, 0 in_progress, 1 blocked (SERP-338, founder-only GCP action). The next canonical gates are SERP-339 and SERP-398, whatever Nexus routes from there. The body of this document below is left as written that morning — a dated snapshot, not silently rewritten — read the "Dated SMART Calendar" section's Window 0 against this update, not against its own original text.
+
 ---
 
 ## Zero — a fact that changes how to read this proposal
