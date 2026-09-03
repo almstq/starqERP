@@ -9,12 +9,15 @@ interface Props {
   onClose: () => void;
 }
 
+// IDs must match the DB check constraint in migrations 202608270024/26/27.
+// Never add an archetype here without updating the migration constraint first.
 const ARCHETYPES = [
   { id: 'automotive_workshop', name: 'Automotive & Workshop', desc: 'Job cards, bay scheduling, parts counter, paint formulas' },
-  { id: 'marine_boatyard', name: 'Marine & Boatyard', desc: 'Vessel slipway intake, dock refits, marine engine overhaul' },
-  { id: 'retail_wholesale', name: 'Retail & Wholesale Trading', desc: 'SKU catalog, multi-warehouse, BML POS, supplier POs' },
-  { id: 'medical_clinic', name: 'Medical Clinic & Diagnostics', desc: 'Patient records, appointments, lab tests, pharmacy' },
-  { id: 'general_business', name: 'Professional Services / Corporate', desc: 'Consulting, project billing, contracts, multi-book ledgers' },
+  { id: 'marine_service', name: 'Marine & Boatyard', desc: 'Vessel slipway intake, dock refits, marine engine overhaul' },
+  { id: 'wholesale_trading', name: 'Retail & Wholesale Trading', desc: 'SKU catalog, multi-warehouse, BML POS, supplier POs' },
+  { id: 'construction_contracting', name: 'Construction & Engineering', desc: 'Project-based contracts, site costing, subcontractors' },
+  { id: 'retail', name: 'Retail', desc: 'Counter sales, stock management, receipts' },
+  { id: 'general_business', name: 'Professional Services / General', desc: 'Consulting, project billing, contracts, multi-book ledgers' },
 ];
 
 export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) => {
@@ -108,20 +111,21 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
           </div>
 
           <div
-            className="p-2.5 rounded-[var(--md-sys-shape-corner-small)] border text-xs flex items-center justify-between"
+            className="p-2.5 rounded-[var(--md-sys-shape-corner-small)] border text-xs flex flex-wrap items-center justify-between gap-1.5"
             style={{
               backgroundColor: 'var(--md-sys-color-surface-container-low)',
               borderColor: 'var(--md-sys-color-outline-variant)',
             }}
           >
-            <div className="flex items-center gap-2">
-              <UserCheck size={16} className="text-[var(--md-sys-color-primary)]" />
-              <div>
-                <span className="font-semibold text-[var(--md-sys-color-on-surface)]">{applicantName}</span>
-                <span className="text-[var(--md-sys-color-on-surface-variant)] ml-1.5">({applicantEmail})</span>
+            {/* SERP-401 UI fix: min-w-0 + truncate prevents name/email from fighting the badge on narrow viewports */}
+            <div className="flex items-center gap-2 min-w-0">
+              <UserCheck size={16} className="shrink-0 text-[var(--md-sys-color-primary)]" />
+              <div className="min-w-0">
+                <span className="font-semibold text-[var(--md-sys-color-on-surface)] truncate block">{applicantName}</span>
+                <span className="text-[var(--md-sys-color-on-surface-variant)] truncate block">({applicantEmail})</span>
               </div>
             </div>
-            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600">
+            <span className="shrink-0 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600">
               Verified Identity
             </span>
           </div>

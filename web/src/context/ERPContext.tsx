@@ -589,7 +589,10 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [alerts, setAlerts] = useState<NeedsAttentionAlert[]>([]);
   const [aiInsights, setAiInsights] = useState<AIAssistantInsight[]>([]);
-  const [staff] = useState<StaffMember[]>(INITIAL_STAFF);
+  // SERP-401: staff is per-org and must never seed from mock data when a real session exists.
+  // No backend HR endpoint exists yet, so live sessions see an empty list until one ships.
+  // The seed is intentionally kept for demo/no-session paths only (tests, mockData consumers).
+  const [staff] = useState<StaffMember[]>(session ? [] : INITIAL_STAFF);
 
   // Load data from backend when session is available
   useEffect(() => {
