@@ -230,42 +230,66 @@ async function signSession(session: Session): Promise<string> {
   return `${payload}.${await hmac(payload)}`;
 }
 
-async function readSession(req: Request): Promise<Session | null> {
+async function readSession(req: Request, diag?: { reason?: string }): Promise<Session | null> {
   const raw = (req.headers.get("cookie") ?? "").split(";")
     .map((part) => part.trim()).find((part) => part.startsWith(`${COOKIE_NAME}=`))?.slice(COOKIE_NAME.length + 1);
-  if (!raw) return null;
+  if (!raw) { if (diag) diag.reason = "no_cookie"; return null; }
   const [payload, signature, extra] = raw.split(".");
-  if (!payload || !signature || extra || !await verifyHmac(payload, signature)) return null;
+  if (!payload || !signature || extra || !await verifyHmac(payload, signature)) {
+    if (diag) diag.reason = "bad_signature";
+    return null;
+  }
   try {
     const session = JSON.parse(new TextDecoder().decode(fromBase64Url(payload))) as Session;
-    if (!session.exp || session.exp <= Math.floor(Date.now() / 1000)) return null;
+    if (!session.exp || session.exp <= Math.floor(Date.now() / 1000)) {
+      if (diag) diag.reason = "expired";
+      return null;
+    }
     // SERP-401-F3: allow organisation_id to be absent for applicant sessions (zero orgs).
     // Tenant sessions still require a valid UUID; applicant sessions have organisation_id: null
     // and are distinguished downstream by the null value itself.
-    if (session.organisation_id && !uuid(session.organisation_id)) return null;
-    if (!session.person_uuid) return null;
+    if (session.organisation_id && !uuid(session.organisation_id)) {
+      if (diag) diag.reason = "bad_org_uuid";
+      return null;
+    }
+    if (!session.person_uuid) {
+      if (diag) diag.reason = "no_person_uuid";
+      return null;
+    }
     // Tenant sessions must carry a seat; applicant sessions (organisation_id null) may have acting_as="" by design.
-    if (session.organisation_id && !session.acting_as) return null;
+    if (session.organisation_id && !session.acting_as) {
+      if (diag) diag.reason = "tenant_session_missing_seat";
+      return null;
+    }
     return session;
   } catch {
+    if (diag) diag.reason = "payload_parse_error";
     return null;
   }
 }
 
-async function refreshSessionAuthority(session: Session): Promise<Session | null> {
+async function refreshSessionAuthority(session: Session, diag?: { reason?: string }): Promise<Session | null> {
   // SERP-401-F3: applicants with zero organisations have no organisation_id.
   // api_session_authority requires a valid org and returns active:false for null,
   // which caused refreshSessionAuthority to return null → 401 → cookie cleared →
   // all onboarding API calls fail for brand-new external users.
   // Fix: if no organisation_id, verify the person exists and is active instead.
   if (!session.organisation_id) {
-    const { data: person } = await db
+    const { data: person, error: personError } = await db
       .from("persons")
       .select("id")
       .eq("id", session.person_uuid)
       .eq("status", "active")
       .maybeSingle();
-    return person ? { ...session, seats: [] } : null;
+    if (personError) {
+      if (diag) diag.reason = `applicant_persons_lookup_error:${personError.message}`;
+      return null;
+    }
+    if (!person) {
+      if (diag) diag.reason = "applicant_person_not_found_or_inactive";
+      return null;
+    }
+    return { ...session, seats: [] };
   }
 
   const { data, error } = await db.rpc("api_session_authority", {
@@ -273,12 +297,26 @@ async function refreshSessionAuthority(session: Session): Promise<Session | null
     target_person: session.person_uuid,
     target_seat: session.acting_as,
   });
-  if (error || !data || typeof data !== "object") return null;
+  if (error) {
+    if (diag) diag.reason = `api_session_authority_rpc_error:${error.message}`;
+    return null;
+  }
+  if (!data || typeof data !== "object") {
+    if (diag) diag.reason = "api_session_authority_empty_response";
+    return null;
+  }
   const authority = data as { active?: unknown; seats?: unknown };
   const seats = Array.isArray(authority.seats)
     ? authority.seats.filter((seat): seat is string => typeof seat === "string")
     : [];
-  if (authority.active !== true || !seats.includes(session.acting_as)) return null;
+  if (authority.active !== true) {
+    if (diag) diag.reason = "api_session_authority_inactive";
+    return null;
+  }
+  if (!seats.includes(session.acting_as)) {
+    if (diag) diag.reason = "seat_not_in_authority_seats";
+    return null;
+  }
   return { ...session, seats };
 }
 
@@ -821,8 +859,9 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       return json(200, { ok: true, user: userDto(session) }, origin, { "set-cookie": cookie(signed) });
     }
 
-    const signedSession = await readSession(req);
-    const session = signedSession ? await refreshSessionAuthority(signedSession) : null;
+    const diag: { reason?: string } = {};
+    const signedSession = await readSession(req, diag);
+    const session = signedSession ? await refreshSessionAuthority(signedSession, diag) : null;
     // SERP-301 — person_uuid and organisation_id on every subsequent log line.
     // The person UUID, never an email or a name: an operational log is not a
     // place to accumulate a directory of the client's staff.
@@ -832,7 +871,7 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
     }
     if (!session) {
       observed.outcome = "unauthenticated";
-      await securityEvent(req, "auth.session", "rejected", null, { path }, requestId);
+      await securityEvent(req, "auth.session", "rejected", null, { path, reason: diag.reason ?? "unknown" }, requestId);
       return json(401, { ok: false, error: "unauthenticated", request_id: requestId }, origin, {
         "set-cookie": cookie("", 0),
       });
