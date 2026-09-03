@@ -239,7 +239,11 @@ async function readSession(req: Request): Promise<Session | null> {
   try {
     const session = JSON.parse(new TextDecoder().decode(fromBase64Url(payload))) as Session;
     if (!session.exp || session.exp <= Math.floor(Date.now() / 1000)) return null;
-    if (!session.organisation_id || !uuid(session.organisation_id) || !session.person_uuid || !session.acting_as) return null;
+    // SERP-401-F3: allow organisation_id to be absent for applicant sessions (zero orgs).
+    // Tenant sessions still require a valid UUID; applicant sessions have organisation_id: null
+    // and are distinguished downstream by the null value itself.
+    if (session.organisation_id && !uuid(session.organisation_id)) return null;
+    if (!session.person_uuid) return null;
     return session;
   } catch {
     return null;
