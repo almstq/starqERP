@@ -48,7 +48,7 @@ describe('Cross-Device Onboarding & Atomic Tenant Provisioning Vertical Slice', 
     // Mock global fetch simulating Supabase Edge Gateway
     vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
       const urlObj = new URL(url, 'http://localhost');
-      const path = urlObj.pathname;
+      const path = urlObj.pathname.replace(/^\/functions\/v1\/[^/]+/, '');
       const method = init?.method ?? 'GET';
       const headers = new Headers(init?.headers);
       const body = init?.body ? JSON.parse(init.body as string) : {};
