@@ -5,6 +5,8 @@
 
 **Governing instruction I'm following:** "Milestones must represent real capability or release readiness, not arbitrary task counts."
 
+**Update, same day:** Founder approved (bus seq #581) proceeding with a dated SMART-goal calendar built on the four milestones below, using the approved planning-target windows from seq #581. That calendar is the "Dated SMART Calendar" section near the end of this document. Per the founder's own words: "These are now approved planning targets, not permission to bypass evidence, review, security, Founder, or deployment gates."
+
 ---
 
 ## Zero — a fact that changes how to read this proposal
@@ -116,6 +118,72 @@ So my job here isn't to invent milestones — it's to say, grounded in the actua
 - Identity/tenant/command-boundary work (Starq Account, SERP-361–378 under SERP-E12) can run alongside Milestone 2's financial-core work — different subsystems, already flagged as parallel in the Bible.
 - Security remediation (P5 — SERP-226 process, Aikido triage, the DEC-072-cited "F5 proof") is explicitly continuous and should not be treated as a phase to "finish" before others start.
 - Phase 9's localization/module-breadth work (30 tasks) and Phase 10's controlled-AI work (10 tasks) are correctly held for 2027+ per the Master Arc's own gating language and should not be pulled forward regardless of available capacity — pulling them forward would violate the arc's stated entry gates (paying non-CI customer count, isolation proof) rather than accelerate anything real.
+
+---
+
+## Dated SMART Calendar (founder-approved planning targets, seq #581)
+
+**All dates below are MVT (UTC+5). Planning targets, not authorized commitments — every gate below (evidence, independent review, Founder decision) still applies exactly as it does anywhere else in this document. A slipped date is information, not a violation.**
+
+**Corrected against actual state as of this writing (13:44 MVT, 3 Sep 2026)** — the founder's suggested frame (seq #580/#581) was written before some of today's own closures landed. Noting the corrections inline rather than silently carrying stale status into a governance artifact.
+
+### Window 0 — 03 Sep 2026: Control-Tower Reset
+
+- **Specific outcome:** One accurate snapshot of every active lane's owner, reviewer, and next evidence step; no stale Founder request sitting unanswered.
+- **Measurable evidence / acceptance test:** A single message or doc listing, per active task, {owner, reviewer, next_action} with no gaps — this document plus the bus history from today's session already constitutes that evidence for the tasks it covers.
+- **Accountable owner:** Elder (compiled this reset). **Independent reviewer:** Nexus (cross-checks against canonical SSOT — already doing this per seq #579).
+- **Entry criteria:** None — this is where today started.
+- **Exit criteria:** As of now, ALREADY MET for the four items the founder's suggested list named, corrected from what was still open when seq #580 was drafted:
+  - PR #44 / SERP-241 exit certification — PR #44 **merged** (commit `9f81a66`), independently reviewed by Elder (ACCEPT) and reproduced independently (101/101 test files, 556/557 tests). **Remaining:** VS Code's post-merge clean-clone re-certification, still open — this is the one item from Window 0 that is NOT yet closed.
+  - PR #32 / SERP-351 clean rebase/re-review — rebase in progress (Vision), Elder's rebased-head re-review is the next step once pushed. **Not yet closed.**
+  - SERP-382 Finding 1 evidence — status not independently re-verified by me in this pass; last known state (earlier bus history) was with Codex for the CI-pin remediation. **Status needs a fresh confirmation from Codex, not assumed here.**
+  - SERP-125 canonical persistence — **ALREADY DONE.** Merged (PR #43, commit `19afab6`, verified reachable on origin/main), board closed to `done` with `merge_commit: 19afab6`, closure pushed and verified on starqNexus `origin/master` (`5212e60`). Nothing further needed on this item.
+- **Dependencies/parallel:** None of these four block each other; all four can close independently.
+- **Recovery rule if slipped:** If VS Code's re-certification or Vision's rebase don't land by end of Window 1 (05 Sep), they roll into Window 1 rather than blocking Window 2's start — Window 2 (financial-control definition work) does not depend on either.
+
+### Window 1 — 04–05 Sep 2026: Review-Debt Wave 1
+
+- **Specific outcome:** Every currently review-ready or near-ready security/release gate closes without adding new feature scope.
+- **Measurable evidence / acceptance test:** Per task — merged artifact + independent non-author acceptance + regenerated SSOT projection + verified remote persistence (the same four-part evidence standard already used today for PR #43/#44).
+- **Accountable owner:** whoever authored each item (Vision for SERP-351/394/395, Codex for SERP-382 F1, AG/vscode for anything in their lanes). **Independent reviewer:** Elder, unless Elder authored the item, in which case a non-Elder reviewer per DEC-072 (this already happened correctly today with SERP-125/399, where AG reviewed Elder-adjacent work).
+- **Entry criteria:** Window 0's open items (VS Code SERP-241 re-cert, Vision's PR #32 rebase) — this window is exactly where those two finish.
+- **Exit criteria:** SERP-241 closed (VS Code independent PASS, not just PR #44 merged); SERP-351/394/395 chain closed; SERP-382 fully dispositioned (Finding 1 remediated + evidenced, Findings 2-6 already FALSE_POSITIVE per founder ruling); zero tasks in `blocked` status for review-debt reasons.
+- **Dependencies/parallel:** SERP-394/395 are strictly sequential after SERP-351 (they depend on it). SERP-241 and SERP-382 are independent of the SERP-351 chain and of each other — all three lanes can run in parallel.
+- **Founder gate:** None required unless a review surfaces a genuine design fork (as SERP-351's original scope note anticipated) — in that case, stop and escalate per standing practice, don't improvise.
+- **Recovery rule if slipped:** If any one item isn't closed by end of 05 Sep, it does not block Window 2's *definition* work (which is planning/mapping, not implementation) but must close before Window 2's exit criteria (a founder-approved v1 checklist) can be considered final, since an open review-debt item on payment-provider tenant scoping is itself part of the financial-control surface.
+
+### Window 2 — 06–12 Sep 2026: V1 Financial-Control Ship-Line Definition
+
+- **Specific outcome:** A founder-approved checklist naming every task required to satisfy DEC-060's v1 line, with no item marked "implemented but unproven."
+- **Measurable evidence / acceptance test:** The checklist itself, reviewed and approved by the founder, listing task IDs against each of DEC-060's four line items (five audit criticals / financial-control core / end-to-end bookkeeping for both tenants / Ignition Ink six-week soak status on the Python portal).
+- **Accountable owner:** Elder (compiles the checklist, since this is a planning/mapping deliverable, not new implementation). **Independent reviewer:** Nexus (cross-checks the checklist against the live SSOT before it goes to the founder). **Founder gate:** yes — explicit approval of the checklist is the exit criterion itself, per DEC-060 being a founder-authored decision.
+- **Entry criteria:** Window 1 substantially closed (see recovery rule above — an open payment-config review item is itself in-scope for this checklist, so it should be resolved or explicitly listed as a checklist line item if still open).
+- **Exit criteria:** Founder signs off on the v1 checklist. This window does NOT require the underlying implementation work to be complete — only that every remaining task is identified, sequenced, and has no undocumented "believed done" status.
+- **Dependencies/parallel:** Can start compiling in parallel with Window 1's tail end, since this is definition work, not a dependency of Window 1's closures. Identity/tenant-boundary work (Starq Account, SERP-E12) and continuous security remediation (P5) run in parallel with this whole window and do not block it.
+- **Recovery rule if slipped:** If the checklist isn't founder-approved by 12 Sep, Window 3 (the actual proof run) does not start on schedule — this is a hard dependency, not a soft one, since starting a 30-day soak against an undefined v1 line would make the soak meaningless.
+
+### Window 3 — 13 Sep 2026 onward: Phase 5 Proof-Run Entry (SERP-261)
+
+- **Specific outcome:** 30 *consecutive* reconciled operating days plus one real (executed, not merely verified) restore drill.
+- **Measurable evidence / acceptance test:** Per SERP-261's own acceptance criteria — trial-balance, per-account, AND per-document reconciliation against the Python books, every day; a missing day resets the count to zero; the restore drill must actually restore, not just report as verified (per the 24 Aug `Filename too long` incident); zero open money-touching item in the workaround register at close; cleared by someone other than the implementer.
+- **Accountable owner:** whoever is operating the ERP day-to-day during the soak (likely Ali/founder for Starq Technologies' own books, per the "system of record" framing). **Independent reviewer:** a non-implementer per DEC-072 — Elder should not self-clear this given contribution history on the underlying finance-kernel tasks; AG, Vision, Codex, or vscode are eligible depending on who touched what.
+- **Entry criteria:** Window 2's founder-approved v1 checklist fully implemented and closed — not just approved, *done*.
+- **Exit criteria:** Exactly SERP-261's stated acceptance — 30 consecutive reconciled days, a passed restore drill, independent clearance.
+- **Dependencies/parallel:** Strictly sequential after Window 2's implementation completes — this cannot be parallelized or accelerated by adding people, since it is a calendar-time soak, not an engineering task.
+- **Founder gate:** Implicit — the founder is the one whose books are being soaked; any operational disruption during the 30 days is a founder-visible event by design.
+- **Recovery rule if slipped:** A missing or unreconciled day resets the 30-day counter per SERP-261's own rule — this is not a "slip the date" situation, it's a "the clock restarts" situation, and that should be reported honestly rather than reframed as a schedule adjustment.
+
+### Window 4 — After Phase 5 exit: Phase 6 Customer Pilot (SERP-272)
+
+- **Specific outcome:** One external, non-Ignition-Ink paying client survives one complete billing cycle on STARQ ERP.
+- **Measurable evidence / acceptance test:** Exactly SERP-272's stated criteria — an issued and paid invoice, no parallel legacy system in use for anything material, a closed period tying to the ledger, evidenced reconciliation, independent clearance. Explicitly excludes "the friendly pilot that never invoices," "the client who kept using their old system," and "the demo that worked in week one."
+- **Accountable owner:** whoever owns commercial/customer-success responsibility (likely founder or Starq Dynamics, per the ST-builds/SD-sells model in CLAUDE.md) for sourcing and onboarding the client; engineering owner for the Switch Kit tasks (Phase 6, 11 tasks) is unassigned in the current board extract and should be named when this window opens.
+- **Independent reviewer:** non-implementer per DEC-072, named when the window opens.
+- **Entry criteria:** Window 3's exit criteria met (Phase 5 closed) — no external client onboarding before the system has proven itself on Starq's own books.
+- **Exit criteria:** Exactly SERP-272's stated acceptance test above.
+- **Dependencies/parallel:** Strictly sequential after Window 3. The Switch Kit build itself (11 tasks) can be built in parallel during Windows 2-3, since it's an onboarding-mechanism deliverable, not itself gated on the soak — only the act of onboarding a real client is gated.
+- **Founder gate:** Yes — commercial terms, client selection, and pricing are founder/commercial decisions, not engineering ones.
+- **Recovery rule if slipped:** This window has no fixed calendar target by design (the founder's own frame says "Phase 6 customer pilot only after Phase 5 exit," open-ended) — a slip here is a commercial-timeline fact, not an engineering failure, and should be reported as such.
 
 ---
 
