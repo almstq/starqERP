@@ -164,7 +164,7 @@ export const AppShell: React.FC = () => {
     isRegisterOrgModalOpen,
     setIsRegisterOrgModalOpen
   } = useERP();
-  const { session, logout } = useAuth();
+  const { session, isLoading, logout } = useAuth();
   const { themeMode, setThemeMode, resolvedTheme } = useTheme();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [collapsedModuleMenus, setCollapsedModuleMenus] = useState<Set<string>>(() => new Set());
@@ -188,11 +188,24 @@ export const AppShell: React.FC = () => {
     ? 'Starq HQ'
     : currentBook
       ? `${currentTenant?.name} (${currentBook.name})`
-      : currentTenant?.name || 'Starq Technologies';
+      : currentTenant?.name || 'No organisation';
 
   const initials = activePlane === 'platform'
     ? 'HQ'
-    : (currentTenant?.name || 'Starq').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+    : (currentTenant?.name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+
+  const hasSessionOrgs = (session?.organisations?.length ?? 0) > 0;
+  const applicantPending =
+    session?.application?.status === 'pending' ||
+    session?.application?.status === 'info_requested' ||
+    pendingApplications.some((a) => a.status === 'pending_approval');
+
+  useEffect(() => {
+    if (isLoading || !session) return;
+    if (!hasSessionOrgs && !applicantPending) {
+      setIsRegisterOrgModalOpen(true);
+    }
+  }, [isLoading, session, hasSessionOrgs, applicantPending, setIsRegisterOrgModalOpen]);
 
   useEffect(() => {
     setMobileDrawerOpen(false);
@@ -840,6 +853,13 @@ export const AppShell: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5 mt-1 max-h-64 overflow-y-auto px-1">
+                      {session && tenants.length === 0 && (
+                        <div className="px-2.5 py-2 text-xs text-[var(--md-sys-color-on-surface-variant)]">
+                          {applicantPending
+                            ? 'Application pending Starq HQ approval. No organisation is assigned yet.'
+                            : 'No organisation on this session. Register to apply.'}
+                        </div>
+                      )}
                       {tenants.map((t) => {
                         const isTenantActive = activePlane === 'tenant' && currentTenant.id === t.id;
                         return (

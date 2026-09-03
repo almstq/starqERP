@@ -45,8 +45,10 @@ import { dispatchCommand, apiGet } from '../services/apiGateway';
 import { useAuth } from './AuthContext';
 import { getArchetype, ArchetypeDefinition, ArchetypeTerminology, ArchetypeId, ARCHETYPES } from '../domain/archetypes';
 import { switchContext as apiSwitchContext, fetchCurrentUser } from '../services/auth';
+import { mapSessionOrganisationsToTenants, resolveCurrentTenant } from '../lib/sessionTenants';
 import {
   submitOrganisationApplication as apiSubmitApplication,
+  getApplicantApplication as apiGetApplicantApplication,
   getPlatformApplications as apiGetPlatformApplications,
   approvePlatformApplication as apiApproveApplication,
   rejectPlatformApplication as apiRejectApplication,
@@ -95,7 +97,9 @@ export interface ERPContextType {
 
   // Platform Application & Organisation Registration
   pendingApplications: OrganisationApplication[];
-  submitOrganisationApplication: (appData: Omit<OrganisationApplication, 'id' | 'submittedAt' | 'status'>) => void;
+  submitOrganisationApplication: (
+    appData: Omit<OrganisationApplication, 'id' | 'submittedAt' | 'status'>
+  ) => Promise<OrganisationApplication>;
   approveOrganisationApplication: (appId: string) => Promise<OrganisationTenant | undefined>;
   rejectOrganisationApplication: (appId: string, reason?: string) => void;
   isRegisterOrgModalOpen: boolean;
@@ -413,30 +417,22 @@ const ERPContext = createContext<ERPContextType | undefined>(undefined);
 export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [activeTab, setActiveTab] = useState<NavigationTab>('dashboard');
   const { resolvedTheme, setThemeMode } = useTheme();
-  const { session } = useAuth();
+  const { session, refreshSession } = useAuth();
   const theme = resolvedTheme;
 
-  // Multi-tenant state with tenant-scoped storage persistence
-  const [tenants, setTenants] = useState<OrganisationTenant[]>(() => {
-    try {
-      const saved = localStorage.getItem('starq_erp_tenants_v2');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {
-      // Fallback to initial seed
-    }
-    return INITIAL_TENANTS;
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('starq_erp_tenants_v2', JSON.stringify(tenants));
-    } catch {
-      // Storage unavailable or quota exceeded
-    }
-  }, [tenants]);
+  // Demo / unsigned fixtures only. A live session never reads INITIAL_TENANTS or localStorage.
+  const [demoTenants, setDemoTenants] = useState<OrganisationTenant[]>(INITIAL_TENANTS);
+  const tenants = useMemo(
+    () => (session ? mapSessionOrganisationsToTenants(session.organisations) : demoTenants),
+    [session, demoTenants]
+  );
+  const setTenants = useCallback(
+    (updater: React.SetStateAction<OrganisationTenant[]>) => {
+      if (session) return;
+      setDemoTenants(updater);
+    },
+    [session]
+  );
 
   // Organisation Applications & Platform Approval State (Authoritative Server Persistence)
   const [pendingApplications, setPendingApplications] = useState<OrganisationApplication[]>([]);
@@ -462,7 +458,6 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
   }, []);
 
-  // Fetch server-side applications if current identity holds platform operator entitlement
   useEffect(() => {
     if (session?.platform_entitlement) {
       apiGetPlatformApplications()
@@ -472,42 +467,47 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
         })
         .catch(() => {
-          // Fallback to initial applications if offline
+          // Operator queue stays empty until the server answers.
         });
     }
   }, [session?.platform_entitlement, mapPlatformAppToClient]);
 
-  const submitOrganisationApplication = useCallback(
-    async (appData: Omit<OrganisationApplication, 'id' | 'submittedAt' | 'status'>) => {
-      try {
-        const res = await apiSubmitApplication({
-          name: appData.name,
-          legal_name: appData.legalName,
-          archetype_id: appData.archetypeId,
-          primary_book_name: appData.primaryBookName,
-          primary_book_code: appData.primaryBookCode,
-          island: appData.island,
-          atoll: appData.atoll,
-          phone: appData.phone,
-        });
-
+  useEffect(() => {
+    if (!session) return;
+    apiGetApplicantApplication()
+      .then((res) => {
         if (res.ok && res.application) {
           const clientApp = mapPlatformAppToClient(res.application);
           setPendingApplications((prev) => [clientApp, ...prev.filter((a) => a.id !== clientApp.id)]);
         }
-      } catch (err) {
-        console.error('Failed to submit organisation application:', err);
-        // Optimistic fallback
-        const newApp: OrganisationApplication = {
-          ...appData,
-          id: `app-${Date.now()}`,
-          submittedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-          status: 'pending_approval',
-        };
-        setPendingApplications((prev) => [newApp, ...prev]);
+      })
+      .catch(() => {
+        // Applicant pending state stays server-backed only.
+      });
+  }, [session?.person_id, mapPlatformAppToClient]);
+
+  const submitOrganisationApplication = useCallback(
+    async (appData: Omit<OrganisationApplication, 'id' | 'submittedAt' | 'status'>) => {
+      const res = await apiSubmitApplication({
+        name: appData.name,
+        legal_name: appData.legalName,
+        archetype_id: appData.archetypeId,
+        primary_book_name: appData.primaryBookName,
+        primary_book_code: appData.primaryBookCode,
+        island: appData.island,
+        atoll: appData.atoll,
+        phone: appData.phone,
+      });
+
+      if (!res.ok || !res.application) {
+        throw new Error('organisation_application_submit_failed');
       }
+      const clientApp = mapPlatformAppToClient(res.application);
+      setPendingApplications((prev) => [clientApp, ...prev.filter((a) => a.id !== clientApp.id)]);
+      await refreshSession();
+      return clientApp;
     },
-    [mapPlatformAppToClient]
+    [mapPlatformAppToClient, refreshSession]
   );
 
   const approveOrganisationApplication = useCallback(
@@ -528,10 +528,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return undefined;
       } catch (err) {
         console.error('Failed to approve organisation application:', err);
-        setPendingApplications((prev) =>
-          prev.map((a) => (a.id === appId ? { ...a, status: 'approved' } : a))
-        );
-        return undefined;
+        throw err;
       }
     },
     [session?.platform_entitlement, mapPlatformAppToClient]
@@ -557,8 +554,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   );
 
   const [activePlane, setActivePlane] = useState<'platform' | 'tenant'>('tenant');
-  const [currentTenantId, setCurrentTenantId] = useState<string>('tenant-starq');
-  const [currentBookId, setCurrentBookId] = useState<string>('book-starq-tech');
+  const [currentTenantId, setCurrentTenantId] = useState<string>('');
+  const [currentBookId, setCurrentBookId] = useState<string>('');
   const [isSetupModalOpen, setIsSetupModalOpen] = useState<boolean>(false);
 
   // Synchronize active tenant & book context from authoritative backend session
@@ -667,9 +664,10 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [prefilledInvoiceId, setPrefilledInvoiceId] = useState<string | undefined>(undefined);
 
   // Current Tenant computation
-  const currentTenant = useMemo(() => {
-    return tenants.find((t) => t.id === currentTenantId) || tenants[0];
-  }, [tenants, currentTenantId]);
+  const currentTenant = useMemo(
+    () => resolveCurrentTenant(tenants, currentTenantId),
+    [tenants, currentTenantId]
+  );
 
   // Current Book computation
   const currentBook = useMemo(() => {
@@ -704,7 +702,20 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return users.find((u) => u.id === currentUserId) || users[0];
   }, [users, currentUserId]);
 
-  const isPendingApproval = currentUser.status === 'Pending Approval';
+  const applicantPending = Boolean(
+    session &&
+      (session.application?.status === 'pending' ||
+        session.application?.status === 'info_requested' ||
+        pendingApplications.some((a) => a.status === 'pending_approval'))
+  );
+  const isPendingApproval = currentUser.status === 'Pending Approval' || applicantPending;
+
+  useEffect(() => {
+    if (!session || session.platform_entitlement) return;
+    if (tenants.length === 0 && !applicantPending) {
+      setIsRegisterOrgModalOpen(true);
+    }
+  }, [session, tenants.length, applicantPending]);
 
   useEffect(() => {
     telemetry.setTenantId(currentTenantId);
