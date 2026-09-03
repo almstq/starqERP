@@ -43,3 +43,4 @@ Thumbs.db
 _ag_packet*.txt
 ops/_ag-*.txt
 ops/_ag_*.txt
+.vercel

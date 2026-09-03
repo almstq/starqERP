@@ -426,6 +426,7 @@ async function securityEvent(
       event_type: eventType,
       outcome,
       source_hash: sourceHash,
+      request_id: requestId && uuid(requestId) ? requestId : null,
       metadata: requestId ? { ...(metadata as Record<string, unknown>), request_id: requestId } : metadata,
     });
   } catch {
