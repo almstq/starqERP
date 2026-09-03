@@ -15,7 +15,12 @@ insert into expected_public_tables (table_name) values
   ('journal_proposals'), ('journal_proposal_lines'), ('journal_entries'),
   ('journal_lines'), ('document_sequences'), ('security_events'),
   ('automation_principals'), ('automation_capability_grants'), ('command_approvals'),
-  ('settlement_allocations');
+  ('settlement_allocations'),
+  -- SERP-125: the one deliberately-partial-public table in this schema. It carries
+  -- RLS + 2 policies like the rest, but one of those policies (see below) grants a
+  -- scoped, cross-tenant read for published rows by design. Classified separately
+  -- below rather than folded into the fully-isolated 'protected-by-RLS' bucket.
+  ('product_publications');
 
 create temporary table expected_policies (
   table_name text not null,
@@ -49,7 +54,16 @@ insert into expected_policies (table_name, policy_name) values
   ('security_events', 'security_events_current'),
   ('automation_principals', 'automation_principals_current'),
   ('command_approvals', 'command_approvals_current'),
-  ('settlement_allocations', 'settlement_allocations_current');
+  ('settlement_allocations', 'settlement_allocations_current'),
+  -- SERP-125: _current is the ordinary tenant-scoped rule (matches the pattern of
+  -- every other table above). _published is NOT tenant-scoped by design -- it is
+  -- the public listing rule, deliberately readable across tenants for rows in
+  -- state='published'. Both are still enumerated here so the drift check above
+  -- can see them; the generic cross-tenant loop further below explicitly skips
+  -- this table because that policy makes the "zero cross-tenant rows" invariant
+  -- inapplicable to it -- see the comment at that loop.
+  ('product_publications', 'product_publications_current'),
+  ('product_publications', 'product_publications_published');
 
 do $$
 begin
@@ -102,6 +116,12 @@ select e.table_name,
        has_table_privilege('authenticated', format('public.%I', e.table_name), 'SELECT')
          as authenticated_can_select,
        case
+         -- SERP-125: classified ahead of the generic RLS bucket because one of its
+         -- two policies (product_publications_published) is a deliberate, evidenced
+         -- cross-tenant read for published rows -- not the full tenant isolation the
+         -- other 27 'protected-by-RLS' tables provide. See publication_boundary_probe.sql
+         -- for the behavioural proof of that boundary.
+         when e.table_name = 'product_publications' then 'protected-with-scoped-public-read'
          when c.relrowsecurity and count(p.oid) > 0 then 'protected-by-RLS'
          when not has_table_privilege(
            'authenticated', format('public.%I', e.table_name), 'SELECT'
@@ -116,14 +136,17 @@ select e.table_name,
 
 do $$
 begin
-  if (select count(*) from protection_report) <> 31 then
-    raise exception 'SERP-124 expected 31 classified public tables';
+  if (select count(*) from protection_report) <> 32 then
+    raise exception 'SERP-124 expected 32 classified public tables';
   end if;
   if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 27 then
     raise exception 'SERP-124 expected 27 RLS-protected tables';
   end if;
   if (select count(*) from protection_report where protection = 'protected-by-revoked-grant') <> 4 then
     raise exception 'SERP-124 expected 4 revoked-grant-protected tables';
+  end if;
+  if (select count(*) from protection_report where protection = 'protected-with-scoped-public-read') <> 1 then
+    raise exception 'SERP-125 expected exactly 1 scoped-public-read table (product_publications)';
   end if;
   if exists (select 1 from protection_report where protection = 'NOT PROTECTED') then
     raise exception 'SERP-124 found an unprotected public table';
@@ -173,7 +196,13 @@ begin
     raise exception 'SERP-124 probe role owns a tested table';
   end if;
 
-  -- No tenant/person claim: every RLS-enabled table must expose zero rows.
+  -- No tenant/person claim: every RLS-enabled table must expose zero rows --
+  -- except product_publications (SERP-125), skipped below. Its
+  -- product_publications_published policy checks only state = 'published' and
+  -- carries no organisation/person claim check at all: a published row is meant
+  -- to be visible with NO tenant claim, since that is what makes it a public
+  -- listing rather than a leak. See publication_boundary_probe.sql for the
+  -- dedicated behavioural proof of that boundary.
   perform set_config('app.organisation_id', '', true);
   perform set_config('app.person_id', '', true);
   for table_record in
@@ -181,6 +210,7 @@ begin
       from pg_class c
       join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity
+       and c.relname <> 'product_publications'
      order by c.relname
   loop
     execute format('select exists (select 1 from public.%I limit 1)', table_record.table_name)
@@ -204,7 +234,21 @@ declare
   tenant_b_count bigint;
   tenant_column text;
 begin
-  for policy_table in select distinct table_name from expected_policies order by table_name loop
+  for policy_table in
+    select distinct table_name from expected_policies
+     -- SERP-125: skip here, not a gap. This loop's invariant is "tenant A can never
+     -- see tenant B's rows by any query shape" -- true for all 27 fully-isolated
+     -- tables, but NOT the intended behaviour for product_publications, whose
+     -- product_publications_published policy deliberately admits another tenant's
+     -- PUBLISHED rows (that is the whole point of a publication feed). Running this
+     -- table through this loop would either fail on correct behaviour, or pass by
+     -- accident of the fixture happening to hold no cross-tenant published row --
+     -- both worse than an explicit skip. The boundary this table actually promises
+     -- (private by default, explicit + audited publish, revocable) is proved
+     -- instead by tests/publication_boundary_probe.sql.
+     where table_name <> 'product_publications'
+     order by table_name
+  loop
     tenant_column := case when policy_table.table_name = 'organisations' then 'id' else 'organisation_id' end;
     execute format('select count(*) from public.%I where %I = $1', policy_table.table_name, tenant_column)
       into tenant_a_count using '00000000-0000-4000-8000-000000000001'::uuid;
@@ -225,7 +269,8 @@ select current_user as asserted_probe_role,
        current_setting('row_security') as row_security,
        (select rolsuper from pg_roles where rolname = current_user) as superuser,
        (select rolbypassrls from pg_roles where rolname = current_user) as bypass_rls,
-       (select count(distinct table_name) from expected_policies) as policies_behaviorally_exercised,
+       (select count(distinct table_name) from expected_policies
+         where table_name <> 'product_publications') as policies_behaviorally_exercised,
        (select count(*) from public.organisations) as visible_organisations,
        (select count(*) from public.memberships) as visible_memberships;
 
