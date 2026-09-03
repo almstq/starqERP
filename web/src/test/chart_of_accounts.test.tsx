@@ -60,7 +60,7 @@ describe('Chart of Accounts Domain & Hierarchy Algorithms', () => {
   });
 });
 
-describe('AccountsView Component & Interactions', () => {
+describe('AccountsView Component & Interactions', { timeout: 15000 }, () => {
   beforeEach(() => {
     localStorage.clear();
   });

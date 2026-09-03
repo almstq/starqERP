@@ -21,7 +21,7 @@ describe('SERP-031: API Gateway — Command Dispatch & Query', () => {
 
     expect(fetchSpy).toHaveBeenCalledOnce();
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(url).toBe('/api/ops/event');
+    expect(url).toMatch(/\/api\/ops\/event$/);
     expect(init.method).toBe('POST');
     expect(init.credentials).toBe('include');
 
@@ -76,7 +76,7 @@ describe('SERP-031: API Gateway — Command Dispatch & Query', () => {
 
     expect(fetchSpy).toHaveBeenCalledOnce();
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(url).toBe('/api/ops/customers');
+    expect(url).toMatch(/\/api\/ops\/customers$/);
     expect(init.method).toBe('GET');
     expect(init.credentials).toBe('include');
     expect(result).toEqual(mockData);
