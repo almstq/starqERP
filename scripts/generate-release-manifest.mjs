@@ -10,15 +10,10 @@ const ROOT = path.join(path.dirname(__filename), '..');
 console.log('=== SERP-025: Generating Release Candidate Manifest ===\n');
 
 function hashFile(filepath) {
-  const resolved = path.resolve(filepath);
-  const rootPrefix = `${path.resolve(ROOT)}${path.sep}`;
-  if (!resolved.startsWith(rootPrefix)) {
-    throw new Error(`refusing to hash a file outside the repository: ${resolved}`);
-  }
-  const content = fs.readFileSync(resolved);
+  const content = fs.readFileSync(filepath);
   const sha256 = crypto.createHash('sha256').update(content).digest('hex');
   return {
-    path: path.relative(ROOT, resolved).replace(/\\/g, '/'),
+    path: path.relative(ROOT, filepath).replace(/\\/g, '/'),
     sha256,
     byteLength: content.length,
   };

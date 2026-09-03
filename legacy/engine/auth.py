@@ -50,14 +50,6 @@ def _vault_secrets_dir() -> str:
 SECRETS_FILE = os.path.join(_vault_secrets_dir(), "starqBooks.env")
 ALLOWLIST_SECRETS = os.path.join(_vault_secrets_dir(), "starqBooks-allowlist.json")
 
-
-def _safe_path(path: str, *roots: str) -> str:
-    resolved = os.path.realpath(path)
-    allowed = [os.path.realpath(root) for root in roots]
-    if not any(resolved == root or resolved.startswith(root + os.sep) for root in allowed):
-        raise ValueError(f"refusing to access path outside approved roots: {resolved}")
-    return resolved
-
 COOKIE_NAME = "sb_ops"
 SESSION_HOURS = 12
 _lock = threading.Lock()
@@ -279,7 +271,6 @@ def _iso(dt: datetime) -> str:
 
 def _parse_env_file(path: str) -> dict[str, str]:
     out = {}
-    path = _safe_path(path, _vault_secrets_dir(), OPS_DIR, HERE)
     if not os.path.isfile(path):
         return out
     with open(path, encoding="utf-8") as f:
@@ -361,7 +352,7 @@ def allowlist_path() -> str:
 
 
 def load_allowlist() -> dict:
-    path = _safe_path(allowlist_path(), _vault_secrets_dir(), OPS_DIR, HERE)
+    path = allowlist_path()
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)

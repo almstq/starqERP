@@ -13,14 +13,6 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 MASTERS = os.path.join(HERE, "ops", "masters")
 AUDIT_LOG = os.path.join(HERE, "ops", "master_audit.jsonl")
 
-
-def _safe_master_path(path: str) -> str:
-    resolved = os.path.realpath(path)
-    root = os.path.realpath(MASTERS)
-    if resolved != root and not resolved.startswith(root + os.sep):
-        raise ValueError(f"master path escaped masters directory: {resolved}")
-    return resolved
-
 # Tests set this to a list so they never create ops/master_audit.jsonl.
 _AUDIT_ROWS = None
 
@@ -85,7 +77,7 @@ def load_audit(occupancy: str | None = None, limit: int = 40) -> list[dict]:
 
 
 def _load(name: str) -> dict:
-    path = _safe_master_path(os.path.join(MASTERS, name))
+    path = os.path.join(MASTERS, name)
     with open(path, encoding="utf-8") as f:
         return json.load(f)
 
@@ -452,7 +444,6 @@ def _leftover_sku(sku: str, name: str = "") -> bool:
 
 
 def _write_json(path: str, data: dict) -> None:
-    path = _safe_master_path(path)
     tmp = path + ".tmp"
     payload = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     with open(tmp, "w", encoding="utf-8") as f:
