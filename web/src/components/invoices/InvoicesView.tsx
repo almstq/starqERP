@@ -52,6 +52,20 @@ export const InvoicesView: React.FC = () => {
   } = useERP();
 
   type InvoiceSection = 'invoices' | 'credits_advances' | 'allocations';
+  const INVOICE_TAB_HEADERS: Record<InvoiceSection, { title: string; subtitle: string }> = {
+    invoices: {
+      title: 'Commercial Invoices & Credit Notes',
+      subtitle: 'Customer billings, credit notes, advance deposits, and settlement allocation',
+    },
+    credits_advances: {
+      title: 'Credit Notes & Advances',
+      subtitle: 'Customer credit balances and advance deposits available for invoice settlement',
+    },
+    allocations: {
+      title: 'Settlement Allocations',
+      subtitle: 'Audit history of credit notes and advances allocated against invoices',
+    },
+  };
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSection = searchParams.get('tab') as InvoiceSection | null;
   const activeTab: InvoiceSection = ['invoices', 'credits_advances', 'allocations'].includes(requestedSection || '')
@@ -277,14 +291,14 @@ export const InvoicesView: React.FC = () => {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 min-w-0">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] truncate">
-              Commercial Invoices & Credit Notes
+              {INVOICE_TAB_HEADERS[activeTab].title}
             </h1>
             <Badge variant="neutral" size="sm">
               {invoices.length} Invoices · {creditNotes.length} Credit Notes
             </Badge>
           </div>
           <p className="mt-0.5 text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">
-            Customer billings, credit notes, advance deposits, and settlement allocation
+            {INVOICE_TAB_HEADERS[activeTab].subtitle}
           </p>
         </div>
 
