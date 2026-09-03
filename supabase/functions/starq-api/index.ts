@@ -899,6 +899,11 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
     // Onboarding & Business Registration Application Routes (Applicant Scope)
     // =========================================================================
     if (req.method === "POST" && path === "/api/onboarding/apply") {
+      const killSwitch = Deno.env.get("ONBOARDING_APPLICATIONS_DISABLED") === "true";
+      if (killSwitch) {
+        return json(503, { ok: false, error: "onboarding_disabled", message: "Organisation registration is temporarily paused for scheduled maintenance." }, origin);
+      }
+
       const body = await readJson(req);
       if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
 
@@ -911,7 +916,7 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       const primaryBookCode = String(body.primary_book_code ?? name.slice(0, 3)).trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || "MAIN";
       const island = String(body.island ?? "Male'").trim();
       const atoll = String(body.atoll ?? "Kaafu Atoll").trim();
-      const phone = body.phone ? String(body.phone).trim() : null;
+      const phone = body.phone ? String(body.phone).trim() || null : null;
 
       const { data: appData, error: appError } = await db.schema("platform").from("tenant_applications").insert({
         applicant_person_id: session.person_uuid,

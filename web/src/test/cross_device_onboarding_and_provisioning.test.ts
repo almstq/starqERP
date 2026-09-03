@@ -307,4 +307,21 @@ describe('Cross-Device Onboarding & Atomic Tenant Provisioning Vertical Slice', 
     );
     expect(hasStqAccess).toBe(false);
   });
+
+  it('Step 5: Optional Phone & Nullability — allows submitting application with null or empty phone string', async () => {
+    const submission = await submitOrganisationApplication({
+      name: 'No Phone Workshop',
+      legal_name: 'No Phone Workshop Pvt Ltd',
+      archetype_id: 'automotive_workshop',
+      primary_book_name: 'Workshop Service',
+      primary_book_code: 'NPW',
+      island: "Male'",
+      atoll: 'Kaafu Atoll',
+      phone: '',
+    });
+
+    expect(submission.ok).toBe(true);
+    expect(submission.application.name).toBe('No Phone Workshop');
+    expect(submission.application.phone).toBeNull();
+  });
 });

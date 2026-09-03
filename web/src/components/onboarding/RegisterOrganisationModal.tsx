@@ -246,7 +246,7 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
 
             <div>
               <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
-                Applicant Contact Phone
+                Phone Number (Optional)
               </label>
               <input
                 type="text"
@@ -263,6 +263,10 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
               {submitError}
             </p>
           )}
+
+          <p className="text-[11px] leading-relaxed text-[var(--md-sys-color-on-surface-variant)]">
+            Starq Technologies collects your organization details solely to provision and administer your tenant preview in accordance with our data protection principles.
+          </p>
 
           <div className="flex justify-end gap-2 pt-3 border-t" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}>
             <button
@@ -284,6 +288,18 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
               <span>{isSubmitting ? 'Submitting…' : 'Submit for Superadmin Approval'}</span>
               <ArrowRight size={14} />
             </button>
+          </div>
+
+          <div className="text-center pt-1">
+            <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
+              Need assistance?{' '}
+              <a
+                href="mailto:support@starq.tech"
+                className="underline hover:text-[var(--md-sys-color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--md-sys-color-primary)] rounded"
+              >
+                Contact support@starq.tech
+              </a>
+            </p>
           </div>
         </form>
       ) : (
