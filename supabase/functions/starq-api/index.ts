@@ -1140,6 +1140,15 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       }
     }
 
+    // Every /api/ops/* route is tenant-scoped and queries by session.organisation_id.
+    // A zero-org applicant session reaching any of them previously fell straight
+    // into a raw Postgres "invalid input syntax for type uuid: null" (22P02) --
+    // .eq(col, null) sends the literal string "null", not IS NULL -- instead of
+    // the clean 403 these routes were always supposed to require.
+    if (path.startsWith("/api/ops/") && !session.organisation_id) {
+      return json(403, { ok: false, error: "organisation_context_required", request_id: requestId }, origin);
+    }
+
     if (req.method === "GET" && path === "/api/ops/pulse") {
       const { data, error } = await db.rpc("api_garage_pulse", {
         target_org: session.organisation_id, target_person: session.person_uuid, target_seat: session.acting_as,
