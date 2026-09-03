@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useERP } from '../../context/ERPContext';
 import { useAuth } from '../../context/AuthContext';
+import { ApiError } from '../../services/apiGateway';
 import { Modal } from '../common/Modal';
 import { Building2, Sparkles, CheckCircle2, ShieldCheck, ArrowRight, UserCheck } from 'lucide-react';
 
@@ -63,8 +64,12 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
         phone: formData.phone,
       });
       setStep('positive');
-    } catch {
-      setSubmitError('Submission failed. The application was not recorded.');
+    } catch (err) {
+      const code = err instanceof ApiError ? err.code : err instanceof Error ? err.message : 'unknown_error';
+      const requestId = err instanceof ApiError ? err.requestId : undefined;
+      setSubmitError(
+        `Submission failed (${code}).${requestId ? ` Reference: ${requestId}.` : ''} The application was not recorded.`
+      );
     } finally {
       setIsSubmitting(false);
     }
