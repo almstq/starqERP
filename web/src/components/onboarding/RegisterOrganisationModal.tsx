@@ -9,12 +9,15 @@ interface Props {
   onClose: () => void;
 }
 
+// IDs must match the DB check constraint in migrations 202608270024/26/27.
+// Never add an archetype here without updating the migration constraint first.
 const ARCHETYPES = [
   { id: 'automotive_workshop', name: 'Automotive & Workshop', desc: 'Job cards, bay scheduling, parts counter, paint formulas' },
-  { id: 'marine_boatyard', name: 'Marine & Boatyard', desc: 'Vessel slipway intake, dock refits, marine engine overhaul' },
-  { id: 'retail_wholesale', name: 'Retail & Wholesale Trading', desc: 'SKU catalog, multi-warehouse, BML POS, supplier POs' },
-  { id: 'medical_clinic', name: 'Medical Clinic & Diagnostics', desc: 'Patient records, appointments, lab tests, pharmacy' },
-  { id: 'general_business', name: 'Professional Services / Corporate', desc: 'Consulting, project billing, contracts, multi-book ledgers' },
+  { id: 'marine_service', name: 'Marine & Boatyard', desc: 'Vessel slipway intake, dock refits, marine engine overhaul' },
+  { id: 'wholesale_trading', name: 'Retail & Wholesale Trading', desc: 'SKU catalog, multi-warehouse, BML POS, supplier POs' },
+  { id: 'construction_contracting', name: 'Construction & Engineering', desc: 'Project-based contracts, site costing, subcontractors' },
+  { id: 'retail', name: 'Retail', desc: 'Counter sales, stock management, receipts' },
+  { id: 'general_business', name: 'Professional Services / General', desc: 'Consulting, project billing, contracts, multi-book ledgers' },
 ];
 
 export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) => {
