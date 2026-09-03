@@ -21,6 +21,8 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
   const { submitOrganisationApplication } = useERP();
   const { session } = useAuth();
   const [step, setStep] = useState<'form' | 'positive'>('form');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const applicantName = session?.name || 'Authenticated Applicant';
   const applicantEmail = session?.email || 'applicant@example.com';
@@ -36,27 +38,33 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
     phone: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim()) return;
+    if (!formData.name.trim() || isSubmitting) return;
 
     const chosenArchetype = ARCHETYPES.find((a) => a.id === formData.archetypeId);
-
-    submitOrganisationApplication({
-      name: formData.name.trim(),
-      legalName: formData.legalName.trim() || `${formData.name.trim()} Pvt Ltd`,
-      primaryBookName: formData.primaryBookName.trim() || formData.name.trim(),
-      primaryBookCode: (formData.primaryBookCode.trim() || formData.name.slice(0, 3)).toUpperCase(),
-      archetypeId: formData.archetypeId,
-      archetypeName: chosenArchetype?.name || 'General Business',
-      island: formData.island,
-      atoll: formData.atoll,
-      applicantName,
-      applicantEmail,
-      phone: formData.phone,
-    });
-
-    setStep('positive');
+    setSubmitError(null);
+    setIsSubmitting(true);
+    try {
+      await submitOrganisationApplication({
+        name: formData.name.trim(),
+        legalName: formData.legalName.trim() || `${formData.name.trim()} Pvt Ltd`,
+        primaryBookName: formData.primaryBookName.trim() || formData.name.trim(),
+        primaryBookCode: (formData.primaryBookCode.trim() || formData.name.slice(0, 3)).toUpperCase(),
+        archetypeId: formData.archetypeId,
+        archetypeName: chosenArchetype?.name || 'General Business',
+        island: formData.island,
+        atoll: formData.atoll,
+        applicantName,
+        applicantEmail,
+        phone: formData.phone,
+      });
+      setStep('positive');
+    } catch {
+      setSubmitError('Submission failed. The application was not recorded.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDone = () => {
@@ -241,6 +249,12 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
             </div>
           </div>
 
+          {submitError && (
+            <p className="text-xs font-semibold" role="alert" style={{ color: 'var(--md-sys-color-error)' }}>
+              {submitError}
+            </p>
+          )}
+
           <div className="flex justify-end gap-2 pt-3 border-t" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}>
             <button
               type="button"
@@ -251,13 +265,14 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-[var(--md-sys-shape-corner-small)] text-xs font-bold flex items-center gap-1.5 shadow-sm"
+              disabled={isSubmitting}
+              className="px-4 py-2 rounded-[var(--md-sys-shape-corner-small)] text-xs font-bold flex items-center gap-1.5 shadow-sm disabled:opacity-50"
               style={{
                 backgroundColor: 'var(--md-sys-color-primary)',
                 color: 'var(--md-sys-color-on-primary)',
               }}
             >
-              <span>Submit for Superadmin Approval</span>
+              <span>{isSubmitting ? 'Submitting…' : 'Submit for Superadmin Approval'}</span>
               <ArrowRight size={14} />
             </button>
           </div>
@@ -278,7 +293,7 @@ export const RegisterOrganisationModal: React.FC<Props> = ({ isOpen, onClose }) 
           <div className="p-3 bg-[var(--md-sys-color-surface-container)] rounded-[var(--md-sys-shape-corner-small)] text-xs text-left max-w-sm mx-auto space-y-1">
             <div className="text-[10px] uppercase font-bold text-[var(--md-sys-color-primary)]">Next Step:</div>
             <div className="text-[var(--md-sys-color-on-surface)]">
-              Switch your workspace selector to <strong>Starq HQ</strong> to review and instantly approve this application.
+              Starq HQ must approve this application. Your session will gain an organisation only after <code>provision_approved_application</code> runs.
             </div>
           </div>
           <button
