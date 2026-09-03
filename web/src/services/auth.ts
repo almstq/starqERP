@@ -15,7 +15,10 @@ export interface OperableOrganisation {
 
 export function getApiBaseUrl(): string {
   const custom = import.meta.env.VITE_API_URL;
-  if (custom) return custom.replace(/\/+$/, '');
+  // An explicitly empty string means "same origin, no prefix" (relies on a
+  // platform rewrite of /api/* to the backend) -- distinct from "unset",
+  // which falls through to the direct cross-origin Supabase URL below.
+  if (custom !== undefined) return custom.replace(/\/+$/, '');
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   if (supabaseUrl && !supabaseUrl.includes('localhost') && !supabaseUrl.includes('127.0.0.1')) {
     return `${supabaseUrl.replace(/\/+$/, '')}/functions/v1/starq-api`;
