@@ -176,7 +176,7 @@ export const PendingApprovalView: React.FC = () => {
               <span className="text-xs font-medium text-[var(--md-sys-color-on-surface-variant)]">Applicant</span>
               <span className="text-xs font-medium text-[var(--md-sys-color-on-surface)] flex items-center gap-1.5">
                 <Mail size={13} className="text-[var(--md-sys-color-on-surface-variant)]" />
-                {session?.email || 'Authenticated Applicant'}
+                {(app && 'applicantEmail' in app ? app.applicantEmail : undefined) || session?.email || 'Authenticated Applicant'}
               </span>
             </div>
 

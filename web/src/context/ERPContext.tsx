@@ -459,6 +459,19 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
   }, []);
 
+  // SERP-405: pendingApplications was only ever appended to, never cleared, by
+  // the two effects below. A browser tab that authenticates as a different
+  // person -- most easily a platform admin's session followed by a fresh
+  // applicant sign-in in the same tab -- could carry the previous person's
+  // application(s) (including the ENTIRE admin queue) straight into the new
+  // session's gating logic (AppShell's applicantPending), misrouting a
+  // brand-new applicant to someone else's PendingApprovalView. Clearing here,
+  // keyed only on person identity, guarantees a clean baseline before either
+  // fetch below can run.
+  useEffect(() => {
+    setPendingApplications([]);
+  }, [session?.person_id]);
+
   useEffect(() => {
     if (session?.platform_entitlement) {
       apiGetPlatformApplications()
