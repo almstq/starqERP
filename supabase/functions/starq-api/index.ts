@@ -988,6 +988,11 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       }).select("id, status, name, legal_name, created_at").single();
 
       if (appError || !appData) {
+        // The real Postgres error (constraint violation, RLS denial, etc.) was
+        // being discarded here -- the client correctly never sees it, but we
+        // never saw it either. This is exactly the blind spot that made
+        // tonight's apply failures undiagnosable without a live retry.
+        console.error("tenant_applications insert failed:", appError?.message ?? "no data returned", appError?.code ?? "");
         throw new Error("application_submission_failed");
       }
 
@@ -1526,7 +1531,7 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       code: publicCode,
       internal_code: code.slice(0, 300),
       path,
-    });
+    }, requestId);
     observed.outcome = publicCode;
     return json(publicCode === "payload_too_large" ? 413 : 400, { ok: false, error: publicCode, request_id: requestId }, origin);
   }
