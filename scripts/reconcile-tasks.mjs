@@ -1019,12 +1019,13 @@ const newTasks = [
   }
 ];
 
-// Append new tasks
-data.tasks = data.tasks.concat(newTasks);
+// Append only genuinely new tasks that don't already exist
+const tasksToAppend = newTasks.filter((t) => !existingIds.has(t.id));
+data.tasks = data.tasks.concat(tasksToAppend);
 data.generated_at = new Date().toISOString();
 
 fs.writeFileSync(nexusPath, JSON.stringify(data, null, 2), 'utf8');
-console.log('Successfully appended', newTasks.length, 'new canonical tasks to starq-erp-tasks.json');
+console.log('Successfully appended', tasksToAppend.length, 'new canonical tasks to starq-erp-tasks.json');
 console.log('New total tasks on canonical Nexus board:', data.tasks.length);
 console.log('Done tasks:', data.tasks.filter((t) => t.status === 'done').length);
 console.log('New completion percentage:', ((data.tasks.filter((t) => t.status === 'done').length / data.tasks.length) * 100).toFixed(2) + '%');
