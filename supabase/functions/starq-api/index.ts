@@ -599,8 +599,11 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
         mfa_verified: false,
       };
     }
-  } catch {
-    // Platform schema isolation
+  } catch (err) {
+    // Platform schema isolation: absence of platform entitlement must not
+    // block ordinary login. But a real query/permission error here silently
+    // meant a real operator could lose their entitlement with zero trail.
+    console.error("platform.operator_principals lookup failed during login:", err instanceof Error ? err.message : err);
   }
 
   // 2b. Auto-accept pending staff invitations for this verified Google email (SERP-286)
@@ -619,8 +622,10 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
         });
       }
     }
-  } catch {
-    // Non-blocking invitation acceptance
+  } catch (err) {
+    // Non-blocking: a login must not fail because invitation acceptance did.
+    // But silently means a real staff invite could fail to attach with no trail.
+    console.error("staff invitation auto-accept failed during login:", err instanceof Error ? err.message : err);
   }
 
   // 3. Resolve organizations and memberships
@@ -738,8 +743,12 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
         provisioned_organisation_id: appLookup.data.provisioned_organisation_id,
       };
     }
-  } catch {
-    // Platform schema isolation
+  } catch (err) {
+    // Platform schema isolation: absence of an application must not block
+    // login. But a real query error here silently means a real applicant's
+    // pending/rejected application state goes missing from their session
+    // with zero trail -- directly adjacent to tonight's apply-flow incident.
+    console.error("platform.tenant_applications lookup failed during login:", err instanceof Error ? err.message : err);
   }
 
   const preferred = entry?.default_seat && seats.includes(entry.default_seat) ? entry.default_seat : (seats[0] ?? "");
