@@ -988,12 +988,16 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       }).select("id, status, name, legal_name, created_at").single();
 
       if (appError || !appData) {
-        // The real Postgres error (constraint violation, RLS denial, etc.) was
-        // being discarded here -- the client correctly never sees it, but we
-        // never saw it either. This is exactly the blind spot that made
-        // tonight's apply failures undiagnosable without a live retry.
+        // The real Postgres error (constraint violation, RLS denial, etc.) is
+        // threaded into the thrown message so it reaches security_events.internal_code
+        // via the outer catch-all -- console.error alone only reached the Edge
+        // Function's own runtime logs, which nothing on the bus could pull without
+        // dashboard access. The client still only ever sees "request_failed":
+        // the outer catch-all's publicCode allowlist collapses any code not in its
+        // small safe set, so this detail never reaches the caller.
         console.error("tenant_applications insert failed:", appError?.message ?? "no data returned", appError?.code ?? "");
-        throw new Error("application_submission_failed");
+        const detail = appError ? `${appError.code ?? "no_code"}: ${appError.message}` : "no_data_returned";
+        throw new Error(`application_submission_failed: ${detail}`);
       }
 
       const updatedSession: Session = {
