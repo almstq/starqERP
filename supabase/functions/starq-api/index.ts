@@ -967,15 +967,19 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       const legalName = String(body.legal_name ?? "").trim() || `${name} Pvt Ltd`;
       const archetypeId = String(body.archetype_id ?? "general_business");
       const primaryBookName = String(body.primary_book_name ?? name).trim();
-      const primaryBookCode = String(body.primary_book_code ?? name.slice(0, 3)).trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || "MAIN";
+      let rawBookCode = String(body.primary_book_code ?? name.slice(0, 3)).trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (rawBookCode.length < 2) rawBookCode = (rawBookCode + "MAIN").slice(0, 4);
+      if (rawBookCode.length > 8) rawBookCode = rawBookCode.slice(0, 8);
+      const primaryBookCode = rawBookCode;
       const island = String(body.island ?? "Male'").trim();
       const atoll = String(body.atoll ?? "Kaafu Atoll").trim();
       const phone = body.phone ? String(body.phone).trim() || null : null;
+      const applicantName = session.display_label || session.email?.split("@")[0] || "Applicant";
 
       const { data: appData, error: appError } = await db.schema("platform").from("tenant_applications").insert({
         applicant_person_id: session.person_uuid,
         applicant_email: session.email,
-        applicant_name: session.display_label,
+        applicant_name: applicantName,
         name,
         legal_name: legalName,
         archetype_id: archetypeId,
