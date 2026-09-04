@@ -104,6 +104,7 @@ export interface ERPContextType {
   rejectOrganisationApplication: (appId: string, reason?: string) => void;
   isRegisterOrgModalOpen: boolean;
   setIsRegisterOrgModalOpen: (open: boolean) => void;
+  refreshApplicantApplication?: () => Promise<void>;
 
   // RBAC & User Management State
   currentUser: AppUser;
@@ -485,6 +486,62 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         // Applicant pending state stays server-backed only.
       });
   }, [session?.person_id, mapPlatformAppToClient]);
+
+  const refreshApplicantApplication = useCallback(async () => {
+    if (!session) return;
+    try {
+      const res = await apiGetApplicantApplication();
+      if (res.ok && res.application) {
+        const clientApp = mapPlatformAppToClient(res.application);
+        setPendingApplications((prev) => [clientApp, ...prev.filter((a) => a.id !== clientApp.id)]);
+      }
+    } catch {
+      // Applicant pending state stays server-backed only.
+    }
+  }, [session, mapPlatformAppToClient]);
+
+  useEffect(() => {
+    if (session?.application) {
+      const sApp = session.application;
+      const clientStatus = sApp.status === 'pending' ? 'pending_approval' : (sApp.status as any);
+      setPendingApplications((prev) => {
+        const existing = prev.find((a) => a.id === sApp.id);
+        if (existing) {
+          return prev.map((a) =>
+            a.id === sApp.id
+              ? {
+                  ...a,
+                  status: clientStatus,
+                  rejectionReason: sApp.rejection_reason || undefined,
+                  name: sApp.name || a.name,
+                  legalName: sApp.legal_name || a.legalName,
+                }
+              : a
+          );
+        }
+        return [
+          {
+            id: sApp.id,
+            name: sApp.name,
+            legalName: sApp.legal_name,
+            primaryBookName: 'Primary Book',
+            primaryBookCode: 'MAIN',
+            archetypeId: 'general_business',
+            archetypeName: 'General Business',
+            island: '',
+            atoll: '',
+            applicantName: session.name || '',
+            applicantEmail: session.email || '',
+            phone: '',
+            submittedAt: sApp.created_at.replace('T', ' ').substring(0, 16),
+            status: clientStatus,
+            rejectionReason: sApp.rejection_reason || undefined,
+          },
+          ...prev,
+        ];
+      });
+    }
+  }, [session?.application, session?.name, session?.email]);
 
   const submitOrganisationApplication = useCallback(
     async (appData: Omit<OrganisationApplication, 'id' | 'submittedAt' | 'status'>) => {
@@ -2397,6 +2454,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         rejectOrganisationApplication,
         isRegisterOrgModalOpen,
         setIsRegisterOrgModalOpen,
+        refreshApplicantApplication,
 
         // RBAC & User Management
         currentUser,

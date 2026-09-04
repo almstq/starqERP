@@ -203,6 +203,8 @@ export const AppShell: React.FC = () => {
     pendingApplications.some((a) => a.status === 'pending_approval');
 
   // Safeguard: Operator without tenant orgs defaults directly to platform plane (Starq HQ)
+  const effectivePlane = isPlatformOperator && !hasSessionOrgs ? 'platform' : activePlane;
+
   useEffect(() => {
     if (isPlatformOperator && !hasSessionOrgs && activePlane === 'tenant') {
       switchActiveContext({ plane: 'platform' });
@@ -227,7 +229,7 @@ export const AppShell: React.FC = () => {
   // SERP-401 (Reference Route-Guard Isolation):
   // When an authenticated user has zero organisations and is not operating in the platform plane,
   // hard-block access to the operational shell, navigation rails, header, and dashboard.
-  if (session && !hasSessionOrgs && activePlane !== 'platform') {
+  if (session && !hasSessionOrgs && effectivePlane !== 'platform') {
     if (applicantPending) {
       return <PendingApprovalView />;
     }

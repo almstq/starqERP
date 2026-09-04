@@ -269,15 +269,14 @@ async function readSession(req: Request, diag?: { reason?: string }): Promise<Se
 }
 
 async function refreshSessionAuthority(session: Session, diag?: { reason?: string }): Promise<Session | null> {
-  // SERP-401-F3: applicants with zero organisations have no organisation_id.
-  // api_session_authority requires a valid org and returns active:false for null,
-  // which caused refreshSessionAuthority to return null → 401 → cookie cleared →
-  // all onboarding API calls fail for brand-new external users.
-  // Fix: if no organisation_id, verify the person exists and is active instead.
+  // SERP-401-F3 / SERP-404: applicants with zero organisations initially have no organisation_id.
+  // When an application is approved (or staff invite accepted), memberships are provisioned.
+  // We check whether the person is active, query latest application state & operator entitlement,
+  // and if active memberships now exist, transition the session to the newly provisioned tenant.
   if (!session.organisation_id) {
     const { data: person, error: personError } = await db
       .from("persons")
-      .select("id")
+      .select("id, status")
       .eq("id", session.person_uuid)
       .eq("status", "active")
       .maybeSingle();
@@ -289,7 +288,138 @@ async function refreshSessionAuthority(session: Session, diag?: { reason?: strin
       if (diag) diag.reason = "applicant_person_not_found_or_inactive";
       return null;
     }
-    return { ...session, seats: [] };
+
+    // Refresh application status
+    let application = session.application ?? null;
+    try {
+      const appLookup = await db.schema("platform").from("tenant_applications")
+        .select("id, status, name, legal_name, created_at, rejection_reason, info_request_note, provisioned_organisation_id")
+        .eq("applicant_person_id", session.person_uuid)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (appLookup.data) {
+        application = {
+          id: appLookup.data.id,
+          status: appLookup.data.status,
+          name: appLookup.data.name,
+          legal_name: appLookup.data.legal_name,
+          created_at: appLookup.data.created_at,
+          rejection_reason: appLookup.data.rejection_reason,
+          info_request_note: appLookup.data.info_request_note,
+          provisioned_organisation_id: appLookup.data.provisioned_organisation_id,
+        };
+      }
+    } catch (err) {
+      console.error("platform.tenant_applications lookup failed during refresh:", err instanceof Error ? err.message : err);
+    }
+
+    // Refresh platform entitlement
+    let platformEntitlement = session.platform_entitlement ?? null;
+    try {
+      const operatorLookup = await db.schema("platform").from("operator_principals")
+        .select("operator_role, active, mfa_required")
+        .eq("person_id", session.person_uuid)
+        .eq("active", true)
+        .maybeSingle();
+      if (operatorLookup.data) {
+        platformEntitlement = {
+          operator_role: operatorLookup.data.operator_role,
+          mfa_verified: session.platform_entitlement?.mfa_verified ?? false,
+        };
+      } else {
+        platformEntitlement = null;
+      }
+    } catch (err) {
+      console.error("platform.operator_principals lookup failed during refresh:", err instanceof Error ? err.message : err);
+    }
+
+    // Check if memberships exist now (application approved or staff invite accepted)
+    const membershipsRes = await db.from("memberships").select("id, organisation_id, role_id, organisations(id, slug, legal_name, status)")
+      .eq("person_id", session.person_uuid)
+      .eq("status", "active");
+    const memberRows = [...(membershipsRes.data ?? [])];
+
+    if (memberRows.length === 0) {
+      return { ...session, seats: [], application, platform_entitlement: platformEntitlement };
+    }
+
+    // Provisioned! Resolve organizations and books
+    const resolvedOrgs: NonNullable<Session["organisations"]> = [];
+    const activeOrgIds = new Set<string>();
+    for (const m of memberRows) {
+      if (m.organisation_id) activeOrgIds.add(m.organisation_id as string);
+    }
+
+    for (const oId of activeOrgIds) {
+      const orgRes = await db.from("organisations").select("id, slug, legal_name, status")
+        .eq("id", oId).eq("status", "active").maybeSingle();
+      if (orgRes.data) {
+        const membership = memberRows.find((row) => row.organisation_id === oId);
+        const bookMemberships = membership
+          ? await db.from("book_memberships").select("book_id")
+            .eq("organisation_id", oId).eq("membership_id", membership.id)
+          : { data: [] as { book_id: string }[] };
+        const allowedBookIds = (bookMemberships.data ?? []).map((row) => row.book_id);
+        const booksRes = allowedBookIds.length > 0
+          ? await db.from("books").select("id, code, name, is_default, archetype_id, status")
+            .eq("organisation_id", oId).in("id", allowedBookIds).eq("status", "active")
+            .order("is_default", { ascending: false })
+          : { data: [] as { id: string; code: string; name: string; is_default: boolean; archetype_id: string }[] };
+
+        resolvedOrgs.push({
+          id: orgRes.data.id,
+          slug: orgRes.data.slug,
+          name: orgRes.data.legal_name,
+          books: (booksRes.data ?? []).map((b) => ({
+            id: b.id,
+            code: b.code,
+            name: b.name,
+            is_default: b.is_default,
+            archetype_id: b.archetype_id,
+          })),
+        });
+      }
+    }
+
+    const primaryOrgId = resolvedOrgs[0]?.id ?? null;
+    let defaultBookId: string | null = null;
+    if (primaryOrgId) {
+      const allowedBooks = resolvedOrgs.find((o) => o.id === primaryOrgId)?.books ?? [];
+      defaultBookId = allowedBooks.find((b) => b.is_default)?.id ?? allowedBooks[0]?.id ?? null;
+    }
+
+    // Resolve seats for primary org
+    let seats: string[] = [];
+    const activeMember = memberRows.find((m) => m.organisation_id === primaryOrgId);
+    if (activeMember?.id) {
+      const { data: memberSeats } = await db.from("membership_seats")
+        .select("seat_code")
+        .eq("membership_id", activeMember.id)
+        .is("revoked_at", null);
+      if (memberSeats && memberSeats.length > 0) {
+        seats = [...new Set(memberSeats.map((r) => r.seat_code).filter((s) => ALLOWED_SEATS.has(s)))];
+      }
+    }
+    if (seats.length === 0) {
+      const entry = allowlist().find((person) =>
+        person.status !== "disabled" && person.email?.trim().toLowerCase() === session.email?.trim().toLowerCase()
+      );
+      seats = entry ? [...new Set((entry.seats ?? []).filter((seat) => ALLOWED_SEATS.has(seat)))] : [];
+    }
+    const preferred = seats[0] ?? "";
+
+    return {
+      ...session,
+      organisation_id: primaryOrgId,
+      book_id: defaultBookId,
+      seats,
+      acting_as: preferred,
+      allowed_entities: resolvedOrgs.map((o) => o.slug),
+      organisations: resolvedOrgs,
+      platform_entitlement: platformEntitlement,
+      application,
+    };
   }
 
   const { data, error } = await db.rpc("api_session_authority", {
@@ -674,6 +804,17 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
         ignoreDuplicates: true,
       });
     }
+  } else if (orgId && seats.length === 0) {
+    const activeMember = memberRows.find((m) => m.organisation_id === orgId);
+    if (activeMember?.id) {
+      const { data: memberSeats } = await db.from("membership_seats")
+        .select("seat_code")
+        .eq("membership_id", activeMember.id)
+        .is("revoked_at", null);
+      if (memberSeats && memberSeats.length > 0) {
+        seats = [...new Set(memberSeats.map((r) => r.seat_code).filter((s) => ALLOWED_SEATS.has(s)))];
+      }
+    }
   }
 
   // Resolve all organizations with their books
@@ -893,7 +1034,53 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
     }
 
     if (req.method === "GET" && path === "/api/me") {
-      return json(200, { ok: true, user: userDto(session) }, origin);
+      if (session.organisation_id) {
+        try {
+          const operatorLookup = await db.schema("platform").from("operator_principals")
+            .select("operator_role, active, mfa_required")
+            .eq("person_id", session.person_uuid)
+            .eq("active", true)
+            .maybeSingle();
+          if (operatorLookup.data) {
+            session.platform_entitlement = {
+              operator_role: operatorLookup.data.operator_role,
+              mfa_verified: session.platform_entitlement?.mfa_verified ?? false,
+            };
+          } else {
+            session.platform_entitlement = null;
+          }
+        } catch (err) {
+          console.error("platform.operator_principals lookup failed during /api/me:", err instanceof Error ? err.message : err);
+        }
+
+        try {
+          const appLookup = await db.schema("platform").from("tenant_applications")
+            .select("id, status, name, legal_name, created_at, rejection_reason, info_request_note, provisioned_organisation_id")
+            .eq("applicant_person_id", session.person_uuid)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (appLookup.data) {
+            session.application = {
+              id: appLookup.data.id,
+              status: appLookup.data.status,
+              name: appLookup.data.name,
+              legal_name: appLookup.data.legal_name,
+              created_at: appLookup.data.created_at,
+              rejection_reason: appLookup.data.rejection_reason,
+              info_request_note: appLookup.data.info_request_note,
+              provisioned_organisation_id: appLookup.data.provisioned_organisation_id,
+            };
+          }
+        } catch (err) {
+          console.error("platform.tenant_applications lookup failed during /api/me:", err instanceof Error ? err.message : err);
+        }
+      }
+
+      const signed = await signSession(session);
+      return json(200, { ok: true, user: userDto(session) }, origin, {
+        "set-cookie": cookie(signed),
+      });
     }
 
     if (req.method === "POST" && path === "/api/auth/logout") {

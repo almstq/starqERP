@@ -8,7 +8,7 @@ import { Clock, RefreshCw, LogOut, ShieldCheck, Building2, MapPin, Mail, User, I
 
 export const PendingApprovalView: React.FC = () => {
   const { session, refreshSession, logout } = useAuth();
-  const { pendingApplications, switchActiveContext } = useERP();
+  const { pendingApplications, switchActiveContext, refreshApplicantApplication } = useERP();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const isPlatformOperator = Boolean(session?.platform_entitlement);
@@ -20,6 +20,9 @@ export const PendingApprovalView: React.FC = () => {
     setIsRefreshing(true);
     try {
       await refreshSession();
+      if (refreshApplicantApplication) {
+        await refreshApplicantApplication();
+      }
     } finally {
       setIsRefreshing(false);
     }
@@ -35,6 +38,20 @@ export const PendingApprovalView: React.FC = () => {
           : 'Pending Starq HQ Review';
 
   const legalName = app ? ('legal_name' in app ? app.legal_name : app.legalName) : '';
+
+  const rejectionReason =
+    app && 'rejection_reason' in app
+      ? app.rejection_reason
+      : app && 'rejectionReason' in app
+        ? (app as any).rejectionReason
+        : null;
+
+  const infoRequestNote =
+    app && 'info_request_note' in app
+      ? app.info_request_note
+      : app && 'infoRequestNote' in app
+        ? (app as any).infoRequestNote
+        : null;
 
   const badgeVariant: 'positive' | 'info' | 'destructive' | 'warning' =
     app?.status === 'approved'
@@ -173,18 +190,34 @@ export const PendingApprovalView: React.FC = () => {
             )}
           </div>
 
-          {/* Info Notice */}
+          {/* Info / Status Notice */}
           <div
             className="flex items-start gap-3 p-3.5 rounded-xl border text-xs mb-6"
             style={{
-              backgroundColor: 'var(--md-sys-color-surface-container-high)',
+              backgroundColor:
+                app?.status === 'rejected'
+                  ? 'var(--md-sys-color-error-container, #fee2e2)'
+                  : app?.status === 'approved'
+                    ? 'var(--md-sys-color-secondary-container, #dcfce7)'
+                    : 'var(--md-sys-color-surface-container-high)',
               borderColor: 'var(--md-sys-color-outline-variant)',
-              color: 'var(--md-sys-color-on-surface-variant)',
+              color:
+                app?.status === 'rejected'
+                  ? 'var(--md-sys-color-on-error-container, #991b1b)'
+                  : app?.status === 'approved'
+                    ? 'var(--md-sys-color-on-secondary-container, #166534)'
+                    : 'var(--md-sys-color-on-surface-variant)',
             }}
           >
             <Info size={16} className="text-[var(--md-sys-color-primary)] shrink-0 mt-0.5" />
             <span>
-              In accordance with Starq governance doctrine, no account may access or operate an organisation without administrative verification. Once approved, your tenant books and operational modules will activate automatically.
+              {app?.status === 'rejected' && rejectionReason
+                ? `Decline reason: ${rejectionReason}`
+                : app?.status === 'info_requested' && infoRequestNote
+                  ? `Information requested: ${infoRequestNote}`
+                  : app?.status === 'approved'
+                    ? 'Your organisation has been approved and provisioned! Entering your operational workspace...'
+                    : 'In accordance with Starq governance doctrine, no account may access or operate an organisation without administrative verification. Once approved, your tenant books and operational modules will activate automatically.'}
             </span>
           </div>
 
@@ -197,7 +230,13 @@ export const PendingApprovalView: React.FC = () => {
               className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold shadow-sm transition-all text-[var(--md-sys-color-on-primary)] bg-[var(--md-sys-color-primary)] hover:opacity-95 disabled:opacity-50"
             >
               <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
-              <span>{isRefreshing ? 'Checking Status...' : 'Check Approval Status'}</span>
+              <span>
+                {isRefreshing
+                  ? 'Checking Status...'
+                  : app?.status === 'approved'
+                    ? 'Enter Workspace'
+                    : 'Check Approval Status'}
+              </span>
             </button>
 
             {isPlatformOperator ? (
