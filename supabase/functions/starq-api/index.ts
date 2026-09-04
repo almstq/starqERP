@@ -429,8 +429,13 @@ async function securityEvent(
       request_id: requestId && uuid(requestId) ? requestId : null,
       metadata: requestId ? { ...(metadata as Record<string, unknown>), request_id: requestId } : metadata,
     });
-  } catch {
-    // Security logging failure must not disclose credentials or database detail.
+  } catch (err) {
+    // The API response must never disclose credentials or database detail --
+    // this stays a silent no-op from the caller's perspective. But a broken
+    // audit log with zero visibility is exactly the blind spot that let
+    // tonight's incident go undiagnosed for hours; console.error only reaches
+    // Supabase's own function logs, never any client response.
+    console.error(`securityEvent insert failed for event_type=${eventType}:`, err instanceof Error ? err.message : err);
   }
 }
 
