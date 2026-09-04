@@ -12,6 +12,8 @@ import { CreateJobModal } from '../components/jobs/CreateJobModal';
 import { CreateInvoiceModal } from '../components/invoices/CreateInvoiceModal';
 import { RecordPaymentModal } from '../components/payments/RecordPaymentModal';
 import { RegisterOrganisationModal } from '../components/onboarding/RegisterOrganisationModal';
+import { PendingApprovalView } from '../components/onboarding/PendingApprovalView';
+import { OnboardingGatewayView } from '../components/onboarding/OnboardingGatewayView';
 import { Badge } from '../components/common/Badge';
 import { getFormattedProductVersion } from '../../../contracts/commands';
 import {
@@ -194,18 +196,18 @@ export const AppShell: React.FC = () => {
     ? 'HQ'
     : (currentTenant?.name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
-  const hasSessionOrgs = (session?.organisations?.length ?? 0) > 0;
+  const hasSessionOrgs = (session?.organisations?.length ?? 0) > 0 || (session?.allowed_entities?.length ?? 0) > 0;
   const applicantPending =
     session?.application?.status === 'pending' ||
     session?.application?.status === 'info_requested' ||
     pendingApplications.some((a) => a.status === 'pending_approval');
 
+  // Safeguard: Operator without tenant orgs defaults directly to platform plane (Starq HQ)
   useEffect(() => {
-    if (isLoading || !session) return;
-    if (!hasSessionOrgs && !applicantPending) {
-      setIsRegisterOrgModalOpen(true);
+    if (isPlatformOperator && !hasSessionOrgs && activePlane === 'tenant') {
+      switchActiveContext({ plane: 'platform' });
     }
-  }, [isLoading, session, hasSessionOrgs, applicantPending, setIsRegisterOrgModalOpen]);
+  }, [isPlatformOperator, hasSessionOrgs, activePlane, switchActiveContext]);
 
   useEffect(() => {
     setMobileDrawerOpen(false);
@@ -221,6 +223,16 @@ export const AppShell: React.FC = () => {
     '/audit',
     '/settings',
   ].some((path) => location.pathname.startsWith(path));
+
+  // SERP-401 (Reference Route-Guard Isolation):
+  // When an authenticated user has zero organisations and is not operating in the platform plane,
+  // hard-block access to the operational shell, navigation rails, header, and dashboard.
+  if (session && !hasSessionOrgs && activePlane !== 'platform') {
+    if (applicantPending) {
+      return <PendingApprovalView />;
+    }
+    return <OnboardingGatewayView />;
+  }
 
   return (
     <div

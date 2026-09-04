@@ -13,7 +13,7 @@ describe('SERP-016: AI-Assisted Reconciliation & OCR Extraction Engine', () => {
   it('extracts structured invoice, TIN, and amount from Maldives receipt text', () => {
     const rawReceipt = `
       ===================================
-             ANTRAC HOLDING PVT LTD
+             STARQ LOGISTICS PVT LTD
              TIN: 1001234GST001
       ===================================
       Date: 2026-08-28
@@ -40,7 +40,7 @@ describe('SERP-016: AI-Assisted Reconciliation & OCR Extraction Engine', () => {
       {
         id: 'btx-01',
         date: '2026-08-28',
-        description: 'BML TRANSFER TO ANTRAC HOLDING INV-2026-8891',
+        description: 'BML TRANSFER TO STARQ LOGISTICS INV-2026-8891',
         amount: 27000,
         type: 'DEBIT',
         isReconciled: false,
@@ -51,7 +51,7 @@ describe('SERP-016: AI-Assisted Reconciliation & OCR Extraction Engine', () => {
       {
         id: 'inv-01',
         invoiceNumber: 'INV-2026-8891',
-        customerOrVendor: 'Antrac Holding Pvt Ltd',
+        customerOrVendor: 'Starq Logistics Pvt Ltd',
         date: '2026-08-28',
         amountMvr: 27000,
         reference: 'INV-2026-8891',
@@ -69,11 +69,11 @@ describe('SERP-016: AI-Assisted Reconciliation & OCR Extraction Engine', () => {
       id: 'aimatch-01',
       bankTxId: 'btx-01',
       bankTxDate: '2026-08-28',
-      bankTxDescription: 'BML TRANSFER TO ANTRAC',
+      bankTxDescription: 'BML TRANSFER TO STARQ LOGISTICS',
       bankTxAmount: 27000,
       matchedInvoiceId: 'inv-01',
       matchedInvoiceNumber: 'INV-2026-8891',
-      customerOrVendorName: 'Antrac Holding',
+      customerOrVendorName: 'Starq Logistics',
       invoiceAmount: 27000,
       confidenceScore: 95,
       matchReason: 'Exact reference match',

@@ -88,8 +88,8 @@ export function parseReceiptOcr(rawText: string): ExtractedReceiptData {
     date = dateMatch[0];
   }
 
-  if (rawText.toLowerCase().includes('antrac')) {
-    vendor = 'Antrac Holding Pvt Ltd';
+  if (rawText.toLowerCase().includes('logistics') || rawText.toLowerCase().includes('marine')) {
+    vendor = 'Starq Logistics Pvt Ltd';
   } else if (rawText.toLowerCase().includes('starq')) {
     vendor = 'Starq Holdings Pvt Ltd';
   } else if (rawText.toLowerCase().includes('dhiraagu')) {

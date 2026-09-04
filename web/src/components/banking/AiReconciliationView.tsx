@@ -30,7 +30,7 @@ export const AiReconciliationView: React.FC = () => {
   const financeBot = DEFAULT_AI_AGENTS.find((a) => a.handle === '@financebot') || DEFAULT_AI_AGENTS[0];
 
   const [rawOcrText, setRawOcrText] = useState<string>(`===================================
-       ANTRAC HOLDING PVT LTD
+       STARQ LOGISTICS PVT LTD
        TIN: 1001234GST001
 ===================================
 Date: 2026-08-28
@@ -52,11 +52,11 @@ TOTAL:    MVR 27,000.00
       id: 'aimatch-01',
       bankTxId: 'btx-901',
       bankTxDate: '2026-08-28',
-      bankTxDescription: 'BML TRANSFER TO ANTRAC HOLDING INV-2026-8891',
+      bankTxDescription: 'BML TRANSFER TO STARQ LOGISTICS INV-2026-8891',
       bankTxAmount: 27000,
       matchedInvoiceId: 'inv-8891',
       matchedInvoiceNumber: 'INV-2026-8891',
-      customerOrVendorName: 'Antrac Holding Pvt Ltd',
+      customerOrVendorName: 'Starq Logistics Pvt Ltd',
       invoiceAmount: 27000,
       confidenceScore: 100,
       matchReason: 'Exact Reference match (INV-2026-8891) · Exact Amount match · Exact Date',
