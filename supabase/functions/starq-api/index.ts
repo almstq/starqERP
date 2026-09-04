@@ -1107,14 +1107,16 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         const appId = path.split("/")[4];
         if (!uuid(appId)) return json(400, { ok: false, error: "invalid_application_id" }, origin);
 
-        const { data: provResult, error: provError } = await db.rpc("provision_approved_application", {
+        const { data: provResult, error: provError } = await db.schema("platform").rpc("provision_approved_application", {
           p_application_id: appId,
           p_reviewer_person_id: session.person_uuid,
         });
 
         if (provError || !provResult) {
+          console.error("platform.provision_approved_application failed:", provError?.message, provError?.code);
           await securityEvent(req, "platform.provision", "rejected", session, { application_id: appId, error: provError?.message });
-          throw new Error("provisioning_failed");
+          const detail = provError ? `${provError.code ?? "no_code"}: ${provError.message}` : "no_data_returned";
+          throw new Error(`provisioning_failed: ${detail}`);
         }
 
         await securityEvent(req, "platform.provision", "accepted", session, { application_id: appId, result: provResult });
