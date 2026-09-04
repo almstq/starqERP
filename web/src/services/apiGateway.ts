@@ -1,8 +1,18 @@
 import {
   CommandName,
   ScmStep,
+  STARQ_ERP_CANONICAL_METADATA,
 } from '../../../contracts/commands';
 import { getApiBaseUrl } from './auth';
+
+export function getClientVersionHeaders(): Record<string, string> {
+  const commit = typeof __BUILD_COMMIT__ !== 'undefined' ? __BUILD_COMMIT__ : 'dev';
+  return {
+    'x-client-version': STARQ_ERP_CANONICAL_METADATA.version,
+    'x-client-release-track': STARQ_ERP_CANONICAL_METADATA.releaseTrack || 'stable',
+    'x-client-commit': commit,
+  };
+}
 
 let csrfToken: string | null = null;
 
@@ -68,6 +78,7 @@ export async function dispatchCommand<TReq = Record<string, unknown>, TRes = unk
       'Content-Type': 'application/json',
       'x-idempotency-key': idempotencyKey,
       'x-csrf-token': getCsrfToken(),
+      ...getClientVersionHeaders(),
     },
     credentials: 'include',
     body: JSON.stringify(body),
@@ -93,6 +104,7 @@ export async function apiGet<T>(path: string): Promise<T> {
     credentials: 'include',
     headers: {
       'Accept': 'application/json',
+      ...getClientVersionHeaders(),
     },
   });
 
@@ -114,6 +126,7 @@ export async function apiPost<T>(path: string, payload: Record<string, unknown>)
       'Accept': 'application/json',
       'x-csrf-token': getCsrfToken(),
       'x-idempotency-key': generateIdempotencyKey(),
+      ...getClientVersionHeaders(),
     },
     body: JSON.stringify({ ...payload, csrf: getCsrfToken() }),
   });

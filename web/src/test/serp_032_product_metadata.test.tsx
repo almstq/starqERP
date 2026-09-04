@@ -74,8 +74,8 @@ describe('SERP-032 / Enterprise SaaS Versioning SSOT', () => {
       </MemoryRouter>
     );
 
-    // Derived version
-    expect(screen.getByText(/starqERP v0\.2\.0-beta • Maldives/i)).toBeDefined();
+    // Derived version with commit ref
+    expect(screen.getByText(/starqERP v0\.2\.0-beta.*\([a-zA-Z0-9_-]+\).*• Maldives/i)).toBeDefined();
 
     // Neutral product capability copy
     expect(screen.getByText(/Maldives-Ready Finance/i)).toBeDefined();
@@ -101,8 +101,8 @@ describe('SERP-032 / Enterprise SaaS Versioning SSOT', () => {
       </MemoryRouter>
     );
 
-    // Desktop and mobile footers derive canonical version
-    const matches = screen.getAllByText(/starqERP v0\.2\.0-beta/i);
+    // Desktop and mobile footers derive canonical version with commit ref
+    const matches = screen.getAllByText(/starqERP v0\.2\.0-beta.*\([a-zA-Z0-9_-]+\)/i);
     expect(matches.length).toBeGreaterThan(0);
     expect(screen.queryByText(/starqERP v1\.0/i)).toBeNull();
   });

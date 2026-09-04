@@ -29,6 +29,9 @@ describe('SERP-031: API Gateway — Command Dispatch & Query', () => {
     expect(headers['Content-Type']).toBe('application/json');
     expect(headers['x-csrf-token']).toBe('test-csrf-token');
     expect(headers['x-idempotency-key']).toMatch(/^[0-9a-f-]{36}$/);
+    expect(headers['x-client-version']).toBe('0.2.0');
+    expect(headers['x-client-release-track']).toBe('beta');
+    expect(headers['x-client-commit']).toBeDefined();
 
     const body = JSON.parse(init.body as string);
     expect(body.type).toBe('CALL');
@@ -79,6 +82,10 @@ describe('SERP-031: API Gateway — Command Dispatch & Query', () => {
     expect(url).toMatch(/\/api\/ops\/customers$/);
     expect(init.method).toBe('GET');
     expect(init.credentials).toBe('include');
+    const headers = init.headers as Record<string, string>;
+    expect(headers['x-client-version']).toBe('0.2.0');
+    expect(headers['x-client-release-track']).toBe('beta');
+    expect(headers['x-client-commit']).toBeDefined();
     expect(result).toEqual(mockData);
   });
 });

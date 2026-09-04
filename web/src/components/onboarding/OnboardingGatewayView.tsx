@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../services/apiGateway';
 import { StarqLogomark } from '../brand/StarqLogo';
 import { Badge } from '../common/Badge';
+import { getFormattedProductVersion } from '../../../../contracts/commands';
 import { Building2, Sparkles, ShieldCheck, ArrowRight, LogOut, Info, Mail } from 'lucide-react';
 
 const ARCHETYPES = [
@@ -353,6 +354,24 @@ export const OnboardingGatewayView: React.FC = () => {
           </form>
         </div>
       </main>
+
+      {/* System Footer */}
+      <footer
+        className="w-full px-4 lg:px-8 py-3 flex items-center justify-between border-t text-[11px] shrink-0"
+        style={{
+          borderColor: 'var(--md-sys-color-outline-variant)',
+          color: 'var(--md-sys-color-on-surface-variant)',
+          backgroundColor: 'var(--md-sys-color-surface-container-low)',
+        }}
+      >
+        <span
+          className="mono-num"
+          title={typeof __BUILD_TIME__ !== 'undefined' ? `Built: ${__BUILD_TIME__}` : undefined}
+        >
+          starqERP {getFormattedProductVersion()} ({typeof __BUILD_COMMIT__ !== 'undefined' ? __BUILD_COMMIT__ : 'dev'})
+        </span>
+        <span>Organisation Onboarding Gate</span>
+      </footer>
     </div>
   );
 };

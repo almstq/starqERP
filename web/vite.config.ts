@@ -5,10 +5,16 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import { execSync } from 'child_process';
 
-let commitHash = '7c05723';
-try {
-  commitHash = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
-} catch {}
+const envCommit = process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA;
+let commitHash = envCommit ? envCommit.slice(0, 7) : '';
+if (!commitHash) {
+  try {
+    commitHash = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+  } catch {}
+}
+if (!commitHash) {
+  commitHash = 'dev';
+}
 
 export default defineConfig(() => {
   const rootDir = process.cwd();

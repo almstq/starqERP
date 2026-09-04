@@ -25,8 +25,8 @@ export const AboutTab: React.FC = () => {
   const [activeDialog, setActiveDialog] = useState<'privacy' | 'terms' | 'licenses' | null>(null);
 
   const meta = STARQ_ERP_CANONICAL_METADATA;
-  const buildSha = typeof __BUILD_COMMIT__ !== 'undefined' ? __BUILD_COMMIT__ : '7c05723';
-  const buildTime = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : '2026-08-27T22:00:00Z';
+  const buildSha = typeof __BUILD_COMMIT__ !== 'undefined' ? __BUILD_COMMIT__ : 'dev';
+  const buildTime = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : '';
   const environment = (import.meta as unknown as { env?: { MODE?: string } }).env?.MODE || 'development';
 
   const getSystemInfo = () => {

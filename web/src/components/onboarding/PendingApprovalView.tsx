@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useERP } from '../../context/ERPContext';
 import { StarqLogomark } from '../brand/StarqLogo';
 import { Badge } from '../common/Badge';
+import { getFormattedProductVersion } from '../../../../contracts/commands';
 import { Clock, RefreshCw, LogOut, ShieldCheck, Building2, MapPin, Mail, User, Info, ArrowRight } from 'lucide-react';
 
 export const PendingApprovalView: React.FC = () => {
@@ -223,6 +224,24 @@ export const PendingApprovalView: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* System Footer */}
+      <footer
+        className="w-full px-4 lg:px-8 py-3 flex items-center justify-between border-t text-[11px] shrink-0"
+        style={{
+          borderColor: 'var(--md-sys-color-outline-variant)',
+          color: 'var(--md-sys-color-on-surface-variant)',
+          backgroundColor: 'var(--md-sys-color-surface-container-low)',
+        }}
+      >
+        <span
+          className="mono-num"
+          title={typeof __BUILD_TIME__ !== 'undefined' ? `Built: ${__BUILD_TIME__}` : undefined}
+        >
+          starqERP {getFormattedProductVersion()} ({typeof __BUILD_COMMIT__ !== 'undefined' ? __BUILD_COMMIT__ : 'dev'})
+        </span>
+        <span>Secure Identity Gate</span>
+      </footer>
     </div>
   );
 };

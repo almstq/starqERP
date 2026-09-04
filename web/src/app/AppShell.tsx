@@ -447,8 +447,13 @@ export const AppShell: React.FC = () => {
             className="flex items-center justify-between text-[11px]"
             style={{ color: 'var(--md-sys-color-on-surface-variant)' }}
           >
-            <span className="mono-num font-medium">
-              {activePlane === 'platform' ? 'Starq HQ v2026.08' : `starqERP ${getFormattedProductVersion()}`}
+            <span
+              className="mono-num font-medium"
+              title={typeof __BUILD_TIME__ !== 'undefined' ? `Built: ${__BUILD_TIME__}` : undefined}
+            >
+              {activePlane === 'platform'
+                ? `Starq HQ v2026.08 (${typeof __BUILD_COMMIT__ !== 'undefined' ? __BUILD_COMMIT__ : 'dev'})`
+                : `starqERP ${getFormattedProductVersion()} (${typeof __BUILD_COMMIT__ !== 'undefined' ? __BUILD_COMMIT__ : 'dev'})`}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--positive)' }} />
@@ -668,10 +673,17 @@ export const AppShell: React.FC = () => {
                 className="flex items-center justify-between text-[11px]"
                 style={{ color: 'var(--md-sys-color-on-surface-variant)' }}
               >
-                <span className="mono-num font-medium">starqERP {getFormattedProductVersion()}</span>
+                <span
+                  className="mono-num font-medium"
+                  title={typeof __BUILD_TIME__ !== 'undefined' ? `Built: ${__BUILD_TIME__}` : undefined}
+                >
+                  {activePlane === 'platform'
+                    ? `Starq HQ v2026.08 (${typeof __BUILD_COMMIT__ !== 'undefined' ? __BUILD_COMMIT__ : 'dev'})`
+                    : `starqERP ${getFormattedProductVersion()} (${typeof __BUILD_COMMIT__ !== 'undefined' ? __BUILD_COMMIT__ : 'dev'})`}
+                </span>
                 <span className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--positive)' }} />
-                  <span>Online</span>
+                  <span>{activePlane === 'platform' ? 'Control Plane' : 'Online'}</span>
                 </span>
               </div>
             </div>

@@ -396,7 +396,12 @@ export const LoginPage: React.FC = () => {
                 variant="compact"
                 size="sm"
               />
-              <span className="mono-num text-[10px] font-mono">starqERP {getFormattedProductVersion()} • Maldives</span>
+              <span
+                className="mono-num text-[10px] font-mono"
+                title={typeof __BUILD_TIME__ !== 'undefined' ? `Built: ${__BUILD_TIME__}` : undefined}
+              >
+                starqERP {getFormattedProductVersion()} ({typeof __BUILD_COMMIT__ !== 'undefined' ? __BUILD_COMMIT__ : 'dev'}) • Maldives
+              </span>
             </div>
           </div>
         </div>
