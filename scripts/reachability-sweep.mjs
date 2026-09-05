@@ -72,6 +72,8 @@ const INTENTIONALLY_UNMOUNTED = {
   'domain/warehouse.ts': 'HOLD under DEC-103 / SERP-393: Warehouse transfer domain logic for held MultiWarehouseView.',
   'domain/ewt.ts': 'HOLD under SERP-339 / DEC-117: Maldives Employee Withholding Tax (EWT) beta finance calculation module.',
   'domain/inputGst.ts': 'HOLD under SERP-339 / DEC-117: Maldives Input GST recoverability classification beta module.',
+  'domain/nwt.ts': 'HOLD under SERP-339 / DEC-117: Maldives Non-resident Withholding Tax beta calculation module.',
+  'domain/greenTax.ts': 'HOLD under SERP-339 / DEC-117: Maldives Green Tax beta calculation module.',
 };
 
 function listSourceFiles(dir) {
