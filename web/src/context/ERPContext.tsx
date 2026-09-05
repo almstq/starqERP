@@ -659,10 +659,21 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [alerts, setAlerts] = useState<NeedsAttentionAlert[]>([]);
   const [aiInsights, setAiInsights] = useState<AIAssistantInsight[]>([]);
-  // SERP-401: staff is per-org and must never seed from mock data when a real session exists.
-  // No backend HR endpoint exists yet, so live sessions see an empty list until one ships.
-  // The seed is intentionally kept for demo/no-session paths only (tests, mockData consumers).
-  const [staff] = useState<StaffMember[]>(session ? [] : INITIAL_STAFF);
+  // SERP-401 + Founder Bug Log Item 5 (5 Sep 2026): staff is per-org and must
+  // never seed from mock data when a real session exists. No backend HR
+  // endpoint exists yet, so live sessions see an empty list until one ships.
+  // The seed is intentionally kept for demo/no-session paths only (tests,
+  // mockData consumers).
+  //
+  // Item 5 finding: this was a useState(session ? [] : INITIAL_STAFF) - a
+  // lazy initializer, which React runs exactly ONCE at mount. Session loads
+  // asynchronously and is null/undefined on that first render, so the legacy
+  // fixture got locked in regardless of what session resolved to afterward -
+  // the SERP-401 gate never actually worked once the session finished
+  // loading. Nothing anywhere calls a setter for this value, so it's a plain
+  // derived read, not stored state - it now recomputes every render and
+  // tracks the real, current session.
+  const staff: StaffMember[] = session ? [] : INITIAL_STAFF;
 
   // Load data from backend when session is available
   useEffect(() => {
