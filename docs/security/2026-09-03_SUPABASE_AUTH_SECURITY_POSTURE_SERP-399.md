@@ -63,7 +63,35 @@ Self-service password resets initiated within an authenticated session cannot pr
 
 ---
 
-## 4. Drift Audit & Review Cadence
+## 4. Production Domain & CORS Boundary (SERP-299 / Founder Ruling #1475)
+
+1. **Canonical Hostname**:
+   - `erp.starq.mv` is the canonical production application hostname.
+   - `starq.mv` serves as the corporate/public root.
+   - Production browser/OAuth origin is strictly `https://erp.starq.mv`.
+
+2. **CORS Allowlist Policy**:
+   - Environment-specific exact origin allowlists enforced at the `starq-api` Edge boundary.
+   - Production permits: `https://erp.starq.mv` and `https://starq.mv`.
+   - Staging/dev origins remain isolated to their respective environments.
+   - **Zero Wildcards on Credentialed Routes**: No wildcard `*.vercel.app` or arbitrary regex matches are permitted in production mode. Any preview origin matching must be explicitly opted into via `STARQBOOKS_ALLOW_PREVIEW_ORIGINS` and isolated from production data.
+
+---
+
+## 5. Privileged Secret Management & Rotation Policy (SERP-299)
+
+1. **Secret Ownership & Invariants**:
+   - `STARQBOOKS_SESSION_SECRET` is a backend-only Supabase Edge Secret utilized solely by `starq-api` for HMAC-SHA256 session token signing. It is never exposed to Vite, client browsers, git repositories, or operational log sinks.
+   - Supabase Secret Key Modernization: The architecture transitions from legacy `SUPABASE_SERVICE_ROLE_KEY` to scoped Supabase Secret Keys as provider migration lands, maintaining strict backend-only authorization boundaries.
+
+2. **Rotation Cadence & Triggers**:
+   - **Scheduled Rotation**: Planned privileged secret review and rotation occurs every **90 days**.
+   - **Immediate Emergency Rotation**: Mandatory upon any suspected key exposure, credential leakage, access revocation, compromised developer account/device, or material security incident.
+   - **Audit Record**: Rotation events must log purpose, owner, date, trigger, affected service, and post-rotation verification smoke tests. Actual secret values must never appear in repository records.
+
+---
+
+## 6. Drift Audit & Review Cadence
 
 1. **Change Control**: No operator may alter Supabase Auth settings in the Supabase Dashboard without a prior pull request referencing an approved architectural decision or incident response task.
 2. **Review Verification**: During periodic security audits (e.g. SERP-120 and pre-release gates), the active Supabase project configuration must be checked against this document.

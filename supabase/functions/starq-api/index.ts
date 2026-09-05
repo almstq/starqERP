@@ -43,10 +43,21 @@ const envOrigins = (Deno.env.get("STARQBOOKS_ALLOWED_ORIGINS") ?? "")
 
 const ALLOWED_ORIGINS = new Set([...DEFAULT_ALLOWED_ORIGINS, ...envOrigins]);
 
+// SERP-299: Fail-closed production check.
+// Unless explicitly running in 'development', 'test', or 'local', we treat the environment as production.
+const rawEnv = ((Deno.env.get("STARQ_ENV") || Deno.env.get("ENVIRONMENT")) ?? "").trim().toLowerCase();
+const IS_PROD = rawEnv !== "development" && rawEnv !== "test" && rawEnv !== "local";
+const ALLOW_PREVIEW_ORIGINS = Deno.env.get("STARQBOOKS_ALLOW_PREVIEW_ORIGINS") === "true";
+
 function isOriginAllowed(origin: string | null): boolean {
   if (!origin) return true;
   if (ALLOWED_ORIGINS.has(origin)) return true;
-  if (/^https:\/\/[a-zA-Z0-9_-]+\.vercel\.app$/.test(origin)) return true;
+  // SERP-299 / Founder ruling #1475: no wildcard production origin on credentialed routes.
+  // Wildcard preview patterns are strictly confined to development/staging environments
+  // or when explicitly opted in via STARQBOOKS_ALLOW_PREVIEW_ORIGINS.
+  if (ALLOW_PREVIEW_ORIGINS || !IS_PROD) {
+    if (/^https:\/\/[a-zA-Z0-9_-]+\.vercel\.app$/.test(origin)) return true;
+  }
   return false;
 }
 const COOKIE_NAME = "sb_ops";

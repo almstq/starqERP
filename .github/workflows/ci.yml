@@ -45,6 +45,9 @@ jobs:
       - name: Security Policy Tests
         run: node tests/security_policy.test.mjs
 
+      - name: OAuth, Origins & Secrets Verification (SERP-299)
+        run: node tests/serp_299_oauth_origins.test.mjs
+
       - name: Support Policy Tests
         run: node tests/support_policy.test.mjs
 

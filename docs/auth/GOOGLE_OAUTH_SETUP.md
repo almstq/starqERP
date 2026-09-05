@@ -75,9 +75,9 @@ All Google OAuth credentials must reside within the canonical Google Cloud proje
    - **User support email**: Administrator / Founder email (e.g. `a.musthaq@gmail.com`)
    - **App logo**: Optional for development; standard 120x120px square icon for production.
 4. **Authorized Domains**:
-   - `starq.io`
+   - `starq.mv`
    - `supabase.co`
-   - `vercel.app` (if preview/production hosting uses Vercel)
+   - `vercel.app` (if preview/staging hosting uses Vercel)
 5. **Developer Contact Information**:
    - Primary technical contact email (e.g. `a.musthaq@gmail.com`).
 6. **Scopes**:
@@ -99,14 +99,14 @@ All Google OAuth credentials must reside within the canonical Google Cloud proje
    - `http://localhost:3001` *(Default Vite development port in package.json)*
    - `http://localhost:5173` *(Standard Vite dev port fallback)*
    - `http://localhost:8080` *(Historical local preview / staging port)*
-   - `https://erp.starq.io` *(Canonical production URL)*
-   - `https://<project-deployment>.vercel.app` *(Optional Vercel preview environments)*
+   - `https://erp.starq.mv` *(Canonical production origin per Founder Ruling #1475)*
+   - `https://<project-deployment>.vercel.app` *(Preview/staging environments)*
 5. **Authorized Redirect URIs**:
    Add the canonical callback endpoints:
    - `https://wthabguvueewgtabjsdo.supabase.co/auth/v1/callback` *(Supabase GoTrue OAuth callback)*
    - `http://localhost:3001/auth/callback` *(Local dev callback for authorization code flow)*
    - `http://localhost:5173/auth/callback` *(Local dev callback fallback)*
-   - `https://erp.starq.io/auth/callback` *(Production authorization code flow callback)*
+   - `https://erp.starq.mv/auth/callback` *(Production authorization code flow callback)*
 
 ---
 
@@ -128,12 +128,12 @@ The backend persistence and Edge functions are hosted on Supabase project `wthab
 5. **Authorized Client IDs** (Optional): Add the Android release client ID (`901212915429-*.apps.googleusercontent.com`) to allow native mobile auth token verification.
 
 ### URL Configuration (Supabase Dashboard → Authentication → URL Configuration)
-- **Site URL**: `https://erp.starq.io` (Production) or `http://localhost:3001` (Development)
+- **Site URL**: `https://erp.starq.mv` (Production) or `http://localhost:3001` (Development)
 - **Redirect URLs (Allowlist)**:
   - `http://localhost:3001/**`
   - `http://localhost:5173/**`
   - `http://localhost:8080/**`
-  - `https://erp.starq.io/**`
+  - `https://erp.starq.mv/**`
   - `https://wthabguvueewgtabjsdo.supabase.co/auth/v1/callback`
 
 ---
@@ -145,15 +145,23 @@ The authoritative boundary `starq-api` is deployed with `verify_jwt = false` (as
 ### Edge Function Secrets Inventory
 Manage secrets via `supabase secrets set <KEY>=<VALUE>`:
 
-| Variable Name | Purpose | Example / Pattern | Sensitivity |
+| Variable Name | Purpose | Example / Pattern | Sensitivity & Ownership |
 |---|---|---|---|
 | `STARQBOOKS_GOOGLE_CLIENT_ID` | Primary Web Google Client ID validated against token `aud` | `901212915429-xxxx.apps.googleusercontent.com` | Public Identifier |
 | `STARQBOOKS_GOOGLE_ANDROID_CLIENT_ID` | Mobile Android Client ID for Flutter client | `901212915429-yyyy.apps.googleusercontent.com` | Public Identifier |
-| `STARQBOOKS_ALLOWED_ORIGINS` | Comma-delimited list of CORS allowed web origins | `http://localhost:3001,http://localhost:5173,https://erp.starq.io` | Configuration |
-| `STARQBOOKS_SESSION_SECRET` | 256-bit secret key for HMAC-SHA256 session cookie signing | High-entropy string (>= 32 chars) | **Confidential Secret** |
+| `STARQBOOKS_ALLOWED_ORIGINS` | Comma-delimited list of CORS allowed web origins | `http://localhost:3001,http://localhost:5173,https://erp.starq.mv,https://starq.mv` | Configuration |
+| `STARQBOOKS_ALLOW_PREVIEW_ORIGINS` | Explicit opt-in boolean (`true`/`false`) to allow `*.vercel.app` wildcard origins | `false` (default) | Configuration |
+| `STARQ_ENV` / `ENVIRONMENT` | Runtime environment tier. Defaults fail-closed to production if unset. Explicitly set to `development`, `test`, or `local` to enable dev preview matching | `production` | Configuration |
+| `STARQBOOKS_SESSION_SECRET` | 256-bit secret key for HMAC-SHA256 session cookie signing | High-entropy string (>= 32 chars) | **Backend-Only Secret** (Never exposed to Vite/browser/repo/logs per Founder Ruling #1475) |
 | `STARQBOOKS_ALLOWLIST_JSON` | Authorized users, emails, seats, and tenant bindings | `{"people":[{"name":"...","email":"user@domain.com","seats":["counter"],"entities":["CI"]}]}` | Sensitive Access List |
 | `SUPABASE_URL` | Supabase Postgres/REST gateway URL | `https://wthabguvueewgtabjsdo.supabase.co` | Platform Pre-injected |
-| `SUPABASE_SERVICE_ROLE_KEY` | Bypasses RLS within Edge functions for session checks | Supabase Service Role JWT | **Confidential Secret** |
+| `SUPABASE_SERVICE_ROLE_KEY` | Bypasses RLS within Edge functions for session checks (Legacy; migrating to Secret Keys) | Supabase Service Role JWT | **Confidential Secret** (Target of Secret-Key Modernization) |
+
+### Secret Management & Rotation Cadence (Founder Ruling #1475)
+1. **Scheduled Rotation**: Planned privileged-secret review and rotation every 90 days.
+2. **Emergency Rotation**: Triggered immediately upon suspected exposure, access revocation, compromised developer account/device, or material security incident.
+3. **Evidence Requirement**: Rotation evidence must document purpose, owner, date, trigger, affected service, and post-rotation smoke test verification. Secret values are never recorded in repository evidence.
+4. **Modernization Path**: Transition from legacy `SUPABASE_SERVICE_ROLE_KEY` to Supabase Secret Keys as provider migration lands, preserving backend-only privileged-secret invariants.
 
 ---
 
@@ -183,7 +191,7 @@ VITE_API_BASE_URL=""
 - **Response**: Server responds with 200 OK and `Set-Cookie: sb_ops=<payload>.<hmac>; Path=/; Max-Age=28800; HttpOnly; Secure; SameSite=None`.
 
 ### 2. Cookie Transport & Cross-Site Considerations
-- The API is served from `https://wthabguvueewgtabjsdo.supabase.co` while the web client runs on `http://localhost:3001` or `https://erp.starq.io`.
+- The API is served from `https://wthabguvueewgtabjsdo.supabase.co` while the web client runs on `http://localhost:3001` or `https://erp.starq.mv`.
 - Because this is a cross-site context:
   - `SameSite=None` and `Secure` are mandatory on the `sb_ops` cookie.
   - Every client `fetch()` call must specify `credentials: 'include'`.
