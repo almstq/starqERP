@@ -41,7 +41,7 @@ import {
 } from '../data/mockData';
 import { telemetry } from '../services/telemetry';
 import { applyMovement } from '../domain/inventoryValuation';
-import { dispatchCommand, apiGet } from '../services/apiGateway';
+import { dispatchCommand, apiGet, ApiError } from '../services/apiGateway';
 import { useAuth } from './AuthContext';
 import { getArchetype, ArchetypeDefinition, ArchetypeTerminology, ArchetypeId, ARCHETYPES } from '../domain/archetypes';
 import { switchContext as apiSwitchContext, fetchCurrentUser } from '../services/auth';
@@ -246,6 +246,11 @@ export interface ERPContextType {
   dismissAlert: (alertId: string) => void;
   triggerAIInsightAction: (insight: AIAssistantInsight) => void;
   generateJobInvoice: (jobId: string) => Invoice;
+
+  // Transactional Edge RPC State (SERP-289)
+  mutationPending: boolean;
+  lastMutationError: string | null;
+  clearMutationError: () => void;
 
   // Quick stats
   totalSalesToday: number;
@@ -659,6 +664,11 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [alerts, setAlerts] = useState<NeedsAttentionAlert[]>([]);
   const [aiInsights, setAiInsights] = useState<AIAssistantInsight[]>([]);
+
+  // Transactional Edge RPC mutation states (SERP-289)
+  const [mutationPending, setMutationPending] = useState<boolean>(false);
+  const [lastMutationError, setLastMutationError] = useState<string | null>(null);
+  const clearMutationError = useCallback(() => setLastMutationError(null), []);
   // SERP-401 + Founder Bug Log Item 5 (5 Sep 2026): staff is per-org and must
   // never seed from mock data when a real session exists. No backend HR
   // endpoint exists yet, so live sessions see an empty list until one ships.
@@ -1776,7 +1786,10 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
     setCustomers((prev) => [newCustomer, ...prev]);
 
-    // Dispatch to backend
+    setMutationPending(true);
+    setLastMutationError(null);
+
+    // Dispatch to backend (SERP-289)
     dispatchCommand({
       command: 'CUSTOMER',
       payload: {
@@ -1788,7 +1801,19 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         type: customerData.type,
         vehicles: customerData.vehicles,
       },
-    }).catch((err) => console.error('[ERP] CUSTOMER command failed:', err));
+    }).then(() => {
+      setMutationPending(false);
+    }).catch((err) => {
+      setMutationPending(false);
+      const errMsg = err instanceof Error ? err.message : 'CUSTOMER command failed';
+      setLastMutationError(errMsg);
+      console.error('[ERP] CUSTOMER command failed:', err);
+
+      // Rollback on authoritative server rejection or authenticated session failure
+      if (session || err instanceof ApiError) {
+        setCustomers((prev) => prev.filter((c) => c.id !== newCustomer.id));
+      }
+    });
 
     logAuditEvent({
       action: 'CREATED',
@@ -1817,7 +1842,15 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     setJobs((prev) => [newJob, ...prev]);
 
-    // Dispatch to backend
+    // Update customer active jobs count optimistically
+    setCustomers((prev) =>
+      prev.map((c) => (c.id === jobData.customerId ? { ...c, activeJobsCount: c.activeJobsCount + 1 } : c))
+    );
+
+    setMutationPending(true);
+    setLastMutationError(null);
+
+    // Authoritative Edge RPC dispatch (SERP-289)
     dispatchCommand({
       command: 'CALL',
       payload: {
@@ -1827,6 +1860,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         consent: true,
       },
     }).then((res) => {
+      setMutationPending(false);
       if (res.ok && (res as any).event) {
         const serverEvent = (res as any).event;
         setJobs((prev) => prev.map((j) =>
@@ -1835,12 +1869,20 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             : j
         ));
       }
-    }).catch((err) => console.error('[ERP] CALL command failed:', err));
+    }).catch((err) => {
+      setMutationPending(false);
+      const errMsg = err instanceof Error ? err.message : 'CALL command failed';
+      setLastMutationError(errMsg);
+      console.error('[ERP] CALL command failed:', err);
 
-    // Update customer active jobs count
-    setCustomers((prev) =>
-      prev.map((c) => (c.id === jobData.customerId ? { ...c, activeJobsCount: c.activeJobsCount + 1 } : c))
-    );
+      // Rollback on authoritative server rejection or authenticated session failure
+      if (session || err instanceof ApiError) {
+        setJobs((prev) => prev.filter((j) => j.id !== newJob.id));
+        setCustomers((prev) =>
+          prev.map((c) => (c.id === jobData.customerId ? { ...c, activeJobsCount: Math.max(0, c.activeJobsCount - 1) } : c))
+        );
+      }
+    });
 
     logAuditEvent({
       action: 'CREATED',
@@ -1866,9 +1908,26 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       invoiceNumber: invNumberStr
     };
 
+    // Optimistic update
     setInvoices((prev) => [newInvoice, ...prev]);
 
-    // Dispatch to backend
+    // Update customer totalInvoiced and outstandingBalance optimistically
+    setCustomers((prev) =>
+      prev.map((c) =>
+        c.id === invoiceData.customerId
+          ? {
+              ...c,
+              totalInvoiced: c.totalInvoiced + invoiceData.totalAmount,
+              outstandingBalance: c.outstandingBalance + invoiceData.balanceDue
+            }
+          : c
+      )
+    );
+
+    setMutationPending(true);
+    setLastMutationError(null);
+
+    // Authoritative Edge RPC dispatch (SERP-289)
     dispatchCommand({
       command: 'INVOICE',
       payload: {
@@ -1885,6 +1944,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         bank_details: invoiceData.bankDetails,
       },
     }).then((res) => {
+      setMutationPending(false);
       if (res.ok && (res as any).invoice) {
         const serverInvoice = (res as any).invoice;
         setInvoices((prev) => prev.map((inv) =>
@@ -1893,20 +1953,28 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             : inv
         ));
       }
-    }).catch((err) => console.error('[ERP] INVOICE command failed:', err));
+    }).catch((err) => {
+      setMutationPending(false);
+      const errMsg = err instanceof Error ? err.message : 'INVOICE command failed';
+      setLastMutationError(errMsg);
+      console.error('[ERP] INVOICE server mutation rejected:', err);
 
-    // Update customer totalInvoiced and outstandingBalance
-    setCustomers((prev) =>
-      prev.map((c) =>
-        c.id === invoiceData.customerId
-          ? {
-              ...c,
-              totalInvoiced: c.totalInvoiced + invoiceData.totalAmount,
-              outstandingBalance: c.outstandingBalance + invoiceData.balanceDue
-            }
-          : c
-      )
-    );
+      // Rollback optimistic state on authoritative server rejection or authenticated session failure
+      if (session || err instanceof ApiError) {
+        setInvoices((prev) => prev.filter((inv) => inv.id !== newInvoice.id));
+        setCustomers((prev) =>
+          prev.map((c) =>
+            c.id === invoiceData.customerId
+              ? {
+                  ...c,
+                  totalInvoiced: Math.max(0, c.totalInvoiced - invoiceData.totalAmount),
+                  outstandingBalance: Math.max(0, c.outstandingBalance - invoiceData.balanceDue)
+                }
+              : c
+          )
+        );
+      }
+    });
 
     logAuditEvent({
       action: 'INVOICE_ISSUED',
@@ -1966,12 +2034,58 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       ].filter(Boolean).join(' • ') || 'Settlement via official banking transfer'
     };
 
+    // Optimistic UI updates
     setInvoices((prev) => [newInvoice, ...prev]);
+    const previousJobStatus = job.status;
+    const previousLinkedInvoiceId = job.linkedInvoiceId;
 
-    // Link invoice to job
     setJobs((prev) =>
       prev.map((j) => (j.id === job.id ? { ...j, linkedInvoiceId: newInvoice.id, status: 'Invoiced' } : j))
     );
+
+    setMutationPending(true);
+    setLastMutationError(null);
+
+    // Route through authoritative Edge RPC (SERP-289)
+    dispatchCommand({
+      command: 'INVOICE',
+      payload: {
+        customer_id: job.customerId,
+        customer_name: job.customerName,
+        total_amount: job.quotedAmount,
+        subtotal,
+        gst_amount: gstAmount,
+        date: newInvoice.date,
+        due_date: newInvoice.dueDate,
+        items: newInvoice.items,
+        notes: newInvoice.notes,
+        job_id: job.id,
+        bank_details: newInvoice.bankDetails,
+      },
+    }).then((res) => {
+      setMutationPending(false);
+      if (res.ok && (res as any).invoice) {
+        const serverInvoice = (res as any).invoice;
+        setInvoices((prev) => prev.map((inv) =>
+          inv.id === newInvoice.id
+            ? { ...inv, invoiceNumber: serverInvoice.invoice_number || inv.invoiceNumber }
+            : inv
+        ));
+      }
+    }).catch((err) => {
+      setMutationPending(false);
+      const errMsg = err instanceof Error ? err.message : 'Job invoice generation failed';
+      setLastMutationError(errMsg);
+      console.error('[ERP] generateJobInvoice server mutation rejected:', err);
+
+      // Rollback on authoritative server rejection or authenticated session failure
+      if (session || err instanceof ApiError) {
+        setInvoices((prev) => prev.filter((inv) => inv.id !== newInvoice.id));
+        setJobs((prev) =>
+          prev.map((j) => (j.id === job.id ? { ...j, linkedInvoiceId: previousLinkedInvoiceId, status: previousJobStatus } : j))
+        );
+      }
+    });
 
     logAuditEvent({
       action: 'INVOICE_ISSUED',
@@ -1993,32 +2107,10 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       paymentNumber: `PAY-${nextNum}`
     };
 
+    // Optimistic UI updates
     setPayments((prev) => [newPayment, ...prev]);
 
-    // Dispatch to backend
-    dispatchCommand({
-      command: 'INVOICE_PAYMENT',
-      payload: {
-        invoice_id: paymentData.invoiceId,
-        customer_id: paymentData.customerId,
-        amount: paymentData.amount,
-        method: paymentData.method,
-        reference: paymentData.referenceNumber,
-        bank_account: paymentData.bankAccount,
-        notes: paymentData.notes,
-      },
-    }).then((res) => {
-      if (res.ok && (res as any).payment) {
-        const serverPayment = (res as any).payment;
-        setPayments((prev) => prev.map((p) =>
-          p.id === newPayment.id
-            ? { ...p, paymentNumber: serverPayment.payment_number || p.paymentNumber }
-            : p
-        ));
-      }
-    }).catch((err) => console.error('[ERP] INVOICE_PAYMENT command failed:', err));
-
-    // Update invoice balance
+    // Update invoice balance optimistically
     setInvoices((prev) =>
       prev.map((inv) => {
         if (inv.id === paymentData.invoiceId || inv.invoiceNumber === paymentData.invoiceNumber) {
@@ -2036,7 +2128,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       })
     );
 
-    // Update customer outstanding balance
+    // Update customer outstanding balance optimistically
     setCustomers((prev) =>
       prev.map((c) => {
         if (c.id === paymentData.customerId || c.name === paymentData.customerName) {
@@ -2049,6 +2141,70 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return c;
       })
     );
+
+    setMutationPending(true);
+    setLastMutationError(null);
+
+    // Authoritative Edge RPC dispatch (SERP-289)
+    dispatchCommand({
+      command: 'INVOICE_PAYMENT',
+      payload: {
+        invoice_id: paymentData.invoiceId,
+        customer_id: paymentData.customerId,
+        amount: paymentData.amount,
+        method: paymentData.method,
+        reference: paymentData.referenceNumber,
+        bank_account: paymentData.bankAccount,
+        notes: paymentData.notes,
+      },
+    }).then((res) => {
+      setMutationPending(false);
+      if (res.ok && (res as any).payment) {
+        const serverPayment = (res as any).payment;
+        setPayments((prev) => prev.map((p) =>
+          p.id === newPayment.id
+            ? { ...p, paymentNumber: serverPayment.payment_number || p.paymentNumber }
+            : p
+        ));
+      }
+    }).catch((err) => {
+      setMutationPending(false);
+      const errMsg = err instanceof Error ? err.message : 'INVOICE_PAYMENT command failed';
+      setLastMutationError(errMsg);
+      console.error('[ERP] INVOICE_PAYMENT server mutation rejected:', err);
+
+      // Rollback on authoritative server rejection or authenticated session failure
+      if (session || err instanceof ApiError) {
+        setPayments((prev) => prev.filter((p) => p.id !== newPayment.id));
+        setInvoices((prev) =>
+          prev.map((inv) => {
+            if (inv.id === paymentData.invoiceId || inv.invoiceNumber === paymentData.invoiceNumber) {
+              const revertedPaid = Math.max(0, inv.amountPaid - paymentData.amount);
+              const revertedBalance = Math.min(inv.totalAmount, inv.balanceDue + paymentData.amount);
+              const revertedStatus = revertedBalance === 0 ? 'Paid' : revertedPaid > 0 ? 'Partially Paid' : 'Sent';
+              return {
+                ...inv,
+                amountPaid: revertedPaid,
+                balanceDue: revertedBalance,
+                status: revertedStatus
+              };
+            }
+            return inv;
+          })
+        );
+        setCustomers((prev) =>
+          prev.map((c) => {
+            if (c.id === paymentData.customerId || c.name === paymentData.customerName) {
+              return {
+                ...c,
+                outstandingBalance: c.outstandingBalance + paymentData.amount
+              };
+            }
+            return c;
+          })
+        );
+      }
+    });
 
     logAuditEvent({
       action: 'PAYMENT_RECORDED',
@@ -2172,6 +2328,57 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     setPayments((prev) => [newPayment, ...prev]);
 
+    setMutationPending(true);
+    setLastMutationError(null);
+
+    // Authoritative Edge RPC dispatch for COUNTER_SALE (SERP-289)
+    dispatchCommand({
+      command: 'COUNTER_SALE',
+      payload: {
+        customer_id: saleData.customerId,
+        customer_name: saleData.customerName || 'Walk-in Counter Customer',
+        total_amount: totalAmount,
+        subtotal,
+        gst_amount: gstAmount,
+        payment_method: saleData.paymentMethod,
+        items: saleData.items,
+        bank_account: saleData.bankAccount,
+      },
+    }).then((res) => {
+      setMutationPending(false);
+      if (res.ok && (res as any).counter_sale) {
+        const cs = (res as any).counter_sale;
+        if (cs.invoice_number) {
+          setInvoices((prev) => prev.map((inv) =>
+            inv.id === newInvoice.id ? { ...inv, invoiceNumber: cs.invoice_number } : inv
+          ));
+        }
+      }
+    }).catch((err) => {
+      setMutationPending(false);
+      const errMsg = err instanceof Error ? err.message : 'COUNTER_SALE command failed';
+      setLastMutationError(errMsg);
+      console.error('[ERP] COUNTER_SALE server mutation rejected:', err);
+
+      // Rollback on authoritative server rejection or authenticated session failure
+      if (session || err instanceof ApiError) {
+        setInvoices((prev) => prev.filter((inv) => inv.id !== newInvoice.id));
+        setPayments((prev) => prev.filter((p) => p.id !== newPayment.id));
+        setStockMovements((prev) => prev.filter((m) => !newMovements.some((nm) => nm.id === m.id)));
+        setInventory((prev) =>
+          prev.map((inv) => {
+            const sold = saleData.items.find((it) => it.itemId === inv.id || it.sku === inv.sku);
+            if (sold) {
+              const revertedQty = inv.quantityOnHand + sold.quantity;
+              const revertedStatus = revertedQty === 0 ? 'Out of Stock' : revertedQty <= inv.reorderLevel ? 'Low Stock' : 'In Stock';
+              return { ...inv, quantityOnHand: revertedQty, stockStatus: revertedStatus };
+            }
+            return inv;
+          })
+        );
+      }
+    });
+
     logAuditEvent({
       action: 'CREATED',
       module: 'invoices',
@@ -2195,7 +2402,10 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
     setExpenses((prev) => [newExpense, ...prev]);
 
-    // Dispatch to backend
+    setMutationPending(true);
+    setLastMutationError(null);
+
+    // Dispatch to backend with rollback on rejection (SERP-289)
     dispatchCommand({
       command: 'EXPENSE',
       payload: {
@@ -2206,7 +2416,19 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         description: expenseData.description,
         date: expenseData.date,
       },
-    }).catch((err) => console.error('[ERP] EXPENSE command failed:', err));
+    }).then(() => {
+      setMutationPending(false);
+    }).catch((err) => {
+      setMutationPending(false);
+      const errMsg = err instanceof Error ? err.message : 'EXPENSE command failed';
+      setLastMutationError(errMsg);
+      console.error('[ERP] EXPENSE command failed:', err);
+
+      // Rollback on authoritative server rejection or authenticated session failure
+      if (session || err instanceof ApiError) {
+        setExpenses((prev) => prev.filter((e) => e.id !== newExpense.id));
+      }
+    });
 
     logAuditEvent({
       action: 'CREATED',
@@ -2582,6 +2804,9 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         dismissAlert,
         triggerAIInsightAction,
         generateJobInvoice,
+        mutationPending,
+        lastMutationError,
+        clearMutationError,
 
         totalSalesToday,
         totalCashReceived,
