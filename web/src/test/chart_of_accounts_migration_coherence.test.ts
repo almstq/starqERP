@@ -144,6 +144,9 @@ function loadMigrationSeed(): Map<string, SeedRow> {
             `chart_of_accounts migration parser: expected 9 fields in ${file}, got ${fields.length}: ${JSON.stringify(fields)}`,
           );
         }
+        // 9th field (description) is deliberately not destructured - this
+        // ratchet doesn't compare descriptions, only the identity/hierarchy/
+        // classification fields that caused the SERP-340 defect.
         const [code, name, accountClass, subtype, parentCode, level, currency, postingControl] =
           fields.map(parseSqlLiteral);
         const codeStr = String(code);
