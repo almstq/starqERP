@@ -6,6 +6,18 @@ import { ERPProvider } from '../context/ERPContext';
 import { AuthProvider } from '../context/AuthContext';
 
 describe('SERP-319: MIRA Tourism GST (16%) & Green Tax Interface', () => {
+  it('shows the filing HOLD and prevents Print Schedule while retaining calculation cards', () => {
+    const print = vi.spyOn(window, 'print').mockImplementation(() => {});
+    render(<AuthProvider><ERPProvider><MiraTgstView /></ERPProvider></AuthProvider>);
+    expect(screen.getByRole('alert').textContent).toContain('do not file');
+    const button = screen.getByRole('button', { name: 'Print Schedule' });
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(print).not.toHaveBeenCalled();
+    expect(screen.getByText('16% TGST Output Tax')).toBeDefined();
+    print.mockRestore();
+  });
+
   it('renders official 16% TGST and Green Tax KPI cards and Guest Register', () => {
     render(
       <AuthProvider>

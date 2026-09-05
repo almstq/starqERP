@@ -98,6 +98,7 @@ export const MiraTgstView: React.FC<{
       // SERP-237: no invented legal entity name on a statutory return. This is
       // the twin of the MiraGst201View fix — the same defect, one file over.
       legalEntityName: currentTenant.name || '',
+      isGstRegistered: currentTenant.gstStatus === 'registered',
       usdToMvrRate: 15.42,
     });
   }, [invoices, expenses, greenTaxStays, selectedYear, selectedMonth, currentTenant]);
@@ -197,12 +198,17 @@ export const MiraTgstView: React.FC<{
             <Button
               variant="filled"
               size="sm"
-              onClick={() => window.print()}
+              disabled={tgstReturn.filingReadiness.status === 'HOLD'}
+              onClick={() => { if (tgstReturn.filingReadiness.status !== 'HOLD') window.print(); }}
               icon={<Printer size={14} />}
             >
               <span>Print Schedule</span>
             </Button>
           </div>
+        </div>
+
+        <div role="alert" className="mt-4 text-sm">
+          HOLD — {tgstReturn.filingReadiness.reason} Amounts remain visible for reconciliation.
         </div>
 
         {/* Metric Cards */}

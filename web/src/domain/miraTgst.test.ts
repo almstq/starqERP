@@ -88,6 +88,25 @@ describe('SERP-319: MIRA Tourism GST (16% TGSTA) and Green Tax Engine', () => {
     expect(result.netTgstPayableMvr).toBe(24000); // 32,000 - 8,000
   });
 
+  it('preserves recorded TGST and holds filing when current registration is false', () => {
+    const result = calculateMiraTgstReturn({
+      invoices: sampleInvoices,
+      expenses: sampleExpenses,
+      periodYear: 2026,
+      periodMonth: 8,
+      tin: '',
+      legalEntityName: 'Unregistered Tenant',
+      isGstRegistered: false,
+    });
+
+    expect(result.isGstRegistered).toBe(false);
+    expect(result.totalTourismTaxableSuppliesMvr).toBe(200000);
+    expect(result.totalTgstOutputTaxMvr).toBe(32000);
+    expect(result.totalTgstInputTaxMvr).toBe(8000);
+    expect(result.netTgstPayableMvr).toBe(24000);
+    expect(result.filingReadiness).toMatchObject({ status: 'HOLD', value: null });
+  });
+
   it('tracks Green Tax ($6.00 USD/night) for tourists while exempting local citizens', () => {
     const result = calculateMiraTgstReturn({
       invoices: sampleInvoices,

@@ -1,4 +1,5 @@
 import { rateMatchesBand, taxOnExclusive, taxWithinInclusive } from './taxRates';
+import { hold, FinanceDecision } from './financeGovernance';
 import { resolveTimeOfSupply, SupplyDocument, SupplyEventType } from './timeOfSupply';
 
 export interface GreenTaxStayRecord {
@@ -25,6 +26,10 @@ export interface MiraTgstReturn {
   periodEndDate: string;
   filingDueDate: string; // 28th of following month
   currency: 'MVR';
+  /** Current generic tenant flag only; not historical tourism registration proof. */
+  isGstRegistered: boolean | undefined;
+  /** Calculation totals are not filing authorization. */
+  filingReadiness: FinanceDecision<never>;
   
   // Tourism GST output tax, at the rate in force on each supply date
   totalTourismTaxableSuppliesMvr: number;
@@ -91,6 +96,8 @@ export interface CalculateTgstParams {
   periodMonth: number;
   tin: string;
   legalEntityName: string;
+  /** Current generic flag; never grants filing readiness or changes source totals. */
+  isGstRegistered?: boolean;
   usdToMvrRate?: number;
 }
 
@@ -137,6 +144,7 @@ export function calculateMiraTgstReturn(params: CalculateTgstParams): MiraTgstRe
     periodMonth,
     tin,
     legalEntityName,
+    isGstRegistered,
     usdToMvrRate = DEFAULT_USD_MVR_RATE,
   } = params;
 
@@ -204,8 +212,6 @@ export function calculateMiraTgstReturn(params: CalculateTgstParams): MiraTgstRe
     }
   }
 
-  const netTgstPayableMvr = round2(totalTgstOutput - totalTgstInput);
-
   // 3. Calculate Green Tax ($6.00 USD / night for foreign tourists)
   let totalBedNights = 0;
   let totalGreenTaxUsd = 0;
@@ -234,6 +240,11 @@ export function calculateMiraTgstReturn(params: CalculateTgstParams): MiraTgstRe
   }
 
   const totalGreenTaxPayableMvr = round2(totalGreenTaxUsd * usdToMvrRate);
+  // A current generic flag cannot rewrite historical, tax-specific amounts.
+  const tgstSupplies = round2(totalTourismSupplies);
+  const tgstPurchases = round2(totalTourismPurchases);
+  const tgstOutput = round2(totalTgstOutput);
+  const tgstInput = round2(totalTgstInput);
 
   return {
     returnId: `MIRA-TGST-${taxPeriod}-${tin || 'TAX'}`,
@@ -247,11 +258,13 @@ export function calculateMiraTgstReturn(params: CalculateTgstParams): MiraTgstRe
     periodEndDate,
     filingDueDate,
     currency: 'MVR',
-    totalTourismTaxableSuppliesMvr: round2(totalTourismSupplies),
-    totalTgstOutputTaxMvr: round2(totalTgstOutput),
-    totalTourismPurchasesMvr: round2(totalTourismPurchases),
-    totalTgstInputTaxMvr: round2(totalTgstInput),
-    netTgstPayableMvr,
+    isGstRegistered,
+    filingReadiness: hold<never>('Historical tourism-tax registration and rule provenance are not connected. Internal calculation only; do not file.'),
+    totalTourismTaxableSuppliesMvr: tgstSupplies,
+    totalTgstOutputTaxMvr: tgstOutput,
+    totalTourismPurchasesMvr: tgstPurchases,
+    totalTgstInputTaxMvr: tgstInput,
+    netTgstPayableMvr: round2(tgstOutput - tgstInput),
     totalTouristBedNights: totalBedNights,
     totalGreenTaxPayableUsd: round2(totalGreenTaxUsd),
     totalGreenTaxPayableMvr,
