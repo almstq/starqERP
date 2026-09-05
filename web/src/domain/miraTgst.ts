@@ -1,4 +1,5 @@
 import { rateMatchesBand, taxOnExclusive, taxWithinInclusive } from './taxRates';
+import { resolveTimeOfSupply, SupplyDocument, SupplyEventType } from './timeOfSupply';
 
 export interface GreenTaxStayRecord {
   id: string;
@@ -42,7 +43,24 @@ export interface MiraTgstReturn {
   totalGreenTaxPayableMvr: number;
   greenTaxRecords: GreenTaxStayRecord[];
 
+  /** Invoice/expense ids that opted into time-of-supply resolution (SERP-342) but
+   * couldn't be resolved (e.g. an advance/deposit/instalment) - fell back to
+   * issueDate/createdAt for this return rather than being silently dropped.
+   * A HOLD signal, not a silent guess. */
+  unresolvedTimeOfSupplyInvoiceIds: string[];
+  unresolvedTimeOfSupplyExpenseIds: string[];
+
   generatedAt: string;
+}
+
+/** Opt-in fields for proper SERP-342 time-of-supply resolution. When
+ * supplyEventType is absent, behaviour is unchanged: issueDate/createdAt (or
+ * expense date) is used directly, exactly as before this was wired in. */
+interface TimeOfSupplyInputs {
+  supplyEventType?: SupplyEventType;
+  supplyEventDate?: string;
+  documents?: SupplyDocument[];
+  paymentDates?: string[];
 }
 
 export interface CalculateTgstParams {
@@ -57,7 +75,7 @@ export interface CalculateTgstParams {
     isTourismSector?: boolean;
     gstRate?: number;
     status?: string;
-  }>;
+  } & TimeOfSupplyInputs>;
   expenses: Array<{
     id: string;
     reference?: string;
@@ -67,7 +85,7 @@ export interface CalculateTgstParams {
     taxAmount?: number;
     isTourismSector?: boolean;
     status?: string;
-  }>;
+  } & TimeOfSupplyInputs>;
   greenTaxStays?: GreenTaxStayRecord[];
   periodYear: number;
   periodMonth: number;
@@ -78,6 +96,32 @@ export interface CalculateTgstParams {
 
 const DEFAULT_USD_MVR_RATE = 15.42;
 const OFFICIAL_GREEN_TAX_RATE_USD = 6.0;
+
+/**
+ * Resolves the effective time of supply for a record that opts in via
+ * supplyEventType (SERP-342 / timeOfSupply.ts), falling back to the legacy
+ * issueDate/createdAt/date when the record doesn't opt in, or when
+ * resolution genuinely can't be determined (e.g. an advance/deposit/
+ * instalment - timeOfSupply.ts throws rather than guessing that case). The
+ * caller records the fallback rather than treating it as a silent success.
+ */
+function resolveSupplyDate(
+  record: TimeOfSupplyInputs,
+  legacyDate: string,
+): { date: string; unresolved: boolean } {
+  if (!record.supplyEventType) return { date: legacyDate, unresolved: false };
+  try {
+    const decision = resolveTimeOfSupply({
+      supplyEventType: record.supplyEventType,
+      supplyEventDate: record.supplyEventDate,
+      documents: record.documents,
+      paymentDates: record.paymentDates,
+    });
+    return { date: decision.timeOfSupply, unresolved: false };
+  } catch {
+    return { date: legacyDate, unresolved: true };
+  }
+}
 
 /**
  * Calculates the official MIRA Tourism GST and Green Tax return schedule.
@@ -110,12 +154,20 @@ export function calculateMiraTgstReturn(params: CalculateTgstParams): MiraTgstRe
   //    SERP-342: the rate is resolved per invoice by time of supply, not applied
   //    as a single period constant. A June-2025 and a July-2025 supply in the same
   //    return compute at 16% and 17% respectively, from this one code path.
+  //    Time of supply itself is resolved via timeOfSupply.ts (deemed-3-day rule,
+  //    receipts/credit/debit notes as triggers, not just invoice date) for any
+  //    invoice that opts in with supplyEventType; others keep the prior
+  //    issueDate/createdAt behaviour unchanged.
   let totalTourismSupplies = 0;
   let totalTgstOutput = 0;
+  const unresolvedTimeOfSupplyInvoiceIds: string[] = [];
+  const unresolvedTimeOfSupplyExpenseIds: string[] = [];
 
   for (const inv of invoices) {
     if (inv.status === 'cancelled' || inv.status === 'draft') continue;
-    const invDate = inv.issueDate || inv.createdAt?.slice(0, 10) || '';
+    const legacyInvDate = inv.issueDate || inv.createdAt?.slice(0, 10) || '';
+    const { date: invDate, unresolved } = resolveSupplyDate(inv, legacyInvDate);
+    if (unresolved) unresolvedTimeOfSupplyInvoiceIds.push(inv.id);
     if (invDate < periodStartDate || invDate > periodEndDate) continue;
 
     if (inv.isTourismSector || rateMatchesBand('gst_tourism', invDate, inv.gstRate)) {
@@ -134,7 +186,9 @@ export function calculateMiraTgstReturn(params: CalculateTgstParams): MiraTgstRe
 
   for (const exp of expenses) {
     if (exp.status === 'cancelled') continue;
-    const expDate = exp.date || '';
+    const legacyExpDate = exp.date || '';
+    const { date: expDate, unresolved: expUnresolved } = resolveSupplyDate(exp, legacyExpDate);
+    if (expUnresolved) unresolvedTimeOfSupplyExpenseIds.push(exp.id);
     if (expDate < periodStartDate || expDate > periodEndDate) continue;
 
     if (exp.isTourismSector) {
@@ -202,6 +256,8 @@ export function calculateMiraTgstReturn(params: CalculateTgstParams): MiraTgstRe
     totalGreenTaxPayableUsd: round2(totalGreenTaxUsd),
     totalGreenTaxPayableMvr,
     greenTaxRecords: processedStays,
+    unresolvedTimeOfSupplyInvoiceIds,
+    unresolvedTimeOfSupplyExpenseIds,
     generatedAt: new Date().toISOString(),
   };
 }
