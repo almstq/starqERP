@@ -365,7 +365,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
   {
     id: 'coa-2122',
     code: '2122',
-    name: 'MIRA Tourism GST Payable (TGST)',
+    name: 'MIRA Tourism GST (TGST 16%)',
     accountClass: 'LIABILITY',
     subtype: 'TAX_PAYABLE',
     parentId: 'coa-2120',
@@ -373,7 +373,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
     currency: 'MVR',
     status: 'ACTIVE',
     balance: 0,
-    isSystem: false,
+    isSystem: true,
     description: 'Tourism sector GST applicable to resort and marine tourist contracts.',
   },
   {
@@ -520,7 +520,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
     currency: 'MVR',
     status: 'ACTIVE',
     balance: 0,
-    isSystem: true,
+    isSystem: false,
     description: 'Contributed equity capital by the founding partners/shareholders.',
   },
   {
@@ -566,7 +566,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
     currency: 'MVR',
     status: 'ACTIVE',
     balance: 0,
-    isSystem: true,
+    isSystem: false,
     description: 'Billed service labor and technician diagnostic fees.',
   },
   {
@@ -580,7 +580,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
     currency: 'MVR',
     status: 'ACTIVE',
     balance: 0,
-    isSystem: true,
+    isSystem: false,
     description: 'Revenue from sales of inventory, filters, oils, and replacement parts.',
   },
   {
@@ -594,7 +594,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
     currency: 'MVR',
     status: 'ACTIVE',
     balance: 0,
-    isSystem: true,
+    isSystem: false,
     description: 'Contra-revenue account for promotional and customer volume rebates.',
   },
   {
@@ -728,7 +728,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
     currency: 'MVR',
     status: 'ACTIVE',
     balance: 0,
-    isSystem: true,
+    isSystem: false,
     description: 'Monthly payroll, food allowances, and overtime compensation.',
   },
   {
@@ -784,7 +784,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
     currency: 'MVR',
     status: 'ACTIVE',
     balance: 0,
-    isSystem: true,
+    isSystem: false,
     description: 'Merchant acquiring discount rate and Favara transfer transaction fees.',
   },
   {
