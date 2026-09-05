@@ -46,12 +46,25 @@
  * demonstrably held garage operations (DEC-051). Do not restate ledger rules here.
  */
 
+import { Money } from './money.ts';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Primitives
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** RFC 4122 v4. Rejected at the boundary if malformed — never coerced. */
 export type Uuid = string;
+
+/**
+ * Currency used while computing a line's tax (SERP-347).
+ *
+ * `calculateLineTax` takes bare numbers and returns bare numbers; it never sees
+ * a currency. Money requires one, because refusing to add MVR to USD is the
+ * point of the type. Every value inside one call is the same currency by
+ * construction, so this placeholder cannot mask a real mismatch — the guard
+ * that matters lives at the document level, where currency is known.
+ */
+const TAX_CALC_CURRENCY = 'MVR' as const;
 
 /** RFC 3339 UTC. */
 export type Timestamp = string;
@@ -690,9 +703,22 @@ export interface TaxRegistrationRecord {
 export interface TaxCalculationResult {
   readonly isTaxable: boolean;
   readonly taxRate: number;
+  /**
+   * Convenience view of `baseAmountExact` as a JS number, for display and for
+   * callers not yet migrated. NOT authoritative — a double cannot hold every
+   * `numeric(20,6)` value. Persist and compare using the `*Exact` strings.
+   */
   readonly baseAmount: number;
   readonly taxAmount: number;
   readonly grossAmount: number;
+  /**
+   * The authoritative figures: exact decimal strings at scale 6, the form
+   * `numeric(20,6)` accepts. Bind these as SQL parameters. `baseAmountExact`
+   * plus `taxAmountExact` always equals `grossAmountExact` exactly.
+   */
+  readonly baseAmountExact: string;
+  readonly taxAmountExact: string;
+  readonly grossAmountExact: string;
   readonly errorMessage?: string | null;
 }
 
@@ -705,30 +731,52 @@ export function calculateLineTax(params: {
   readonly lineAmount: number;
 }): TaxCalculationResult {
   const { registration, schedules, taxType, supplyDate, taxMode, lineAmount } = params;
-  const roundedAmount = Math.round(lineAmount * 100) / 100;
+
+  // SERP-347. This calculation previously ran on IEEE-754 doubles:
+  //
+  //     const roundedAmount = Math.round(lineAmount * 100) / 100;
+  //     const tax = Math.round(base * rate * 100) / 100;
+  //
+  // which is measurably wrong for values not exactly representable in binary.
+  // Observed on that arithmetic: 1.005 -> 1.00 (correct 1.01) and
+  // 162.295 -> 162.29 (correct 162.30), because 1.005 * 100 evaluates to
+  // 100.49999999999999. These are statutory GST figures on live invoices.
+  //
+  // Every monetary step below now runs through Money, which is exact decimal
+  // at the same scale as the columns — `numeric(20, 6)`.
+  //
+  // On the input: `lineAmount` is typed `number`, so precision is already lost
+  // before this function is entered. `String(n)` yields the shortest decimal
+  // that round-trips to that double — String(1.005) === '1.005' — which
+  // recovers the caller's intent. Callers should migrate to passing an exact
+  // decimal string; until then this is the faithful reading of what they meant.
+  const amount = Money.fromDecimalString(String(lineAmount), TAX_CALC_CURRENCY, 'half_up');
+
+  const untaxed = (base: Money): TaxCalculationResult => ({
+    isTaxable: false,
+    taxRate: 0,
+    baseAmount: Number(base.toDisplayString(2)),
+    taxAmount: 0,
+    grossAmount: Number(base.toDisplayString(2)),
+    baseAmountExact: base.toDecimalString(),
+    taxAmountExact: Money.zero(TAX_CALC_CURRENCY).toDecimalString(),
+    grossAmountExact: base.toDecimalString(),
+    errorMessage: null,
+  });
+
+  // The statutory presentation scale is two places; the storage scale is six.
+  // Round once, here, so the figure that reaches the ledger is the figure that
+  // was quoted — rather than rounding again at each later step.
+  const presented = Money.fromDecimalString(amount.toDisplayString(2), TAX_CALC_CURRENCY);
 
   // 1. If not registered -> CANNOT charge tax
   if (!registration || registration.registrationStatus !== 'registered') {
-    return {
-      isTaxable: false,
-      taxRate: 0,
-      baseAmount: roundedAmount,
-      taxAmount: 0,
-      grossAmount: roundedAmount,
-      errorMessage: null,
-    };
+    return untaxed(presented);
   }
 
   // 2. Non-taxable modes
   if (taxMode === 'zero_rated' || taxMode === 'exempt') {
-    return {
-      isTaxable: false,
-      taxRate: 0,
-      baseAmount: roundedAmount,
-      taxAmount: 0,
-      grossAmount: roundedAmount,
-      errorMessage: null,
-    };
+    return untaxed(presented);
   }
 
   // 3. Resolve rate schedule by time of supply
@@ -740,29 +788,54 @@ export function calculateLineTax(params: {
   });
 
   if (!schedule) {
+    const zero = Money.zero(TAX_CALC_CURRENCY);
     return {
       isTaxable: false,
       taxRate: 0,
       baseAmount: 0,
       taxAmount: 0,
       grossAmount: 0,
+      baseAmountExact: zero.toDecimalString(),
+      taxAmountExact: zero.toDecimalString(),
+      grossAmountExact: zero.toDecimalString(),
       errorMessage: 'no_tax_rate_for_supply_date',
     };
   }
 
   const rate = schedule.rate;
+  // The rate is typed `number` on TaxRateScheduleRecord. Same treatment as the
+  // line amount: String() recovers the exact decimal that was meant (0.08),
+  // rather than multiplying by 0.08000000000000000166...
+  const rateDecimal = String(rate);
+
+  const taxed = (base: Money, tax: Money, gross: Money): TaxCalculationResult => ({
+    isTaxable: true,
+    taxRate: rate,
+    baseAmount: Number(base.toDisplayString(2)),
+    taxAmount: Number(tax.toDisplayString(2)),
+    grossAmount: Number(gross.toDisplayString(2)),
+    baseAmountExact: base.toDecimalString(),
+    taxAmountExact: tax.toDecimalString(),
+    grossAmountExact: gross.toDecimalString(),
+    errorMessage: null,
+  });
+
   if (taxMode === 'exclusive') {
-    const base = roundedAmount;
-    const tax = Math.round(base * rate * 100) / 100;
-    const gross = Math.round((base + tax) * 100) / 100;
-    return { isTaxable: true, taxRate: rate, baseAmount: base, taxAmount: tax, grossAmount: gross };
+    const base = presented;
+    const tax = base.multiply(rateDecimal, 'half_up');
+    // Derived by addition, so base + tax === gross holds exactly.
+    return taxed(base, tax, base.add(tax));
   }
 
-  // Inclusive
-  const gross = roundedAmount;
-  const base = Math.round((gross / (1 + rate)) * 100) / 100;
-  const tax = Math.round((gross - base) * 100) / 100;
-  return { isTaxable: true, taxRate: rate, baseAmount: base, taxAmount: tax, grossAmount: gross };
+  // Inclusive: the quoted figure IS the gross, and the base is recovered from
+  // it. The tax is then taken by SUBTRACTION rather than a second rounding, so
+  // that base + tax === gross exactly — the identity an auditor checks first.
+  const gross = presented;
+  const divisor = Money.fromDecimalString('1', TAX_CALC_CURRENCY)
+    .add(Money.fromDecimalString(rateDecimal, TAX_CALC_CURRENCY, 'half_up'))
+    .toDecimalString();
+  const base = gross.divide(divisor, 'half_up');
+  return taxed(base, gross.subtract(base), gross);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
