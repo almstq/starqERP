@@ -33,6 +33,48 @@ describe('Maldives GST time of supply', () => {
     expect(result.basis).toBe('PAYMENT');
   });
 
+  it('treats a plain payment date string as a full settlement, for backward compatibility', () => {
+    const result = resolveTimeOfSupply(request({ paymentDates: ['2026-02-20'] }));
+    expect(result.basis).toBe('PAYMENT');
+    expect(result.timeOfSupply).toBe('2026-02-20');
+  });
+
+  it('accepts an explicit full-settlement payment object the same way as a plain string', () => {
+    const result = resolveTimeOfSupply(
+      request({ paymentDates: [{ date: '2026-02-20', isFullSettlement: true }] }),
+    );
+    expect(result.timeOfSupply).toBe('2026-02-20');
+  });
+
+  it('refuses to date the whole supply off a partial payment (MIRA Reg 15(a))', () => {
+    // A partial payment triggers a supply only for the amount received, not
+    // the whole transaction - this function returns one date for the FULL
+    // supply, so it must not silently misdate it off an advance.
+    expect(() =>
+      resolveTimeOfSupply(
+        request({ paymentDates: [{ date: '2026-02-20', isFullSettlement: false }] }),
+      ),
+    ).toThrow(TimeOfSupplyUnresolved);
+    expect(() =>
+      resolveTimeOfSupply(
+        request({ paymentDates: [{ date: '2026-02-20', isFullSettlement: false }] }),
+      ),
+    ).toThrow(/partial payment/i);
+  });
+
+  it('does not throw on a partial payment that is not the earliest candidate anyway', () => {
+    // The full-settlement invoice is earlier, so the later partial payment
+    // never has to be selected - no ambiguity to refuse.
+    const result = resolveTimeOfSupply(
+      request({
+        documents: [{ type: 'TAX_INVOICE', issuedDate: '2026-03-02' }],
+        paymentDates: [{ date: '2026-03-03', isFullSettlement: false }],
+      }),
+    );
+    expect(result.timeOfSupply).toBe('2026-03-02');
+    expect(result.basis).toBe('DOCUMENT');
+  });
+
   it('treats a receipt to an unregistered recipient as a first-class time-of-supply document', () => {
     const result = resolveTimeOfSupply(
       request({ documents: [{ type: 'RECEIPT', issuedDate: '2026-03-01' }] }),
@@ -48,17 +90,25 @@ describe('Maldives GST time of supply', () => {
     expect(result.triggeringDocumentType).toBe('CREDIT_NOTE');
   });
 
-  it('reproduces the study\'s worked example: delivery on the 29th, invoice raised on the 4th of the next month falls in the earlier period', () => {
+  it('reproduces the study\'s worked example: a late invoice raised the next month must not move the deemed supply into that later taxable period', () => {
+    // Delivery on 28 Jan; the 3-day deemed window closes on 31 Jan - still
+    // January. The invoice, raised late on 4 Feb, falls in February. Using
+    // the invoice date instead of the deemed date would misstate the return
+    // by one whole taxable period (January vs February), which is exactly
+    // the defect the study's worked example warns against. (An earlier draft
+    // of this test used 29 Jan, where 29+3=1 Feb - already in the SAME month
+    // as the invoice, so it failed to actually demonstrate a period
+    // difference. Caught in independent review - see PR #83.)
     const result = resolveTimeOfSupply(
       request({
-        supplyEventDate: '2026-01-29',
+        supplyEventDate: '2026-01-28',
         documents: [{ type: 'TAX_INVOICE', issuedDate: '2026-02-04' }],
       }),
     );
     expect(result.basis).toBe('DEEMED_THIRD_DAY');
-    expect(result.timeOfSupply).toBe('2026-02-01'); // 29th + 3 days = 1st of Feb
-    // Critically, the actual (late) invoice date must NOT be used - it falls in the wrong period.
-    expect(result.timeOfSupply).not.toBe('2026-02-04');
+    expect(result.timeOfSupply).toBe('2026-01-31'); // 28th + 3 days = 31st, still January
+    expect(result.timeOfSupply.slice(0, 7)).toBe('2026-01'); // January - the EARLIER period
+    expect(result.timeOfSupply).not.toBe('2026-02-04'); // not February, where the late invoice falls
   });
 
   it('deems the third day for a service completed with no document issued within the window', () => {

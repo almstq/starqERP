@@ -149,18 +149,20 @@ describe('SERP-342: time-of-supply resolution wired into the TGST return', () =>
     expect(result.unresolvedTimeOfSupplyInvoiceIds).toEqual([]);
   });
 
-  it('reports an invoice in the earlier period when the deemed 3-day rule applies, not the late invoice date', () => {
-    // Goods delivered 2026-06-29, invoice only raised 2026-07-04 -> deemed
-    // supply on 2026-07-02, which is still June's period... no: 29+3 = July 2.
-    // Use a delivery near month-end so the deemed date crosses the boundary
-    // the way the study's own example does.
+  it('excludes an invoice from a return in the LATE invoice month when the deemed date actually falls in the prior month', () => {
+    // Goods delivered 2026-06-27; the 3-day deemed window closes 2026-06-30 -
+    // still June. The invoice is only raised 2026-07-04 - July. A June-only
+    // return must exclude this invoice under the deemed date (June 30 IS in
+    // June, so it should actually be picked up by June, not excluded - see
+    // the next test). This test instead proves the July return does NOT
+    // double-count it: the deemed date already placed it in June.
     const result = calculateMiraTgstReturn({
       invoices: [
         {
           id: 'inv-deemed',
           issueDate: '2026-07-04', // legacy field still present but must NOT be used once supplyEventType opts in
           supplyEventType: 'GOODS_DELIVERY',
-          supplyEventDate: '2026-06-29',
+          supplyEventDate: '2026-06-27',
           documents: [{ type: 'TAX_INVOICE', issuedDate: '2026-07-04' }],
           subtotal: 100000,
           taxAmount: 16000,
@@ -171,26 +173,26 @@ describe('SERP-342: time-of-supply resolution wired into the TGST return', () =>
       ],
       expenses: [],
       periodYear: 2026,
-      periodMonth: 6, // June - the deemed-supply period, NOT July where the invoice date falls
+      periodMonth: 7, // July, where the late invoice was actually raised
       tin: 'T1',
       legalEntityName: 'Deemed Co',
     });
-    // Deemed date is 2026-07-02, which is outside June - so a June-only return
-    // should NOT pick this invoice up under the deemed rule either. Assert the
-    // return correctly excludes it from June (proves invDate really changed
-    // from the legacy July-04 to the deemed July-02, both outside June).
+    // The deemed date (2026-06-30) is in June, not July - so the July return,
+    // built from the LEGACY invoice date, would have wrongly included it (and
+    // double-counted it alongside the June return below). Using time of
+    // supply correctly excludes it from July.
     expect(result.totalTgstOutputTaxMvr).toBe(0);
     expect(result.unresolvedTimeOfSupplyInvoiceIds).toEqual([]);
   });
 
-  it('includes the invoice in the deemed period once the return period matches the deemed date', () => {
+  it('includes the invoice in June - the EARLIER period - via the deemed date, not the late July invoice date', () => {
     const result = calculateMiraTgstReturn({
       invoices: [
         {
           id: 'inv-deemed-2',
           issueDate: '2026-07-04',
           supplyEventType: 'GOODS_DELIVERY',
-          supplyEventDate: '2026-06-29',
+          supplyEventDate: '2026-06-27',
           documents: [{ type: 'TAX_INVOICE', issuedDate: '2026-07-04' }],
           subtotal: 100000,
           taxAmount: 16000,
@@ -201,7 +203,7 @@ describe('SERP-342: time-of-supply resolution wired into the TGST return', () =>
       ],
       expenses: [],
       periodYear: 2026,
-      periodMonth: 7, // deemed date 2026-07-02 falls in July
+      periodMonth: 6, // deemed date 2026-06-30 falls in June, the delivery's own month
       tin: 'T1',
       legalEntityName: 'Deemed Co',
     });
