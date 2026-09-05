@@ -53,6 +53,31 @@ import {
   deriveOperationalJournals,
 } from '../../domain/journals';
 
+type AccountSection = 'chart_of_accounts' | 'general_ledger' | 'periods' | 'bank_reconciliation' | 'multi_currency';
+
+export const ACCOUNTS_TAB_HEADERS: Record<AccountSection, { title: string; subtitle: string }> = {
+  chart_of_accounts: {
+    title: 'Chart of Accounts',
+    subtitle: 'Authoritative account hierarchy for Maldivian commerce and IFRS reporting',
+  },
+  general_ledger: {
+    title: 'General Ledger',
+    subtitle: 'Double-entry journal postings, account balances, and transaction drilldowns',
+  },
+  periods: {
+    title: 'Period Management',
+    subtitle: 'Fiscal period lock, close, and year-end closing journal workflows',
+  },
+  bank_reconciliation: {
+    title: 'Bank Reconciliation',
+    subtitle: 'Match bank statement lines to ledger entries and post adjustment journals',
+  },
+  multi_currency: {
+    title: 'Multi-Currency',
+    subtitle: 'Foreign exchange rate management, revaluation, and realised gain/loss tracking',
+  },
+};
+
 export const AccountsView: React.FC = () => {
   const { invoices, payments, expenses, purchaseOrders, currentTenant, formatMVR } = useERP();
   // Derived from the tenant's real registration status. ERPContext exposes no
@@ -60,7 +85,6 @@ export const AccountsView: React.FC = () => {
   // silently behaved as 'not registered'.
   const isGstRegistered = currentTenant?.gstStatus === 'registered';
 
-  type AccountSection = 'chart_of_accounts' | 'general_ledger' | 'periods' | 'bank_reconciliation' | 'multi_currency';
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSection = searchParams.get('tab') as AccountSection | null;
   const activeTab: AccountSection = ['chart_of_accounts', 'general_ledger', 'periods', 'bank_reconciliation', 'multi_currency'].includes(requestedSection || '')
@@ -333,10 +357,10 @@ export const AccountsView: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-[var(--md-sys-color-on-surface)] flex items-center gap-2.5">
             <Building2 className="w-7 h-7 text-[var(--md-sys-color-primary)]" />
-            General Ledger & Chart of Accounts
+            {ACCOUNTS_TAB_HEADERS[activeTab].title}
           </h1>
           <p className="text-sm text-[var(--md-sys-color-on-surface-variant)] mt-1">
-            Authoritative double-entry general ledger and account hierarchy for Maldivian commerce and IFRS reporting.
+            {ACCOUNTS_TAB_HEADERS[activeTab].subtitle}
           </p>
         </div>
 
@@ -740,6 +764,12 @@ export const AccountsView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Mobile bottom-nav clearance — the fixed h-16 bottom bar can clip the
+          last table rows when the main scroll region's pb-24 doesn't fully
+          propagate through nested flex containers. This spacer is invisible on
+          desktop (lg:hidden) and provides guaranteed clearance on mobile. */}
+      <div className="h-20 lg:hidden" aria-hidden="true" />
 
       {/* Modals */}
       <NewAccountModal

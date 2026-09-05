@@ -71,6 +71,7 @@ export const DashboardView: React.FC = () => {
     // why its "Operating Surplus" line could only ever have been fabricated.
     expenses,
     payments,
+    suppliers,
     formatMVR,
     setIsCreateJobOpen,
     setIsCreateInvoiceOpen,
@@ -87,6 +88,7 @@ export const DashboardView: React.FC = () => {
   // they are flat.
   const monthlyPerformance = buildMonthlyPerformance(invoices, expenses);
   const serviceMix = buildServiceMix(jobs);
+  const payableSuppliersCount = suppliers.filter((s) => s.outstandingPayable > 0).length;
 
   const activeJobs = jobs.filter((j) => !['Completed', 'Paid'].includes(j.status));
 
@@ -361,7 +363,9 @@ export const DashboardView: React.FC = () => {
             {formatMVR(totalAccountsPayable, false)}
           </div>
           <span className="text-[10px] sm:text-[11px] text-[var(--md-sys-color-on-surface-variant)] block truncate h-3.5 leading-none">
-            Vendor dues (4 suppliers)
+            {payableSuppliersCount > 0
+              ? `Vendor dues (${payableSuppliersCount} ${payableSuppliersCount === 1 ? 'supplier' : 'suppliers'})`
+              : 'No outstanding dues'}
           </span>
         </Surface>
 

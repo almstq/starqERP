@@ -378,7 +378,7 @@ export const CreateJobModal: React.FC = () => {
         </div>
 
         {/* Bay & Priority & Dates */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 relative z-0">
           <div>
             <label className="block text-[11px] font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
               {isAutomotive ? 'Assigned Garage Bay' : `Assigned ${currentTerms.facility}`}
@@ -386,7 +386,7 @@ export const CreateJobModal: React.FC = () => {
             <select
               value={bayNumber}
               onChange={(e) => setBayNumber(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500 scroll-mt-4"
             >
               {isAutomotive ? (
                 <>
