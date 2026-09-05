@@ -3,6 +3,7 @@ import { useERP } from '../../context/ERPContext';
 import { Modal } from '../common/Modal';
 import { InvoiceLineItem } from '../../types/erp';
 import { Plus, Trash2, Receipt } from 'lucide-react';
+import { resolveTaxRate, taxOnExclusive } from '../../domain/taxRates';
 
 export const CreateInvoiceModal: React.FC = () => {
   const {
@@ -79,10 +80,16 @@ export const CreateInvoiceModal: React.FC = () => {
     setItems(updated);
   };
 
+  // Bug fix 5 Sep 2026 (docs/qa/BUG_LOG_2026-09-05_FOUNDER_LIVE_TESTING.md #1):
+  // gstRate/gstAmount were hardcoded to 0, so this modal's own "Maldives GST
+  // (8%)" label was never actually applied - every invoice created here was
+  // understated by the full GST amount. Resolved by date via taxRates.ts,
+  // never a hardcoded constant, same convention as miraTgst.ts.
+  const invoiceDate = new Date().toISOString().split('T')[0];
   const subtotal = items.reduce((sum, i) => sum + i.amount, 0);
-  const gstRate = 0;
-  const gstAmount = 0;
-  const totalAmount = subtotal;
+  const gstRate = resolveTaxRate('gst_general', invoiceDate);
+  const gstAmount = taxOnExclusive('gst_general', invoiceDate, subtotal);
+  const totalAmount = subtotal + gstAmount;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +105,7 @@ export const CreateInvoiceModal: React.FC = () => {
       customerIsland: cust.island,
       linkedJobId: job?.id,
       linkedJobNumber: job?.jobId,
-      date: new Date().toISOString().split('T')[0],
+      date: invoiceDate,
       dueDate,
       items: items.map((it, idx) => ({ ...it, id: it.id || `inv-item-${Date.now()}-${idx}` })),
       subtotal,
@@ -283,7 +290,7 @@ export const CreateInvoiceModal: React.FC = () => {
             <span className="font-mono text-[var(--md-sys-color-on-surface)] font-semibold">{formatMVR(subtotal)}</span>
           </div>
           <div className="flex justify-between text-[var(--md-sys-color-on-surface-variant)]">
-            <span>Maldives GST (8%):</span>
+            <span>Maldives GST ({Math.round(gstRate * 100)}%):</span>
             <span className="font-mono text-[var(--md-sys-color-on-surface)] font-semibold">{formatMVR(gstAmount)}</span>
           </div>
           <div className="flex justify-between text-base font-extrabold text-[var(--md-sys-color-on-surface)] border-t border-[var(--md-sys-color-outline-variant)] pt-2">
