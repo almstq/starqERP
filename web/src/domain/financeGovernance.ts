@@ -26,7 +26,15 @@ export function hold<T>(reason: string, provenance: RuleProvenance[] = []): Fina
 }
 
 export function validateProvenance(provenance: RuleProvenance): void {
-  if (!/^https?:\/\//.test(provenance.sourceUrl)) throw new Error('sourceUrl must be an absolute HTTP(S) URL');
+  let sourceUrl: URL;
+  try {
+    sourceUrl = new URL(provenance.sourceUrl);
+  } catch {
+    throw new Error('sourceUrl must be an absolute HTTP(S) URL');
+  }
+  if (sourceUrl.protocol !== 'http:' && sourceUrl.protocol !== 'https:') {
+    throw new Error('sourceUrl must be an absolute HTTP(S) URL');
+  }
   if (!provenance.sourceReference.trim()) throw new Error('sourceReference is required');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(provenance.snapshotDate)) throw new Error('snapshotDate must be YYYY-MM-DD');
   if (!provenance.ruleVersion.trim()) throw new Error('ruleVersion is required');
