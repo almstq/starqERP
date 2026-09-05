@@ -1,7 +1,7 @@
 # SERP-339 — External Finance Review Pack
 
 **Prepared:** 4 September 2026, by Elder, at the founder's instruction, for independent parallel
-review by Claude and Gemini.
+review by two external frontier reviewer systems (L3 advisory, per V3 SOP §A.4).
 **Ask:** FINANCE REVIEW — ACCEPT or HOLD. Not a code review — a review of whether the accounting
 logic described below is something an accountant would sign off on.
 **Scope:** the Chart of Accounts remediation chain (SERP-340–346) that sits under the SERP-339
