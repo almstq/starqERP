@@ -74,6 +74,7 @@ const INTENTIONALLY_UNMOUNTED = {
   'domain/inputGst.ts': 'HOLD under SERP-339 / DEC-117: Maldives Input GST recoverability classification beta module.',
   'domain/nwt.ts': 'HOLD under SERP-339 / DEC-117: Maldives Non-resident Withholding Tax beta calculation module.',
   'domain/greenTax.ts': 'HOLD under SERP-339 / DEC-117: Maldives Green Tax beta calculation module.',
+  'domain/timeOfSupply.ts': 'HOLD under SERP-339 / DEC-117: Maldives GST time-of-supply resolution beta module.',
 };
 
 function listSourceFiles(dir) {
