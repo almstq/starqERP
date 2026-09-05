@@ -9,7 +9,6 @@ Required function secrets:
 - `STARQBOOKS_SESSION_SECRET`
 - `STARQBOOKS_GOOGLE_CLIENT_ID`
 - optional `STARQBOOKS_GOOGLE_ANDROID_CLIENT_ID`
-- `STARQBOOKS_ALLOWLIST_JSON`
 - `STARQBOOKS_ALLOWED_ORIGINS` before browser deployment
 
 Deploy with JWT verification disabled because the foundation engine verifies Google ID

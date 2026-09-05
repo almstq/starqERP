@@ -12,7 +12,6 @@ import {
   audienceIsValid,
   authorizeCommand,
   fromLegacyBody,
-  seatWriteIsSafe,
   SEATS,
   type AudiencePolicy,
   type Principal,
@@ -64,12 +63,12 @@ const SESSION_SECONDS = 8 * 60 * 60;
  * ─────────────────────────────────────────────────────────────────────────────
  * THIS SET IS AN INTERSECTION FILTER, NOT A GRANT. It is easy to read it the other way.
  * ─────────────────────────────────────────────────────────────────────────────
- * establishPerson computes:
+ * establishPerson and refreshSessionAuthority compute:
  *
- *     entry.seats.filter((seat) => ALLOWED_SEATS.has(seat))
+ *     memberSeats.map((r) => r.seat_code).filter((seat) => ALLOWED_SEATS.has(seat))
  *
- * so a seat has to be in the person's allowlist entry AND in this set. Widening the set
- * gives nobody a seat they were not already granted in the allowlist — it stops seats they
+ * so a seat has to be in the person's public.membership_seats AND in this set. Widening the set
+ * gives nobody a seat they were not already granted in the database — it stops seats they
  * WERE granted from being silently discarded at sign-in.
  *
  * What the eight-seat version was actually doing, which is worse than "vocabulary drift":
@@ -177,15 +176,6 @@ type OperableOrganisation = {
     is_default: boolean;
     archetype_id: string;
   }[];
-};
-type AllowPerson = {
-  person_id?: string;
-  name?: string;
-  email?: string;
-  default_seat?: string;
-  seats?: string[];
-  entities?: string[];
-  status?: string;
 };
 
 function base64Url(bytes: Uint8Array): string {
@@ -401,12 +391,6 @@ async function refreshSessionAuthority(session: Session, diag?: { reason?: strin
         seats = [...new Set(memberSeats.map((r) => r.seat_code).filter((s) => ALLOWED_SEATS.has(s)))];
       }
     }
-    if (seats.length === 0) {
-      const entry = allowlist().find((person) =>
-        person.status !== "disabled" && person.email?.trim().toLowerCase() === session.email?.trim().toLowerCase()
-      );
-      seats = entry ? [...new Set((entry.seats ?? []).filter((seat) => ALLOWED_SEATS.has(seat)))] : [];
-    }
     const preferred = seats[0] ?? "";
 
     return {
@@ -579,12 +563,6 @@ async function readJson(req: Request): Promise<Json> {
   return value as Json;
 }
 
-function allowlist(): AllowPerson[] {
-  const raw = Deno.env.get("STARQBOOKS_ALLOWLIST_JSON") ?? "";
-  const parsed = JSON.parse(raw) as { people?: AllowPerson[] };
-  return Array.isArray(parsed.people) ? parsed.people : [];
-}
-
 /**
  * AUDIT CRITICAL #5 — platform audience isolation.
  *
@@ -661,57 +639,57 @@ interface Session {
 
 async function establishPerson(claims: { sub: string; email: string; name: string }): Promise<Session> {
   const normalizedEmail = claims.email.trim().toLowerCase();
-  const entry = allowlist().find((person) =>
-    person.status !== "disabled" && person.email?.trim().toLowerCase() === normalizedEmail
-  );
-
-  let personKey = entry?.person_id;
-  let displayLabel = entry?.name ?? claims.name;
-  let seats = entry ? [...new Set((entry.seats ?? []).filter((seat) => ALLOWED_SEATS.has(seat)))] : [];
 
   // 1. Identity lookup or creation in public.persons
   let personUuid: string;
+  let personKey: string;
+  let displayLabel: string;
+
   const existingBySub = await db.from("persons").select("id, person_key, display_label, status, verified_email")
     .eq("external_subject", claims.sub).maybeSingle();
 
   if (existingBySub.data) {
     personUuid = existingBySub.data.id as string;
-    personKey = personKey ?? existingBySub.data.person_key;
-    displayLabel = existingBySub.data.display_label ?? displayLabel;
+    personKey = existingBySub.data.person_key;
+    displayLabel = existingBySub.data.display_label ?? claims.name;
     if (existingBySub.data.verified_email !== normalizedEmail) {
       const identityUpdate = await db.from("persons").update({ verified_email: normalizedEmail })
         .eq("id", personUuid)
         .eq("external_subject", claims.sub);
       if (identityUpdate.error) throw new Error("identity_email_binding_failed");
     }
-  } else if (personKey) {
-    const existingByKey = await db.from("persons").select("id, external_subject, status")
-      .eq("person_key", personKey).maybeSingle();
-    if (existingByKey.data?.external_subject && existingByKey.data.external_subject !== claims.sub) {
-      throw new Error("identity_binding_conflict");
-    }
-    const personWrite = await db.from("persons").upsert({
-      person_key: personKey,
-      external_subject: claims.sub,
-      verified_email: normalizedEmail,
-      display_label: displayLabel,
-      status: "active",
-    }, { onConflict: "person_key" }).select("id").single();
-    if (personWrite.error) throw new Error("identity_write_failed");
-    personUuid = personWrite.data.id as string;
   } else {
-    // New person signing in with verified Google account
-    const newKey = `user-${normalizedEmail.split("@")[0].replace(/[^a-z0-9_-]/gi, "").toLowerCase() || crypto.randomUUID().slice(0, 8)}`;
-    const personWrite = await db.from("persons").insert({
-      person_key: newKey,
-      external_subject: claims.sub,
-      verified_email: normalizedEmail,
-      display_label: claims.name,
-      status: "active",
-    }).select("id, person_key").single();
-    if (personWrite.error) throw new Error("identity_write_failed");
-    personUuid = personWrite.data.id as string;
-    personKey = personWrite.data.person_key as string;
+    // Lookup by verified email for pre-seeded pilot staff or invited users
+    const existingByEmail = await db.from("persons").select("id, person_key, display_label, status, external_subject")
+      .eq("verified_email", normalizedEmail).maybeSingle();
+
+    if (existingByEmail.data) {
+      if (existingByEmail.data.external_subject && existingByEmail.data.external_subject !== claims.sub) {
+        throw new Error("identity_binding_conflict");
+      }
+      const identityUpdate = await db.from("persons").update({
+        external_subject: claims.sub,
+        status: "active",
+      }).eq("id", existingByEmail.data.id);
+      if (identityUpdate.error) throw new Error("identity_write_failed");
+      personUuid = existingByEmail.data.id as string;
+      personKey = existingByEmail.data.person_key;
+      displayLabel = existingByEmail.data.display_label ?? claims.name;
+    } else {
+      // New person signing in with verified Google account
+      const newKey = `user-${normalizedEmail.split("@")[0].replace(/[^a-z0-9_-]/gi, "").toLowerCase() || crypto.randomUUID().slice(0, 8)}`;
+      const personWrite = await db.from("persons").insert({
+        person_key: newKey,
+        external_subject: claims.sub,
+        verified_email: normalizedEmail,
+        display_label: claims.name,
+        status: "active",
+      }).select("id, person_key").single();
+      if (personWrite.error) throw new Error("identity_write_failed");
+      personUuid = personWrite.data.id as string;
+      personKey = personWrite.data.person_key as string;
+      displayLabel = claims.name;
+    }
   }
 
   // 2. Platform operator entitlement resolution (platform.operator_principals)
@@ -758,53 +736,17 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
     console.error("staff invitation auto-accept failed during login:", err instanceof Error ? err.message : err);
   }
 
-  // 3. Resolve organizations and memberships
-  const declaredEntities = entry?.entities ?? [];
-  let orgId: string | null = null;
-
-  if (declaredEntities.length > 0) {
-    const targetEntity = declaredEntities[0];
-    const orgLookup = await db.from("organisations").select("id")
-      .or(`slug.eq.${targetEntity},legal_name.ilike.%${targetEntity}%`)
-      .eq("status", "active")
-      .limit(1)
-      .maybeSingle();
-    if (orgLookup.data?.id) orgId = orgLookup.data.id as string;
-  }
-
-  // Find existing memberships
+  // 3. Resolve organizations and memberships dynamically from database
   const membershipsRes = await db.from("memberships").select("id, organisation_id, role_id, organisations(id, slug, legal_name, status)")
     .eq("person_id", personUuid)
     .eq("status", "active");
 
   const memberRows = [...(membershipsRes.data ?? [])];
+  const orgId: string | null = memberRows[0]?.organisation_id as string ?? null;
 
-  if (!orgId && memberRows.length > 0) {
-    orgId = memberRows[0].organisation_id as string;
-  }
-
-  if (orgId && seats.length > 0) {
-    const membershipWrite = await db.from("memberships").upsert({
-      organisation_id: orgId,
-      person_id: personUuid,
-      status: "active",
-    }, { onConflict: "organisation_id,person_id" }).select("id").single();
-    if (!membershipWrite.error && membershipWrite.data?.id) {
-      const membershipId = membershipWrite.data.id as string;
-      if (!memberRows.some((membership) => membership.id === membershipId)) {
-        memberRows.push({ id: membershipId, organisation_id: orgId, role_id: null, organisations: [] });
-      }
-      const seatRows = seats.map((seat) => ({ membership_id: membershipId, seat_code: seat }));
-      for (const row of seatRows) {
-        const safe = seatWriteIsSafe(row);
-        if (!safe.ok) throw new Error("seat_write_would_alter_revocation");
-      }
-      await db.from("membership_seats").upsert(seatRows, {
-        onConflict: "membership_id,seat_code",
-        ignoreDuplicates: true,
-      });
-    }
-  } else if (orgId && seats.length === 0) {
+  // Resolve seats dynamically from membership_seats
+  let seats: string[] = [];
+  if (orgId) {
     const activeMember = memberRows.find((m) => m.organisation_id === orgId);
     if (activeMember?.id) {
       const { data: memberSeats } = await db.from("membership_seats")
@@ -892,7 +834,7 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
     console.error("platform.tenant_applications lookup failed during login:", err instanceof Error ? err.message : err);
   }
 
-  const preferred = entry?.default_seat && seats.includes(entry.default_seat) ? entry.default_seat : (seats[0] ?? "");
+  const preferred = seats[0] ?? "";
 
   return {
     person_uuid: personUuid,
