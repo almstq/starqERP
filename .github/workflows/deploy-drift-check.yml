@@ -1,0 +1,65 @@
+name: Deploy Drift Check
+
+# Prepared 2026-09-04 per the founder's own instruction: this class of automation
+# needs explicit sign-off before it runs for real, so it stays INERT until
+# SUPABASE_ACCESS_TOKEN is deliberately added as a repo secret (Settings ->
+# Secrets and variables -> Actions). Merging this workflow changes nothing on
+# its own -- the job below no-ops with a clear message when the secret is absent.
+#
+# Runs post-merge on main only (never on PR branches, which may be untrusted)
+# and on manual dispatch. It is read-only and reports; it never deploys or
+# migrates anything itself -- see scripts/check-deploy-drift.mjs.
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  drift-check:
+    name: Production vs git drift
+    runs-on: ubuntu-latest
+    steps:
+      # Read first, before anything else -- secrets are available without a
+      # checkout, so an unactivated run costs one step instead of spending
+      # checkout + Node setup time on every push to main for nothing.
+      - name: Check for required secret
+        id: gate
+        run: |
+          if [ -z "${{ secrets.SUPABASE_ACCESS_TOKEN }}" ]; then
+            echo "armed=false" >> "$GITHUB_OUTPUT"
+            echo "SUPABASE_ACCESS_TOKEN is not set -- this workflow is prepared but not yet activated."
+            echo "To activate: add SUPABASE_ACCESS_TOKEN as a repo secret (a Supabase personal access token with read access), then re-run this workflow."
+          else
+            echo "armed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout repository
+        if: steps.gate.outputs.armed == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: steps.gate.outputs.armed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Supabase CLI
+        if: steps.gate.outputs.armed == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          # Pinned, not "latest" -- an unpinned CLI can change behavior under
+          # this workflow with no corresponding code change to review.
+          version: 2.105.0
+
+      - name: Link Supabase project
+        if: steps.gate.outputs.armed == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase link --project-ref wthabguvueewgtabjsdo
+
+      - name: Run drift check
+        if: steps.gate.outputs.armed == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: node scripts/check-deploy-drift.mjs
