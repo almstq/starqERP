@@ -2,6 +2,25 @@ import { JournalEntry } from './journals';
 
 export type CitizenshipType = 'MALDIVIAN' | 'EXPATRIATE';
 
+/**
+ * STANDARD_7_7: the ordinary MRPS split (7% employee deduction + 7% employer contribution).
+ * EMPLOYER_FUNDS_FULL_14: employer absorbs the full 14% and the employee takes no deduction -
+ * a documented, common practice in tourism (SERP-339 Validation Study).
+ */
+export type PensionFundingSplit = 'STANDARD_7_7' | 'EMPLOYER_FUNDS_FULL_14';
+
+// Maldives Pension Act eligibility window: enrolment/contribution applies only
+// between these ages (inclusive) at the pay date.
+export const MRPS_MIN_ELIGIBLE_AGE = 16;
+export const MRPS_MAX_ELIGIBLE_AGE = 65;
+
+export class PayrollValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PayrollValidationError';
+  }
+}
+
 export interface EmployeeProfile {
   id: string;
   employeeCode: string;
@@ -11,6 +30,9 @@ export interface EmployeeProfile {
   designation: string;
   department: string;
   joinDate: string;
+  /** ISO YYYY-MM-DD. Optional for backward compatibility: when absent, MRPS
+   * age eligibility is not gated (existing behaviour is preserved). */
+  dateOfBirth?: string;
   basicSalaryMvr: number;
   foodAllowanceMvr: number;
   housingAllowanceMvr: number;
@@ -18,6 +40,8 @@ export interface EmployeeProfile {
   bankName: string;
   bankAccountNumber: string;
   pensionEnrolled: boolean; // Mandatory for Maldivians (7% employee + 7% employer)
+  /** Defaults to STANDARD_7_7 when omitted. */
+  pensionFundingSplit?: PensionFundingSplit;
   ramadanAllowanceEligible: boolean; // MVR 3,000 statutory for Maldivian Muslim employees
   status: 'ACTIVE' | 'ON_LEAVE' | 'TERMINATED';
 }
@@ -74,6 +98,36 @@ export interface PayrollRun {
   generatedAt: string;
 }
 
+function parseIsoDate(value: string, field: string): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new PayrollValidationError(`${field} must be an ISO date (YYYY-MM-DD).`);
+  }
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(date.valueOf()) || date.toISOString().slice(0, 10) !== value) {
+    throw new PayrollValidationError(`${field} is not a valid calendar date.`);
+  }
+  return date;
+}
+
+function calculateAgeAt(dateOfBirthIso: string, asOfIso: string): number {
+  const dob = parseIsoDate(dateOfBirthIso, 'dateOfBirth');
+  const asOf = parseIsoDate(asOfIso, 'payDate');
+  if (dob > asOf) throw new PayrollValidationError('dateOfBirth cannot be after the pay date.');
+  let age = asOf.getUTCFullYear() - dob.getUTCFullYear();
+  const hadBirthdayThisYear =
+    asOf.getUTCMonth() > dob.getUTCMonth() ||
+    (asOf.getUTCMonth() === dob.getUTCMonth() && asOf.getUTCDate() >= dob.getUTCDate());
+  if (!hadBirthdayThisYear) age--;
+  return age;
+}
+
+/** DOB is optional; absent DOB preserves prior behaviour rather than excluding the employee. */
+function isPensionAgeEligible(emp: EmployeeProfile, payDate: string): boolean {
+  if (!emp.dateOfBirth) return true;
+  const age = calculateAgeAt(emp.dateOfBirth, payDate);
+  return age >= MRPS_MIN_ELIGIBLE_AGE && age <= MRPS_MAX_ELIGIBLE_AGE;
+}
+
 /**
  * Calculates a complete Monthly Payroll Run for all active employees
  * strictly adhering to the Maldives Employment Act & Pension Act.
@@ -123,12 +177,18 @@ export function calculatePayrollRun(params: {
 
     const gross = round2(basic + food + housing + other + ramadan);
 
-    // Maldives Pension Scheme (MRPS): 7% of Basic Salary (Maldivian citizens)
+    // Maldives Pension Scheme (MRPS): 14% of Basic Salary for eligible, enrolled
+    // Maldivian citizens aged 16-65 at the pay date, split per the employee's
+    // funding arrangement (default 7% employee + 7% employer).
     let empPension = 0;
     let emprPension = 0;
-    if (emp.citizenship === 'MALDIVIAN' && emp.pensionEnrolled) {
-      empPension = round2(basic * 0.07);
-      emprPension = round2(basic * 0.07);
+    if (emp.citizenship === 'MALDIVIAN' && emp.pensionEnrolled && isPensionAgeEligible(emp, payDate)) {
+      if (emp.pensionFundingSplit === 'EMPLOYER_FUNDS_FULL_14') {
+        emprPension = round2(basic * 0.14);
+      } else {
+        empPension = round2(basic * 0.07);
+        emprPension = round2(basic * 0.07);
+      }
     }
 
     const deductions = empPension;
