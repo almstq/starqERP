@@ -70,6 +70,7 @@ const INTENTIONALLY_UNMOUNTED = {
   'domain/payroll.ts': 'HOLD under DEC-103 / SERP-393: Pension & salary calculations for held PayrollManagementView.',
   'domain/threeWayMatch.ts': 'HOLD under DEC-103 / SERP-393: 3-way matching logic pending AP workflow UI.',
   'domain/warehouse.ts': 'HOLD under DEC-103 / SERP-393: Warehouse transfer domain logic for held MultiWarehouseView.',
+  'domain/ewt.ts': 'HOLD under SERP-339 / DEC-117: Maldives Employee Withholding Tax (EWT) beta finance calculation module.',
   'domain/inputGst.ts': 'HOLD under SERP-339 / DEC-117: Maldives Input GST recoverability classification beta module.',
 };
 
