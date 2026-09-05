@@ -75,6 +75,7 @@ const INTENTIONALLY_UNMOUNTED = {
   'domain/nwt.ts': 'HOLD under SERP-339 / DEC-117: Maldives Non-resident Withholding Tax beta calculation module.',
   'domain/greenTax.ts': 'HOLD under SERP-339 / DEC-117: Maldives Green Tax beta calculation module.',
   'domain/timeOfSupply.ts': 'HOLD under SERP-339 / DEC-117: Maldives GST time-of-supply resolution beta module.',
+  'domain/maldivesOperationalDefaults.ts': 'HOLD under SERP-326: Maldives operational geographic directory, MED business registration validator & prayer-pause operating schedule module.',
 };
 
 function listSourceFiles(dir) {
