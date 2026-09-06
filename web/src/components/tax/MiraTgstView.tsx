@@ -199,7 +199,7 @@ export const MiraTgstView: React.FC<{
               variant="filled"
               size="sm"
               disabled={tgstReturn.filingReadiness.status === 'HOLD'}
-              onClick={() => { if (tgstReturn.filingReadiness.status !== 'HOLD') window.print(); }}
+              onClick={() => window.print()}
               icon={<Printer size={14} />}
             >
               <span>Print Schedule</span>
@@ -207,7 +207,7 @@ export const MiraTgstView: React.FC<{
           </div>
         </div>
 
-        <div role="alert" className="mt-4 text-sm">
+        <div role="status" aria-live="polite" className="mt-4 text-sm">
           HOLD — {tgstReturn.filingReadiness.reason} Amounts remain visible for reconciliation.
         </div>
 
