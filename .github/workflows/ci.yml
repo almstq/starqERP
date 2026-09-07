@@ -78,6 +78,69 @@ jobs:
       - name: Deno Contract Test Suite (164 tests)
         run: deno test --allow-read tests/contract/commands_test.ts
 
+  rls-isolation-probe:
+    name: RLS Tenant Isolation Probe (SERP-337)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: public.ecr.aws/supabase/postgres:17.6.1.155
+        env:
+          POSTGRES_PASSWORD: synthetic-serp124-only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGPASSWORD: synthetic-serp124-only
+      PGHOST: localhost
+      PGUSER: postgres
+      PGDATABASE: postgres
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      # The Supabase image briefly accepts connections during first-time initialization,
+      # then restarts PostgreSQL to apply its bootstrap SQL. A single successful pg_isready
+      # can land in that window, so confirm the connection is stable before trusting it
+      # (mirrors the wait logic in tests/run_rls_isolation_probe.ps1).
+      - name: Wait for PostgreSQL to settle after bootstrap restart
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if psql --set ON_ERROR_STOP=1 --command 'select 1' >/dev/null 2>&1; then
+              echo "Connected on attempt $attempt; confirming stability..."
+              sleep 5
+              if psql --set ON_ERROR_STOP=1 --command 'select 1' >/dev/null 2>&1; then
+                echo "PostgreSQL is stable."
+                exit 0
+              fi
+            fi
+            sleep 2
+          done
+          echo "PostgreSQL did not become stable within the wait window." >&2
+          exit 1
+
+      - name: Apply migrations
+        run: |
+          set -euo pipefail
+          for migration in supabase/migrations/*.sql; do
+            echo "Applying $migration"
+            psql --set ON_ERROR_STOP=1 --file "$migration"
+          done
+
+      - name: Load RLS isolation fixture (SERP-124)
+        run: psql --set ON_ERROR_STOP=1 --file tests/rls_isolation_fixture.sql
+
+      - name: Run RLS isolation probe (SERP-124 / SERP-337)
+        run: psql --set ON_ERROR_STOP=1 --file tests/rls_isolation_probe.sql
+
   frontend:
     name: Web Frontend Build & Test Suite
     runs-on: ubuntu-latest

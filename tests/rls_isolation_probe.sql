@@ -20,7 +20,24 @@ insert into expected_public_tables (table_name) values
   -- RLS + 2 policies like the rest, but one of those policies (see below) grants a
   -- scoped, cross-tenant read for published rows by design. Classified separately
   -- below rather than folded into the fully-isolated 'protected-by-RLS' bucket.
-  ('product_publications');
+  ('product_publications'),
+  -- Added 2026-09-07: this list had not been updated since SERP-124 while 25 real
+  -- tables were added across later migrations (chart of accounts, payments,
+  -- workflow, SoD audit, tax, RBAC, invitations, books, goods receipts, outbox).
+  -- Verified via pg_class against a fresh migration-only database - nothing here
+  -- was removed, this only adds tables that already exist and were previously
+  -- invisible to this catalogue-drift check entirely.
+  ('chart_of_accounts'), ('bank_accounts'),
+  ('books'), ('book_locations'), ('book_memberships'),
+  ('goods_receipts'), ('goods_receipt_lines'),
+  ('payment_providers'), ('payment_provider_config'), ('payment_intents'),
+  ('payment_attempts'), ('payment_refunds'), ('payment_settlements'),
+  ('payment_settlement_items'), ('provider_events'),
+  ('workflow_stages'), ('workflow_templates'),
+  ('sod_exceptions'), ('sod_exception_dispositions'),
+  ('tax_registrations'), ('tax_rate_schedules'),
+  ('roles'), ('role_permissions'), ('invitations'),
+  ('transactional_outbox');
 
 create temporary table expected_policies (
   table_name text not null,
@@ -63,7 +80,51 @@ insert into expected_policies (table_name, policy_name) values
   -- this table because that policy makes the "zero cross-tenant rows" invariant
   -- inapplicable to it -- see the comment at that loop.
   ('product_publications', 'product_publications_current'),
-  ('product_publications', 'product_publications_published');
+  ('product_publications', 'product_publications_published'),
+  -- Added 2026-09-07, alongside the expected_public_tables fix above: this list
+  -- had not been updated since SERP-124 either, so every real policy on the 25
+  -- newer tables was "unexpected" and tripped the drift check below. Verified by
+  -- grepping `create policy ... on public.<table>` across supabase/migrations/*.sql
+  -- for each of the 25 tables and listing exactly what exists -- nothing invented.
+  --
+  -- Two of the 25 carry NO policy by design (deny-by-default, service-role only,
+  -- same pattern as payment_provider_config/provider_events already documented
+  -- above) and correctly have no row here: payment_provider_config (no client
+  -- read/write policy -- 202608290031_payment_provider_registry.sql section 5,
+  -- reaffirmed by 202609031047_payment_provider_tenant_scope.sql section 4) and
+  -- provider_events (no client read policy at all -- raw webhook bodies are
+  -- dispute evidence, not for the browser -- 202608290033_provider_events.sql).
+  ('chart_of_accounts', 'chart_of_accounts_tenant'),          -- 202608300035_chart_of_accounts_as_data.sql
+  ('bank_accounts', 'bank_accounts_tenant'),                  -- 202608250018_bank_accounts_entities.sql
+  ('books', 'books_tenant_isolation'),                        -- 202608270025_books_and_operating_activities.sql
+  ('book_locations', 'book_locations_tenant_isolation'),      -- 202608270025_books_and_operating_activities.sql
+  ('book_memberships', 'book_memberships_tenant_isolation'),  -- 202608270025_books_and_operating_activities.sql
+  ('goods_receipts', 'goods_receipts_tenant'),                -- 202608300036_goods_receipts.sql
+  ('goods_receipt_lines', 'goods_receipt_lines_tenant'),      -- 202608300036_goods_receipts.sql
+  -- payment_providers_read is a GLOBAL reference-data policy (`using (true)`,
+  -- no organisation_id column on the table at all -- it is a 3-row registry of
+  -- provider codes 'MOCK'/'BML'/'MIB', deliberately readable by every tenant so
+  -- the UI can offer payment methods). See the exclusion for this table in the
+  -- tenant A/B behavioural loop further below -- 202608290031 section 5.
+  ('payment_providers', 'payment_providers_read'),            -- 202608290031_payment_provider_registry.sql
+  ('payment_intents', 'payment_intents_current'),             -- 202608290032_payment_intents_and_attempts.sql
+  ('payment_attempts', 'payment_attempts_current'),           -- 202608290032_payment_intents_and_attempts.sql
+  ('payment_refunds', 'payment_refunds_current'),             -- 202608290032_payment_intents_and_attempts.sql
+  ('payment_settlements', 'payment_settlements_current'),     -- 202608290034_payment_settlements.sql
+  ('payment_settlement_items', 'payment_settlement_items_current'), -- 202608290034_payment_settlements.sql
+  ('workflow_templates', 'workflow_templates_tenant'),        -- 202608250013_workflow_stages.sql
+  ('workflow_stages', 'workflow_stages_tenant'),              -- 202608250013_workflow_stages.sql
+  ('sod_exceptions', 'sod_exceptions_tenant'),                -- 202608250016_sod_exceptions.sql
+  ('sod_exception_dispositions', 'sod_dispositions_tenant'),  -- 202608250016_sod_exceptions.sql
+  ('tax_registrations', 'tax_registrations_tenant'),          -- 202608250017_tax_regimes_and_periods.sql
+  -- tax_rate_schedules_read is likewise GLOBAL (`using (true)`, no
+  -- organisation_id column): a single statutory GST rate table shared by every
+  -- tenant, not tenant data. Same behavioural-loop exclusion as payment_providers.
+  ('tax_rate_schedules', 'tax_rate_schedules_read'),          -- 202608250017_tax_regimes_and_periods.sql
+  ('roles', 'roles_tenant'),                                  -- 202608250015_roles_as_data.sql
+  ('role_permissions', 'role_permissions_tenant'),            -- 202608250015_roles_as_data.sql
+  ('invitations', 'invitations_tenant_isolation'),            -- 202608270027_staff_invitations_and_lifecycle.sql
+  ('transactional_outbox', 'transactional_outbox_current');   -- 202608260022_transactional_outbox_and_audit.sql
 
 do $$
 begin
@@ -134,16 +195,23 @@ select e.table_name,
   left join pg_policy p on p.polrelid = c.oid
  group by e.table_name, c.relrowsecurity;
 
+-- Counts updated 2026-09-07 alongside the two catalogue fixes above: 25 tables
+-- joined expected_public_tables, of which 23 carry a real policy (protected-by-RLS,
+-- including the two global-reference tables payment_providers/tax_rate_schedules --
+-- this classification does not distinguish tenant-scoped from global-readable, it
+-- only asks "is there RLS + a policy") and 2 are deny-by-default with no policy
+-- and no authenticated grant (payment_provider_config, provider_events), landing
+-- in protected-by-revoked-grant like the original 4. 32+25=57, 27+23=50, 4+2=6.
 do $$
 begin
-  if (select count(*) from protection_report) <> 32 then
-    raise exception 'SERP-124 expected 32 classified public tables';
+  if (select count(*) from protection_report) <> 57 then
+    raise exception 'SERP-124/337 expected 57 classified public tables';
   end if;
-  if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 27 then
-    raise exception 'SERP-124 expected 27 RLS-protected tables';
+  if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 50 then
+    raise exception 'SERP-124/337 expected 50 RLS-protected tables';
   end if;
-  if (select count(*) from protection_report where protection = 'protected-by-revoked-grant') <> 4 then
-    raise exception 'SERP-124 expected 4 revoked-grant-protected tables';
+  if (select count(*) from protection_report where protection = 'protected-by-revoked-grant') <> 6 then
+    raise exception 'SERP-124/337 expected 6 revoked-grant-protected tables';
   end if;
   if (select count(*) from protection_report where protection = 'protected-with-scoped-public-read') <> 1 then
     raise exception 'SERP-125 expected exactly 1 scoped-public-read table (product_publications)';
@@ -203,6 +271,16 @@ begin
   -- to be visible with NO tenant claim, since that is what makes it a public
   -- listing rather than a leak. See publication_boundary_probe.sql for the
   -- dedicated behavioural proof of that boundary.
+  --
+  -- payment_providers and tax_rate_schedules (added SERP-337) are skipped for
+  -- the same reason as each other, and a different reason from
+  -- product_publications: both carry a single `using (true)` policy with no
+  -- organisation/person claim check of any kind, because both are global
+  -- reference data seeded once by their migration and meant to be visible to
+  -- every tenant regardless of claim (the 3-row payment provider registry --
+  -- 202608290031_payment_provider_registry.sql section 5; the statutory GST
+  -- rate table -- 202608250017_tax_regimes_and_periods.sql section 6). A
+  -- no-claim session is expected to see these rows; that is not a leak.
   perform set_config('app.organisation_id', '', true);
   perform set_config('app.person_id', '', true);
   for table_record in
@@ -210,7 +288,7 @@ begin
       from pg_class c
       join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity
-       and c.relname <> 'product_publications'
+       and c.relname not in ('product_publications', 'payment_providers', 'tax_rate_schedules')
      order by c.relname
   loop
     execute format('select exists (select 1 from public.%I limit 1)', table_record.table_name)
@@ -246,7 +324,18 @@ begin
      -- both worse than an explicit skip. The boundary this table actually promises
      -- (private by default, explicit + audited publish, revocable) is proved
      -- instead by tests/publication_boundary_probe.sql.
-     where table_name <> 'product_publications'
+     --
+     -- payment_providers and tax_rate_schedules are excluded for a different
+     -- reason: this loop's tenant_column := 'organisation_id' assumption does
+     -- not hold for them at all -- neither table HAS an organisation_id column.
+     -- Both are global reference data by design (payment_providers: the 3-row
+     -- provider registry, `using (true)`, 202608290031_payment_provider_registry.sql
+     -- section 5; tax_rate_schedules: the statutory GST rate table, `using (true)`,
+     -- 202608250017_tax_regimes_and_periods.sql section 6) -- there is no tenant
+     -- boundary for this loop to prove on them, and running the composed query
+     -- would fail with "column organisation_id does not exist" rather than a
+     -- meaningful assertion.
+     where table_name not in ('product_publications', 'payment_providers', 'tax_rate_schedules')
      order by table_name
   loop
     tenant_column := case when policy_table.table_name = 'organisations' then 'id' else 'organisation_id' end;
@@ -270,7 +359,8 @@ select current_user as asserted_probe_role,
        (select rolsuper from pg_roles where rolname = current_user) as superuser,
        (select rolbypassrls from pg_roles where rolname = current_user) as bypass_rls,
        (select count(distinct table_name) from expected_policies
-         where table_name <> 'product_publications') as policies_behaviorally_exercised,
+         where table_name not in ('product_publications', 'payment_providers', 'tax_rate_schedules')
+       ) as policies_behaviorally_exercised,
        (select count(*) from public.organisations) as visible_organisations,
        (select count(*) from public.memberships) as visible_memberships;
 
