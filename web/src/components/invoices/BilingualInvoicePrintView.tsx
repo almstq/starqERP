@@ -18,6 +18,7 @@ import {
 import { generateFavaraPaymentPayload } from '../../domain/favaraQr';
 import { useERP } from '../../context/ERPContext';
 import { Badge, Surface, Button } from '../ui';
+import { DEMO_INVOICE_PRINT_DATA } from '../../data/demoFixtures';
 
 export interface InvoicePrintData {
   id: string;
@@ -49,39 +50,7 @@ export const BilingualInvoicePrintView: React.FC<{
 
   const [languageMode, setLanguageMode] = useState<'bilingual' | 'dhivehi' | 'english'>('bilingual');
 
-  const defaultInvoice: InvoicePrintData = invoice || {
-    id: 'inv-demo-01',
-    invoiceNumber: 'INV-2026-0042',
-    issueDate: '2026-08-28',
-    dueDate: '2026-09-15',
-    customerName: 'Island Horizon Transport Pvt Ltd',
-    customerTin: '1004921GST001',
-    items: [
-      {
-        id: '1',
-        description: 'Marine Engine Overhaul & Maintenance Labor',
-        descriptionDhivehi: 'އިންޖީނުގެ މަރާމާތު އަދި ސަރވިސް ކުރުމުގެ ޚިދުމަތް',
-        quantity: 1,
-        unitPrice: 15000,
-        gstRate: 0.08,
-        amount: 15000,
-      },
-      {
-        id: '2',
-        description: 'High-Pressure Hydraulic Seal Ring (Set)',
-        descriptionDhivehi: 'ހައިޑްރޮލިކް ސީލް ރިންގް ސެޓް',
-        quantity: 2,
-        unitPrice: 2500,
-        gstRate: 0.08,
-        amount: 5000,
-      },
-    ],
-    subtotal: 20000,
-    taxAmount: 1600,
-    totalAmount: 21600,
-    currency: 'MVR',
-    status: 'unpaid',
-  };
+  const defaultInvoice: InvoicePrintData = DEMO_INVOICE_PRINT_DATA;
 
   const inv = invoice || defaultInvoice;
   const d = DHIVEHI_COMMERCE_DICTIONARY;
@@ -89,7 +58,7 @@ export const BilingualInvoicePrintView: React.FC<{
   const favaraPayload = generateFavaraPaymentPayload({
     merchantName: currentTenant.name || 'Starq Marine Services',
     merchantCity: 'Male',
-    accountNumber: currentTenant.bmlAccount || '7701192837101',
+    accountNumber: currentTenant.bmlAccount || '',
     bankName: ('BML') as any,
     currency: inv.currency,
     amount: inv.totalAmount,
@@ -272,7 +241,7 @@ export const BilingualInvoicePrintView: React.FC<{
                 Scan with BML Mobile Banking or any Favara app to pay instantly.
               </div>
               <div className="font-mono text-[10px] text-slate-500">
-                Favara ID: {currentTenant.bmlAccount || '7701192837101'}@BML
+                Favara ID: {currentTenant.bmlAccount ? `${currentTenant.bmlAccount}@BML` : 'Not configured'}
               </div>
             </div>
           </div>

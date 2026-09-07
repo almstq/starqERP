@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '../common/Badge';
 import { Modal } from '../common/Modal';
-import { OrganisationApplication } from '../../data/mockData';
+import { OrganisationApplication } from '../../data/demoFixtures';
 
 export const StarqHQApplications: React.FC = () => {
   const {

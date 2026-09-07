@@ -388,7 +388,7 @@ export const SettingsView: React.FC = () => {
                     type="text"
                     value={tinNumber}
                     onChange={(e) => setTinNumber(e.target.value)}
-                    placeholder="e.g. 1004829GST001"
+                    placeholder="Enter registered TIN, if configured"
                     className="w-full px-3.5 py-2 text-xs font-mono font-bold text-blue-600 border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)]"
                     style={{
                       backgroundColor: 'var(--md-sys-color-surface-container-high)',
@@ -432,7 +432,7 @@ export const SettingsView: React.FC = () => {
                     type="text"
                     value={bmlAccount}
                     onChange={(e) => setBmlAccount(e.target.value)}
-                    placeholder="e.g. 7730000189201 (BML MVR Main Account)"
+                    placeholder="Enter configured settlement account"
                     className="w-full px-3.5 py-2 text-xs font-mono border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)]"
                     style={{
                       backgroundColor: 'var(--md-sys-color-surface-container-high)',

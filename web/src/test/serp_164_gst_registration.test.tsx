@@ -52,9 +52,9 @@ describe('SERP-164: Explicit MIRA GST Registration Status State & Reports Reacti
     });
 
     // Enter a TIN
-    const tinInput = screen.getByPlaceholderText(/e\.g\. 1004829GST001/i);
+    const tinInput = screen.getByPlaceholderText(/Enter registered TIN, if configured/i);
     await act(async () => {
-      fireEvent.change(tinInput, { target: { value: '1009999GST001' } });
+      fireEvent.change(tinInput, { target: { value: 'DEMO-TIN-TEST' } });
     });
 
     // Save tenant profile
@@ -79,9 +79,9 @@ describe('SERP-164: Explicit MIRA GST Registration Status State & Reports Reacti
     // tenant-starq (Starq Technologies) is not_registered by default
     expect(screen.getByText(/Non-Registered \(0% GST\)/i)).toBeDefined();
 
-    const tinInput = screen.getByPlaceholderText(/e\.g\. 1004829GST001/i);
+    const tinInput = screen.getByPlaceholderText(/Enter registered TIN, if configured/i);
     await act(async () => {
-      fireEvent.change(tinInput, { target: { value: '1002222GST001' } });
+      fireEvent.change(tinInput, { target: { value: 'DEMO-TIN-TEST' } });
     });
 
     // Save with status remaining not_registered

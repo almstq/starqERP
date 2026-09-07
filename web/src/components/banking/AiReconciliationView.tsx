@@ -23,60 +23,25 @@ import {
 import { DEFAULT_AI_AGENTS } from '../../domain/agentRegistry';
 import { useERP } from '../../context/ERPContext';
 import { Badge, Surface, Button } from '../ui';
+import {
+  DEMO_AI_RECONCILIATION_OCR_TEXT,
+  DEMO_AI_RECONCILIATION_SUGGESTIONS,
+} from '../../data/demoFixtures';
 
 export const AiReconciliationView: React.FC = () => {
   const { formatMVR, currentTenant } = useERP();
 
   const financeBot = DEFAULT_AI_AGENTS.find((a) => a.handle === '@financebot') || DEFAULT_AI_AGENTS[0];
 
-  const [rawOcrText, setRawOcrText] = useState<string>(`===================================
-       STARQ LOGISTICS PVT LTD
-       TIN: 1001234GST001
-===================================
-Date: 2026-08-28
-Invoice: INV-2026-8891
-BML Ref: BML789456123
------------------------------------
-Marine Spares & Fuel
-Subtotal: MVR 25,000.00
-GST 8%:   MVR 2,000.00
-TOTAL:    MVR 27,000.00
-===================================`);
+  const [rawOcrText, setRawOcrText] = useState<string>(DEMO_AI_RECONCILIATION_OCR_TEXT);
 
   const [extractedData, setExtractedData] = useState<ExtractedReceiptData | null>(() =>
     parseReceiptOcr(rawOcrText)
   );
 
-  const [suggestions, setSuggestions] = useState<AiMatchSuggestion[]>([
-    {
-      id: 'aimatch-01',
-      bankTxId: 'btx-901',
-      bankTxDate: '2026-08-28',
-      bankTxDescription: 'BML TRANSFER TO STARQ LOGISTICS INV-2026-8891',
-      bankTxAmount: 27000,
-      matchedInvoiceId: 'inv-8891',
-      matchedInvoiceNumber: 'INV-2026-8891',
-      customerOrVendorName: 'Starq Logistics Pvt Ltd',
-      invoiceAmount: 27000,
-      confidenceScore: 100,
-      matchReason: 'Exact Reference match (INV-2026-8891) · Exact Amount match · Exact Date',
-      status: 'SUGGESTED',
-    },
-    {
-      id: 'aimatch-02',
-      bankTxId: 'btx-902',
-      bankTxDate: '2026-08-27',
-      bankTxDescription: 'DHIRAAGU BROADBAND HQ FIBER PAYMENT',
-      bankTxAmount: 4850,
-      matchedInvoiceId: 'inv-dh-04',
-      matchedInvoiceNumber: 'BILL-DHIR-4850',
-      customerOrVendorName: 'Dhiraagu PLC',
-      invoiceAmount: 4850,
-      confidenceScore: 92,
-      matchReason: 'Entity Dhiraagu PLC recognized · Exact Amount match',
-      status: 'SUGGESTED',
-    },
-  ]);
+  const [suggestions, setSuggestions] = useState<AiMatchSuggestion[]>(() =>
+    DEMO_AI_RECONCILIATION_SUGGESTIONS.map((suggestion) => ({ ...suggestion }))
+  );
 
   const handleParseOcr = () => {
     const data = parseReceiptOcr(rawOcrText);

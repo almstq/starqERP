@@ -1,5 +1,5 @@
 import React from 'react';
-import { PLATFORM_CLIENTS_REGISTRY } from '../../data/mockData';
+import { PLATFORM_CLIENTS_REGISTRY } from '../../data/demoFixtures';
 import {
   CreditCard,
   Building2,

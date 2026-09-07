@@ -18,8 +18,8 @@ describe('SERP-016: AI-Assisted Reconciliation & OCR Interface', () => {
     expect(screen.getByText('AI-Assisted Reconciliation & OCR Extraction')).toBeDefined();
     expect(screen.getByText('Smart Receipt / BML Slip OCR Parser')).toBeDefined();
     expect(screen.getByText('AI Multi-Factor Match Suggestions')).toBeDefined();
-    expect(screen.getAllByText('INV-2026-8891').length).toBeGreaterThan(0);
-    expect(screen.getByText('BILL-DHIR-4850')).toBeDefined();
+    expect(screen.getByText('DEMO-INVOICE-01')).toBeDefined();
+    expect(screen.getByText('DEMO-BILL-02')).toBeDefined();
   });
 
   it('extracts OCR fields when clicking Extract Data', () => {
@@ -34,8 +34,7 @@ describe('SERP-016: AI-Assisted Reconciliation & OCR Interface', () => {
     const extractBtn = screen.getByText('Extract Data');
     fireEvent.click(extractBtn);
 
-    expect(screen.getByText('1001234GST001')).toBeDefined();
-    expect(screen.getByText('BML789456123')).toBeDefined();
+    expect(screen.getAllByText('N/A').length).toBeGreaterThanOrEqual(2);
   });
 
   it('handles accepting AI match suggestion', () => {

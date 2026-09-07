@@ -30,7 +30,7 @@ import {
 // context, one keystroke from being wired back in by anyone who saw
 // INITIAL_INVOICES available and reasonably assumed it was meant to be used.
 // A tenant surface should not have another business's invoices within reach.
-// Removed, not merely left unused. They remain exported from mockData for the
+// Removed, not merely left unused. They remain exported from the demo fixture
 // tests and demo fixtures that legitimately want them.
 import {
   INITIAL_STAFF,
@@ -38,7 +38,7 @@ import {
   INITIAL_ROLES,
   INITIAL_USERS,
   OrganisationApplication,
-} from '../data/mockData';
+} from '../data/demoFixtures';
 import { telemetry } from '../services/telemetry';
 import { applyMovement } from '../domain/inventoryValuation';
 import { dispatchCommand, apiGet, ApiError } from '../services/apiGateway';
