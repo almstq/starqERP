@@ -1048,6 +1048,28 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
     setTenants((prev) => [...prev, newTenant]);
     setCurrentTenantId(newTenant.id);
+    setMutationPending(true);
+    setLastMutationError(null);
+
+    dispatchCommand({
+      command: 'TENANT_ONBOARD',
+      payload: {
+        name: newTenant.name,
+        tinNumber: newTenant.tinNumber,
+        industry: newTenant.industry,
+        address: newTenant.address,
+        phone: newTenant.phone,
+      },
+    }).then(() => { setMutationPending(false); })
+    .catch((err) => {
+      setMutationPending(false);
+      const errMsg = err instanceof Error ? err.message : 'TENANT_ONBOARD command failed';
+      setLastMutationError(errMsg);
+      console.error('[ERP] TENANT_ONBOARD command failed:', err);
+      if (session || err instanceof ApiError) {
+        setTenants((prev) => prev.filter((t) => t.id !== newTenant.id));
+      }
+    });
 
     // Apply industry workflow preset directly to the new tenant id
     if (newTenant.industry === 'Medical Clinic & Diagnostics') {
@@ -1540,6 +1562,26 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       tenantId: currentTenant.id
     };
     setRoles((prev) => [...prev, newRole]);
+    setMutationPending(true);
+    setLastMutationError(null);
+
+    dispatchCommand({
+      command: 'ROLE',
+      payload: {
+        name: newRole.name,
+        permissions: newRole.permissions,
+        tenantId: newRole.tenantId,
+      },
+    }).then(() => { setMutationPending(false); })
+    .catch((err) => {
+      setMutationPending(false);
+      const errMsg = err instanceof Error ? err.message : 'ROLE command failed';
+      setLastMutationError(errMsg);
+      console.error('[ERP] ROLE command failed:', err);
+      if (session || err instanceof ApiError) {
+        setRoles((prev) => prev.filter((r) => r.id !== newRole.id));
+      }
+    });
 
     logAuditEvent({
       action: 'ROLE_UPDATED',
@@ -1594,6 +1636,27 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       order: nextOrder
     };
     setWorkflowStages((prev) => [...prev, newStage]);
+    setMutationPending(true);
+    setLastMutationError(null);
+
+    dispatchCommand({
+      command: 'WORKFLOW',
+      payload: {
+        name: newStage.name,
+        code: newStage.code,
+        order: newStage.order,
+        tenantId: newStage.tenantId,
+      },
+    }).then(() => { setMutationPending(false); })
+    .catch((err) => {
+      setMutationPending(false);
+      const errMsg = err instanceof Error ? err.message : 'WORKFLOW command failed';
+      setLastMutationError(errMsg);
+      console.error('[ERP] WORKFLOW command failed:', err);
+      if (session || err instanceof ApiError) {
+        setWorkflowStages((prev) => prev.filter((s) => s.id !== newStage.id));
+      }
+    });
 
     logAuditEvent({
       action: 'WORKFLOW_MODIFIED',
@@ -1732,6 +1795,23 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return job;
       })
     );
+
+    setMutationPending(true);
+    setLastMutationError(null);
+    dispatchCommand({
+      command: 'WORK',
+      payload: { jobId, inventoryId, quantity, totalCost },
+    }).then(() => { setMutationPending(false); })
+    .catch((err) => {
+      setMutationPending(false);
+      const errMsg = err instanceof Error ? err.message : 'WORK command failed';
+      setLastMutationError(errMsg);
+      console.error('[ERP] WORK command failed:', err);
+      if (session || err instanceof ApiError) {
+        // Rollback job material addition
+        setJobs((prev) => prev.map((j) => j.id === jobId ? {...j, materialsUsed: j.materialsUsed.filter((m) => m.id !== materialUsage.id), actualMaterialCost: j.actualMaterialCost - totalCost, actualProfit: j.quotedAmount - (j.actualMaterialCost - totalCost + j.laborCostEstimate)} : j));
+      }
+    });
 
     // Update inventory quantity
     setInventory((prev) =>
@@ -2536,6 +2616,14 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       lastRestockedDate: new Date().toISOString().split('T')[0]
     };
     setInventory((prev) => [newItem, ...prev]);
+    setMutationPending(true);
+    setLastMutationError(null);
+    dispatchCommand({
+      command: 'PURCHASE',
+      payload: { itemData: { sku: newItem.sku, name: newItem.name, unit: newItem.unit, reorderLevel: newItem.reorderLevel } },
+      step: 'need',
+    }).then(() => { setMutationPending(false); })
+    .catch((err) => { setMutationPending(false); console.error('[ERP] PURCHASE command failed:', err); if (session || err instanceof ApiError) { setInventory((prev) => prev.filter((i) => i.id !== newItem.id)); } });
 
     const newMovement: StockMovement = {
       id: `mov-${Date.now()}`,
@@ -2616,6 +2704,14 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     setPurchaseOrders((prev) => [newPO, ...prev]);
+    setMutationPending(true);
+    setLastMutationError(null);
+    dispatchCommand({
+      command: 'PURCHASE',
+      payload: { supplierId: poData.supplierId, items: poData.items, expectedDeliveryDate: poData.expectedDeliveryDate, notes: poData.notes, totalAmount: poData.totalAmount },
+      step: 'need',
+    }).then(() => { setMutationPending(false); })
+    .catch((err) => { setMutationPending(false); console.error('[ERP] PURCHASE command failed:', err); if (session || err instanceof ApiError) { setPurchaseOrders((prev) => prev.filter((p) => p.id !== newPO.id)); setSuppliers((prev) => prev.map((s) => s.id === poData.supplierId ? {...s, outstandingPayable: s.outstandingPayable - (poData.totalAmount || 0)} : s)); } });
 
     // Update supplier outstanding payable
     setSuppliers((prev) =>
