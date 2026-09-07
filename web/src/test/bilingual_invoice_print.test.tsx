@@ -20,6 +20,8 @@ describe('SERP-323: Bilingual Dhivehi (Thaana) & English Invoice Print Interface
     expect(screen.getByText(/ޓެކްސް އިންވޮއިސް/)).toBeDefined();
     expect(screen.getAllByText(/ޖީ\.އެސް\.ޓީ/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/ފަވަރަ \/ ބީ\.އެމް\.އެލް/)).toBeDefined();
+    expect(screen.getByTestId('favara-qr-not-configured')).toBeDefined();
+    expect(screen.queryByAltText('Favara Instant Pay QR')).toBeNull();
   });
 
   it('switches between Bilingual, Dhivehi Only, and English Only view modes', () => {

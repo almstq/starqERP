@@ -55,15 +55,18 @@ export const BilingualInvoicePrintView: React.FC<{
   const inv = invoice || defaultInvoice;
   const d = DHIVEHI_COMMERCE_DICTIONARY;
 
-  const favaraPayload = generateFavaraPaymentPayload({
-    merchantName: currentTenant.name || 'Starq Marine Services',
-    merchantCity: 'Male',
-    accountNumber: currentTenant.bmlAccount || '',
-    bankName: ('BML') as any,
-    currency: inv.currency,
-    amount: inv.totalAmount,
-    invoiceNumber: inv.invoiceNumber,
-  });
+  const favaraAccountNumber = currentTenant.bmlAccount?.match(/\d{13}/)?.[0] || null;
+  const favaraPayload = favaraAccountNumber
+    ? generateFavaraPaymentPayload({
+        merchantName: currentTenant.name || 'Starq Marine Services',
+        merchantCity: 'Male',
+        accountNumber: favaraAccountNumber,
+        bankName: ('BML') as any,
+        currency: inv.currency,
+        amount: inv.totalAmount,
+        invoiceNumber: inv.invoiceNumber,
+      })
+    : null;
 
   return (
     <div className="space-y-6" data-testid="bilingual-invoice-print-view">
@@ -227,11 +230,21 @@ export const BilingualInvoicePrintView: React.FC<{
           {/* Favara Instant QR Box */}
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-300 flex items-center gap-4">
             <div className="w-24 h-24 bg-white p-1.5 rounded-xl border border-slate-300 shadow-sm shrink-0">
-              <img
-                src={favaraPayload.qrSvgDataUri}
-                alt="Favara Instant Pay QR"
-                className="w-full h-full object-contain"
-              />
+              {favaraPayload ? (
+                <img
+                  src={favaraPayload.qrSvgDataUri}
+                  alt="Favara Instant Pay QR"
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div
+                  data-testid="favara-qr-not-configured"
+                  className="w-full h-full flex items-center justify-center text-center text-[10px] font-bold"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  Not configured
+                </div>
+              )}
             </div>
             <div className="space-y-1 text-xs">
               <div className="font-bold text-slate-900 flex items-center gap-1.5">
@@ -241,7 +254,7 @@ export const BilingualInvoicePrintView: React.FC<{
                 Scan with BML Mobile Banking or any Favara app to pay instantly.
               </div>
               <div className="font-mono text-[10px] text-slate-500">
-                Favara ID: {currentTenant.bmlAccount ? `${currentTenant.bmlAccount}@BML` : 'Not configured'}
+                Favara ID: {favaraAccountNumber ? `${favaraAccountNumber}@BML` : 'Not configured'}
               </div>
             </div>
           </div>

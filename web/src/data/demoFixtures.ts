@@ -938,7 +938,7 @@ export const INITIAL_PAYMENTS: Payment[] = [
     amount: 15000,
     paymentDate: '2026-08-22',
     method: 'MIB Transfer',
-    referenceNumber: 'MIB-FT-20260822-88',
+    referenceNumber: 'DEMO-TXN-REF',
     status: 'Pending Reconciliation', // Pending slip match!
     notes: 'Partial payment slip received on Viber, pending accountant bank statement reconciliation'
   }
@@ -1682,8 +1682,17 @@ export const INITIAL_USERS: import('../types/erp').AppUser[] = [
     mfaEnabled: true,
     mfaRequired: true,
     mfaEnrolledAt: '2026-08-01 10:00',
-    mfaSecret: 'JBSWY3DPEHPK3PXP',
-    recoveryCodes: ['REC1-9921', 'REC2-4412', 'REC3-8871', 'REC4-3319', 'REC5-7762', 'REC6-1184', 'REC7-5509', 'REC8-2234']
+    mfaSecret: 'DEMO-MFA-SECRET-NOT-REAL',
+    recoveryCodes: [
+      'DEMO-RECOVERY-CODE-01',
+      'DEMO-RECOVERY-CODE-02',
+      'DEMO-RECOVERY-CODE-03',
+      'DEMO-RECOVERY-CODE-04',
+      'DEMO-RECOVERY-CODE-05',
+      'DEMO-RECOVERY-CODE-06',
+      'DEMO-RECOVERY-CODE-07',
+      'DEMO-RECOVERY-CODE-08'
+    ]
   },
   {
     id: 'user-ignition-owner',

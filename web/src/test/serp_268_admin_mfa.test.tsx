@@ -231,7 +231,7 @@ describe('SERP-268: Privileged & Administrator MFA Security Boundary', () => {
     // Submit valid recovery code
     const challengeInput = screen.getByTestId('mfa-challenge-input');
     await act(async () => {
-      fireEvent.change(challengeInput, { target: { value: 'REC1-9921' } });
+      fireEvent.change(challengeInput, { target: { value: 'DEMO-RECOVERY-CODE-01' } });
     });
 
     const submitChallenge = screen.getByTestId('mfa-challenge-submit-button');
