@@ -36,7 +36,6 @@ authority*. It does not delete them; they remain history.
 | Review-pending | **26** |
 | Decision store | **113 records**, ends `DEC-113` |
 | Board freshness | PASS on all 15 boards |
-| `!starq` deletion set | **560 files, untouched, unauthorised to commit** |
 | Elder window | to **4 September 2026** |
 
 ### 1.1 Open pull requests — merge posture is Founder-set and binding
@@ -239,7 +238,6 @@ audit.**
 
 ## 11 · What stays parked
 
-- The **560-file `!starq` deletion set** — investigate separately; **do not commit, do not clean**. Requires Founder authority.
 - **Non-starqERP Aikido findings** (`erp-public`, `Nexus`) — out of scope for the ERP final stretch (N6). Do not infer, do not block on them.
 - **Broad discovery auditing** — until the P8 trigger.
 - **GitHub IP allow list / Enterprise hardening** — deferred.
