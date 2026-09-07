@@ -22,6 +22,10 @@ import { logRequest, severityFor } from "../_shared/observability.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const SESSION_SECRET = Deno.env.get("STARQBOOKS_SESSION_SECRET") ?? "";
+// SERP-301 alert relay: an unattended poller has no human session cookie, so
+// it cannot pass the `!session` gate below by design. It authenticates with
+// a distinct shared secret instead, scoped to exactly one read-only route.
+const ALERT_RELAY_SECRET = Deno.env.get("STARQBOOKS_ALERT_RELAY_SECRET") ?? "";
 // GOOGLE_CLIENT_IDS (a combined allowlist across both platforms) was audit
 // critical #5 and has been replaced by AUDIENCE_POLICIES, which maps exactly one
 // audience to each client kind. Do not reintroduce a flat list of client ids.
@@ -564,6 +568,18 @@ async function securityEvent(
   }
 }
 
+// Plain `===` on secrets leaks timing information proportional to the
+// matching prefix length. This walks the full length of both operands
+// regardless of where they first differ.
+function timingSafeEqual(a: string, b: string): boolean {
+  const bufA = encoder.encode(a);
+  const bufB = encoder.encode(b);
+  if (bufA.length !== bufB.length) return false;
+  let diff = 0;
+  for (let i = 0; i < bufA.length; i++) diff |= bufA[i] ^ bufB[i];
+  return diff === 0;
+}
+
 async function readJson(req: Request): Promise<Json> {
   const declared = Number(req.headers.get("content-length") ?? "0");
   if (declared > MAX_BODY_BYTES) throw new Error("payload_too_large");
@@ -966,6 +982,30 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       const signed = await signSession(session);
       await securityEvent(req, "auth.google", "accepted", session);
       return json(200, { ok: true, user: userDto(session) }, origin, { "set-cookie": cookie(signed) });
+    }
+
+    // SERP-301 alert relay — deliberately dispatched BEFORE the session gate
+    // below. This route is polled by an unattended process with no human
+    // session cookie; placing it after `if (!session) return 401` would
+    // reject every call unconditionally, which is exactly the mistake this
+    // comment exists to stop a future edit from reintroducing.
+    if (req.method === "GET" && path === "/admin/security-events/recent") {
+      const providedSecret = req.headers.get("x-starq-relay-secret") ?? "";
+      if (!ALERT_RELAY_SECRET || !timingSafeEqual(providedSecret, ALERT_RELAY_SECRET)) {
+        return await deny(401, "relay_unauthenticated");
+      }
+      const sinceParam = new URL(req.url).searchParams.get("since");
+      const since = sinceParam && !Number.isNaN(Date.parse(sinceParam))
+        ? sinceParam
+        : new Date(Date.now() - 15 * 60_000).toISOString();
+      const recent = await db.from("security_events")
+        .select("id, organisation_id, principal_kind, event_type, outcome, request_id, metadata, occurred_at")
+        .neq("outcome", "accepted")
+        .gt("occurred_at", since)
+        .order("occurred_at", { ascending: false })
+        .limit(200);
+      if (recent.error) throw new Error("database_not_ready");
+      return json(200, { ok: true, since, events: recent.data ?? [] }, origin);
     }
 
     const diag: { reason?: string } = {};
