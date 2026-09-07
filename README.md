@@ -71,7 +71,7 @@ $$\text{Identity} \longrightarrow \begin{matrix} \text{Platform Entitlement} \\ 
 ## Implementation & Release Status
 
 ### Canonical Roadmap Snapshot
-*Baseline Snapshot Date: 2026-08-27 | Release: v0.2.0-beta*
+*Baseline Snapshot Date: 2026-09-06 | Release: v0.2.0-beta*
 
 | Milestone Gate | Scope & Focus | Status |
 | :--- | :--- | :--- |
@@ -80,7 +80,7 @@ $$\text{Identity} \longrightarrow \begin{matrix} \text{Platform Entitlement} \\ 
 | **Gate 3 (G3)** | **Maldives Competitive Advantage** — Native MIRA GST filing integration, Dhivehi localization, BML payment gateway, offline sync resilience. | **Partially delivered** — GST-201, Dhivehi print and Favara QR merged; offline sync still planned |
 | **Gate 4 (G4)** | **Enterprise Scale & Governance** — Multi-region replication, automated continuous compliance, high-availability tenancy failover. | **Planned** |
 
-*Canonical Board Progress: **142 of 319 tasks completed (44.5%)** across G1-G4. Figures are read from the Nexus board SSOT (`starq-erp-tasks.json`), not maintained by hand.*
+*Canonical Board Progress: **179 of 387 tasks completed (46.25%)** across G1-G4. Figures are read from the Nexus board SSOT (`starq-erp-tasks.json`) at each manual snapshot refresh — not a live/automated feed, so treat this number as accurate as of the Baseline Snapshot Date above, not real-time.*
 
 ---
 
