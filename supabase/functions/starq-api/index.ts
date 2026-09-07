@@ -18,6 +18,7 @@ import {
   type SeatCode,
 } from "../_shared/commands.ts";
 import { logRequest, severityFor } from "../_shared/observability.ts";
+import { resolveInvoiceFinanceDecision, type InvoiceTaxLineResult } from "../_shared/invoiceFinance.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -1673,12 +1674,76 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         return json(403, { ok: false, error: verdict.error, request_id: requestId }, origin);
       }
 
+      let commandForRpc = body;
+      if (intent.command === "INVOICE") {
+        const rawTaxMode = body.tax_mode;
+        const taxMode = rawTaxMode === "inclusive" || rawTaxMode === "exclusive" ||
+          rawTaxMode === "zero_rated" || rawTaxMode === "exempt"
+          ? rawTaxMode
+          : "exclusive";
+        const taxType = typeof body.tax_type === "string" && body.tax_type.trim()
+          ? body.tax_type.trim()
+          : "gst_general";
+        const supplyDate = typeof body.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date)
+          ? body.date
+          : new Date().toISOString().slice(0, 10);
+        const rawItems = Array.isArray(body.items) ? body.items : [];
+        const decision = await resolveInvoiceFinanceDecision(
+          {
+            items: rawItems.map((raw) => {
+              const item = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+              return { quantity: Number(item.quantity), unitPrice: Number(item.unitPrice) };
+            }),
+            taxMode,
+            snapshotDate: supplyDate,
+          },
+          async (lineAmount) => {
+            const { data, error } = await db.rpc("calculate_line_tax", {
+              target_org: session.organisation_id,
+              target_tax_type: taxType,
+              supply_date: supplyDate,
+              tax_mode: taxMode,
+              line_amount: lineAmount,
+            });
+            if (error) throw new Error("authoritative_tax_calculation_failed");
+            const row = Array.isArray(data) ? data[0] : data;
+            return (row ?? null) as InvoiceTaxLineResult | null;
+          },
+        );
+
+        if (decision.status === "HOLD" || !decision.value) {
+          observed.outcome = "blocked";
+          await securityEvent(req, "finance.invoice", "blocked", session, {
+            code: "finance_hold",
+            reason: decision.reason,
+            provenance: decision.provenance,
+          }, requestId);
+          return json(422, {
+            ok: false,
+            error: "finance_hold",
+            reason: decision.reason,
+            decision,
+            request_id: requestId,
+          }, origin);
+        }
+
+        commandForRpc = {
+          ...body,
+          subtotal: decision.value.subtotal,
+          gst_amount: decision.value.gstAmount,
+          total_amount: decision.value.totalAmount,
+          gst_rate: decision.value.gstRate,
+          tax_mode: decision.value.taxMode,
+          finance_decision: decision,
+        };
+      }
+
       const { data, error } = await db.rpc("api_garage_command", {
         target_org: session.organisation_id,
         target_person: session.person_uuid,
         target_seat: session.acting_as,
         command_key: commandKey,
-        command: body,
+        command: commandForRpc,
         request_identifier: requestId,
       });
       if (error) {

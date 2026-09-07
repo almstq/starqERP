@@ -1947,11 +1947,37 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setMutationPending(false);
       if (res.ok && (res as any).invoice) {
         const serverInvoice = (res as any).invoice;
+        const authTotal = Number(serverInvoice.total_amount ?? invoiceData.totalAmount);
+        const authBalanceDue = authTotal - (newInvoice.amountPaid || 0);
+        const totalDelta = authTotal - invoiceData.totalAmount;
+        const balanceDelta = authBalanceDue - invoiceData.balanceDue;
+
         setInvoices((prev) => prev.map((inv) =>
           inv.id === newInvoice.id
-            ? { ...inv, invoiceNumber: serverInvoice.invoice_number || inv.invoiceNumber }
+            ? {
+                ...inv,
+                invoiceNumber: serverInvoice.invoice_number || inv.invoiceNumber,
+                subtotal: Number(serverInvoice.subtotal ?? inv.subtotal),
+                gstAmount: Number(serverInvoice.gst_amount ?? inv.gstAmount),
+                totalAmount: authTotal,
+                balanceDue: authBalanceDue,
+              }
             : inv
         ));
+
+        if (totalDelta !== 0 || balanceDelta !== 0) {
+          setCustomers((prev) =>
+            prev.map((c) =>
+              c.id === invoiceData.customerId
+                ? {
+                    ...c,
+                    totalInvoiced: Math.max(0, c.totalInvoiced + totalDelta),
+                    outstandingBalance: Math.max(0, c.outstandingBalance + balanceDelta),
+                  }
+                : c
+            )
+          );
+        }
       }
     }).catch((err) => {
       setMutationPending(false);
