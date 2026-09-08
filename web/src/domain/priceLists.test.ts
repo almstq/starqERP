@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validatePriceList, resolveItemPrice, PriceList } from './priceLists';
+import { validatePriceList, resolveItemPrice, roundToTwoDecimals, PriceList } from './priceLists';
 
 describe('SERP-314: tiered customer price lists', () => {
   const item = { id: 'inv-1', sellingPrice: 100 };
@@ -105,6 +105,25 @@ describe('SERP-314: tiered customer price lists', () => {
         itemOverrides: [{ itemId: 'inv-1', unitPrice: -5 }],
       });
       expect(errors.some((e) => e.field === 'itemOverrides')).toBe(true);
+    });
+  });
+
+  describe('roundToTwoDecimals', () => {
+    // Copilot review on PR #118: 1.005 is stored as ~1.00499999999999989..
+    // in IEEE-754 binary, so a plain Math.round(v*100)/100 mis-rounds DOWN
+    // to 1 instead of the expected 1.01. These are exactly that class of
+    // exact-half-cent value at the binary representation boundary.
+    it('rounds exact half-cent IEEE-754 boundary values correctly, not down', () => {
+      expect(roundToTwoDecimals(1.005)).toBe(1.01);
+      expect(roundToTwoDecimals(0.145)).toBe(0.15);
+      expect(roundToTwoDecimals(1.015)).toBe(1.02);
+    });
+
+    it('still rounds ordinary values correctly (no regression from the epsilon correction)', () => {
+      expect(roundToTwoDecimals(2.675)).toBe(2.68);
+      expect(roundToTwoDecimals(5.005)).toBe(5.01);
+      expect(roundToTwoDecimals(100)).toBe(100);
+      expect(roundToTwoDecimals(3 * 0.05)).toBe(0.15); // the PR #118 drift case
     });
   });
 });

@@ -42,7 +42,7 @@ import {
 } from '../data/demoFixtures';
 import { telemetry } from '../services/telemetry';
 import { applyMovement } from '../domain/inventoryValuation';
-import { PriceList, resolveItemPrice } from '../domain/priceLists';
+import { PriceList, resolveItemPrice, roundToTwoDecimals } from '../domain/priceLists';
 import { dispatchCommand, apiGet, ApiError } from '../services/apiGateway';
 import { useAuth } from './AuthContext';
 import { getArchetype, ArchetypeDefinition, ArchetypeTerminology, ArchetypeId, ARCHETYPES } from '../domain/archetypes';
@@ -2070,22 +2070,35 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const createInvoice = (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber'> & { priceList?: PriceList }): Invoice => {
     const { priceList, ...baseInvoiceData } = invoiceData;
     const resolvedItems = baseInvoiceData.items.map((item) => {
-      const unitPrice = resolveItemPrice(
+      // KNOWN LIMITATION (Copilot review on PR #117, tracked on SERP-314's
+      // not_done list): item.id here is InvoiceLineItem.id, an invoice-local
+      // identifier (CreateInvoiceModal generates `item-*`/`inv-item-*`), not
+      // an InventoryItem.id. PriceList.itemOverrides is keyed by the latter,
+      // so a per-item override will never match through this call site today
+      // -- only the flat discountPercent path is reliably reachable. This is
+      // currently unexploitable (no UI can create a priceList with
+      // itemOverrides and feed it into createInvoice yet), so it is
+      // documented rather than guess-fixed: the correct fix threads a real
+      // inventoryItemId through the invoice line item, which belongs with
+      // the still-unbuilt catalog/binding work (SERP-314 admin CRUD +
+      // Customer binding), not invented in isolation here.
+      const unitPrice = roundToTwoDecimals(resolveItemPrice(
         { id: item.id, sellingPrice: item.unitPrice },
         priceList
-      );
-      return { ...item, unitPrice, amount: item.quantity * unitPrice };
+      ));
+      const amount = roundToTwoDecimals(item.quantity * unitPrice);
+      return { ...item, unitPrice, amount };
     });
-    const resolvedSubtotal = resolvedItems.reduce((sum, item) => sum + item.amount, 0);
-    const resolvedGstAmount = Math.round(resolvedSubtotal * baseInvoiceData.gstRate * 100) / 100;
-    const resolvedTotalAmount = resolvedSubtotal + resolvedGstAmount;
+    const resolvedSubtotal = roundToTwoDecimals(resolvedItems.reduce((sum, item) => sum + item.amount, 0));
+    const resolvedGstAmount = roundToTwoDecimals(resolvedSubtotal * baseInvoiceData.gstRate);
+    const resolvedTotalAmount = roundToTwoDecimals(resolvedSubtotal + resolvedGstAmount);
     const finalizedInvoiceData: Omit<Invoice, 'id' | 'invoiceNumber'> = {
       ...baseInvoiceData,
       items: resolvedItems,
       subtotal: resolvedSubtotal,
       gstAmount: resolvedGstAmount,
       totalAmount: resolvedTotalAmount,
-      balanceDue: resolvedTotalAmount - baseInvoiceData.amountPaid,
+      balanceDue: roundToTwoDecimals(resolvedTotalAmount - baseInvoiceData.amountPaid),
     };
     const nextNum = invoices.length + 88;
     const invNumberStr = `INV-2026-0${nextNum}`;

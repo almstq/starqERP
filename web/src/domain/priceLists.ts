@@ -114,6 +114,16 @@ export function resolveItemPrice(
   return roundToTwoDecimals(discounted);
 }
 
-function roundToTwoDecimals(value: number): number {
-  return Math.round(value * 100) / 100;
+/**
+ * Rounds to 2 decimal places, correcting for IEEE-754 binary representation
+ * error on exact half-cent values. `1.005` is actually stored as
+ * ~1.00499999999999989..., so a plain `Math.round(value * 100) / 100` mis-
+ * rounds it DOWN to 1.00/1 instead of the expected 1.01 (Copilot review on
+ * PR #118 caught this once this helper was exported for reuse in invoice
+ * arithmetic, where it matters). Adding Number.EPSILON before scaling nudges
+ * genuine half-cent values back onto the correct side of the rounding
+ * boundary without perturbing any other value enough to change its result.
+ */
+export function roundToTwoDecimals(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 }
