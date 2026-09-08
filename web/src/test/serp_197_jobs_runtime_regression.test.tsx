@@ -68,9 +68,24 @@ describe('SERP-197 / SERP-145: Jobs Runtime & CreateJobModal Permission Contract
 
   it('SERP-151: displays administrator role assignment guidance and removes misleading self-switch instructions', () => {
     // Non-admin harness testing WorkflowStepRail for an intake step where user with role-member is logged in
+    // Two effects on purpose. The append and the switch cannot share one, because
+    // switchCurrentUser looks the user up in current state: called in the same
+    // effect body as setUsers, 'user-7' does not exist yet and the switch is a
+    // silent no-op.
+    //
+    // This used to "work" only by accident. switchCurrentUser was an unmemoised
+    // plain function, so every render minted a new identity, this effect's
+    // dependency array compared unequal, and it re-fired — appending another
+    // user each time until, on some later pass, the lookup finally succeeded.
+    // An unbounded render loop was doing the sequencing. It hung the whole
+    // vitest suite (SERP-328) and the assertion below never ran.
     const NonAdminHarness: React.FC = () => {
-      const { switchCurrentUser, setUsers } = useERP();
+      const { switchCurrentUser, setUsers, users } = useERP();
+      const appended = React.useRef(false);
+
       React.useEffect(() => {
+        if (appended.current) return;
+        appended.current = true;
         setUsers((prev) => [
           ...prev,
           {
@@ -84,8 +99,13 @@ describe('SERP-197 / SERP-145: Jobs Runtime & CreateJobModal Permission Contract
             permissions: [],
           } as any,
         ]);
-        switchCurrentUser('user-7');
-      }, [switchCurrentUser, setUsers]);
+      }, [setUsers]);
+
+      React.useEffect(() => {
+        if (users.some((u) => u.id === 'user-7')) {
+          switchCurrentUser('user-7');
+        }
+      }, [users, switchCurrentUser]);
 
       return <WorkflowStepRail currentStatus="Vehicle Intake & Inspection" />;
     };

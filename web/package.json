@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
   },
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@material/material-color-utilities": "^0.4.0",
+    "@playwright/test": "^1.62.1",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
     "@types/canvas-confetti": "^1.9.0",

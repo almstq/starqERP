@@ -168,8 +168,58 @@ jobs:
         working-directory: .
         run: node scripts/lint-design-tokens.mjs
 
-      - name: Vitest test suite (31 files, 119 tests)
+      - name: Vitest test suite
         run: npm test
 
       - name: Vite production build
         run: npm run build
+
+  e2e:
+    name: Playwright End-to-End Acceptance (SERP-328)
+    runs-on: ubuntu-latest
+    # Gated behind the unit suite on purpose: browsers take minutes to install,
+    # and there is no sense paying for that to learn something `npm test` would
+    # have told us in seconds.
+    needs: frontend
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: 'web/package-lock.json'
+
+      - name: Install dependencies (clean install)
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      # playwright.config.ts starts Vite itself via its webServer block
+      # (`vite --mode e2e --port 3001`), so no separate server step is needed.
+      # The e2e run is offline by construction: e2e/support/gateway.ts fulfils
+      # every /api/* call in-browser, so CI reaches no live backend.
+      - name: Playwright acceptance suite
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: web/playwright-report/
+          retention-days: 14
+
+      - name: Upload failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: web/test-results/
+          retention-days: 14

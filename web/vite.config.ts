@@ -49,8 +49,9 @@ export default defineConfig(() => {
     test: {
       globals: true,
       environment: 'jsdom',
-      pool: 'threads',
+      pool: 'forks',
       setupFiles: [path.resolve(rootDir, 'src/test/setup.ts')],
+      include: ['src/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
       watch: false,
     },
   };

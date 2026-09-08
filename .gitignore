@@ -7,6 +7,7 @@
 *.env
 !.env.example
 !web/.env.example
+!web/.env.e2e
 *_allowlist.json
 !*_allowlist.example.json
 *_secrets/
@@ -18,6 +19,11 @@ dist/
 .turbo/
 build/
 *.tsbuildinfo
+
+# --- E2E (SERP-328) ---
+playwright-report/
+test-results/
+blob-report/
 
 # --- Python / Test Artifacts ---
 __pycache__/
