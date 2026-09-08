@@ -1950,6 +1950,8 @@ export interface CustomerCommandPayload {
   readonly island?: string;
   readonly vehicle_reg?: string;
   readonly notes?: string;
+  /** Optional price list tier binding (SERP-314). Absent = standard pricing. */
+  readonly price_list_id?: string;
 }
 
 export function validateCustomerCommandPayload(

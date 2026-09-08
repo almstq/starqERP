@@ -11,6 +11,7 @@ import {
 import { useERP } from '../../context/ERPContext';
 import { Surface, Button, Badge, DataTable, ColumnDef } from '../ui';
 import { JobOrder, Invoice } from '../../types/erp';
+import { priceListBindingName } from '../../domain/priceLists';
 
 export const CustomerDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -330,6 +331,12 @@ export const CustomerDetailView: React.FC = () => {
               >
                 <span className="text-[var(--md-sys-color-on-surface-variant)]">Island / Atoll:</span>
                 <span className="text-[var(--md-sys-color-on-surface)]">{customer.island}</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}>
+                <span className="text-[var(--md-sys-color-on-surface-variant)]">Price List:</span>
+                <span className="font-semibold text-[var(--md-sys-color-on-surface)]">
+                  {priceListBindingName(customer.priceListId) ?? 'Standard Pricing'}
+                </span>
               </div>
               <div className="flex justify-between py-1.5">
                 <span className="text-[var(--md-sys-color-on-surface-variant)]">Customer Since:</span>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useERP } from '../../context/ERPContext';
 import { Modal } from '../common/Modal';
 import { CustomerType, Vehicle } from '../../types/erp';
+import { PRICE_LIST_BINDING_OPTIONS } from '../../domain/priceLists';
 
 export const NewCustomerModal: React.FC = () => {
   const { isNewCustomerOpen, setIsNewCustomerOpen, createCustomer, currentArchetype, currentTerms } = useERP();
@@ -12,6 +13,7 @@ export const NewCustomerModal: React.FC = () => {
   const [email, setEmail] = useState('');
   const [type, setType] = useState<CustomerType>('Individual');
   const [island, setIsland] = useState("Hulhumale'");
+  const [priceListId, setPriceListId] = useState<string>('');
   const [notes, setNotes] = useState('');
 
   // Primary vehicle
@@ -49,6 +51,7 @@ export const NewCustomerModal: React.FC = () => {
       vehicles,
       notes,
       logoUrl: logoUrl.trim() || undefined,
+      priceListId: priceListId || undefined,
     });
 
     setIsNewCustomerOpen(false);
@@ -61,6 +64,7 @@ export const NewCustomerModal: React.FC = () => {
     setModel('');
     setColor('');
     setNotes('');
+    setPriceListId('');
   };
 
   return (
@@ -115,7 +119,7 @@ export const NewCustomerModal: React.FC = () => {
             <select
               value={type}
               onChange={(e) => setType(e.target.value as CustomerType)}
-              className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500 font-medium"
+className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-[var(--md-sys-color-primary)] font-medium"
             >
               <option value="Individual">Individual Client</option>
               <option value="Corporate">Corporate / Business Account</option>
@@ -149,6 +153,26 @@ export const NewCustomerModal: React.FC = () => {
               className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500"
             />
           </div>
+        </div>
+
+        {/* Price List Binding (SERP-314) */}
+        <div>
+          <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
+            Price List / Pricing Tier
+          </label>
+          <select
+            value={priceListId}
+            onChange={(e) => setPriceListId(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500 font-medium"
+          >
+            <option value="">Standard Pricing (No Tier)</option>
+            {PRICE_LIST_BINDING_OPTIONS.map((opt) => (
+              <option key={opt.id} value={opt.id}>{opt.name}</option>
+            ))}
+          </select>
+          <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-1">
+            Optional — binds this {currentTerms.customer.toLowerCase()} to a tiered price list.
+          </p>
         </div>
 
         {/* Branding & Location */}

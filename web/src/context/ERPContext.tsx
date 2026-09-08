@@ -274,6 +274,7 @@ function mapBackendCustomers(rows: unknown[]): Customer[] {
     phone: r.phone ?? '',
     email: r.email ?? '',
     type: r.metadata?.type ?? 'Individual',
+    priceListId: r.metadata?.price_list_id ?? r.metadata?.priceListId ?? undefined,
     island: r.metadata?.island ?? '',
     vehicles: r.metadata?.vehicles ?? [],
     notes: r.metadata?.notes ?? '',
@@ -1966,6 +1967,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         notes: customerData.notes,
         type: customerData.type,
         vehicles: customerData.vehicles,
+        price_list_id: customerData.priceListId,
       },
     }).then(() => {
       setMutationPending(false);

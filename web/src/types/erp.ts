@@ -33,6 +33,8 @@ export interface Customer {
   phone: string;
   email: string;
   type: CustomerType;
+  /** Optional binding to a price list tier (SERP-314). Absent/undefined = standard pricing, no binding. */
+  priceListId?: string;
   lifecycleStage?: CustomerLifecycleStage;
   consentGiven?: boolean;
   consentTimestamp?: string;

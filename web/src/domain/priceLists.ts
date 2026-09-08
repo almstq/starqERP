@@ -58,6 +58,39 @@ export interface PriceListValidationError {
 }
 
 /**
+ * Reference registry of the tiered price lists a customer can be bound to.
+ *
+ * SERP-314 scoped this as a signed-off domain concept (Retail, Wholesale,
+ * Resort, VIP) — the PriceList CRUD admin screens are explicitly NOT built in
+ * this packet, so the binding surface needs a fixed, known set of tier ids to
+ * offer and display. `id` is the value stored on `Customer.priceListId`; it is
+ * forward-compatible with a future CRUD-backed catalog that emits the same ids.
+ */
+export interface PriceListBindingOption {
+  id: string;
+  name: string;
+}
+
+export const PRICE_LIST_BINDING_OPTIONS: readonly PriceListBindingOption[] = [
+  { id: 'retail', name: 'Retail' },
+  { id: 'wholesale', name: 'Wholesale' },
+  { id: 'resort', name: 'Resort' },
+  { id: 'vip', name: 'VIP' },
+];
+
+/**
+ * Resolves a price list tier id to its display name for a bound customer.
+ * Returns undefined only for an empty/absent binding (standard pricing). An
+ * unknown non-empty id is surfaced explicitly so stale or custom backend data
+ * is not misrepresented as an unbound customer.
+ */
+export function priceListBindingName(priceListId?: string): string | undefined {
+  if (!priceListId) return undefined;
+  return PRICE_LIST_BINDING_OPTIONS.find((o) => o.id === priceListId)?.name
+    ?? `Unknown Tier (${priceListId})`;
+}
+
+/**
  * Validates a price list before it is created or saved. Returns an empty
  * array when valid. Does not mutate the input.
  */
