@@ -42,6 +42,7 @@ import {
 } from '../data/demoFixtures';
 import { telemetry } from '../services/telemetry';
 import { applyMovement } from '../domain/inventoryValuation';
+import { PriceList, resolveItemPrice } from '../domain/priceLists';
 import { dispatchCommand, apiGet, ApiError } from '../services/apiGateway';
 import { useAuth } from './AuthContext';
 import { getArchetype, ArchetypeDefinition, ArchetypeTerminology, ArchetypeId, ARCHETYPES } from '../domain/archetypes';
@@ -231,7 +232,7 @@ export interface ERPContextType {
   laborEntries: LaborEntry[];
   createJob: (jobData: Omit<JobOrder, 'id' | 'jobId' | 'materialsUsed' | 'actualMaterialCost' | 'actualLaborCost' | 'totalLaborHours' | 'actualProfit'>) => JobOrder;
   createCustomer: (customerData: Omit<Customer, 'id' | 'createdAt' | 'activeJobsCount' | 'totalInvoiced' | 'outstandingBalance'>) => Customer;
-  createInvoice: (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber'>) => Invoice;
+  createInvoice: (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber'> & { priceList?: PriceList }) => Invoice;
   recordPayment: (paymentData: Omit<Payment, 'id' | 'paymentNumber'>) => Payment;
   recordCounterSale: (saleData: {
     items: Array<{ itemId: string; name: string; sku: string; quantity: number; unitPrice: number }>;
@@ -2066,11 +2067,30 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return newJob;
   };
 
-  const createInvoice = (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber'>): Invoice => {
+  const createInvoice = (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber'> & { priceList?: PriceList }): Invoice => {
+    const { priceList, ...baseInvoiceData } = invoiceData;
+    const resolvedItems = baseInvoiceData.items.map((item) => {
+      const unitPrice = resolveItemPrice(
+        { id: item.id, sellingPrice: item.unitPrice },
+        priceList
+      );
+      return { ...item, unitPrice, amount: item.quantity * unitPrice };
+    });
+    const resolvedSubtotal = resolvedItems.reduce((sum, item) => sum + item.amount, 0);
+    const resolvedGstAmount = Math.round(resolvedSubtotal * baseInvoiceData.gstRate * 100) / 100;
+    const resolvedTotalAmount = resolvedSubtotal + resolvedGstAmount;
+    const finalizedInvoiceData: Omit<Invoice, 'id' | 'invoiceNumber'> = {
+      ...baseInvoiceData,
+      items: resolvedItems,
+      subtotal: resolvedSubtotal,
+      gstAmount: resolvedGstAmount,
+      totalAmount: resolvedTotalAmount,
+      balanceDue: resolvedTotalAmount - baseInvoiceData.amountPaid,
+    };
     const nextNum = invoices.length + 88;
     const invNumberStr = `INV-2026-0${nextNum}`;
     const newInvoice: Invoice = {
-      ...invoiceData,
+      ...finalizedInvoiceData,
       id: `inv-${Date.now()}`,
       invoiceNumber: invNumberStr
     };
@@ -2081,11 +2101,11 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // Update customer totalInvoiced and outstandingBalance optimistically
     setCustomers((prev) =>
       prev.map((c) =>
-        c.id === invoiceData.customerId
+        c.id === finalizedInvoiceData.customerId
           ? {
               ...c,
-              totalInvoiced: c.totalInvoiced + invoiceData.totalAmount,
-              outstandingBalance: c.outstandingBalance + invoiceData.balanceDue
+              totalInvoiced: c.totalInvoiced + finalizedInvoiceData.totalAmount,
+              outstandingBalance: c.outstandingBalance + finalizedInvoiceData.balanceDue
             }
           : c
       )
@@ -2098,26 +2118,26 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     dispatchCommand({
       command: 'INVOICE',
       payload: {
-        customer_id: invoiceData.customerId,
-        customer_name: invoiceData.customerName,
-        total_amount: invoiceData.totalAmount,
-        subtotal: invoiceData.subtotal,
-        gst_amount: invoiceData.gstAmount,
-        date: invoiceData.date,
-        due_date: invoiceData.dueDate,
-        items: invoiceData.items,
-        notes: invoiceData.notes,
-        job_id: invoiceData.linkedJobId,
-        bank_details: invoiceData.bankDetails,
+        customer_id: finalizedInvoiceData.customerId,
+        customer_name: finalizedInvoiceData.customerName,
+        total_amount: finalizedInvoiceData.totalAmount,
+        subtotal: finalizedInvoiceData.subtotal,
+        gst_amount: finalizedInvoiceData.gstAmount,
+        date: finalizedInvoiceData.date,
+        due_date: finalizedInvoiceData.dueDate,
+        items: finalizedInvoiceData.items,
+        notes: finalizedInvoiceData.notes,
+        job_id: finalizedInvoiceData.linkedJobId,
+        bank_details: finalizedInvoiceData.bankDetails,
       },
     }).then((res) => {
       setMutationPending(false);
       if (res.ok && (res as any).invoice) {
         const serverInvoice = (res as any).invoice;
-        const authTotal = Number(serverInvoice.total_amount ?? invoiceData.totalAmount);
+        const authTotal = Number(serverInvoice.total_amount ?? finalizedInvoiceData.totalAmount);
         const authBalanceDue = authTotal - (newInvoice.amountPaid || 0);
-        const totalDelta = authTotal - invoiceData.totalAmount;
-        const balanceDelta = authBalanceDue - invoiceData.balanceDue;
+        const totalDelta = authTotal - finalizedInvoiceData.totalAmount;
+        const balanceDelta = authBalanceDue - finalizedInvoiceData.balanceDue;
 
         setInvoices((prev) => prev.map((inv) =>
           inv.id === newInvoice.id
@@ -2135,7 +2155,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (totalDelta !== 0 || balanceDelta !== 0) {
           setCustomers((prev) =>
             prev.map((c) =>
-              c.id === invoiceData.customerId
+              c.id === finalizedInvoiceData.customerId
                 ? {
                     ...c,
                     totalInvoiced: Math.max(0, c.totalInvoiced + totalDelta),
@@ -2157,11 +2177,11 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setInvoices((prev) => prev.filter((inv) => inv.id !== newInvoice.id));
         setCustomers((prev) =>
           prev.map((c) =>
-            c.id === invoiceData.customerId
+            c.id === finalizedInvoiceData.customerId
               ? {
                   ...c,
-                  totalInvoiced: Math.max(0, c.totalInvoiced - invoiceData.totalAmount),
-                  outstandingBalance: Math.max(0, c.outstandingBalance - invoiceData.balanceDue)
+                  totalInvoiced: Math.max(0, c.totalInvoiced - finalizedInvoiceData.totalAmount),
+                  outstandingBalance: Math.max(0, c.outstandingBalance - finalizedInvoiceData.balanceDue)
                 }
               : c
           )
