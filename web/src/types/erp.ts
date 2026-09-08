@@ -79,6 +79,19 @@ export interface StaffMember {
   name: string;
   role: string;
   avatar?: string;
+  hourlyCostRateMvr?: number;
+}
+
+export interface LaborEntry {
+  id: string;
+  jobId: string;
+  technicianId: string;
+  technicianName: string;
+  hourlyCostRateMvr: number;
+  taskDescription: string;
+  hoursWorked: number;
+  totalCostMvr: number;
+  clockedAt: string;
 }
 
 export interface MaterialUsageItem {
@@ -115,6 +128,8 @@ export interface JobOrder {
   estimatedMaterialCost: number;
   actualMaterialCost: number;
   laborCostEstimate: number;
+  actualLaborCost: number;
+  totalLaborHours: number;
   targetMarginPercentage: number;
   actualProfit: number;
   linkedInvoiceId?: string;

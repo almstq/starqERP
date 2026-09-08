@@ -15,10 +15,12 @@ import {
   Printer,
   CheckCircle2,
   User,
+  Hourglass,
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { JobStatus } from '../../types/erp';
 import { WorkflowStepRail } from './WorkflowStepRail';
+import { LaborTimeEntryModal } from './LaborTimeEntryModal';
 import {
   Button,
   Input,
@@ -49,6 +51,7 @@ export const JobDetailView: React.FC = () => {
     generateJobInvoice,
     currentArchetype,
     currentTerms,
+    laborEntries,
   } = useERP();
 
   const isAutomotive = currentArchetype?.terminology?.showVehicleFields ?? false;
@@ -56,8 +59,11 @@ export const JobDetailView: React.FC = () => {
   const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false);
   const [selectedInventoryId, setSelectedInventoryId] = useState(inventory[0]?.id || '');
   const [materialQty, setMaterialQty] = useState(1);
+  const [isLaborModalOpen, setIsLaborModalOpen] = useState(false);
 
   const job = jobs.find((j) => j.id === id || j.jobId.toLowerCase() === id?.toLowerCase());
+
+  const jobLabor = laborEntries.filter((l) => l.jobId === job?.id || l.jobId === job?.jobId);
 
   if (!job) {
     return (
@@ -438,6 +444,82 @@ export const JobDetailView: React.FC = () => {
               </TableBody>
             </Table>
           </Surface>
+
+          {/* Technician Labor & Timesheet */}
+          <Surface variant="filled" level={1} padding="md" className="space-y-4">
+            <div
+              className="flex items-center justify-between pb-3 min-w-0"
+              style={{ borderBottom: '1px solid var(--md-sys-color-outline-variant)' }}
+            >
+              <div className="flex items-center gap-2 min-w-0 truncate">
+                <Hourglass size={17} style={{ color: 'var(--md-sys-color-primary)' }} className="shrink-0" />
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface)] truncate">
+                  Technician Labor
+                </h2>
+              </div>
+              <Button
+                variant="tonal"
+                size="xs"
+                onClick={() => setIsLaborModalOpen(true)}
+                icon={<Plus size={12} />}
+              >
+                <span>Clock Hours</span>
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 text-center min-w-0">
+              <div className="rounded-[var(--md-sys-shape-corner-medium)] px-2 py-3"
+                style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)' }}
+              >
+                <div className="text-base sm:text-lg font-bold mono-num text-[var(--md-sys-color-on-surface)]">{job.totalLaborHours}</div>
+                <div className="text-[10px] uppercase tracking-wide text-[var(--md-sys-color-on-surface-variant)] mt-1">Hours</div>
+              </div>
+              <div className="rounded-[var(--md-sys-shape-corner-medium)] px-2 py-3"
+                style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)' }}
+              >
+                <div className="text-base sm:text-lg font-bold mono-num text-[var(--md-sys-color-on-surface)]">{formatMVR(job.actualLaborCost)}</div>
+                <div className="text-[10px] uppercase tracking-wide text-[var(--md-sys-color-on-surface-variant)] mt-1">Labor Cost</div>
+              </div>
+              <div className="rounded-[var(--md-sys-shape-corner-medium)] px-2 py-3"
+                style={{ backgroundColor: 'var(--md-sys-color-primary-container)', color: 'var(--md-sys-color-on-primary-container)' }}
+              >
+                <div className="text-base sm:text-lg font-bold mono-num">{formatMVR(job.quotedAmount - job.actualMaterialCost - job.actualLaborCost)}</div>
+                <div className="text-[10px] uppercase tracking-wide mt-1">Est. Margin</div>
+              </div>
+            </div>
+
+            <Table>
+              <TableHeader>
+                <tr>
+                  <TableHead>Technician / Task</TableHead>
+                  <TableHead alignRight>Hours</TableHead>
+                  <TableHead alignRight className="hidden sm:table-cell">Rate</TableHead>
+                  <TableHead alignRight>Cost</TableHead>
+                </tr>
+              </TableHeader>
+              <TableBody>
+                {jobLabor.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-6" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                      No labor hours logged yet. Clock hours against this {currentTerms.order.toLowerCase()}.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  jobLabor.map((l) => (
+                    <TableRow key={l.id}>
+                      <TableCell>
+                        <span className="block font-semibold text-[var(--md-sys-color-on-surface)]">{l.technicianName}</span>
+                        <span className="block text-[11px] text-[var(--md-sys-color-on-surface-variant)] truncate max-w-[220px]">{l.taskDescription}</span>
+                      </TableCell>
+                      <TableCell isNumeric className="mono-num">{l.hoursWorked}h</TableCell>
+                      <TableCell isNumeric className="hidden sm:table-cell mono-num">{formatMVR(l.hourlyCostRateMvr)}</TableCell>
+                      <TableCell isNumeric className="font-bold text-[var(--md-sys-color-on-surface)] mono-num">{formatMVR(l.totalCostMvr)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Surface>
         </div>
 
         {/* Right Column (5 cols): Financials, Staff & Commercial Invoices */}
@@ -479,6 +561,23 @@ export const JobDetailView: React.FC = () => {
 
               <div className="my-2" style={{ borderTop: '1px solid var(--md-sys-color-outline-variant)' }} />
 
+              <div className="space-y-2 min-w-0">
+                <div className="flex items-center justify-between min-w-0">
+                  <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Labor Cost (actual):</span>
+                  <span className="mono-num font-semibold text-[var(--md-sys-color-on-surface)]">{formatMVR(job.actualLaborCost)}</span>
+                </div>
+                <div className="flex items-center justify-between min-w-0">
+                  <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Parts / Material Cost (actual):</span>
+                  <span className="mono-num font-semibold text-[var(--md-sys-color-on-surface)]">{formatMVR(job.actualMaterialCost)}</span>
+                </div>
+                <div className="flex items-center justify-between min-w-0">
+                  <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Total Cost:</span>
+                  <span className="mono-num font-semibold text-[var(--md-sys-color-on-surface)]">{formatMVR(job.actualMaterialCost + job.actualLaborCost)}</span>
+                </div>
+              </div>
+
+              <div className="my-2" style={{ borderTop: '1px solid var(--md-sys-color-outline-variant)' }} />
+
               <div className="p-3.5 rounded-[var(--md-sys-shape-corner-small)] flex items-center justify-between min-w-0"
                 style={{
                   backgroundColor: 'var(--md-sys-color-surface-container-high)',
@@ -487,7 +586,7 @@ export const JobDetailView: React.FC = () => {
               >
                 <div className="min-w-0">
                   <span className="block text-[10px] uppercase font-semibold text-[var(--md-sys-color-on-surface-variant)]">
-                    Est. Profit
+                    Net Profit
                   </span>
                   <span className="mono-num font-bold text-sm sm:text-base" style={{ color: 'var(--positive)' }}>
                     {formatMVR(job.actualProfit)}
@@ -579,6 +678,8 @@ export const JobDetailView: React.FC = () => {
           </Surface>
         </div>
       </div>
+
+      <LaborTimeEntryModal job={job} isOpen={isLaborModalOpen} onClose={() => setIsLaborModalOpen(false)} />
     </div>
   );
 };

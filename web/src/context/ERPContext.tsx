@@ -12,6 +12,7 @@ import {
   Supplier,
   PurchaseOrder,
   StaffMember,
+  LaborEntry,
   NeedsAttentionAlert,
   AIAssistantInsight,
   JobStatus,
@@ -226,7 +227,9 @@ export interface ERPContextType {
   // CRUD actions
   updateJobStatus: (jobId: string, status: JobStatus) => void;
   addMaterialToJob: (jobId: string, inventoryId: string, quantity: number) => void;
-  createJob: (jobData: Omit<JobOrder, 'id' | 'jobId' | 'materialsUsed' | 'actualMaterialCost' | 'actualProfit'>) => JobOrder;
+  addLaborEntry: (entry: Omit<LaborEntry, 'id' | 'totalCostMvr' | 'clockedAt'>) => void;
+  laborEntries: LaborEntry[];
+  createJob: (jobData: Omit<JobOrder, 'id' | 'jobId' | 'materialsUsed' | 'actualMaterialCost' | 'actualLaborCost' | 'totalLaborHours' | 'actualProfit'>) => JobOrder;
   createCustomer: (customerData: Omit<Customer, 'id' | 'createdAt' | 'activeJobsCount' | 'totalInvoiced' | 'outstandingBalance'>) => Customer;
   createInvoice: (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber'>) => Invoice;
   recordPayment: (paymentData: Omit<Payment, 'id' | 'paymentNumber'>) => Payment;
@@ -303,6 +306,7 @@ function mapBackendJobs(rows: unknown[]): JobOrder[] {
     actualMaterialCost: 0,
     laborCostEstimate: 0,
     actualLaborCost: 0,
+    totalLaborHours: 0,
     targetMarginPercentage: 0,
     actualProfit: 0,
     bayNumber: '',
@@ -664,6 +668,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [alerts, setAlerts] = useState<NeedsAttentionAlert[]>([]);
   const [aiInsights, setAiInsights] = useState<AIAssistantInsight[]>([]);
+  const [laborEntries, setLaborEntries] = useState<LaborEntry[]>([]);
 
   // Transactional Edge RPC mutation states (SERP-289)
   const [mutationPending, setMutationPending] = useState<boolean>(false);
@@ -1784,7 +1789,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (job.id === jobId || job.jobId === jobId) {
           const newMaterials = [...job.materialsUsed, materialUsage];
           const newActualMatCost = job.actualMaterialCost + totalCost;
-          const newProfit = job.quotedAmount - (newActualMatCost + job.laborCostEstimate);
+          const newProfit = job.quotedAmount - (newActualMatCost + job.actualLaborCost);
           return {
             ...job,
             materialsUsed: newMaterials,
@@ -1809,7 +1814,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       console.error('[ERP] WORK command failed:', err);
       if (session || err instanceof ApiError) {
         // Rollback job material addition
-        setJobs((prev) => prev.map((j) => j.id === jobId ? {...j, materialsUsed: j.materialsUsed.filter((m) => m.id !== materialUsage.id), actualMaterialCost: j.actualMaterialCost - totalCost, actualProfit: j.quotedAmount - (j.actualMaterialCost - totalCost + j.laborCostEstimate)} : j));
+        setJobs((prev) => prev.map((j) => j.id === jobId ? {...j, materialsUsed: j.materialsUsed.filter((m) => m.id !== materialUsage.id), actualMaterialCost: j.actualMaterialCost - totalCost, actualProfit: j.quotedAmount - (j.actualMaterialCost - totalCost + j.actualLaborCost)} : j));
       }
     });
 
@@ -1852,6 +1857,86 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       summary: `Deducted ${quantity} ${item.unit} for job ${jobId}. Total material cost: ${formatMVR(totalCost)}.`,
       previousValue: `Stock: ${item.quantityOnHand} ${item.unit}`,
       newValue: `Stock: ${item.quantityOnHand - quantity} ${item.unit}`
+    });
+  };
+
+  const addLaborEntry = (entry: Omit<LaborEntry, 'id' | 'totalCostMvr' | 'clockedAt'>) => {
+    const totalCostMvr = Math.round(entry.hoursWorked * entry.hourlyCostRateMvr);
+    const newEntry: LaborEntry = {
+      ...entry,
+      id: `lab-${Date.now()}`,
+      totalCostMvr,
+      clockedAt: new Date().toISOString()
+    };
+
+    setLaborEntries((prev) => [newEntry, ...prev]);
+
+    // Recompute job actual labor cost, totals, and margin in real time
+    setJobs((prev) =>
+      prev.map((job) => {
+        if (job.id === newEntry.jobId || job.jobId === newEntry.jobId) {
+          return {
+            ...job,
+            actualLaborCost: job.actualLaborCost + totalCostMvr,
+            totalLaborHours: job.totalLaborHours + entry.hoursWorked,
+            actualProfit: job.quotedAmount - (job.actualMaterialCost + job.actualLaborCost + totalCostMvr),
+            laborCostEstimate: Math.max(job.laborCostEstimate, job.actualLaborCost + totalCostMvr),
+          };
+        }
+        return job;
+      })
+    );
+
+    setMutationPending(true);
+    setLastMutationError(null);
+    dispatchCommand({
+      command: 'WORK',
+      payload: {
+        jobId: newEntry.jobId,
+        technicianId: newEntry.technicianId,
+        technician_name: newEntry.technicianName,
+        task: newEntry.taskDescription,
+        hours: entry.hoursWorked,
+        hourly_rate: entry.hourlyCostRateMvr,
+        total_cost: totalCostMvr,
+        type: 'timesheet'
+      },
+    }).then(() => {
+      setMutationPending(false);
+    }).catch((err) => {
+      setMutationPending(false);
+      const errMsg = err instanceof Error ? err.message : 'WORK command failed';
+      setLastMutationError(errMsg);
+      console.error('[ERP] WORK timesheet command failed:', err);
+      if (session || err instanceof ApiError) {
+        // Rollback labor entry and job recalculation on authoritative rejection
+        setLaborEntries((prev) => prev.filter((l) => l.id !== newEntry.id));
+        setJobs((prev) =>
+          prev.map((job) => {
+            if (job.id === newEntry.jobId || job.jobId === newEntry.jobId) {
+              const revertedLaborCost = Math.max(0, job.actualLaborCost - totalCostMvr);
+              return {
+                ...job,
+                actualLaborCost: revertedLaborCost,
+                totalLaborHours: Math.max(0, job.totalLaborHours - entry.hoursWorked),
+                actualProfit: job.quotedAmount - (job.actualMaterialCost + revertedLaborCost),
+              };
+            }
+            return job;
+          })
+        );
+      }
+    });
+
+    logAuditEvent({
+      action: 'CREATED',
+      module: 'jobs',
+      entityType: 'JobOrder',
+      entityId: newEntry.jobId,
+      entityName: newEntry.jobId,
+      summary: `${newEntry.technicianName} clocked ${entry.hoursWorked}h on "${entry.taskDescription}" at ${formatMVR(newEntry.hourlyCostRateMvr)}/hr (${formatMVR(totalCostMvr)}).`,
+      previousValue: 'Labor entry: none',
+      newValue: `${newEntry.hoursWorked}h labor logged`
     });
   };
 
@@ -1907,7 +1992,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return newCustomer;
   };
 
-  const createJob = (jobData: Omit<JobOrder, 'id' | 'jobId' | 'materialsUsed' | 'actualMaterialCost' | 'actualProfit'>): JobOrder => {
+  const createJob = (jobData: Omit<JobOrder, 'id' | 'jobId' | 'materialsUsed' | 'actualMaterialCost' | 'actualLaborCost' | 'totalLaborHours' | 'actualProfit'>): JobOrder => {
     const prefix = currentTenant.slug.substring(0, 3).toUpperCase();
     const nextNumber = jobs.length + 240;
     const jobIdStr = `${prefix}-0${nextNumber}`;
@@ -1917,7 +2002,9 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       jobId: jobIdStr,
       materialsUsed: [],
       actualMaterialCost: 0,
-      actualProfit: jobData.quotedAmount - (jobData.laborCostEstimate || 0)
+      actualLaborCost: 0,
+      totalLaborHours: 0,
+      actualProfit: jobData.quotedAmount
     };
 
     setJobs((prev) => [newJob, ...prev]);
@@ -2912,6 +2999,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         formatMVR,
         updateJobStatus,
         addMaterialToJob,
+        addLaborEntry,
+        laborEntries,
         createJob,
         createCustomer,
         createInvoice,

@@ -15,11 +15,11 @@ import {
 import type { AiMatchSuggestion } from '../domain/aiReconciliation';
 
 export const INITIAL_STAFF: StaffMember[] = [
-  { id: 'st-1', name: 'Ahsan "Acko"', role: 'Lead Painter' },
-  { id: 'st-2', name: 'Nabeel Rizvy', role: 'Wrap Specialist' },
-  { id: 'st-3', name: 'Sham Hussain', role: 'Detailer' },
-  { id: 'st-4', name: 'Moosa Latheef', role: 'Workshop Manager' },
-  { id: 'st-5', name: 'Fayaz "Faaye"', role: 'Prep Tech' }
+  { id: 'st-1', name: 'Ahsan "Acko"', role: 'Lead Painter', hourlyCostRateMvr: 450 },
+  { id: 'st-2', name: 'Nabeel Rizvy', role: 'Wrap Specialist', hourlyCostRateMvr: 400 },
+  { id: 'st-3', name: 'Sham Hussain', role: 'Detailer', hourlyCostRateMvr: 320 },
+  { id: 'st-4', name: 'Moosa Latheef', role: 'Workshop Manager', hourlyCostRateMvr: 500 },
+  { id: 'st-5', name: 'Fayaz "Faaye"', role: 'Prep Tech', hourlyCostRateMvr: 280 }
 ];
 
 export const INITIAL_CUSTOMERS: Customer[] = [
@@ -447,6 +447,8 @@ export const INITIAL_JOBS: JobOrder[] = [
     estimatedMaterialCost: 8500,
     actualMaterialCost: 9970, // Exceeded estimate slightly (AI insight trigger!)
     laborCostEstimate: 14000,
+    actualLaborCost: 14000,
+    totalLaborHours: 31,
     targetMarginPercentage: 53.6,
     actualProfit: 24530,
     bayNumber: 'Spray Booth Bay 1 (Bake Oven)',
@@ -502,6 +504,8 @@ export const INITIAL_JOBS: JobOrder[] = [
     estimatedMaterialCost: 8800,
     actualMaterialCost: 8560,
     laborCostEstimate: 9500,
+    actualLaborCost: 9500,
+    totalLaborHours: 24,
     targetMarginPercentage: 49.8,
     actualProfit: 17940,
     bayNumber: 'Clean Wrap Bay 1'
@@ -557,6 +561,8 @@ export const INITIAL_JOBS: JobOrder[] = [
     estimatedMaterialCost: 4500,
     actualMaterialCost: 4300,
     laborCostEstimate: 7000,
+    actualLaborCost: 7000,
+    totalLaborHours: 18,
     targetMarginPercentage: 59.6,
     actualProfit: 16700,
     bayNumber: 'Prep Bay 2'
@@ -600,6 +606,8 @@ export const INITIAL_JOBS: JobOrder[] = [
     estimatedMaterialCost: 2800,
     actualMaterialCost: 650,
     laborCostEstimate: 4500,
+    actualLaborCost: 4500,
+    totalLaborHours: 16,
     targetMarginPercentage: 55.7,
     actualProfit: 11350,
     bayNumber: 'Body Pull Bay 3'
@@ -643,6 +651,8 @@ export const INITIAL_JOBS: JobOrder[] = [
     estimatedMaterialCost: 1800,
     actualMaterialCost: 1200,
     laborCostEstimate: 4500,
+    actualLaborCost: 4500,
+    totalLaborHours: 14,
     targetMarginPercentage: 68.3,
     actualProfit: 12300,
     bayNumber: 'Detailing Bay A (LED Tunnel)'
@@ -675,6 +685,8 @@ export const INITIAL_JOBS: JobOrder[] = [
     estimatedMaterialCost: 6500,
     actualMaterialCost: 0,
     laborCostEstimate: 7000,
+    actualLaborCost: 13500,
+    totalLaborHours: 34,
     targetMarginPercentage: 48.4,
     actualProfit: 12700,
     bayNumber: 'Wrap Studio Bay 2'
