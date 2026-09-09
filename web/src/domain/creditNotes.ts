@@ -102,9 +102,9 @@ export interface SettlementAllocation {
  * Generates authoritative reversing double-entry journals for issued credit notes.
  *
  * Accounting Entry:
- *   DR 4100 / 4000 (Sales Returns / Revenue Reversal) - Subtotal
- *   DR 2200 (Output GST Payable Reversal)             - Tax Amount
- *   CR 1200 (Accounts Receivable)                     - Total Credit Amount
+ *   DR 4210 (Sales Discounts Given / contra-revenue)  - Subtotal
+ *   DR 2121 (MIRA Output GST Payable Reversal)        - Tax Amount
+ *   CR 1210 (Trade Debtors Control Account)           - Total Credit Amount
  */
 export function generateCreditNoteJournals(params: {
   creditNotes: CreditNote[];
@@ -120,14 +120,14 @@ export function generateCreditNoteJournals(params: {
 
     const lines: JournalLine[] = [];
 
-    // 1. Debit Revenue / Sales Returns
+    // 1. Debit canonical contra-revenue account for the allowance
     if (cn.subtotal > 0) {
       lines.push({
         id: `${cn.id}-rev`,
-        accountCode: '4110',
-        accountId: 'acc-4110',
-        accountClass: accountClassForCode('4110'),
-        accountName: 'Workshop & Job Labor Revenue',
+        accountCode: '4210',
+        accountId: 'acc-4210',
+        accountClass: accountClassForCode('4210'),
+        accountName: 'Sales Discounts Given',
         debit: Math.round(cn.subtotal * 100) / 100,
         credit: 0,
         narration: `Credit Note ${cn.creditNoteNumber} - ${cn.reason || 'Sales Allowance'} (${cn.customerName})`,
