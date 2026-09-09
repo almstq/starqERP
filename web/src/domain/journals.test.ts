@@ -140,10 +140,10 @@ describe('General Ledger Derivation & Running Balance (SERP-291)', () => {
   });
 
   it('uses canonical postable accounts for every legacy operational mapping', () => {
-    const invoice = { id: 'inv-canonical', invoiceNumber: 'INV-C', customerId: 'c', customerName: 'C', date: '2026-08-01', subtotal: 100, gstAmount: 17, totalAmount: 117, amountPaid: 0, status: 'Issued', items: [] } as Invoice;
+    const invoice = { id: 'inv-canonical', invoiceNumber: 'INV-C', customerId: 'c', customerName: 'C', customerPhone: '', customerIsland: '', date: '2026-08-01', dueDate: '2026-08-15', subtotal: 100, gstRate: 17, gstAmount: 17, totalAmount: 117, amountPaid: 0, balanceDue: 117, status: 'Sent', bankDetails: '', items: [] } as Invoice;
     const payment = { id: 'pay-canonical', invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, customerId: 'c', customerName: 'C', amount: 117, paymentDate: '2026-08-02', method: 'BML Transfer', paymentNumber: 'RCT-C', status: 'Verified', referenceNumber: 'R' } as Payment;
-    const expense = { id: 'exp-canonical', date: '2026-08-03', description: 'Rent', category: 'Rent', amount: 50, paymentMethod: 'Bank' } as Expense;
-    const purchase = { id: 'po-canonical', poNumber: 'PO-C', orderDate: '2026-08-04', supplierName: 'Supplier', totalAmount: 50, status: 'Approved', paymentStatus: 'Unpaid' } as PurchaseOrder;
+    const expense = { id: 'exp-canonical', expenseNumber: 'EXP-001', date: '2026-08-03', description: 'Rent', category: 'Workshop Rent (Hulhumale)', amount: 50, paymentMethod: 'BML Bank Transfer', payee: 'Landlord', status: 'Paid' } as Expense;
+    const purchase = { id: 'po-canonical', poNumber: 'PO-C', supplierId: 's', orderDate: '2026-08-04', expectedDeliveryDate: '2026-08-11', supplierName: 'Supplier', items: [], subtotal: 50, gstAmount: 0, totalAmount: 50, status: 'Received & Stocked', paymentStatus: 'Unpaid' } as PurchaseOrder;
     const journals = deriveOperationalJournals({ invoices: [invoice], payments: [payment], expenses: [expense], purchaseOrders: [purchase], accounts: DEFAULT_CHART_OF_ACCOUNTS, isGstRegistered: true, tenantId: 'tenant-canonical' });
     expect(journals.map((j) => j.lines.map((line) => line.accountCode))).toEqual([
       ['1210', '4110', '2121'], ['1111', '1210'], ['6210', '1111'], ['5110', '2110'],
