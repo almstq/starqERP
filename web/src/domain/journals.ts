@@ -359,10 +359,10 @@ export function deriveOperationalJournals(params: {
     });
   });
 
-  // 4. Purchase Orders (PO / Bills) -> DR 5210 (COGS), CR 2110 (AP) or CR 1111 if Paid
+  // 4. Purchase Orders (PO / Bills) -> DR 5110 (Cost of Parts & Materials Consumed), CR 2110 (AP) or CR 1111 if Paid
   purchaseOrders.forEach((po) => {
     if (po.status !== 'Draft' && po.status !== 'Cancelled') {
-      const cogsAcc = getAcc('5210');
+      const cogsAcc = getAcc('5110');
       const apAcc = po.paymentStatus === 'Paid' ? getAcc('1111') : getAcc('2110');
 
       journals.push({

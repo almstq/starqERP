@@ -146,7 +146,7 @@ describe('General Ledger Derivation & Running Balance (SERP-291)', () => {
     const purchase = { id: 'po-canonical', poNumber: 'PO-C', orderDate: '2026-08-04', supplierName: 'Supplier', totalAmount: 50, status: 'Approved', paymentStatus: 'Unpaid' } as PurchaseOrder;
     const journals = deriveOperationalJournals({ invoices: [invoice], payments: [payment], expenses: [expense], purchaseOrders: [purchase], accounts: DEFAULT_CHART_OF_ACCOUNTS, isGstRegistered: true, tenantId: 'tenant-canonical' });
     expect(journals.map((j) => j.lines.map((line) => line.accountCode))).toEqual([
-      ['1210', '4110', '2121'], ['1111', '1210'], ['6210', '1111'], ['5210', '2110'],
+      ['1210', '4110', '2121'], ['1111', '1210'], ['6210', '1111'], ['5110', '2110'],
     ]);
     for (const journal of journals) {
       expect(validateJournalEntry(journal.lines).isValid).toBe(true);
