@@ -209,14 +209,14 @@ export const CreateInvoiceModal: React.FC = () => {
         </div>
 
         {tierLabel && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--md-sys-color-secondary-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-secondary-container)] text-xs">
             <Tag className="w-3.5 h-3.5" />
             <span className="font-semibold">Tier:</span>
             <span>{tierLabel}</span>
             {boundPriceList ? (
-              <span className="text-emerald-600">— prices auto-resolved below</span>
+              <span>— prices auto-resolved below</span>
             ) : (
-              <span className="text-amber-600">— bound tier not found in registry; standard pricing applies</span>
+              <span>— bound tier not found in registry; standard pricing applies</span>
             )}
           </div>
         )}
