@@ -174,18 +174,20 @@ export function validatePriceList(input: {
 
 /**
  * Resolves the effective PriceList for a customer's bound tier, or undefined
- * when the customer is unbound or their bound code is not present in the
- * loaded registry (a stale legacy code with no registry row resolves to
- * standard pricing — same semantics as an unbound customer). Matching mirrors
- * `priceListBindingName`: registry rows keep their stable binding code in
- * `id`, so lookups key on `list.id`, never the internal registry UUID.
+ * when the customer is unbound, their bound code is not present in the loaded
+ * registry (a stale legacy code with no registry row resolves to standard
+ * pricing — same semantics as an unbound customer), or the matching list has
+ * been archived. Matching mirrors `priceListBindingName` and
+ * `priceListBindingOptions`: registry rows keep their stable binding code in
+ * `id` and archived rows are excluded, so lookups key on `list.id` (never the
+ * internal registry UUID) and never auto-apply a retired list.
  */
 export function resolvePriceListForCustomer(
   customer: { priceListId?: string } | null | undefined,
   priceLists: readonly PriceList[] | undefined
 ): PriceList | undefined {
   if (!customer?.priceListId || !priceLists) return undefined;
-  return priceLists.find((list) => list.id === customer.priceListId);
+  return priceLists.find((list) => list.id === customer.priceListId && list.active !== false);
 }
 
 /**

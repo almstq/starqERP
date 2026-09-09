@@ -13,7 +13,7 @@ import { resolvePriceListForCustomer, type PriceList } from '../domain/priceList
 // is bound to its code, and the invoice goes through the actual
 // createInvoice -> resolveItemPrice pipeline.
 function TierAutoResolutionHarness() {
-  const { createInvoice, invoices, createCustomer, createPriceList, priceLists } = useERP();
+  const { createInvoice, invoices, createCustomer, createPriceList, archivePriceList, priceLists } = useERP();
   const [boundId, setBoundId] = useState('');
 
   const seedRegistry = async () => {
@@ -75,6 +75,7 @@ function TierAutoResolutionHarness() {
     <>
       <button onClick={seedRegistry}>Seed registry</button>
       <button onClick={bindCustomer}>Bind customer</button>
+      <button onClick={() => archivePriceList('trade_15')}>Archive price list</button>
       <button onClick={() => invoice(undefined)}>Invoice bound</button>
       <button
         onClick={() =>
@@ -92,6 +93,7 @@ function TierAutoResolutionHarness() {
       <output data-testid="amount">{invoices[0]?.items[0]?.amount ?? ''}</output>
       <output data-testid="subtotal">{invoices[0]?.subtotal ?? ''}</output>
       <output data-testid="registry-count">{priceLists.length}</output>
+      <output data-testid="active-count">{priceLists.filter((list) => list.active !== false).length}</output>
     </>
   );
 }
@@ -162,6 +164,24 @@ describe('SERP-314 invoice tier auto-resolution', () => {
     expect(screen.getByTestId('unit-price')).toHaveTextContent('100');
     expect(screen.getByTestId('amount')).toHaveTextContent('200');
   });
+
+  it('never auto-applies an archived price list (falls back to standard pricing)', async () => {
+    render(
+      <ERPProvider>
+        <TierAutoResolutionHarness />
+      </ERPProvider>
+    );
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Seed registry' }));
+    await waitFor(() => expect(screen.getByTestId('registry-count')).toHaveTextContent('5'));
+    fireEvent.click(screen.getByRole('button', { name: 'Bind customer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Archive price list' }));
+    await waitFor(() => expect(screen.getByTestId('active-count')).toHaveTextContent('4'));
+    fireEvent.click(screen.getByRole('button', { name: 'Invoice bound' }));
+
+    expect(screen.getByTestId('unit-price')).toHaveTextContent('100');
+    expect(screen.getByTestId('amount')).toHaveTextContent('200');
+  });
 });
 
 describe('SERP-314 resolvePriceListForCustomer domain lookup', () => {
@@ -176,6 +196,13 @@ describe('SERP-314 resolvePriceListForCustomer domain lookup', () => {
       resolvePriceListForCustomer(
         { priceListId: 'wholesale' },
         [{ id: 'uuid-from-registry', code: 'wholesale', name: 'Wholesale', discountPercent: 10, itemOverrides: [] }]
+      )
+    ).toBeUndefined();
+
+    expect(
+      resolvePriceListForCustomer(
+        { priceListId: 'retail' },
+        [{ id: 'retail', code: 'retail', name: 'Retail', active: false, discountPercent: 10, itemOverrides: [] }]
       )
     ).toBeUndefined();
   });
