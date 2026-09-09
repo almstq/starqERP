@@ -1,12 +1,11 @@
 /**
  * SERP-314 — tiered customer price lists (Retail, Wholesale, Resort, VIP).
  *
- * SCOPE OF THIS FILE. Domain logic only: the shape of a Price List and the
- * function that resolves what a given customer actually pays for a given
- * item. Admin CRUD screens and invoice-creation wiring are separate work —
- * this module is the part that can be specified and tested in isolation,
- * the same pattern already used for threeWayMatch.ts and landedCost.ts in
- * this codebase.
+ * SCOPE OF THIS FILE. Domain logic for the Gap 2 registry-backed PriceList
+ * shape, validation, customer binding options, and item-price resolution. The
+ * admin CRUD surface is implemented by PriceListsTab/ERPContext and the
+ * tenant-scoped PRICE_LIST API. Gap 3 invoice auto-resolution and invoice-line
+ * identity changes remain intentionally out of scope.
  *
  * TWO WAYS TO SET A PRICE, IN PRIORITY ORDER.
  *   1. ITEM OVERRIDE — an explicit price for one specific item on this list.
@@ -45,11 +44,19 @@ export interface PriceListItemOverride {
 
 export interface PriceList {
   id: string;
+  /** Stable tenant-scoped binding key. Existing retail/wholesale/resort/vip ids remain valid. */
+  code?: string;
+  /** Backend registry UUID; not exposed to customers or invoice lines. */
+  registryId?: string;
   name: string;
   description?: string;
   /** Flat discount off InventoryItem.sellingPrice, applied when no item override exists. 0-100. */
   discountPercent: number;
   itemOverrides: PriceListItemOverride[];
+  active?: boolean;
+  version?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PriceListValidationError {
@@ -60,15 +67,33 @@ export interface PriceListValidationError {
 /**
  * Reference registry of the tiered price lists a customer can be bound to.
  *
- * SERP-314 scoped this as a signed-off domain concept (Retail, Wholesale,
- * Resort, VIP) — the PriceList CRUD admin screens are explicitly NOT built in
- * this packet, so the binding surface needs a fixed, known set of tier ids to
- * offer and display. `id` is the value stored on `Customer.priceListId`; it is
- * forward-compatible with a future CRUD-backed catalog that emits the same ids.
+ * SERP-314 Gap 2 provides a tenant-scoped registry-backed CRUD catalog while
+ * preserving Retail, Wholesale, Resort, and VIP as compatibility codes. The
+ * default ids remain a compatibility fallback only when the registry has not
+ * loaded yet; a loaded registry is authoritative. `id` is the stable value
+ * stored on `Customer.priceListId`; the registry UUID is internal to CRUD.
  */
 export interface PriceListBindingOption {
   id: string;
   name: string;
+}
+
+export const PRICE_LIST_ADMIN_SEATS = ['owner', 'director', 'managing_director'] as const;
+
+/**
+ * Live Price List visibility follows the authenticated session, not demo role
+ * fixtures. The acting seat must both be currently held and be one of the
+ * server-authorized administrative seats for the current tenant context.
+ */
+export function canManagePriceListsForSession(session: {
+  current_organisation_id?: string | null;
+  acting_as?: string;
+  seats?: readonly string[];
+} | null | undefined): boolean {
+  if (!session?.current_organisation_id || !session.acting_as || !session.seats?.includes(session.acting_as)) {
+    return false;
+  }
+  return (PRICE_LIST_ADMIN_SEATS as readonly string[]).includes(session.acting_as);
 }
 
 export const PRICE_LIST_BINDING_OPTIONS: readonly PriceListBindingOption[] = [
@@ -78,15 +103,26 @@ export const PRICE_LIST_BINDING_OPTIONS: readonly PriceListBindingOption[] = [
   { id: 'vip', name: 'VIP' },
 ];
 
+/** Converts the tenant registry into customer-binding options. */
+export function priceListBindingOptions(
+  priceLists: readonly PriceList[] | undefined,
+): readonly PriceListBindingOption[] {
+  if (!priceLists) return PRICE_LIST_BINDING_OPTIONS;
+  return priceLists
+    .filter((list) => list.active !== false)
+    .map((list) => ({ id: list.id, name: list.name }));
+}
+
 /**
  * Resolves a price list tier id to its display name for a bound customer.
  * Returns undefined only for an empty/absent binding (standard pricing). An
  * unknown non-empty id is surfaced explicitly so stale or custom backend data
  * is not misrepresented as an unbound customer.
  */
-export function priceListBindingName(priceListId?: string): string | undefined {
+export function priceListBindingName(priceListId?: string, priceLists?: readonly PriceList[]): string | undefined {
   if (!priceListId) return undefined;
-  return PRICE_LIST_BINDING_OPTIONS.find((o) => o.id === priceListId)?.name
+  return priceLists?.find((list) => list.id === priceListId)?.name
+    ?? PRICE_LIST_BINDING_OPTIONS.find((o) => o.id === priceListId)?.name
     ?? `Unknown Tier (${priceListId})`;
 }
 
@@ -95,14 +131,26 @@ export function priceListBindingName(priceListId?: string): string | undefined {
  * array when valid. Does not mutate the input.
  */
 export function validatePriceList(input: {
+  code?: string;
   name: string;
+  description?: string;
   discountPercent: number;
   itemOverrides: PriceListItemOverride[];
 }): PriceListValidationError[] {
   const errors: PriceListValidationError[] = [];
 
+  if (input.code !== undefined && !/^[a-z0-9][a-z0-9_-]{0,62}$/.test(input.code.trim().toLowerCase())) {
+    errors.push({ field: 'code', message: 'Price list code is required and may only contain lowercase letters, numbers, hyphens, and underscores.' });
+  }
+
   if (!input.name || !input.name.trim()) {
     errors.push({ field: 'name', message: 'Price list name is required.' });
+  }
+  if (input.name.trim().length > 200) {
+    errors.push({ field: 'name', message: 'Price list name must be 200 characters or fewer.' });
+  }
+  if (input.description !== undefined && input.description.length > 1000) {
+    errors.push({ field: 'description', message: 'Price list description must be 1000 characters or fewer.' });
   }
 
   if (!Number.isFinite(input.discountPercent) || input.discountPercent < 0 || input.discountPercent > 100) {

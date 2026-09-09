@@ -16,7 +16,7 @@ import { priceListBindingName } from '../../domain/priceLists';
 export const CustomerDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { customers, jobs, invoices, formatMVR, currentArchetype, currentTerms } = useERP();
+  const { customers, jobs, invoices, formatMVR, currentArchetype, currentTerms, priceLists } = useERP();
   const isAutomotive = currentArchetype?.terminology?.showVehicleFields ?? false;
 
   const [activeTab, setActiveTab] = useState<'overview' | 'vehicles' | 'jobs' | 'invoices' | 'notes'>('overview');
@@ -335,7 +335,7 @@ export const CustomerDetailView: React.FC = () => {
               <div className="flex justify-between py-1.5 border-b" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}>
                 <span className="text-[var(--md-sys-color-on-surface-variant)]">Price List:</span>
                 <span className="font-semibold text-[var(--md-sys-color-on-surface)]">
-                  {priceListBindingName(customer.priceListId) ?? 'Standard Pricing'}
+                  {priceListBindingName(customer.priceListId, priceLists) ?? 'Standard Pricing'}
                 </span>
               </div>
               <div className="flex justify-between py-1.5">

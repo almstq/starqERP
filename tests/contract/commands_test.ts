@@ -86,6 +86,7 @@ import {
   validateInvoiceCommandPayload,
   validateExpenseCommandPayload,
   validateCustomerCommandPayload,
+  validatePriceListCommandPayload,
   validateAICopilotProxyRequest,
   isPrivilegedRole,
   requiresMfaForAction,
@@ -443,6 +444,9 @@ Deno.test('a legacy body is read exactly as the SQL reads it', () => {
     'quote',
     'scm_step must win over action, as coalesce does',
   );
+  const priceList = fromLegacyBody({ type: 'PRICE_LIST', action: 'create' })!;
+  assertEquals(priceList.step, undefined);
+  assertEquals(authorizeCommand(principal('owner'), priceList).ok, true);
 });
 
 Deno.test('a body with no command at all is refused, not defaulted', () => {
@@ -1475,8 +1479,8 @@ Deno.test('SERP-144: migration 202608250019 adds customer_name, vehicle_reg, and
 // (DEC-068 / Amendment A2 / Amendment A4)
 // ─────────────────────────────────────────────────────────────────────────────
 
-Deno.test('SERP-166: mutation surface map covers exactly the 25 ERPContext mutations plus the 2 audit entries', () => {
-  // The 25 named mutations from the SERP-166 task description, plus logAuditEvent and dismissAlert
+Deno.test('SERP-166: mutation surface map covers the ERPContext mutations plus the 2 audit entries', () => {
+  // The established mutations plus the three SERP-314 Gap 2 registry operations.
   const EXPECTED_MUTATIONS = new Set([
     // WORK
     'createJob', 'updateJobStatus', 'addMaterialToJob',
@@ -1485,7 +1489,7 @@ Deno.test('SERP-166: mutation surface map covers exactly the 25 ERPContext mutat
     // STOCK_PROCUREMENT
     'receiveStock', 'createPurchaseOrder', 'receivePurchaseOrder',
     // ENTITIES
-    'createCustomer',
+    'createCustomer', 'createPriceList', 'updatePriceList', 'archivePriceList',
     // TENANT
     'createTenant', 'updateTenant', 'switchTenant',
     // WORKFLOW
@@ -1504,14 +1508,17 @@ Deno.test('SERP-166: mutation surface map covers exactly the 25 ERPContext mutat
   assertEquals(mapped.size, EXPECTED_MUTATIONS.size);
 });
 
-Deno.test('SERP-167: wired mutations now include all 24 server mutations post-SERP-167', () => {
+Deno.test('SERP-167: wired mutations include the established server mutations plus Gap 2 registry operations', () => {
   const wired = MUTATION_SURFACE_MAP.filter((m) => m.status === 'wired').map((m) => m.mutation);
-  // Post-SERP-167, all 24 server-backed mutations are wired (with switchTenant and dismissAlert client-local, logAuditEvent eliminated)
-  assertEquals(wired.length, 24);
+  // Gap 2 adds three server-backed registry operations (with switchTenant and dismissAlert client-local, logAuditEvent eliminated).
+  assertEquals(wired.length, 27);
   assert(wired.includes('createInvoice'));
   assert(wired.includes('generateJobInvoice'));
   assert(wired.includes('addExpense'));
   assert(wired.includes('createCustomer'));
+  assert(wired.includes('createPriceList'));
+  assert(wired.includes('updatePriceList'));
+  assert(wired.includes('archivePriceList'));
   assert(wired.includes('createTenant'));
   assert(wired.includes('updateTenant'));
   assert(wired.includes('addWorkflowStage'));
@@ -3095,6 +3102,46 @@ Deno.test('SERP-033 [ATTACK 3]: Revoked seat cannot execute commands even if pre
   if (!decision.ok) {
     assertEquals(decision.error, 'seat_revoked');
   }
+});
+
+Deno.test('SERP-314 Gap 2: PRICE_LIST is restricted to owner/director/managing_director', () => {
+  for (const seat of ['owner', 'director', 'managing_director'] as SeatCode[]) {
+    assertEquals(authorizeCommand(principal(seat), envelope('PRICE_LIST')).ok, true);
+  }
+  for (const seat of ['counter', 'payer', 'financial_controller', 'technician'] as SeatCode[]) {
+    assertEquals(authorizeCommand(principal(seat), envelope('PRICE_LIST')).ok, false);
+  }
+  assertEquals(COMMAND_SEATS.PRICE_LIST, ['owner', 'director', 'managing_director']);
+  assertEquals(SQL_PERMITTED_SEATS.PRICE_LIST, ['owner', 'director', 'managing_director']);
+});
+
+Deno.test('SERP-314 Gap 2: PRICE_LIST payload validation rejects invalid actions, discounts, and overrides', () => {
+  assertEquals(validatePriceListCommandPayload({ action: 'delete', name: 'Nope' }).valid, false);
+  assertEquals(validatePriceListCommandPayload({ action: 'create', code: 'bad code', name: 'Nope' }).error, 'price_list_code_invalid');
+  assertEquals(validatePriceListCommandPayload({ action: 'create', code: 'negative', name: 'Nope', discount_percent: -1 }).error, 'price_list_discount_invalid');
+  assertEquals(validatePriceListCommandPayload({
+    action: 'create', code: 'duplicate', name: 'Nope',
+    overrides: [
+      { product_id: 'product-1', unit_price: 10 },
+      { product_id: 'product-1', unit_price: 12 },
+    ],
+  }).error, 'price_list_override_invalid');
+  assertEquals(validatePriceListCommandPayload({
+    action: 'create', code: 'negative_override', name: 'Nope',
+    overrides: [{ product_id: 'product-1', unit_price: -0.01 }],
+  }).error, 'price_list_override_invalid');
+  assertEquals(validatePriceListCommandPayload({
+    action: 'create', code: 'long_name', name: 'x'.repeat(201),
+  }).error, 'price_list_name_invalid');
+  assertEquals(validatePriceListCommandPayload({
+    action: 'create', code: 'long_description', name: 'Nope', description: 'x'.repeat(1001),
+  }).error, 'price_list_description_invalid');
+  assertEquals(validatePriceListCommandPayload({ action: 'archive', price_list_id: 'registry-1' }).error, 'price_list_id_invalid');
+  assertEquals(validatePriceListCommandPayload({ action: 'archive', price_list_id: '00000000-0000-4000-8000-000000000001' }).valid, true);
+  assertEquals(validatePriceListCommandPayload({ action: 'archive', price_list_id: '00000000-0000-8000-8000-000000000001' }).valid, true);
+  assertEquals(validatePriceListCommandPayload({ action: 'archive', price_list_id: '00000000-0000-9000-8000-000000000001' }).error, 'price_list_id_invalid');
+  assertEquals(validatePriceListCommandPayload({ action: 'update', price_list_id: '00000000-0000-4000-8000-000000000001', name: 'Updated' }).error, 'price_list_version_required');
+  assertEquals(validatePriceListCommandPayload({ action: 'update', price_list_id: '00000000-0000-4000-8000-000000000001', expected_version: 2, name: 'Updated' }).valid, true);
 });
 
 Deno.test('SERP-033 [ATTACK 4]: Replayed request nonces and idempotency conflicts fail closed', () => {

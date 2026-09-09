@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useERP } from '../../context/ERPContext';
 import { Modal } from '../common/Modal';
 import { CustomerType, Vehicle } from '../../types/erp';
-import { PRICE_LIST_BINDING_OPTIONS } from '../../domain/priceLists';
+import { priceListBindingOptions } from '../../domain/priceLists';
 
 export const NewCustomerModal: React.FC = () => {
-  const { isNewCustomerOpen, setIsNewCustomerOpen, createCustomer, currentArchetype, currentTerms } = useERP();
+  const { isNewCustomerOpen, setIsNewCustomerOpen, createCustomer, currentArchetype, currentTerms, priceLists, priceListsLoading } = useERP();
+  const bindingOptions = priceListBindingOptions(priceLists);
   const isAutomotive = currentArchetype?.terminology?.showVehicleFields ?? false;
 
   const [name, setName] = useState('');
@@ -27,7 +28,7 @@ export const NewCustomerModal: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || (priceListsLoading && priceListId)) return;
 
     const vehicles: Vehicle[] = (isAutomotive && plateNumber)
       ? [
@@ -90,6 +91,7 @@ export const NewCustomerModal: React.FC = () => {
           <button
             type="button"
             onClick={handleSubmit}
+            disabled={priceListsLoading && !!priceListId}
             className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs"
           >
             Save {currentTerms.customer} Profile
@@ -163,10 +165,11 @@ className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-
           <select
             value={priceListId}
             onChange={(e) => setPriceListId(e.target.value)}
+            disabled={priceListsLoading}
             className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500 font-medium"
           >
-            <option value="">Standard Pricing (No Tier)</option>
-            {PRICE_LIST_BINDING_OPTIONS.map((opt) => (
+            <option value="">{priceListsLoading ? 'Loading pricing tiers…' : 'Standard Pricing (No Tier)'}</option>
+            {bindingOptions.map((opt) => (
               <option key={opt.id} value={opt.id}>{opt.name}</option>
             ))}
           </select>

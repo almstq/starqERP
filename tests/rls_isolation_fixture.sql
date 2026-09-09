@@ -376,3 +376,19 @@ values
    '00000000-0000-4000-8000-000000003291', '{}'::jsonb),
   ('00000000-0000-4000-8000-000000003212', '00000000-0000-4000-8000-000000000002', 'synthetic.event', 'synthetic',
    '00000000-0000-4000-8000-000000003292', '{}'::jsonb);
+
+-- SERP-314: tenant-scoped price-list registry rows. Both tables need positive
+-- controls so the isolation loop proves visibility for A and rejection for B.
+insert into public.price_lists
+  (id, organisation_id, code, name, discount_percent)
+values
+  ('00000000-0000-4000-8000-000000003301', '00000000-0000-4000-8000-000000000001', 'synthetic_a', 'Synthetic A Price List', 0),
+  ('00000000-0000-4000-8000-000000003302', '00000000-0000-4000-8000-000000000002', 'synthetic_b', 'Synthetic B Price List', 0);
+
+insert into public.price_list_item_overrides
+  (id, organisation_id, price_list_id, product_id, unit_price)
+values
+  ('00000000-0000-4000-8000-000000003311', '00000000-0000-4000-8000-000000000001',
+   '00000000-0000-4000-8000-000000003301', '00000000-0000-4000-8000-000000000801', 1),
+  ('00000000-0000-4000-8000-000000003312', '00000000-0000-4000-8000-000000000002',
+   '00000000-0000-4000-8000-000000003302', '00000000-0000-4000-8000-000000000802', 1);

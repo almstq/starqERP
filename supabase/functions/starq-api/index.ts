@@ -12,6 +12,7 @@ import {
   audienceIsValid,
   authorizeCommand,
   fromLegacyBody,
+  preparePriceListCommandForEdge,
   SEATS,
   type AudiencePolicy,
   type Principal,
@@ -1399,6 +1400,21 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       return json(200, { ok: true, customers: data ?? [] }, origin);
     }
 
+    if (req.method === "GET" && path === "/api/ops/price-lists") {
+      const { data, error } = await db.rpc("api_price_list_registry", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+      });
+      if (error) {
+        if (error.message?.includes("price_list_seat_not_authorized")) {
+          return await deny(403, "seat_not_authorized", session);
+        }
+        throw new Error("price_lists_query_failed");
+      }
+      return json(200, data as Json, origin);
+    }
+
     if (req.method === "GET" && path === "/api/ops/suppliers") {
       const { data, error } = await db.from("contacts").select("*")
         .eq("organisation_id", session.organisation_id)
@@ -1668,7 +1684,16 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         heldSeats: session.seats as SeatCode[],
         seatVerifiedAt: new Date().toISOString(),
       };
-      const verdict = authorizeCommand(principal, intent);
+      const priceListPreparation = intent.command === "PRICE_LIST"
+        ? preparePriceListCommandForEdge(body, principal)
+        : null;
+      if (priceListPreparation && !priceListPreparation.ok) {
+        await securityEvent(req, "garage.command", "rejected", session, { code: priceListPreparation.error });
+        return json(priceListPreparation.status, { ok: false, error: priceListPreparation.error, request_id: requestId }, origin);
+      }
+      const verdict = priceListPreparation?.ok
+        ? { ok: true as const }
+        : authorizeCommand(principal, intent);
       if (!verdict.ok) {
         await securityEvent(req, "garage.command", "rejected", session, { code: verdict.error });
         return json(403, { ok: false, error: verdict.error, request_id: requestId }, origin);
@@ -1738,14 +1763,17 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         };
       }
 
-      const { data, error } = await db.rpc("api_garage_command", {
+      const rpcArgs = {
         target_org: session.organisation_id,
         target_person: session.person_uuid,
         target_seat: session.acting_as,
         command_key: commandKey,
         command: commandForRpc,
         request_identifier: requestId,
-      });
+      };
+      const { data, error } = intent.command === "PRICE_LIST"
+        ? await db.rpc("api_price_list_command", rpcArgs)
+        : await db.rpc("api_garage_command", rpcArgs);
       if (error) {
         await securityEvent(req, "garage.command", "rejected", session, { code: error.code ?? "database_rejection" });
         return json(400, { ok: false, error: "command_rejected", request_id: requestId }, origin);

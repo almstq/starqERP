@@ -48,6 +48,7 @@ import {
   Layers,
   Activity,
   Landmark,
+  Tag,
 } from 'lucide-react';
 import { StarqHQShell, PlatformTabId } from '../components/platform/StarqHQShell';
 
@@ -123,6 +124,7 @@ export const SETTINGS_SUBNAV = [
   { id: 'profile',   label: 'Profile & Tax',       Icon: Building2 },
   { id: 'branding',  label: 'Branding & Logo',     Icon: ImageIcon },
   { id: 'roles',     label: 'Roles & Permissions', Icon: ShieldCheck },
+  { id: 'price_lists', label: 'Price Lists',        Icon: Tag },
   { id: 'users',     label: 'Users & Staff',       Icon: Users },
   { id: 'workflows', label: 'Workflows',           Icon: GitBranch },
   { id: 'support',   label: 'Support & Help',      Icon: LifeBuoy },

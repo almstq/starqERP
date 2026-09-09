@@ -182,7 +182,7 @@ export const COMMANDS = [
   // Revision missing endpoints (SERP-167)
   'INVOICE', 'EXPENSE', 'CUSTOMER', 'TENANT_CONFIG', 'TENANT_ONBOARD',
   'WORKFLOW', 'MEMBER_INVITE', 'MEMBER_AUTHORIZE', 'MEMBER_SUSPEND',
-  'MEMBER_ROLE_UPDATE', 'ROLE', 'COUNTER_SALE',
+  'MEMBER_ROLE_UPDATE', 'ROLE', 'PRICE_LIST', 'COUNTER_SALE',
 ] as const;
 export type CommandName = (typeof COMMANDS)[number];
 
@@ -221,6 +221,7 @@ export const COMMAND_SEATS: Readonly<Record<CommandName, readonly SeatCode[]>> =
   MEMBER_SUSPEND:    ['owner', 'director', 'managing_director'],
   MEMBER_ROLE_UPDATE:['owner', 'director', 'managing_director'],
   ROLE:              ['owner', 'director', 'managing_director'],
+  PRICE_LIST:        ['owner', 'director', 'managing_director'],
   COUNTER_SALE:      ['counter', 'financial_controller', 'director', 'managing_director', 'owner'],
 } as const;
 
@@ -253,6 +254,7 @@ export const SQL_REQUIRED_SEAT: Readonly<Record<CommandName, SeatCode | null>> =
   MEMBER_SUSPEND: null,
   MEMBER_ROLE_UPDATE: null,
   ROLE: null,
+  PRICE_LIST: null,
   COUNTER_SALE: null,
 } as const;
 
@@ -281,6 +283,7 @@ export const SQL_PERMITTED_SEATS: Readonly<Record<CommandName, readonly SeatCode
   MEMBER_SUSPEND:    ['owner', 'director', 'managing_director'],
   MEMBER_ROLE_UPDATE:['owner', 'director', 'managing_director'],
   ROLE:              ['owner', 'director', 'managing_director'],
+  PRICE_LIST:        ['owner', 'director', 'managing_director'],
   COUNTER_SALE:      ['counter', 'financial_controller', 'director', 'managing_director', 'owner'],
 } as const;
 
@@ -1207,6 +1210,7 @@ export function audienceIsValid(
  *
  *     event_name := upper(trim(coalesce(command->>'type', command->>'sop', '')))
  *     scm_step   := lower(trim(coalesce(command->>'scm_step', command->>'action', '')))
+ *                   only when event_name = 'PURCHASE'
  *
  * If this and that SQL ever disagree about which key wins, the boundary authorizes one command
  * while the database executes another — worse than having no boundary check, because it would
@@ -1229,13 +1233,16 @@ export function fromLegacyBody(
   const command = pick('type', 'sop').toUpperCase();
   if (!command) return null;
 
-  const step = pick('scm_step', 'action').toLowerCase();
+  // `action` is a domain action for PRICE_LIST (create/update/archive), not a
+  // workflow step. Only PURCHASE carries an envelope step; treating every
+  // legacy action as `step` made the Edge reject PRICE_LIST before its RPC.
+  const step = command === 'PURCHASE' ? pick('scm_step', 'action').toLowerCase() : '';
 
   return {
     contract: CONTRACT_VERSION,
     command: command as CommandName,
-    // Only PURCHASE carries a step. A step on anything else is refused by authorizeCommand as
-    // `step_not_permitted` — the correct answer, not something to paper over here.
+    // Only PURCHASE carries a step. Other commands retain their domain action
+    // in payload and cannot be rejected as if that action were a workflow step.
     ...(step ? { step: step as ScmStep } : {}),
     payload: body,
     csrf: String(body.csrf ?? ''),
@@ -1564,6 +1571,33 @@ export const MUTATION_SURFACE_MAP: readonly MutationSurfaceEntry[] = [
     requiredSeats: COMMAND_SEATS.CUSTOMER,
     statutoryBoundary: false,
     notes: 'CUSTOMER command added in SERP-167 (migration 202608250020). Creates contact record in public.contacts with type=customer.',
+  },
+  {
+    mutation: 'createPriceList',
+    group: 'ENTITIES',
+    status: 'wired',
+    serverCommand: 'PRICE_LIST',
+    requiredSeats: COMMAND_SEATS.PRICE_LIST,
+    statutoryBoundary: false,
+    notes: 'PRICE_LIST create persists a tenant-scoped registry row and optional product overrides through the Gap-2 migration.',
+  },
+  {
+    mutation: 'updatePriceList',
+    group: 'ENTITIES',
+    status: 'wired',
+    serverCommand: 'PRICE_LIST',
+    requiredSeats: COMMAND_SEATS.PRICE_LIST,
+    statutoryBoundary: false,
+    notes: 'PRICE_LIST update is tenant-scoped and refuses archived records.',
+  },
+  {
+    mutation: 'archivePriceList',
+    group: 'ENTITIES',
+    status: 'wired',
+    serverCommand: 'PRICE_LIST',
+    requiredSeats: COMMAND_SEATS.PRICE_LIST,
+    statutoryBoundary: false,
+    notes: 'PRICE_LIST archive deactivates a row; physical deletion is not supported.',
   },
   // ── TENANT ────────────────────────────────────────────────────────────────
   {
@@ -1963,6 +1997,114 @@ export function validateCustomerCommandPayload(
     return { valid: false, error: 'customer_name_required' };
   }
   return { valid: true, name };
+}
+
+export interface PriceListCommandPayload {
+  readonly action?: 'create' | 'update' | 'archive';
+  readonly price_list_id?: Uuid;
+  /** Required for update; prevents lost concurrent administrator edits. */
+  readonly expected_version?: number;
+  /** Stable tenant-scoped binding key; retail/wholesale/resort/vip remain valid. */
+  readonly code?: string;
+  readonly name?: string;
+  readonly description?: string;
+  readonly discount_percent?: number;
+  readonly overrides?: readonly { product_id: Uuid; unit_price: number }[];
+}
+
+export function validatePriceListCommandPayload(
+  payload: PriceListCommandPayload | Readonly<Record<string, unknown>>,
+): { valid: boolean; error?: string } {
+  const p = payload as Record<string, unknown>;
+  const action = String(p.action ?? 'create').trim().toLowerCase();
+  if (!['create', 'update', 'archive'].includes(action)) {
+    return { valid: false, error: 'price_list_action_invalid' };
+  }
+
+  const code = String(p.code ?? '').trim().toLowerCase();
+  const name = String(p.name ?? '').trim();
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const priceListId = String(p.price_list_id ?? '').trim();
+  if (action !== 'create' && !uuidPattern.test(priceListId)) {
+    return { valid: false, error: 'price_list_id_invalid' };
+  }
+  if (action === 'update' && (!Number.isInteger(Number(p.expected_version)) || Number(p.expected_version) <= 0)) {
+    return { valid: false, error: 'price_list_version_required' };
+  }
+  if (action === 'create' && !/^[a-z0-9][a-z0-9_-]{0,62}$/.test(code)) {
+    return { valid: false, error: 'price_list_code_invalid' };
+  }
+  if (action !== 'archive' && !name) {
+    return { valid: false, error: 'price_list_name_required' };
+  }
+  if (action !== 'archive' && name.length > 200) {
+    return { valid: false, error: 'price_list_name_invalid' };
+  }
+  if (action !== 'archive' && p.description !== undefined && String(p.description).length > 1000) {
+    return { valid: false, error: 'price_list_description_invalid' };
+  }
+
+  if (p.discount_percent !== undefined) {
+    const rawDiscount = p.discount_percent;
+    const discountText = typeof rawDiscount === 'number' ? String(rawDiscount) : String(rawDiscount ?? '').trim();
+    const discount = Number(rawDiscount);
+    if (!/^[0-9]+(\.[0-9]+)?$/.test(discountText) || !Number.isFinite(discount) || discount < 0 || discount > 100) {
+      return { valid: false, error: 'price_list_discount_invalid' };
+    }
+  }
+
+  if (p.overrides !== undefined) {
+    if (!Array.isArray(p.overrides)) return { valid: false, error: 'price_list_overrides_invalid' };
+    const seen = new Set<string>();
+    for (const raw of p.overrides) {
+      const override = raw as Record<string, unknown>;
+      const productId = String(override?.product_id ?? '').trim();
+      const rawUnitPrice = override?.unit_price;
+      const unitPriceText = typeof rawUnitPrice === 'number' ? String(rawUnitPrice) : String(rawUnitPrice ?? '').trim();
+      const unitPrice = Number(rawUnitPrice);
+      if (!uuidPattern.test(productId) || seen.has(productId.toLowerCase()) ||
+          !/^[0-9]+(\.[0-9]+)?$/.test(unitPriceText) || !Number.isFinite(unitPrice) || unitPrice < 0) {
+        return { valid: false, error: 'price_list_override_invalid' };
+      }
+      seen.add(productId.toLowerCase());
+    }
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Executable PRICE_LIST boundary used by the Edge route.
+ *
+ * The Edge assembles the principal from the authenticated session and calls
+ * this pure function immediately before the RPC. Keeping adaptation, runtime
+ * validation, and seat authorization together lets CI exercise the same
+ * boundary without live credentials or a production database.
+ */
+export type PriceListEdgePreparation =
+  | { readonly ok: true; readonly intent: CommandEnvelope }
+  | { readonly ok: false; readonly error: string; readonly status: 400 | 403 };
+
+export function preparePriceListCommandForEdge(
+  body: Readonly<Record<string, unknown>>,
+  principal: Principal,
+): PriceListEdgePreparation {
+  const intent = fromLegacyBody(body);
+  if (!intent || intent.command !== 'PRICE_LIST') {
+    return { ok: false, error: 'unknown_command', status: 400 };
+  }
+
+  const payloadVerdict = validatePriceListCommandPayload(body);
+  if (!payloadVerdict.valid) {
+    return { ok: false, error: payloadVerdict.error ?? 'price_list_payload_invalid', status: 400 };
+  }
+
+  const authorization = authorizeCommand(principal, intent);
+  if (!authorization.ok) {
+    return { ok: false, error: 'error' in authorization ? authorization.error : 'seat_not_authorized', status: 403 };
+  }
+
+  return { ok: true, intent };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

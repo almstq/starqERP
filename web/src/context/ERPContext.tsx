@@ -42,12 +42,19 @@ import {
 } from '../data/demoFixtures';
 import { telemetry } from '../services/telemetry';
 import { applyMovement } from '../domain/inventoryValuation';
-import { PriceList, resolveItemPrice, roundToTwoDecimals } from '../domain/priceLists';
+import {
+  PRICE_LIST_BINDING_OPTIONS,
+  PriceList,
+  resolveItemPrice,
+  roundToTwoDecimals,
+  validatePriceList,
+} from '../domain/priceLists';
 import { dispatchCommand, apiGet, ApiError } from '../services/apiGateway';
 import { useAuth } from './AuthContext';
 import { getArchetype, ArchetypeDefinition, ArchetypeTerminology, ArchetypeId, ARCHETYPES } from '../domain/archetypes';
 import { switchContext as apiSwitchContext, fetchCurrentUser } from '../services/auth';
 import { mapSessionOrganisationsToTenants, resolveCurrentTenant } from '../lib/sessionTenants';
+import { isCurrentSessionDataLoad } from '../lib/sessionLoadGuard';
 import {
   submitOrganisationApplication as apiSubmitApplication,
   getApplicantApplication as apiGetApplicantApplication,
@@ -88,7 +95,7 @@ export interface ERPContextType {
   currentArchetype: ArchetypeDefinition;
   currentTerms: ArchetypeTerminology;
   tenants: OrganisationTenant[];
-  switchTenant: (tenantId: string) => void;
+  switchTenant: (tenantId: string) => Promise<void>;
   switchBook?: (bookId: string) => void;
   switchActiveContext: (context: { plane: 'platform' | 'tenant'; tenantId?: string; bookId?: string }) => void;
   createTenant: (tenantData: Omit<OrganisationTenant, 'id' | 'createdAt'>) => OrganisationTenant;
@@ -233,6 +240,11 @@ export interface ERPContextType {
   createJob: (jobData: Omit<JobOrder, 'id' | 'jobId' | 'materialsUsed' | 'actualMaterialCost' | 'actualLaborCost' | 'totalLaborHours' | 'actualProfit'>) => JobOrder;
   createCustomer: (customerData: Omit<Customer, 'id' | 'createdAt' | 'activeJobsCount' | 'totalInvoiced' | 'outstandingBalance'>) => Customer;
   createInvoice: (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber'> & { priceList?: PriceList }) => Invoice;
+  priceLists: PriceList[];
+  priceListsLoading: boolean;
+  createPriceList: (priceListData: Omit<PriceList, 'id' | 'registryId' | 'version' | 'createdAt' | 'updatedAt'>) => Promise<PriceList>;
+  updatePriceList: (priceListId: string, priceListData: Partial<Omit<PriceList, 'id' | 'registryId'>>) => Promise<PriceList>;
+  archivePriceList: (priceListId: string) => Promise<void>;
   recordPayment: (paymentData: Omit<Payment, 'id' | 'paymentNumber'>) => Payment;
   recordCounterSale: (saleData: {
     items: Array<{ itemId: string; name: string; sku: string; quantity: number; unitPrice: number }>;
@@ -284,6 +296,36 @@ function mapBackendCustomers(rows: unknown[]): Customer[] {
     createdAt: r.created_at?.split('T')[0] ?? '',
   }));
 }
+
+function mapBackendPriceLists(rows: unknown[]): PriceList[] {
+  return rows.map((r: any) => ({
+    id: r.code,
+    code: r.code,
+    registryId: r.registry_id ?? r.id,
+    name: r.name,
+    description: r.description ?? undefined,
+    discountPercent: Number(r.discount_percent ?? 0),
+    itemOverrides: Array.isArray(r.overrides)
+      ? r.overrides.map((override: any) => ({
+          itemId: override.product_id,
+          unitPrice: Number(override.unit_price),
+        }))
+      : [],
+    active: r.active !== false,
+    version: Number(r.version ?? 1),
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  }));
+}
+
+const DEMO_PRICE_LISTS: PriceList[] = PRICE_LIST_BINDING_OPTIONS.map((option) => ({
+  id: option.id,
+  code: option.id,
+  name: option.name,
+  discountPercent: 0,
+  itemOverrides: [],
+  active: true,
+}));
 
 function mapBackendJobs(rows: unknown[]): JobOrder[] {
   return rows.map((r: any) => ({
@@ -429,7 +471,7 @@ const ERPContext = createContext<ERPContextType | undefined>(undefined);
 export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [activeTab, setActiveTab] = useState<NavigationTab>('dashboard');
   const { resolvedTheme, setThemeMode } = useTheme();
-  const { session, refreshSession } = useAuth();
+  const { session, login, refreshSession } = useAuth();
   const theme = resolvedTheme;
 
   // Demo / unsigned fixtures only. A live session never reads INITIAL_TENANTS or localStorage.
@@ -668,6 +710,11 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [priceLists, setPriceLists] = useState<PriceList[]>(DEMO_PRICE_LISTS);
+  const [priceListsLoading, setPriceListsLoading] = useState(false);
+  const dataLoadGeneration = useRef(0);
+  const activeOrganisationId = useRef<string | null>(null);
+  activeOrganisationId.current = session?.current_organisation_id ?? null;
   const [alerts, setAlerts] = useState<NeedsAttentionAlert[]>([]);
   const [aiInsights, setAiInsights] = useState<AIAssistantInsight[]>([]);
   const [laborEntries, setLaborEntries] = useState<LaborEntry[]>([]);
@@ -694,12 +741,34 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Load data from backend when session is available
   useEffect(() => {
-    if (!session) return;
+    const generation = ++dataLoadGeneration.current;
+    let cancelled = false;
+    if (!session) {
+      setPriceLists(DEMO_PRICE_LISTS);
+      setPriceListsLoading(false);
+      return () => { cancelled = true; };
+    }
+
+    const requestOrganisationId = session.current_organisation_id ?? null;
+    setPriceListsLoading(true);
+    // Serp314 finding: reset the registry to the DEMO reference tiers at the
+    // start of every authenticated session/tenant load so a previous tenant's
+    // real registry is never shown while the new request is pending. On
+    // success the backend response replaces these; on failure the DEMO
+    // standard + tier options remain available.
+    setPriceLists(DEMO_PRICE_LISTS);
+    const isCurrentLoad = () => isCurrentSessionDataLoad(
+      generation,
+      dataLoadGeneration.current,
+      requestOrganisationId,
+      activeOrganisationId.current,
+      cancelled,
+    );
 
     const loadDomainData = async () => {
       try {
         const [customersRes, jobsRes, invoicesRes, expensesRes, paymentsRes,
-                suppliersRes, poRes, auditRes] = await Promise.allSettled([
+                suppliersRes, poRes, auditRes, priceListsRes] = await Promise.allSettled([
           apiGet<{ ok: boolean; customers: unknown[] }>('/api/ops/customers'),
           apiGet<{ ok: boolean; jobs: unknown[] }>('/api/ops/jobs'),
           apiGet<{ ok: boolean; invoices: unknown[] }>('/api/ops/invoices'),
@@ -708,38 +777,45 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           apiGet<{ ok: boolean; suppliers: unknown[] }>('/api/ops/suppliers'),
           apiGet<{ ok: boolean; purchaseOrders: unknown[] }>('/api/ops/purchase-orders'),
           apiGet<{ ok: boolean; events: unknown[] }>('/api/ops/audit?limit=100'),
+          apiGet<{ ok: boolean; price_lists: unknown[] }>('/api/ops/price-lists'),
         ]);
 
-        if (customersRes.status === 'fulfilled' && customersRes.value.ok) {
+        if (isCurrentLoad() && customersRes.status === 'fulfilled' && customersRes.value.ok) {
           setCustomers(mapBackendCustomers(customersRes.value.customers));
         }
-        if (jobsRes.status === 'fulfilled' && jobsRes.value.ok) {
+        if (isCurrentLoad() && jobsRes.status === 'fulfilled' && jobsRes.value.ok) {
           setJobs(mapBackendJobs(jobsRes.value.jobs));
         }
-        if (invoicesRes.status === 'fulfilled' && invoicesRes.value.ok) {
+        if (isCurrentLoad() && invoicesRes.status === 'fulfilled' && invoicesRes.value.ok) {
           setInvoices(mapBackendInvoices(invoicesRes.value.invoices));
         }
-        if (expensesRes.status === 'fulfilled' && expensesRes.value.ok) {
+        if (isCurrentLoad() && expensesRes.status === 'fulfilled' && expensesRes.value.ok) {
           setExpenses(mapBackendExpenses(expensesRes.value.expenses));
         }
-        if (paymentsRes.status === 'fulfilled' && paymentsRes.value.ok) {
+        if (isCurrentLoad() && paymentsRes.status === 'fulfilled' && paymentsRes.value.ok) {
           setPayments(mapBackendPayments(paymentsRes.value.payments));
         }
-        if (suppliersRes.status === 'fulfilled' && suppliersRes.value.ok) {
+        if (isCurrentLoad() && suppliersRes.status === 'fulfilled' && suppliersRes.value.ok) {
           setSuppliers(mapBackendSuppliers(suppliersRes.value.suppliers));
         }
-        if (poRes.status === 'fulfilled' && poRes.value.ok) {
+        if (isCurrentLoad() && poRes.status === 'fulfilled' && poRes.value.ok) {
           setPurchaseOrders(mapBackendPurchaseOrders(poRes.value.purchaseOrders));
         }
-        if (auditRes.status === 'fulfilled' && auditRes.value.ok) {
+        if (isCurrentLoad() && auditRes.status === 'fulfilled' && auditRes.value.ok) {
           setAuditLogs(mapBackendAuditEvents(auditRes.value.events));
+        }
+        if (isCurrentLoad() && priceListsRes.status === 'fulfilled' && priceListsRes.value.ok) {
+          setPriceLists(mapBackendPriceLists(priceListsRes.value.price_lists));
         }
       } catch (err) {
         console.error('[ERP] Failed to load domain data from backend:', err);
+      } finally {
+        if (isCurrentLoad()) setPriceListsLoading(false);
       }
     };
 
     loadDomainData();
+    return () => { cancelled = true; };
   }, [session]);
 
   // Selected drawers & modals
@@ -955,12 +1031,26 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // Switch Tenant
-  const switchTenant = (tenantId: string) => {
+  const switchTenant = async (tenantId: string): Promise<void> => {
     const target = tenants.find((t) => t.id === tenantId);
     if (!target) return;
+    const targetBookId = target.books && target.books.length > 0 ? target.books[0].id : undefined;
+    if (session) {
+      try {
+        const updatedSession = await apiSwitchContext(
+          { organisation_id: tenantId, ...(targetBookId ? { book_id: targetBookId } : {}) },
+          session.csrf,
+        );
+        login(updatedSession);
+        setActivePlane('tenant');
+      } catch (error) {
+        console.error('[ERP] Authoritative tenant switch failed:', error);
+      }
+      return;
+    }
     setCurrentTenantId(tenantId);
-    if (target.books && target.books.length > 0) {
-      setCurrentBookId(target.books[0].id);
+    if (targetBookId) {
+      setCurrentBookId(targetBookId);
     }
     setActivePlane('tenant');
     logAuditEvent({
@@ -988,7 +1078,23 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // Switch Active Operating Context (Platform vs Tenant)
-  const switchActiveContext = (context: { plane: 'platform' | 'tenant'; tenantId?: string; bookId?: string }) => {
+  const switchActiveContext = async (context: { plane: 'platform' | 'tenant'; tenantId?: string; bookId?: string }): Promise<void> => {
+    if (session && context.plane === 'tenant' && context.tenantId) {
+      const target = tenants.find((t) => t.id === context.tenantId);
+      if (!target) return;
+      const targetBookId = context.bookId || target.books?.[0]?.id;
+      try {
+        const updatedSession = await apiSwitchContext(
+          { organisation_id: context.tenantId, ...(targetBookId ? { book_id: targetBookId } : {}) },
+          session.csrf,
+        );
+        login(updatedSession);
+        setActivePlane('tenant');
+      } catch (error) {
+        console.error('[ERP] Authoritative operating-context switch failed:', error);
+      }
+      return;
+    }
     setActivePlane(context.plane);
     if (context.tenantId) {
       setCurrentTenantId(context.tenantId);
@@ -1995,6 +2101,131 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return newCustomer;
   };
 
+  const createPriceList = async (
+    priceListData: Omit<PriceList, 'id' | 'registryId' | 'version' | 'createdAt' | 'updatedAt'>,
+  ): Promise<PriceList> => {
+    const code = (priceListData.code ?? '').trim().toLowerCase();
+    const candidate = { ...priceListData, code };
+    const validation = validatePriceList(candidate);
+    if (validation.length > 0) throw new Error(validation[0].message);
+    if (priceLists.some((list) => list.id === code)) {
+      throw new Error('Price list code already exists.');
+    }
+
+    if (!session) {
+      const localPriceList: PriceList = { ...candidate, id: code, code, active: true };
+      setPriceLists((prev) => [localPriceList, ...prev]);
+      return localPriceList;
+    }
+
+    setMutationPending(true);
+    setLastMutationError(null);
+    try {
+      const response = await dispatchCommand<Record<string, unknown>, { price_list?: unknown }>({
+        command: 'PRICE_LIST',
+        payload: {
+          action: 'create',
+          code,
+          name: candidate.name,
+          description: candidate.description,
+          discount_percent: candidate.discountPercent,
+          overrides: candidate.itemOverrides.map((override) => ({
+            product_id: override.itemId,
+            unit_price: override.unitPrice,
+          })),
+        },
+      });
+      const created = response.price_list ? mapBackendPriceLists([response.price_list])[0] : undefined;
+      if (!created) throw new Error('PRICE_LIST command returned no price list.');
+      setPriceLists((prev) => [created, ...prev.filter((list) => list.id !== created.id)]);
+      return created;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'PRICE_LIST command failed';
+      setLastMutationError(message);
+      throw err;
+    } finally {
+      setMutationPending(false);
+    }
+  };
+
+  const updatePriceList = async (
+    priceListId: string,
+    priceListData: Partial<Omit<PriceList, 'id' | 'registryId'>>,
+  ): Promise<PriceList> => {
+    const existing = priceLists.find((list) => list.id === priceListId);
+    if (!existing) throw new Error('Price list not found.');
+    const candidate: PriceList = {
+      ...existing,
+      ...priceListData,
+      id: existing.id,
+      code: existing.code ?? existing.id,
+      itemOverrides: priceListData.itemOverrides ?? existing.itemOverrides,
+    };
+    const validation = validatePriceList(candidate);
+    if (validation.length > 0) throw new Error(validation[0].message);
+
+    if (!session) {
+      setPriceLists((prev) => prev.map((list) => list.id === priceListId ? candidate : list));
+      return candidate;
+    }
+
+    if (!existing.registryId) throw new Error('Price list registry id is missing.');
+    setMutationPending(true);
+    setLastMutationError(null);
+    try {
+      const response = await dispatchCommand<Record<string, unknown>, { price_list?: unknown }>({
+        command: 'PRICE_LIST',
+        payload: {
+          action: 'update',
+          price_list_id: existing.registryId,
+          expected_version: existing.version ?? 1,
+          name: candidate.name,
+          description: candidate.description,
+          discount_percent: candidate.discountPercent,
+          overrides: candidate.itemOverrides.map((override) => ({
+            product_id: override.itemId,
+            unit_price: override.unitPrice,
+          })),
+        },
+      });
+      const updated = response.price_list ? mapBackendPriceLists([response.price_list])[0] : undefined;
+      if (!updated) throw new Error('PRICE_LIST command returned no price list.');
+      setPriceLists((prev) => prev.map((list) => list.id === updated.id ? updated : list));
+      return updated;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'PRICE_LIST command failed';
+      setLastMutationError(message);
+      throw err;
+    } finally {
+      setMutationPending(false);
+    }
+  };
+
+  const archivePriceList = async (priceListId: string): Promise<void> => {
+    const existing = priceLists.find((list) => list.id === priceListId);
+    if (!existing) throw new Error('Price list not found.');
+    if (!session) {
+      setPriceLists((prev) => prev.map((list) => list.id === priceListId ? { ...list, active: false } : list));
+      return;
+    }
+    if (!existing.registryId) throw new Error('Price list registry id is missing.');
+    setMutationPending(true);
+    setLastMutationError(null);
+    try {
+      await dispatchCommand({
+        command: 'PRICE_LIST',
+        payload: { action: 'archive', price_list_id: existing.registryId },
+      });
+      setPriceLists((prev) => prev.map((list) => list.id === priceListId ? { ...list, active: false } : list));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'PRICE_LIST command failed';
+      setLastMutationError(message);
+      throw err;
+    } finally {
+      setMutationPending(false);
+    }
+  };
+
   const createJob = (jobData: Omit<JobOrder, 'id' | 'jobId' | 'materialsUsed' | 'actualMaterialCost' | 'actualLaborCost' | 'totalLaborHours' | 'actualProfit'>): JobOrder => {
     const prefix = currentTenant.slug.substring(0, 3).toUpperCase();
     const nextNumber = jobs.length + 240;
@@ -2910,6 +3141,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         customers,
         jobs,
         invoices,
+        priceLists,
+        priceListsLoading,
         payments,
         expenses,
         inventory,
@@ -3038,6 +3271,9 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         laborEntries,
         createJob,
         createCustomer,
+        createPriceList,
+        updatePriceList,
+        archivePriceList,
         createInvoice,
         recordPayment,
         recordCounterSale,

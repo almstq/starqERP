@@ -15,6 +15,7 @@ import {
   LifeBuoy,
   Image as ImageIcon,
   Info,
+  Tag,
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { GstRegistrationStatus } from '../../types/erp';
@@ -25,8 +26,9 @@ import { WorkflowsConfigTab } from './WorkflowsConfigTab';
 import { SupportTab } from './SupportTab';
 import { LogoUpload } from './LogoUpload';
 import { AboutTab } from './AboutTab';
+import { PriceListsTab } from './PriceListsTab';
 
-type SettingsSubTab = 'profile' | 'branding' | 'roles' | 'users' | 'workflows' | 'support' | 'about';
+type SettingsSubTab = 'profile' | 'branding' | 'roles' | 'price_lists' | 'users' | 'workflows' | 'support' | 'about';
 
 interface TabConfig {
   id: SettingsSubTab;
@@ -57,6 +59,13 @@ const SETTINGS_TABS: TabConfig[] = [
     shortLabel: 'Roles & Permissions',
     desc: 'Segregation of duties, capabilities & access matrix',
     icon: ShieldCheck,
+  },
+  {
+    id: 'price_lists',
+    label: 'Price Lists',
+    shortLabel: 'Price Lists',
+    desc: 'Tenant-scoped customer pricing tiers and registry',
+    icon: Tag,
   },
   {
     id: 'users',
@@ -474,6 +483,8 @@ export const SettingsView: React.FC = () => {
         )}
 
         {activeSubTab === 'roles' && <RolesPermissionsTab />}
+
+        {activeSubTab === 'price_lists' && <PriceListsTab />}
 
         {activeSubTab === 'users' && <UsersManagementTab />}
 

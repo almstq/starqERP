@@ -16,6 +16,9 @@ insert into expected_public_tables (table_name) values
   ('journal_lines'), ('document_sequences'), ('security_events'),
   ('automation_principals'), ('automation_capability_grants'), ('command_approvals'),
   ('settlement_allocations'),
+  -- SERP-314: tenant-scoped price-list registry tables introduced by the
+  -- additive registry migration and therefore included in the exact catalogue.
+  ('price_lists'), ('price_list_item_overrides'),
   -- SERP-125: the one deliberately-partial-public table in this schema. It carries
   -- RLS + 2 policies like the rest, but one of those policies (see below) grants a
   -- scoped, cross-tenant read for published rows by design. Classified separately
@@ -72,6 +75,8 @@ insert into expected_policies (table_name, policy_name) values
   ('automation_principals', 'automation_principals_current'),
   ('command_approvals', 'command_approvals_current'),
   ('settlement_allocations', 'settlement_allocations_current'),
+  ('price_lists', 'price_lists_tenant'),
+  ('price_list_item_overrides', 'price_list_item_overrides_tenant'),
   -- SERP-125: _current is the ordinary tenant-scoped rule (matches the pattern of
   -- every other table above). _published is NOT tenant-scoped by design -- it is
   -- the public listing rule, deliberately readable across tenants for rows in
@@ -195,20 +200,20 @@ select e.table_name,
   left join pg_policy p on p.polrelid = c.oid
  group by e.table_name, c.relrowsecurity;
 
--- Counts updated 2026-09-07 alongside the two catalogue fixes above: 25 tables
+-- Counts updated 2026-09-09 for the SERP-314 registry tables: 27 tables
 -- joined expected_public_tables, of which 23 carry a real policy (protected-by-RLS,
 -- including the two global-reference tables payment_providers/tax_rate_schedules --
 -- this classification does not distinguish tenant-scoped from global-readable, it
 -- only asks "is there RLS + a policy") and 2 are deny-by-default with no policy
 -- and no authenticated grant (payment_provider_config, provider_events), landing
--- in protected-by-revoked-grant like the original 4. 32+25=57, 27+23=50, 4+2=6.
+-- in protected-by-revoked-grant like the original 4. 32+27=59, 27+25=52, 4+2=6.
 do $$
 begin
-  if (select count(*) from protection_report) <> 57 then
-    raise exception 'SERP-124/337 expected 57 classified public tables';
+  if (select count(*) from protection_report) <> 59 then
+    raise exception 'SERP-124/337 expected 59 classified public tables';
   end if;
-  if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 50 then
-    raise exception 'SERP-124/337 expected 50 RLS-protected tables';
+  if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 52 then
+    raise exception 'SERP-124/337 expected 52 RLS-protected tables';
   end if;
   if (select count(*) from protection_report where protection = 'protected-by-revoked-grant') <> 6 then
     raise exception 'SERP-124/337 expected 6 revoked-grant-protected tables';

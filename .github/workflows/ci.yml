@@ -75,8 +75,11 @@ jobs:
       - name: Reachability Ratchet Enforcement Gate (SERP-392)
         run: node tests/serp_392_reachability_ratchet.test.mjs
 
-      - name: Deno Contract Test Suite (164 tests)
+      - name: Deno Contract Test Suite (169 tests)
         run: deno test --allow-read tests/contract/commands_test.ts
+
+      - name: SERP-314 Gap 2 authenticated Price List boundary test
+        run: deno test --allow-read tests/serp314_price_list_edge_path.test.ts
 
   rls-isolation-probe:
     name: RLS Tenant Isolation Probe (SERP-337)
@@ -140,6 +143,9 @@ jobs:
 
       - name: Run RLS isolation probe (SERP-124 / SERP-337)
         run: psql --set ON_ERROR_STOP=1 --file tests/rls_isolation_probe.sql
+
+      - name: SERP-314 Gap 2 Price List registry probe
+        run: psql --set ON_ERROR_STOP=1 --file tests/serp314_price_list_registry_probe.sql
 
   frontend:
     name: Web Frontend Build & Test Suite
