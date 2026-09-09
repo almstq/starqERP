@@ -139,6 +139,21 @@ describe('General Ledger Derivation & Running Balance (SERP-291)', () => {
     expect(journals[1].totalCredit).toBe(10800);
   });
 
+  it('uses canonical postable accounts for every legacy operational mapping', () => {
+    const invoice = { id: 'inv-canonical', invoiceNumber: 'INV-C', customerId: 'c', customerName: 'C', date: '2026-08-01', subtotal: 100, gstAmount: 17, totalAmount: 117, amountPaid: 0, status: 'Issued', items: [] } as Invoice;
+    const payment = { id: 'pay-canonical', invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, customerId: 'c', customerName: 'C', amount: 117, paymentDate: '2026-08-02', method: 'BML Transfer', paymentNumber: 'RCT-C', status: 'Verified', referenceNumber: 'R' } as Payment;
+    const expense = { id: 'exp-canonical', date: '2026-08-03', description: 'Rent', category: 'Rent', amount: 50, paymentMethod: 'Bank' } as Expense;
+    const purchase = { id: 'po-canonical', poNumber: 'PO-C', orderDate: '2026-08-04', supplierName: 'Supplier', totalAmount: 50, status: 'Approved', paymentStatus: 'Unpaid' } as PurchaseOrder;
+    const journals = deriveOperationalJournals({ invoices: [invoice], payments: [payment], expenses: [expense], purchaseOrders: [purchase], accounts: DEFAULT_CHART_OF_ACCOUNTS, isGstRegistered: true, tenantId: 'tenant-canonical' });
+    expect(journals.map((j) => j.lines.map((line) => line.accountCode))).toEqual([
+      ['1210', '4110', '2121'], ['1111', '1210'], ['6210', '1111'], ['5210', '2110'],
+    ]);
+    for (const journal of journals) {
+      expect(validateJournalEntry(journal.lines).isValid).toBe(true);
+      expect(journal.totalDebit).toBe(journal.totalCredit);
+    }
+  });
+
   it('calculates accurate running balance across General Ledger postings', () => {
     const mockJournals = [
       {

@@ -200,12 +200,13 @@ export function deriveOperationalJournals(params: {
     );
   };
 
-  // 1. Invoices -> DR 1100 (AR), CR 4000 (Revenue), CR 2100 (GST Payable if reg)
+  // Legacy mappings corrected to canonical postable accounts.
+  // 1. Invoices -> DR 1210 (AR), CR 4110 (service revenue), CR 2121 (GST payable if reg)
   invoices.forEach((inv) => {
     const lines: JournalLine[] = [];
-    const arAcc = getAcc('1100');
-    const revAcc = getAcc('4000');
-    const gstAcc = getAcc('2100');
+    const arAcc = getAcc('1210');
+    const revAcc = getAcc('4110');
+    const gstAcc = getAcc('2121');
 
     lines.push({
       id: `${inv.id}-dr-ar`,
@@ -270,10 +271,10 @@ export function deriveOperationalJournals(params: {
     });
   });
 
-  // 2. Payments -> DR 1000 (Bank/Cash), CR 1100 (AR)
+  // 2. Payments -> DR 1111 (Bank/Cash), CR 1210 (AR)
   payments.forEach((pay) => {
-    const bankAcc = getAcc('1000');
-    const arAcc = getAcc('1100');
+    const bankAcc = getAcc('1111');
+    const arAcc = getAcc('1210');
 
     journals.push({
       id: `je-pay-${pay.id}`,
@@ -314,10 +315,10 @@ export function deriveOperationalJournals(params: {
     });
   });
 
-  // 3. Expenses -> DR 6000 (Admin/Operating Exp), CR 1000 (Bank/Cash)
+  // 3. Expenses -> DR 6210 (postable operating expense), CR 1111 (Bank/Cash)
   expenses.forEach((exp) => {
-    const expAcc = getAcc('6000');
-    const bankAcc = getAcc('1000');
+    const expAcc = getAcc('6210');
+    const bankAcc = getAcc('1111');
 
     journals.push({
       id: `je-exp-${exp.id}`,
@@ -358,11 +359,11 @@ export function deriveOperationalJournals(params: {
     });
   });
 
-  // 4. Purchase Orders (PO / Bills) -> DR 5000 (COGS), CR 2000 (AP) or CR 1000 if Paid
+  // 4. Purchase Orders (PO / Bills) -> DR 5210 (COGS), CR 2110 (AP) or CR 1111 if Paid
   purchaseOrders.forEach((po) => {
     if (po.status !== 'Draft' && po.status !== 'Cancelled') {
-      const cogsAcc = getAcc('5000');
-      const apAcc = po.paymentStatus === 'Paid' ? getAcc('1000') : getAcc('2000');
+      const cogsAcc = getAcc('5210');
+      const apAcc = po.paymentStatus === 'Paid' ? getAcc('1111') : getAcc('2110');
 
       journals.push({
         id: `je-po-${po.id}`,
