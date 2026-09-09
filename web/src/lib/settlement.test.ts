@@ -123,7 +123,7 @@ describe('SERP-294: Credit Notes, Customer Advances & Settlement Engine', () => 
     expect(journal.lines.map((line) => line.accountCode)).toEqual(['4210', '2121', '1210']);
     expect(journal.lines.map((line) => line.accountName)).toEqual([
       'Sales Discounts Given',
-      'MIRA Output GST Payable',
+      'MIRA Output GST Payable (8%)',
       'Trade Debtors Control Account',
     ]);
     expect(journal.lines.some((line) => ['4110', '4000', '2200', '1200'].includes(line.accountCode))).toBe(false);

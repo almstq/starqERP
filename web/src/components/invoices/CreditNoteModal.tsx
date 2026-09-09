@@ -314,7 +314,7 @@ export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
               <div className="font-mono text-[10px] space-y-0.5 pl-1 border-l-2 border-purple-400">
                 <div>DR 4210 Sales Discounts Given (Reversal): +{formatMVR(subtotal)}</div>
                 {isGstRegistered && taxAmount > 0 && (
-                  <div>DR 2121 Output GST (Reversal): +{formatMVR(taxAmount)}</div>
+                  <div>DR 2121 MIRA Output GST Payable (8%) (Reversal): +{formatMVR(taxAmount)}</div>
                 )}
                 <div>CR 1210 Trade Debtors Control Account: +{formatMVR(totalAmount)}</div>
               </div>

@@ -141,7 +141,7 @@ export function generateCreditNoteJournals(params: {
         accountCode: '2121',
         accountId: 'acc-2121',
         accountClass: accountClassForCode('2121'),
-        accountName: 'MIRA Output GST Payable',
+        accountName: 'MIRA Output GST Payable (8%)',
         debit: Math.round(cn.taxAmount * 100) / 100,
         credit: 0,
         narration: `GST Reversal on Credit Note ${cn.creditNoteNumber}`,
