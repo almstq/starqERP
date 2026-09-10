@@ -37,16 +37,17 @@ import { Badge, Surface, Button } from '../ui';
 interface BankAccountOption {
   code: string;
   name: string;
-  bank: 'BML' | 'MIB' | 'CASH';
+  bank: 'BML' | 'MIB' | 'CASH' | 'OTHER';
   accountNumber: string;
   currency: 'MVR' | 'USD';
 }
 
 const BANK_ACCOUNTS: BankAccountOption[] = [
-  { code: '1010', name: 'Bank of Maldives (BML MVR)', bank: 'BML', accountNumber: '7730000148201', currency: 'MVR' },
-  { code: '1020', name: 'Bank of Maldives (BML USD)', bank: 'BML', accountNumber: '7730000148202', currency: 'USD' },
-  { code: '1030', name: 'Maldives Islamic Bank (MIB MVR)', bank: 'MIB', accountNumber: '9901000293810', currency: 'MVR' },
-  { code: '1000', name: 'Main Operating Cash / Vault', bank: 'CASH', accountNumber: 'VAULT-01', currency: 'MVR' },
+  { code: '1111', name: 'Bank of Maldives (BML MVR)', bank: 'BML', accountNumber: '7730000148201', currency: 'MVR' },
+  { code: '1112', name: 'Bank of Maldives (BML USD)', bank: 'BML', accountNumber: '7730000148202', currency: 'USD' },
+  { code: '1113', name: 'Maldives Islamic Bank (MIB MVR)', bank: 'MIB', accountNumber: '9901000293810', currency: 'MVR' },
+  { code: '1114', name: 'Petty Cash', bank: 'CASH', accountNumber: 'VAULT-01', currency: 'MVR' },
+  { code: '1115', name: 'Favara Clearing', bank: 'OTHER', accountNumber: 'FAVARA-01', currency: 'MVR' },
 ];
 
 export const BankReconciliationView: React.FC<{
