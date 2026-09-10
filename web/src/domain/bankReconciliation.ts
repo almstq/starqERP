@@ -442,6 +442,28 @@ export function createBankAdjustmentEntry(params: {
 }
 
 /**
+ * Calculates the tenant-scoped general ledger balance for a bank account code.
+ * Journals belonging to another tenant are excluded (fail-closed), so the returned
+ * balance can never leak another tenant's movements into the reconciliation.
+ */
+export function calculateTenantLedgerBalance(
+  journals: JournalEntry[],
+  tenantId: string,
+  accountCode: string
+): number {
+  let balance = 0;
+  for (const j of journals) {
+    if (j.tenantId !== tenantId) continue;
+    for (const line of j.lines) {
+      if (line.accountCode === accountCode) {
+        balance += (line.debit || 0) - (line.credit || 0);
+      }
+    }
+  }
+  return balance;
+}
+
+/**
  * Calculates authoritative Bank Reconciliation Statement summary and variance.
  */
 export function calculateReconciliationSummary(

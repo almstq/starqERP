@@ -90,6 +90,7 @@ describe('SERP-317: Direct and Indirect Cash Flow Statement Reporting Engine', (
   it('categorizes cash flows accurately across Operating, Investing, and Financing activities', () => {
     const cfs = computeCashFlowStatement({
       journals: sampleJournals,
+      tenantId: 'tenant-01',
       periodStartDate: '2026-08-01',
       periodEndDate: '2026-08-31',
       openingCash: 10000,
@@ -114,6 +115,7 @@ describe('SERP-317: Direct and Indirect Cash Flow Statement Reporting Engine', (
   it('validates mathematical identity: Closing Cash === Balance Sheet Cash & Bank', () => {
     const cfs = computeCashFlowStatement({
       journals: sampleJournals,
+      tenantId: 'tenant-01',
       periodStartDate: '2026-08-01',
       periodEndDate: '2026-08-31',
       openingCash: 0,
@@ -124,6 +126,24 @@ describe('SERP-317: Direct and Indirect Cash Flow Statement Reporting Engine', (
     expect(cfs.closingCashBalance).toBe(45000);
     expect(cfs.isBalanced).toBe(true);
     expect(cfs.variance).toBe(0);
+  });
+
+  it('isolates cash flow per tenant — journals from another tenant never aggregate', () => {
+    const cfs = computeCashFlowStatement({
+      journals: sampleJournals,
+      tenantId: 'tenant-02',
+      periodStartDate: '2026-08-01',
+      periodEndDate: '2026-08-31',
+      openingCash: 0,
+    });
+
+    // sampleJournals all belong to tenant-01; a tenant-02 statement must see none of them.
+    expect(cfs.netChangeInCash).toBe(0);
+    expect(cfs.operatingActivities.netCashFlow).toBe(0);
+    expect(cfs.investingActivities.netCashFlow).toBe(0);
+    expect(cfs.financingActivities.netCashFlow).toBe(0);
+    expect(cfs.balanceSheetCashBalance).toBe(0);
+    expect(cfs.closingCashBalance).toBe(0);
   });
 
   it('accurately identifies canonical cash and bank leaf account codes (1111..1115)', () => {
