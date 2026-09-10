@@ -1,7 +1,7 @@
 import { accountClassForCode } from '../domain/accounts';
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { BankReconciliationView } from '../components/accounts/BankReconciliationView';
 import { ERPProvider } from '../context/ERPContext';
 import { AuthProvider } from '../context/AuthContext';
@@ -30,6 +30,8 @@ const mockJournals: JournalEntry[] = [
 ];
 
 describe('SERP-296: Bank Reconciliation Interface', () => {
+  afterEach(() => cleanup());
+
   it('renders bank account selector, KPIs, and sample CSV loader', () => {
     render(
       <AuthProvider>
@@ -42,6 +44,8 @@ describe('SERP-296: Bank Reconciliation Interface', () => {
     expect(screen.getByText('Bank & Cash Ledger Reconciliation')).toBeDefined();
     expect(screen.getByText('Upload Bank Statement CSV')).toBeDefined();
     expect(screen.getByText('Load Sample BML Statement')).toBeDefined();
+    expect(screen.getByRole('option', { name: /BML MVR/i })).toHaveValue('1111');
+    expect(screen.queryByRole('option', { name: /1010/ })).toBeNull();
   });
 
   it('loads sample statement, renders transactions, and auto-matches candidate payments', () => {
@@ -112,5 +116,6 @@ describe('SERP-296: Bank Reconciliation Interface', () => {
     expect(createdJe.isBalanced).toBe(true);
     expect(createdJe.tenantId).toBe('tenant-starq');
     expect(createdJe.tenantId).not.toBe('tenant-club-ignition');
+    expect(createdJe.lines.map((line) => line.accountCode)).toContain('1111');
   });
 });
