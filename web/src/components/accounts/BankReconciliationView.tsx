@@ -27,6 +27,7 @@ import {
   parseMibCsv,
   autoMatchStatementLines,
   createBankAdjustmentEntry,
+  calculateTenantLedgerBalance,
   calculateReconciliationSummary,
 } from '../../domain/bankReconciliation';
 import { JournalEntry } from '../../domain/journals';
@@ -119,18 +120,10 @@ export const BankReconciliationView: React.FC<{
     return list;
   }, [payments, expenses]);
 
-  // Calculate ERP Ledger Balance for the selected bank account from Journals
+  // Calculate ERP Ledger Balance for the selected bank account from tenant-scoped Journals
   const erpLedgerBalance = useMemo(() => {
-    let balance = 0;
-    for (const j of journals) {
-      for (const line of j.lines) {
-        if (line.accountCode === selectedAccount.code) {
-          balance += (line.debit || 0) - (line.credit || 0);
-        }
-      }
-    }
-    return balance;
-  }, [journals, selectedAccount]);
+    return calculateTenantLedgerBalance(journals, currentTenant.id, selectedAccount.code);
+  }, [journals, currentTenant.id, selectedAccount]);
 
   // Calculate Summary & Variance
   const summary = useMemo(() => {
@@ -600,7 +593,7 @@ Date,Description,Debit,Credit,Balance,Reference
                   onChange={(e) => setAdjustmentType(e.target.value as any)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500"
                 >
-                  <option value="bank_fee">Bank Fee / Service Charge (Account #6300)</option>
+                  <option value="bank_fee">Bank Fee / Service Charge (Account #6310)</option>
                   <option value="interest_income">Interest / Profit Income (Account #8000)</option>
                 </select>
               </div>
@@ -617,7 +610,7 @@ Date,Description,Debit,Credit,Balance,Reference
               </div>
 
               <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-[10px] font-mono text-slate-400">
-                • Debit: <strong>{adjustmentType === 'bank_fee' ? '6300 Bank Fees' : `${selectedAccount.code} Bank`}</strong> ({formatMVR(selectedLineForAdjustment.debit || selectedLineForAdjustment.credit)})<br />
+                • Debit: <strong>{adjustmentType === 'bank_fee' ? '6310 Bank Fees' : `${selectedAccount.code} Bank`}</strong> ({formatMVR(selectedLineForAdjustment.debit || selectedLineForAdjustment.credit)})<br />
                 • Credit: <strong>{adjustmentType === 'bank_fee' ? `${selectedAccount.code} Bank` : '8000 Interest Income'}</strong> ({formatMVR(selectedLineForAdjustment.debit || selectedLineForAdjustment.credit)})
               </div>
             </div>

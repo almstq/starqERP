@@ -37,6 +37,8 @@ export interface CashFlowStatement {
 }
 
 export interface ComputeCashFlowParams {
+  /** Authorized tenant for this statement. Journals from any other tenant are excluded (fail-closed). */
+  tenantId: string;
   journals: JournalEntry[];
   periodStartDate?: string;
   periodEndDate?: string;
@@ -46,9 +48,11 @@ export interface ComputeCashFlowParams {
 /**
  * Computes authoritative Cash Flow Statement (Direct & Indirect) from double-entry journal movements.
  * Cash and Cash Equivalents are the leaf accounts under canonical 1110 Cash and Bank Equivalents.
+ * The statement is tenant-scoped: journals belonging to another tenant are excluded fail-closed.
  */
 export function computeCashFlowStatement(params: ComputeCashFlowParams): CashFlowStatement {
   const {
+    tenantId,
     journals,
     periodStartDate = '2026-01-01',
     periodEndDate = '2026-12-31',
@@ -70,8 +74,12 @@ export function computeCashFlowStatement(params: ComputeCashFlowParams): CashFlo
   let equityContributions = 0;
   let loanRepayments = 0;
 
+  // Tenant-scoping gate — fail-closed: journals not belonging to the requesting
+  // tenant are excluded before any computation, so no cross-tenant aggregation is possible.
+  const tenantJournals = journals.filter((j) => j.tenantId === tenantId);
+
   // Filter journals in period
-  const periodJournals = journals.filter((j) => {
+  const periodJournals = tenantJournals.filter((j) => {
     const d = j.date || j.postedAt?.slice(0, 10) || '';
     return d >= periodStartDate && d <= periodEndDate;
   });
@@ -224,7 +232,7 @@ export function computeCashFlowStatement(params: ComputeCashFlowParams): CashFlo
 
   // Total cash on balance sheet across all cash accounts
   let balanceSheetCash = 0;
-  for (const j of journals) {
+  for (const j of tenantJournals) {
     for (const l of j.lines) {
       if (isCashOrBankAccount(l.accountCode)) {
         balanceSheetCash += (l.debit || 0) - (l.credit || 0);
