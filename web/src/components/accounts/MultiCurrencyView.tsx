@@ -100,11 +100,11 @@ export const MultiCurrencyView: React.FC<{
           </div>
         </div>
 
-        <div className="mt-4 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 flex items-start gap-2.5">
+        <div className="mt-4 p-3.5 rounded-xl border flex items-start gap-2.5 bg-[var(--warning-subtle)] border-[var(--warning)] text-[var(--warning)]">
           <AlertTriangle size={16} className="shrink-0 mt-0.5" />
           <div className="space-y-1">
             <span className="font-bold text-[11px] uppercase tracking-wide">DEMO / SAMPLE DATA — simulated defaults, not a live MMA or bank feed</span>
-            <p className="text-[11px] leading-relaxed text-amber-200/90">
+            <p className="text-[11px] leading-relaxed opacity-90">
               Exchange rates and foreign balances on this screen are seeded demo / sample data (for example USD 15.42, USD 25,000, book MVR 385,500). They are simulated placeholders until a live MMA rate source and live bank balances are integrated. Revalued balance and gain/loss use the same calculation as production; only the inputs are sample.
             </p>
           </div>

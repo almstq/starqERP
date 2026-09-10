@@ -287,7 +287,7 @@ export const MiraTgstView: React.FC<{
         <div
           role="note"
           data-testid="tgst-demo-stays-banner"
-          className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
+          className="rounded-xl border px-3 py-2 text-xs bg-[var(--warning-subtle)] border-[var(--warning)] text-[var(--warning)]"
         >
           DEMO / SAMPLE DATA — seeded guest stays are walkthrough fixtures, not live tenant PMS records.
           Green Tax totals from these rows are illustrative. 16% TGST output/input still comes from
@@ -318,9 +318,7 @@ export const MiraTgstView: React.FC<{
                     <span className="inline-flex items-center gap-2">
                       {stay.guestName}
                       {isDemoGuestStay(stay.id) && (
-                        <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[9px] font-bold uppercase tracking-wide">
-                          DEMO
-                        </span>
+                        <Badge variant="warning" size="sm">DEMO</Badge>
                       )}
                     </span>
                   </td>
