@@ -89,6 +89,65 @@ export const ManualJournalModal: React.FC<ManualJournalModalProps> = ({
     );
   }, [lines]);
 
+  const [postError, setPostError] = useState<string | null>(null);
+
+  // Presentation-only split. validateJournalEntry still treats incomplete drafts as
+  // !isValid (that boolean stays the post-disable gate). Amber/red is reserved for
+  // actual invalid input or a rejected post attempt.
+  const hasInvalidInput = useMemo(() => {
+    const hasHardLineError = validation.errors.some(
+      (err) =>
+        err.includes('Negative values are prohibited') ||
+        err.includes('cannot have both a debit and a credit')
+    );
+    const bothSidesEntered = validation.totalDebit > 0 && validation.totalCredit > 0;
+    const unbalancedAfterAmounts = bothSidesEntered && validation.variance >= 0.005;
+    return hasHardLineError || unbalancedAfterAmounts;
+  }, [validation]);
+
+  const statusTone: 'valid' | 'incomplete' | 'invalid' = validation.isValid
+    ? 'valid'
+    : hasInvalidInput || Boolean(postError)
+      ? 'invalid'
+      : 'incomplete';
+
+  // Presentation only: validateJournalEntry still treats incomplete drafts as
+  // !isValid (which disables Post). Amber/red is reserved for actual bad input
+  // or an out-of-balance entry after both sides have amounts.
+  const [postRejection, setPostRejection] = useState<string | null>(null);
+
+  const bothSidesHaveAmounts = validation.totalDebit > 0 && validation.totalCredit > 0;
+  const hasHardInputError = validation.errors.some(
+    (err) =>
+      err.includes('Negative values are prohibited') ||
+      err.includes('cannot have both a debit and a credit'),
+  );
+  const isUnbalancedAfterAmounts = bothSidesHaveAmounts && validation.variance >= 0.005;
+  const isInvalidError = hasHardInputError || isUnbalancedAfterAmounts || Boolean(postRejection);
+  const isIncomplete = !validation.isValid && !isInvalidError;
+
+  const displayedErrors = isIncomplete
+    ? validation.errors.filter((err) => !err.includes('out of balance'))
+    : validation.errors;
+
+  const [postAttempted, setPostAttempted] = useState(false);
+
+  // UI-only: incomplete empty/partial draft vs invalid input. Does not change
+  // validateJournalEntry — Post stays disabled until isValid.
+  const isHardInvalid = useMemo(() => {
+    const parsed = lines.map((l) => ({
+      debit: parseFloat(l.debit) || 0,
+      credit: parseFloat(l.credit) || 0,
+    }));
+    const hasNegative = parsed.some((l) => l.debit < 0 || l.credit < 0);
+    const hasBothOnLine = parsed.some((l) => l.debit > 0 && l.credit > 0);
+    const bothSidesFilled = validation.totalDebit > 0 && validation.totalCredit > 0;
+    const unbalanced = bothSidesFilled && validation.variance >= 0.005;
+    return hasNegative || hasBothOnLine || unbalanced;
+  }, [lines, validation.totalDebit, validation.totalCredit, validation.variance]);
+
+  const showInvalidChrome = isHardInvalid || (postAttempted && !validation.isValid);
+
   const handleAccountChange = (index: number, accountId: string) => {
     const acc = accounts.find((a) => a.id === accountId);
     if (!acc) return;
@@ -106,6 +165,7 @@ export const ManualJournalModal: React.FC<ManualJournalModalProps> = ({
   };
 
   const handleAmountChange = (index: number, field: 'debit' | 'credit', value: string) => {
+    setPostError(null);
     setLines((prev) => {
       const next = [...prev];
       next[index] = {
@@ -186,7 +246,10 @@ export const ManualJournalModal: React.FC<ManualJournalModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validation.isValid) return;
+    if (!validation.isValid) {
+      setPostAttempted(true);
+      return;
+    }
 
     const actorName = session?.name || session?.name || 'Authorized Finance Officer';
 
@@ -240,10 +303,15 @@ export const ManualJournalModal: React.FC<ManualJournalModalProps> = ({
                 <CheckCircle2 size={15} />
                 <span>Zero Variance Pass (MVR 0.00)</span>
               </span>
-            ) : (
+            ) : showInvalidChrome ? (
               <span className="flex items-center gap-1.5 text-amber-400 font-semibold">
                 <AlertCircle size={15} />
                 <span>Unbalanced (Δ {formatMVR(validation.variance)})</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-[var(--md-sys-color-on-surface-variant)] font-semibold">
+                <Info size={15} />
+                <span>Incomplete — enter matching debit and credit amounts</span>
               </span>
             )}
           </div>
@@ -464,19 +532,33 @@ export const ManualJournalModal: React.FC<ManualJournalModalProps> = ({
           </div>
         </div>
 
-        {/* Validation Errors Box */}
+        {/* Validation Errors Box — amber only for invalid input or rejected post */}
         {validation.errors.length > 0 && (
-          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 space-y-1">
-            <div className="font-bold flex items-center gap-1.5">
-              <AlertCircle size={14} />
-              <span>Please resolve the following before posting:</span>
+          showInvalidChrome ? (
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 space-y-1">
+              <div className="font-bold flex items-center gap-1.5">
+                <AlertCircle size={14} />
+                <span>Please resolve the following before posting:</span>
+              </div>
+              <ul className="list-disc list-inside space-y-0.5 text-[11px] pl-1 opacity-90">
+                {validation.errors.map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+              </ul>
             </div>
-            <ul className="list-disc list-inside space-y-0.5 text-[11px] pl-1 opacity-90">
-              {validation.errors.map((err, i) => (
-                <li key={i}>{err}</li>
-              ))}
-            </ul>
-          </div>
+          ) : (
+            <div className="p-3 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface-variant)] space-y-1">
+              <div className="font-bold flex items-center gap-1.5 text-[var(--md-sys-color-on-surface)]">
+                <Info size={14} className="text-[var(--md-sys-color-primary)]" />
+                <span>Complete the journal before posting:</span>
+              </div>
+              <ul className="list-disc list-inside space-y-0.5 text-[11px] pl-1 opacity-90">
+                {validation.errors.map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+              </ul>
+            </div>
+          )
         )}
 
         {/* Audit Attribution Footer Note */}

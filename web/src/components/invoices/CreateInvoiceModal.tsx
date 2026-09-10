@@ -30,11 +30,11 @@ export const CreateInvoiceModal: React.FC = () => {
   const [items, setItems] = useState<InvoiceLineItem[]>([
     {
       id: `item-1`,
-      description: 'Automotive Paint Service & Prep Labor',
-      category: 'Labor/Service',
+      description: '',
+      category: '',
       quantity: 1,
-      unitPrice: 25000,
-      amount: 25000
+      unitPrice: 0,
+      amount: 0
     }
   ]);
 
@@ -51,11 +51,11 @@ export const CreateInvoiceModal: React.FC = () => {
       ...items,
       {
         id: `item-${Date.now()}`,
-        description: 'Clearcoat & Consumables',
-        category: 'Material/Part',
+        description: '',
+        category: '',
         quantity: 1,
-        unitPrice: 3500,
-        amount: 3500
+        unitPrice: 0,
+        amount: 0
       }
     ]);
   };

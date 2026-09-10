@@ -146,7 +146,7 @@ export const ExpensesView: React.FC = () => {
             </Badge>
           </div>
           <p className="mt-0.5 text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">
-            Log and track operational overheads — shop rent, STELCO utilities, consumables, and payroll
+            Log and track operational overheads — facility rent, STELCO utilities, consumables, and payroll
           </p>
         </div>
 
@@ -267,7 +267,7 @@ export const ExpensesView: React.FC = () => {
                 </label>
                 <Input
                   type="text"
-                  placeholder="e.g. Spray booth electricity bill for April"
+                  placeholder="e.g. Electricity bill for April"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   required

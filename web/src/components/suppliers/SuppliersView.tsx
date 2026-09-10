@@ -103,7 +103,7 @@ export const SuppliersView: React.FC = () => {
             </Badge>
           </div>
           <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
-            Direct vendors for automotive basecoats, primers, clearcoats, wrap films, and garage consumables
+            Manage supplier and vendor records, contacts, settlement accounts, and purchase relationships
           </p>
         </div>
       </div>

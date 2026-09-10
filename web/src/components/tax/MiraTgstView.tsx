@@ -27,6 +27,13 @@ import { JournalEntry } from '../../domain/journals';
 import { useERP } from '../../context/ERPContext';
 import { Badge, Surface, Button } from '../ui';
 
+/** Hardcoded register rows for UI walkthrough only — not tenant PMS records. */
+const DEMO_GUEST_STAY_IDS = new Set(['demo-stay-01', 'demo-stay-02', 'demo-stay-03']);
+
+function isDemoGuestStay(stayId: string): boolean {
+  return DEMO_GUEST_STAY_IDS.has(stayId) || stayId.startsWith('demo-stay-');
+}
+
 export const MiraTgstView: React.FC<{
   onAddJournalEntry?: (entry: JournalEntry) => void;
 }> = ({ onAddJournalEntry }) => {
@@ -36,9 +43,9 @@ export const MiraTgstView: React.FC<{
   const [selectedMonth, setSelectedMonth] = useState<number>(8); // August
   const [greenTaxStays, setGreenTaxStays] = useState<GreenTaxStayRecord[]>([
     {
-      id: 'stay-01',
-      guestName: 'Alexander Wright',
-      passportOrId: 'GB9920194',
+      id: 'demo-stay-01',
+      guestName: '[DEMO] Alexander Wright',
+      passportOrId: 'SAMPLE-GB9920194',
       nationality: 'British',
       isTourist: true,
       checkInDate: '2026-08-01',
@@ -50,9 +57,9 @@ export const MiraTgstView: React.FC<{
       totalGreenTaxMvr: 647.64,
     },
     {
-      id: 'stay-02',
-      guestName: 'Elena Rostova',
-      passportOrId: 'RU8819201',
+      id: 'demo-stay-02',
+      guestName: '[DEMO] Elena Rostova',
+      passportOrId: 'SAMPLE-RU8819201',
       nationality: 'Russian',
       isTourist: true,
       checkInDate: '2026-08-05',
@@ -64,9 +71,9 @@ export const MiraTgstView: React.FC<{
       totalGreenTaxMvr: 925.20,
     },
     {
-      id: 'stay-03',
-      guestName: 'Ahmed Zahir',
-      passportOrId: 'A091823',
+      id: 'demo-stay-03',
+      guestName: '[DEMO] Ahmed Zahir',
+      passportOrId: 'SAMPLE-A091823',
       nationality: 'Maldivian',
       isTourist: false, // Maldivian citizen exempt
       checkInDate: '2026-08-10',
@@ -253,6 +260,7 @@ export const MiraTgstView: React.FC<{
           <div className="flex items-center gap-2">
             <Moon size={16} className="text-emerald-400" />
             <h3 className="text-sm font-bold text-white">Green Tax Guest Stays Register ($6.00 USD/night)</h3>
+            <Badge variant="warning">SAMPLE DATA</Badge>
           </div>
 
           <div className="flex items-center gap-2">
@@ -276,6 +284,16 @@ export const MiraTgstView: React.FC<{
           </div>
         </div>
 
+        <div
+          role="note"
+          data-testid="tgst-demo-stays-banner"
+          className="rounded-xl border px-3 py-2 text-xs bg-[var(--warning-subtle)] border-[var(--warning)] text-[var(--warning)]"
+        >
+          DEMO / SAMPLE DATA — seeded guest stays are walkthrough fixtures, not live tenant PMS records.
+          Green Tax totals from these rows are illustrative. 16% TGST output/input still comes from
+          invoices and expenses when present.
+        </div>
+
         <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
           <table className="w-full text-left text-xs border-collapse font-sans">
             <thead>
@@ -291,8 +309,19 @@ export const MiraTgstView: React.FC<{
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
               {tgstReturn.greenTaxRecords.map((stay) => (
-                <tr key={stay.id} className="hover:bg-slate-900/40">
-                  <td className="py-2.5 px-3 font-sans font-medium text-white">{stay.guestName}</td>
+                <tr
+                  key={stay.id}
+                  className="hover:bg-slate-900/40"
+                  data-demo-stay={isDemoGuestStay(stay.id) ? 'true' : undefined}
+                >
+                  <td className="py-2.5 px-3 font-sans font-medium text-white">
+                    <span className="inline-flex items-center gap-2">
+                      {stay.guestName}
+                      {isDemoGuestStay(stay.id) && (
+                        <Badge variant="warning" size="sm">DEMO</Badge>
+                      )}
+                    </span>
+                  </td>
                   <td className="py-2.5 px-3 text-slate-400">{stay.passportOrId}</td>
                   <td className="py-2.5 px-3 text-slate-300 font-sans">{stay.nationality}</td>
                   <td className="py-2.5 px-3 text-center">

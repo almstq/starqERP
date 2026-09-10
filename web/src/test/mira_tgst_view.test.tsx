@@ -31,7 +31,10 @@ describe('SERP-319: MIRA Tourism GST (16%) & Green Tax Interface', () => {
     expect(screen.getByText('16% TGST Output Tax')).toBeDefined();
     expect(screen.getByText('Green Tax Payable')).toBeDefined();
     expect(screen.getByText(/Green Tax Guest Stays Register/)).toBeDefined();
-    expect(screen.getByText('Alexander Wright')).toBeDefined();
+    expect(screen.getByText(/Alexander Wright/)).toBeDefined();
+    expect(screen.getByTestId('tgst-demo-stays-banner').textContent).toMatch(/SAMPLE DATA/);
+    expect(screen.getAllByText('DEMO').length).toBeGreaterThanOrEqual(3);
+    expect(screen.getByRole('status').textContent).toMatch(/^HOLD —/);
   });
 
   it('opens Record Guest Stay modal and adds a new guest to the Green Tax register', () => {

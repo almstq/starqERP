@@ -40,18 +40,45 @@ vi.mock('../context/ERPContext', () => ({
 
 const { CreateInvoiceModal } = await import('../components/invoices/CreateInvoiceModal');
 
+function fillNeutralLine(unitPrice = 25000, description = 'Professional service') {
+  fireEvent.change(screen.getByPlaceholderText('Description of service / parts'), {
+    target: { value: description },
+  });
+  fireEvent.change(screen.getByPlaceholderText('Unit Price'), {
+    target: { value: String(unitPrice) },
+  });
+}
+
 describe('CreateInvoiceModal: GST is actually computed, not hardcoded to zero', () => {
-  it('shows a non-zero GST amount for the default MVR 25,000 line item', () => {
+  it('starts empty and does not inject garage terminology when adding a line', () => {
     render(<CreateInvoiceModal />);
 
-    // Default seed item is 1 x 25,000 = 25,000 subtotal. At the current 8%
-    // general GST band that is 2,000.00 - not 0.00.
+    const initial = screen.getByPlaceholderText('Description of service / parts') as HTMLInputElement;
+    expect(initial.value).toBe('');
+    expect(screen.queryByDisplayValue(/Automotive Paint|Clearcoat/i)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Add Item/i }));
+
+    const descriptions = screen.getAllByPlaceholderText(
+      'Description of service / parts'
+    ) as HTMLInputElement[];
+    expect(descriptions).toHaveLength(2);
+    expect(descriptions.every((input) => input.value === '')).toBe(true);
+    expect(screen.queryByDisplayValue(/Automotive Paint|Clearcoat|Consumables/i)).toBeNull();
+  });
+
+  it('shows a non-zero GST amount for a MVR 25,000 line item', () => {
+    render(<CreateInvoiceModal />);
+    fillNeutralLine();
+
+    // Neutral empty default; after entering 1 x 25,000 the 8% general GST
+    // band is 2,000.00 - not 0.00.
     expect(screen.getByText('MVR 2000.00')).toBeDefined();
-    expect(screen.queryByText('MVR 0.00')).toBeNull();
   });
 
   it('shows a total that includes GST, not just the bare subtotal', () => {
     render(<CreateInvoiceModal />);
+    fillNeutralLine();
 
     expect(screen.getByText('MVR 27000.00')).toBeDefined();
   });
@@ -64,6 +91,7 @@ describe('CreateInvoiceModal: GST is actually computed, not hardcoded to zero', 
 
   it('persists the computed gstAmount/totalAmount, not zero, when the invoice is created', () => {
     render(<CreateInvoiceModal />);
+    fillNeutralLine();
 
     fireEvent.click(screen.getByRole('button', { name: /Issue Tax Invoice/i }));
 
