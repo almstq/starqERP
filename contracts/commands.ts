@@ -169,7 +169,7 @@ export const COMMANDS = [
   'PARTS_PROCUREMENT', 'PURCHASE', 'WORK', 'QC', 'HANDOVER',
   'INVOICE_PAYMENT', 'CLOSE',
   // Revision missing endpoints (SERP-167)
-  'INVOICE', 'EXPENSE', 'CUSTOMER', 'TENANT_CONFIG', 'TENANT_ONBOARD',
+  'INVOICE', 'EXPENSE', 'CUSTOMER', 'SUPPLIER', 'TENANT_CONFIG', 'TENANT_ONBOARD',
   'WORKFLOW', 'MEMBER_INVITE', 'MEMBER_AUTHORIZE', 'MEMBER_SUSPEND',
   'MEMBER_ROLE_UPDATE', 'ROLE', 'PRICE_LIST', 'COUNTER_SALE',
 ] as const;
@@ -202,6 +202,7 @@ export const COMMAND_SEATS: Readonly<Record<CommandName, readonly SeatCode[]>> =
   INVOICE:           ['counter', 'financial_controller', 'director', 'managing_director', 'owner'],
   EXPENSE:           ['counter', 'financial_controller', 'director', 'managing_director', 'owner'],
   CUSTOMER:          ['counter', 'director', 'managing_director', 'owner'],
+  SUPPLIER:          ['counter', 'director', 'managing_director', 'owner'],
   TENANT_CONFIG:     ['owner', 'director', 'managing_director'],
   TENANT_ONBOARD:    ['owner'],
   WORKFLOW:          ['owner', 'director', 'managing_director'],
@@ -235,6 +236,7 @@ export const SQL_REQUIRED_SEAT: Readonly<Record<CommandName, SeatCode | null>> =
   INVOICE: null, // multi-seat authorized
   EXPENSE: null,
   CUSTOMER: null,
+  SUPPLIER: null,
   TENANT_CONFIG: null,
   TENANT_ONBOARD: 'owner',
   WORKFLOW: null,
@@ -264,6 +266,7 @@ export const SQL_PERMITTED_SEATS: Readonly<Record<CommandName, readonly SeatCode
   INVOICE:           ['counter', 'financial_controller', 'director', 'managing_director', 'owner'],
   EXPENSE:           ['counter', 'financial_controller', 'director', 'managing_director', 'owner'],
   CUSTOMER:          ['counter', 'director', 'managing_director', 'owner'],
+  SUPPLIER:          ['counter', 'director', 'managing_director', 'owner'],
   TENANT_CONFIG:     ['owner', 'director', 'managing_director'],
   TENANT_ONBOARD:    ['owner'],
   WORKFLOW:          ['owner', 'director', 'managing_director'],

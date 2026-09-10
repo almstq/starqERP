@@ -240,6 +240,7 @@ export interface ERPContextType {
   laborEntries: LaborEntry[];
   createJob: (jobData: Omit<JobOrder, 'id' | 'jobId' | 'materialsUsed' | 'actualMaterialCost' | 'actualLaborCost' | 'totalLaborHours' | 'actualProfit'>) => JobOrder;
   createCustomer: (customerData: Omit<Customer, 'id' | 'createdAt' | 'activeJobsCount' | 'totalInvoiced' | 'outstandingBalance'>) => Customer;
+  createSupplier: (supplierData: Omit<Supplier, 'id' | 'outstandingPayable' | 'rating'>) => Supplier;
   createInvoice: (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber'> & { priceList?: PriceList }) => Invoice;
   priceLists: PriceList[];
   priceListsLoading: boolean;
@@ -2102,6 +2103,22 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return newCustomer;
   };
 
+  const createSupplier = (supplierData: Omit<Supplier, 'id' | 'outstandingPayable' | 'rating'>): Supplier => {
+    const newSupplier: Supplier = { ...supplierData, id: `supplier-${Date.now()}`, outstandingPayable: 0, rating: 0 };
+    setSuppliers((prev) => [newSupplier, ...prev]);
+    setMutationPending(true);
+    setLastMutationError(null);
+    dispatchCommand({ command: 'SUPPLIER', payload: supplierData })
+      .then(() => setMutationPending(false))
+      .catch((err) => {
+        setMutationPending(false);
+        setLastMutationError(err instanceof Error ? err.message : 'SUPPLIER command failed');
+        if (session || err instanceof ApiError) setSuppliers((prev) => prev.filter((s) => s.id !== newSupplier.id));
+      });
+    logAuditEvent({ action: 'CREATED', module: 'suppliers', entityType: 'Supplier', entityId: newSupplier.id, entityName: newSupplier.name, summary: `Created supplier record for ${newSupplier.name}.` });
+    return newSupplier;
+  };
+
   const createPriceList = async (
     priceListData: Omit<PriceList, 'id' | 'registryId' | 'version' | 'createdAt' | 'updatedAt'>,
   ): Promise<PriceList> => {
@@ -3289,6 +3306,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         laborEntries,
         createJob,
         createCustomer,
+        createSupplier,
         createPriceList,
         updatePriceList,
         archivePriceList,
