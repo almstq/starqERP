@@ -1,23 +1,14 @@
 import React, { useState } from 'react';
 import {
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
-  RefreshCw,
   Scale,
-  Plus,
   Building2,
-  Layers,
-  ArrowRight,
-  ShieldCheck,
-  CheckCircle2,
   Globe,
-  Coins
+  Coins,
+  AlertTriangle
 } from 'lucide-react';
 import {
   DEFAULT_MMA_RATES,
   SupportedCurrency,
-  convertToBaseMvr,
   calculateRealizedFxGainLoss,
   calculateUnrealizedRevaluation,
   FxSettlementResult,
@@ -97,14 +88,25 @@ export const MultiCurrencyView: React.FC<{
               <Globe size={24} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-lg font-bold text-white">Multi-Currency & MMA Exchange Rates</h2>
+                <Badge variant="warning">DEMO / SAMPLE DATA</Badge>
                 <Badge variant="neutral">Base Currency: MVR</Badge>
               </div>
               <p className="text-xs text-slate-400">
-                Official Maldives Monetary Authority (MMA) pegged rates, dynamic spot conversion, and automated Realized FX Gain/Loss.
+                Sample MMA-style rates, simulated balances, and a settlement calculator. Not live MMA quotes or production balances until a live source is connected.
               </p>
             </div>
+          </div>
+        </div>
+
+        <div className="mt-4 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 flex items-start gap-2.5">
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <span className="font-bold text-[11px] uppercase tracking-wide">DEMO / SAMPLE DATA — simulated defaults, not a live MMA or bank feed</span>
+            <p className="text-[11px] leading-relaxed text-amber-200/90">
+              Exchange rates and foreign balances on this screen are seeded demo / sample data (for example USD 15.42, USD 25,000, book MVR 385,500). They are simulated placeholders until a live MMA rate source and live bank balances are integrated. Revalued balance and gain/loss use the same calculation as production; only the inputs are sample.
+            </p>
           </div>
         </div>
 
@@ -117,7 +119,7 @@ export const MultiCurrencyView: React.FC<{
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-white font-mono">{cur}</span>
-                <span className="text-[9px] text-slate-500 font-mono">1 {cur}</span>
+                <Badge variant="warning" size="sm">DEMO</Badge>
               </div>
               {editingCurrency === cur && cur !== 'MVR' ? (
                 <div className="flex items-center gap-1 pt-1">
@@ -154,7 +156,7 @@ export const MultiCurrencyView: React.FC<{
                 </div>
               )}
               <div className="text-[9px] text-slate-500">
-                {cur === 'USD' ? 'MMA Peg Band' : cur === 'MVR' ? 'Base Currency' : 'MMA Daily Spot'}
+                {cur === 'USD' ? 'DEMO · MMA peg sample' : cur === 'MVR' ? 'DEMO · Base Currency' : 'DEMO · sample spot'}
               </div>
             </div>
           ))}
@@ -164,12 +166,13 @@ export const MultiCurrencyView: React.FC<{
       {/* Realized FX Settlement Engine */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Surface className="p-6 rounded-2xl border border-slate-800 bg-[#0a0f1d] space-y-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Coins size={18} className="text-sky-400" />
             <h3 className="text-sm font-bold text-white">Foreign Currency Settlement Simulator</h3>
+            <Badge variant="warning" size="sm">SAMPLE DATA</Badge>
           </div>
           <p className="text-xs text-slate-400">
-            Calculate and book Realized FX Gain or Loss upon foreign invoice collection or supplier bill payment.
+            Calculate and book Realized FX Gain or Loss upon foreign invoice collection or supplier bill payment. Seeded amounts and rates below are sample defaults, not live balances.
           </p>
 
           <div className="space-y-3 text-xs">
@@ -218,7 +221,7 @@ export const MultiCurrencyView: React.FC<{
               </div>
 
               <div>
-                <label className="text-[10px] uppercase font-bold text-slate-400 font-mono">Foreign Amount</label>
+                <label className="text-[10px] uppercase font-bold text-slate-400 font-mono">Foreign Amount (SAMPLE)</label>
                 <input
                   type="number"
                   value={foreignAmt}
@@ -228,7 +231,7 @@ export const MultiCurrencyView: React.FC<{
               </div>
 
               <div>
-                <label className="text-[10px] uppercase font-bold text-slate-400 font-mono">Original Rate</label>
+                <label className="text-[10px] uppercase font-bold text-slate-400 font-mono">Original Rate (SAMPLE · 15.42)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -240,7 +243,7 @@ export const MultiCurrencyView: React.FC<{
             </div>
 
             <div>
-              <label className="text-[10px] uppercase font-bold text-slate-400 font-mono">Settlement Spot Rate</label>
+              <label className="text-[10px] uppercase font-bold text-slate-400 font-mono">Settlement Spot Rate (SAMPLE)</label>
               <input
                 type="number"
                 step="0.01"
@@ -264,12 +267,13 @@ export const MultiCurrencyView: React.FC<{
 
         {/* Period-End Foreign Currency Asset Revaluation */}
         <Surface className="p-6 rounded-2xl border border-slate-800 bg-[#0a0f1d] space-y-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Building2 size={18} className="text-purple-400" />
             <h3 className="text-sm font-bold text-white">Foreign Currency Balance Revaluation</h3>
+            <Badge variant="warning" size="sm">DEMO / SAMPLE DATA</Badge>
           </div>
           <p className="text-xs text-slate-400">
-            Revalue foreign bank accounts and open AR/AP balances against latest closing MMA rates.
+            Revalue foreign bank accounts and open AR/AP balances against closing MMA-style rates. USD 25,000 and book MVR 385,500 are simulated sample balances until live source integration exists.
           </p>
 
           <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3 font-mono text-xs">
@@ -278,15 +282,15 @@ export const MultiCurrencyView: React.FC<{
               <span className="text-white font-bold">{revalResult.accountCode} - {revalResult.accountName}</span>
             </div>
             <div className="flex items-center justify-between text-slate-300">
-              <span>Foreign Balance:</span>
+              <span>Foreign Balance (SAMPLE):</span>
               <span className="text-white font-bold">${revalResult.foreignBalance.toLocaleString()} {revalResult.currency}</span>
             </div>
             <div className="flex items-center justify-between text-slate-300">
-              <span>Book Balance (MVR):</span>
+              <span>Book Balance (SAMPLE):</span>
               <span>{formatMVR(revalResult.bookMvrBalance)}</span>
             </div>
             <div className="flex items-center justify-between text-slate-300">
-              <span>Current MMA Rate:</span>
+              <span>Current MMA Rate (DEMO):</span>
               <span className="text-amber-400 font-bold">{revalResult.closingMmaRate.toFixed(2)} MVR</span>
             </div>
             <div className="flex items-center justify-between text-slate-300 pt-2 border-t border-slate-800">

@@ -110,7 +110,7 @@ export const PurchasingView: React.FC = () => {
             Purchasing & Material Procurement
           </h1>
           <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
-            Procure raw paint, clearcoat, and workshop supplies from accredited suppliers
+            Procure goods and materials from accredited suppliers
           </p>
         </div>
 
@@ -164,7 +164,7 @@ export const PurchasingView: React.FC = () => {
             {suppliers.length} Vendors
           </div>
           <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
-            Paints, vinyls, abrasives
+            Goods, materials, and supplies
           </span>
         </Surface>
       </div>

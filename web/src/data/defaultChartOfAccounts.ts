@@ -100,7 +100,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
     status: 'ACTIVE',
     balance: 0,
     isSystem: false,
-    description: 'Physical workshop and cashier drawer cash on hand.',
+    description: 'Physical till and cashier drawer cash on hand.',
   },
   {
     id: 'coa-1115',
@@ -263,7 +263,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
   {
     id: 'coa-1510',
     code: '1510',
-    name: 'Workshop Machinery & Diagnostic Equipment',
+    name: 'Machinery & Equipment',
     accountClass: 'ASSET',
     subtype: 'FIXED_ASSET',
     parentId: 'coa-1500',
@@ -272,7 +272,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
     status: 'ACTIVE',
     balance: 0,
     isSystem: false,
-    description: 'Lifts, diagnostic scanners, compressors, and specialized workshop tools.',
+    description: 'Plant, machinery, compressors, and specialized operational equipment.',
   },
   {
     id: 'coa-1590',
@@ -558,7 +558,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
   {
     id: 'coa-4110',
     code: '4110',
-    name: 'Workshop & Job Labor Revenue',
+    name: 'Service & Job Labor Revenue',
     accountClass: 'REVENUE',
     subtype: 'SERVICE_REVENUE',
     parentId: 'coa-4000',
@@ -748,7 +748,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
   {
     id: 'coa-6210',
     code: '6210',
-    name: 'Workshop & Garage Rent',
+    name: 'Facility Rent',
     accountClass: 'EXPENSE',
     subtype: 'RENT_AND_LEASE',
     parentId: 'coa-6000',
@@ -757,7 +757,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
     status: 'ACTIVE',
     balance: 0,
     isSystem: false,
-    description: 'Facility lease for workshop bays, offices, and storage yards.',
+    description: 'Facility lease for premises, offices, and storage.',
   },
   {
     id: 'coa-6220',
@@ -804,7 +804,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
   {
     id: 'coa-6910',
     code: '6910',
-    name: 'Depreciation Expense - Workshop Equipment',
+    name: 'Depreciation Expense - Equipment',
     accountClass: 'EXPENSE',
     subtype: 'DEPRECIATION_EXPENSE',
     parentId: 'coa-6000',
