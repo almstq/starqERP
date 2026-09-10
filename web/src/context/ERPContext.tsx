@@ -46,6 +46,7 @@ import {
   PRICE_LIST_BINDING_OPTIONS,
   PriceList,
   resolveItemPrice,
+  resolvePriceListForCustomer,
   roundToTwoDecimals,
   validatePriceList,
 } from '../domain/priceLists';
@@ -2301,7 +2302,24 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const createInvoice = (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber'> & { priceList?: PriceList }): Invoice => {
-    const { priceList, ...baseInvoiceData } = invoiceData;
+    const { priceList: suppliedPriceList, ...baseInvoiceData } = invoiceData;
+    // SERP-314 Gap 3 (acceptance criterion 3): when the caller does not supply
+    // an explicit priceList, derive the target customer's bound tier
+    // automatically so any invoice issued for a bound customer resolves tier
+    // pricing without threading a PriceList object through every call site.
+    // An explicit priceList still wins (no-op-compatible override), an
+    // unbound/archived binding — or a bound code with no row in the loaded
+    // registry — resolves to the item's own sellingPrice unchanged, and the
+    // derivation never crosses tenant boundaries (the customer is only used
+    // when the session has no organisation or its tenantId matches).
+    const boundCustomer = customers.find(
+      (c) =>
+        c.id === baseInvoiceData.customerId &&
+        (!session?.current_organisation_id || c.tenantId === session.current_organisation_id)
+    );
+    const priceList =
+      suppliedPriceList ??
+      resolvePriceListForCustomer(boundCustomer, priceLists);
     const resolvedItems = baseInvoiceData.items.map((item) => {
       // KNOWN LIMITATION (Copilot review on PR #117, tracked on SERP-314's
       // not_done list): item.id here is InvoiceLineItem.id, an invoice-local

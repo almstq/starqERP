@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useERP } from '../../context/ERPContext';
 import { Modal } from '../common/Modal';
 import { InvoiceLineItem } from '../../types/erp';
-import { Plus, Trash2, Receipt } from 'lucide-react';
+import { Plus, Trash2, Receipt, Tag } from 'lucide-react';
 import { resolveTaxRate, taxOnExclusive } from '../../domain/taxRates';
+import { priceListBindingName, resolveItemPrice, resolvePriceListForCustomer, roundToTwoDecimals } from '../../domain/priceLists';
 
 export const CreateInvoiceModal: React.FC = () => {
   const {
@@ -15,7 +16,8 @@ export const CreateInvoiceModal: React.FC = () => {
     prefilledCustomerId,
     setPrefilledCustomerId,
     setSelectedInvoiceId,
-    formatMVR
+    formatMVR,
+    priceLists
   } = useERP();
 
   const [customerId, setCustomerId] = useState('');
@@ -86,7 +88,24 @@ export const CreateInvoiceModal: React.FC = () => {
   // understated by the full GST amount. Resolved by date via taxRates.ts,
   // never a hardcoded constant, same convention as miraTgst.ts.
   const invoiceDate = new Date().toISOString().split('T')[0];
-  const subtotal = items.reduce((sum, i) => sum + i.amount, 0);
+
+  // SERP-314 Gap 3: the customer's bound tier is resolved automatically when
+  // the invoice is created (ERPContext.createInvoice derives it from
+  // customer.priceListId). Mirror that here so the preview always shows the
+  // price the customer will actually be charged. An unbound customer, or a
+  // bound code with no row in the loaded registry, keeps the typed price
+  // unchanged (resolveItemPrice with no list returns sellingPrice).
+  const selectedCustomer = customers.find((c) => c.id === customerId);
+  const boundPriceList = resolvePriceListForCustomer(selectedCustomer, priceLists);
+  const tierLabel = priceListBindingName(selectedCustomer?.priceListId, priceLists);
+
+  const previewItems = items.map((item) => {
+    const unitPrice = boundPriceList
+      ? roundToTwoDecimals(resolveItemPrice({ id: item.id, sellingPrice: item.unitPrice }, boundPriceList))
+      : item.unitPrice;
+    return { ...item, unitPrice, amount: roundToTwoDecimals(item.quantity * unitPrice) };
+  });
+  const subtotal = previewItems.reduce((sum, i) => sum + i.amount, 0);
   const gstRate = resolveTaxRate('gst_general', invoiceDate);
   const gstAmount = taxOnExclusive('gst_general', invoiceDate, subtotal);
   const totalAmount = subtotal + gstAmount;
@@ -189,6 +208,19 @@ export const CreateInvoiceModal: React.FC = () => {
           </div>
         </div>
 
+        {tierLabel && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--md-sys-color-secondary-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-secondary-container)] text-xs">
+            <Tag className="w-3.5 h-3.5" />
+            <span className="font-semibold">Tier:</span>
+            <span>{tierLabel}</span>
+            {boundPriceList ? (
+              <span>— prices auto-resolved below</span>
+            ) : (
+              <span>— bound tier not found in registry; standard pricing applies</span>
+            )}
+          </div>
+        )}
+
         {/* Due Date */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div>
@@ -267,7 +299,7 @@ export const CreateInvoiceModal: React.FC = () => {
                   />
                 </div>
                 <div className="col-span-3 sm:col-span-2 text-right font-bold text-[var(--md-sys-color-on-surface)] mono-num">
-                  {formatMVR(item.amount)}
+                  {formatMVR(previewItems[idx].amount)}
                 </div>
                 <div className="col-span-1 text-center">
                   <button
