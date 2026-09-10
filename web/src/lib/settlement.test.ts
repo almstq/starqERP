@@ -92,17 +92,41 @@ describe('SERP-294: Credit Notes, Customer Advances & Settlement Engine', () => 
     expect(je.source).toBe('CREDIT_NOTE');
 
     // Verify double-entry balance: Debits (Revenue 5,000 + GST 400) = Credit (AR 5,400)
-    const revDebit = je.lines.find((l) => l.accountCode === '4110')?.debit;
+    const discountDebit = je.lines.find((l) => l.accountCode === '4210')?.debit;
     const gstDebit = je.lines.find((l) => l.accountCode === '2121')?.debit;
     const arCredit = je.lines.find((l) => l.accountCode === '1210')?.credit;
 
-    expect(revDebit).toBe(5000);
+    expect(discountDebit).toBe(5000);
     expect(gstDebit).toBe(400);
     expect(arCredit).toBe(5400);
 
     const totalDebits = je.lines.reduce((s, l) => s + l.debit, 0);
     const totalCredits = je.lines.reduce((s, l) => s + l.credit, 0);
     expect(totalDebits).toBe(totalCredits);
+  });
+
+  it('SERP-339 uses canonical allowance, GST, and receivable account mappings', () => {
+    const creditNote = issueCreditNote({
+      customerId: 'cust-crown',
+      customerName: 'Crown Resorts Maldives',
+      issueDate: '2026-08-15',
+      reason: 'Sales allowance',
+      items: [{ description: 'Allowance', quantity: 1, unitPrice: 1000, taxRate: 8 }],
+    });
+
+    const [journal] = generateCreditNoteJournals({
+      creditNotes: [creditNote],
+      accounts: DEFAULT_CHART_OF_ACCOUNTS,
+      isGstRegistered: true,
+    });
+
+    expect(journal.lines.map((line) => line.accountCode)).toEqual(['4210', '2121', '1210']);
+    expect(journal.lines.map((line) => line.accountName)).toEqual([
+      'Sales Discounts Given',
+      'MIRA Output GST Payable (8%)',
+      'Trade Debtors Control Account',
+    ]);
+    expect(journal.lines.some((line) => ['4110', '4000', '2200', '1200'].includes(line.accountCode))).toBe(false);
   });
 
   it('records customer advance deposits and generates liability holding journals', () => {
