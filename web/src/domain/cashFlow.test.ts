@@ -14,8 +14,8 @@ describe('SERP-317: Direct and Indirect Cash Flow Statement Reporting Engine', (
       reference: 'RCT-1001',
       narration: 'Customer Settlement',
       lines: [
-        { id: 'l1', accountCode: '1010', accountId: 'acc-1010', accountClass: accountClassForCode('1010'), accountName: 'BML MVR', debit: 50000, credit: 0, narration: 'Bank Receipt' },
-        { id: 'l2', accountCode: '1100', accountId: 'acc-1100', accountClass: accountClassForCode('1100'), accountName: 'Accounts Receivable', debit: 0, credit: 50000, narration: 'AR Clearing' },
+        { id: 'l1', accountCode: '1111', accountId: 'acc-1111', accountClass: accountClassForCode('1111'), accountName: 'BML MVR', debit: 50000, credit: 0, narration: 'Bank Receipt' },
+        { id: 'l2', accountCode: '1210', accountId: 'acc-1210', accountClass: accountClassForCode('1210'), accountName: 'Accounts Receivable', debit: 0, credit: 50000, narration: 'AR Clearing' },
       ],
       totalDebit: 50000,
       totalCredit: 50000,
@@ -34,8 +34,8 @@ describe('SERP-317: Direct and Indirect Cash Flow Statement Reporting Engine', (
       reference: 'PAY-2001',
       narration: 'Supplier Settlement',
       lines: [
-        { id: 'l3', accountCode: '2000', accountId: 'acc-2000', accountClass: accountClassForCode('2000'), accountName: 'Accounts Payable', debit: 15000, credit: 0, narration: 'AP Clearing' },
-        { id: 'l4', accountCode: '1010', accountId: 'acc-1010', accountClass: accountClassForCode('1010'), accountName: 'BML MVR', debit: 0, credit: 15000, narration: 'Bank Wire' },
+        { id: 'l3', accountCode: '2110', accountId: 'acc-2110', accountClass: accountClassForCode('2110'), accountName: 'Accounts Payable', debit: 15000, credit: 0, narration: 'AP Clearing' },
+        { id: 'l4', accountCode: '1111', accountId: 'acc-1111', accountClass: accountClassForCode('1111'), accountName: 'BML MVR', debit: 0, credit: 15000, narration: 'Bank Wire' },
       ],
       totalDebit: 15000,
       totalCredit: 15000,
@@ -55,7 +55,7 @@ describe('SERP-317: Direct and Indirect Cash Flow Statement Reporting Engine', (
       narration: 'Outboard Engine Purchase',
       lines: [
         { id: 'l5', accountCode: '1500', accountId: 'acc-1500', accountClass: accountClassForCode('1500'), accountName: 'Machinery & Equipment', debit: 20000, credit: 0, narration: 'Engine' },
-        { id: 'l6', accountCode: '1010', accountId: 'acc-1010', accountClass: accountClassForCode('1010'), accountName: 'BML MVR', debit: 0, credit: 20000, narration: 'Bank Outflow' },
+        { id: 'l6', accountCode: '1111', accountId: 'acc-1111', accountClass: accountClassForCode('1111'), accountName: 'BML MVR', debit: 0, credit: 20000, narration: 'Bank Outflow' },
       ],
       totalDebit: 20000,
       totalCredit: 20000,
@@ -74,7 +74,7 @@ describe('SERP-317: Direct and Indirect Cash Flow Statement Reporting Engine', (
       reference: 'EQUITY-01',
       narration: 'Owner Capital Deposit',
       lines: [
-        { id: 'l7', accountCode: '1010', accountId: 'acc-1010', accountClass: accountClassForCode('1010'), accountName: 'BML MVR', debit: 30000, credit: 0, narration: 'Capital Inflow' },
+        { id: 'l7', accountCode: '1111', accountId: 'acc-1111', accountClass: accountClassForCode('1111'), accountName: 'BML MVR', debit: 30000, credit: 0, narration: 'Capital Inflow' },
         { id: 'l8', accountCode: '3000', accountId: 'acc-3000', accountClass: accountClassForCode('3000'), accountName: 'Owner Equity', debit: 0, credit: 30000, narration: 'Capital Contribution' },
       ],
       totalDebit: 30000,
@@ -126,11 +126,12 @@ describe('SERP-317: Direct and Indirect Cash Flow Statement Reporting Engine', (
     expect(cfs.variance).toBe(0);
   });
 
-  it('accurately identifies cash and bank account codes (1000..1099)', () => {
-    expect(isCashOrBankAccount('1000')).toBe(true); // Cash on Hand
-    expect(isCashOrBankAccount('1010')).toBe(true); // BML MVR
-    expect(isCashOrBankAccount('1030')).toBe(true); // MIB MVR
-    expect(isCashOrBankAccount('1100')).toBe(false); // Accounts Receivable
-    expect(isCashOrBankAccount('2000')).toBe(false); // Accounts Payable
+  it('accurately identifies canonical cash and bank leaf account codes (1111..1115)', () => {
+    expect(isCashOrBankAccount('1111')).toBe(true); // BML MVR
+    expect(isCashOrBankAccount('1115')).toBe(true); // Canonical upper leaf boundary
+    expect(isCashOrBankAccount('1010')).toBe(false); // Retired BML MVR code
+    expect(isCashOrBankAccount('1000')).toBe(false); // Retired cash code
+    expect(isCashOrBankAccount('1210')).toBe(false); // Trade Debtors
+    expect(isCashOrBankAccount('2110')).toBe(false); // Accounts Payable
   });
 });
