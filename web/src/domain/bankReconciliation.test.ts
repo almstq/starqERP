@@ -4,10 +4,12 @@ import {
   parseMibCsv,
   autoMatchStatementLines,
   createBankAdjustmentEntry,
+  validateBankAdjustmentAccount,
   calculateReconciliationSummary,
   BankStatementLine,
   ERPReconciliationCandidate,
 } from './bankReconciliation';
+import { AccountRecord } from './accounts';
 
 describe('SERP-296: Bank & Cash Ledger Reconciliation Engine', () => {
   const SAMPLE_BML_CSV = `
@@ -92,11 +94,29 @@ Transaction Date,Details,Withdrawal,Deposit,Balance,Ref No
       status: 'unreconciled',
     };
 
+    const authorizedAccounts: AccountRecord[] = [
+      {
+        id: 'coa-1010',
+        code: '1010',
+        name: 'Bank of Maldives (BML MVR)',
+        accountClass: 'ASSET',
+        subtype: 'BANK_AND_CASH',
+        parentId: 'coa-1110',
+        level: 3,
+        currency: 'MVR',
+        status: 'ACTIVE',
+        balance: 0,
+        isSystem: false,
+        description: 'Operating BML MVR account',
+      },
+    ];
+
     const journal = createBankAdjustmentEntry({
       statementLine: feeLine,
       bankAccountCode: '1010',
       adjustmentType: 'bank_fee',
       tenantId: 'tenant-club-ignition',
+      authorizedAccounts,
     });
 
     expect(journal.isBalanced).toBe(true);
@@ -104,6 +124,48 @@ Transaction Date,Details,Withdrawal,Deposit,Balance,Ref No
     expect(journal.totalCredit).toBe(150);
     expect(journal.lines[0].accountCode).toBe('6310'); // Bank fees
     expect(journal.lines[1].accountCode).toBe('1010'); // BML Bank MVR
+  });
+
+  it('rejects bank adjustment when authorizedAccounts does not contain the bank code (cross-tenant guard)', () => {
+    const feeLine: BankStatementLine = {
+      id: 'stmt-line-fee-cross',
+      statementId: 'stmt-cross-001',
+      date: '2026-08-15',
+      description: 'Monthly Service Fee',
+      reference: 'FEE-AUG-2026',
+      debit: 150,
+      credit: 0,
+      balance: 162850,
+      status: 'unreconciled',
+    };
+
+    // Tenant A's accounts — does NOT contain code '1010'
+    const tenantAAccounts: AccountRecord[] = [
+      {
+        id: 'coa-2010',
+        code: '2010',
+        name: 'Accounts Payable',
+        accountClass: 'LIABILITY',
+        subtype: 'CURRENT_LIABILITY',
+        parentId: 'coa-2000',
+        level: 3,
+        currency: 'MVR',
+        status: 'ACTIVE',
+        balance: 0,
+        isSystem: false,
+        description: 'Trade payables',
+      },
+    ];
+
+    expect(() => {
+      createBankAdjustmentEntry({
+        statementLine: feeLine,
+        bankAccountCode: '1010', // BML MVR — belongs to Tenant B, not Tenant A
+        adjustmentType: 'bank_fee',
+        tenantId: 'tenant-a',
+        authorizedAccounts: tenantAAccounts,
+      });
+    }).toThrow(/not in the authorized account set/);
   });
 
   it('calculates authoritative reconciliation summary and proves mathematical balance', () => {

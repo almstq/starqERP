@@ -30,6 +30,7 @@ import {
   calculateReconciliationSummary,
 } from '../../domain/bankReconciliation';
 import { JournalEntry } from '../../domain/journals';
+import { AccountRecord } from '../../domain/accounts';
 import { useERP } from '../../context/ERPContext';
 import { Badge, Surface, Button } from '../ui';
 
@@ -54,6 +55,19 @@ export const BankReconciliationView: React.FC<{
   onAddAdjustmentJournal?: (entry: JournalEntry) => void;
 }> = ({ journals, candidateTransactions, onAddAdjustmentJournal }) => {
   const { invoices, payments, expenses, formatMVR, currentTenant } = useERP();
+
+  // Load tenant-scoped accounts from localStorage (persisted by AccountsView)
+  const authorizedAccounts: AccountRecord[] = useMemo(() => {
+    const saved = localStorage.getItem('starq:chart_of_accounts:v1');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }, []);
 
   const [selectedAccount, setSelectedAccount] = useState<BankAccountOption>(BANK_ACCOUNTS[0]);
   const [statement, setStatement] = useState<BankStatement | null>(null);
@@ -217,6 +231,7 @@ Date,Description,Debit,Credit,Balance,Reference
       adjustmentType,
       narration: adjustmentNarration,
       tenantId: currentTenant?.id || 'tenant-starq',
+      authorizedAccounts,
     });
 
     if (onAddAdjustmentJournal) {
