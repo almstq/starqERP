@@ -71,16 +71,32 @@ $$\text{Identity} \longrightarrow \begin{matrix} \text{Platform Entitlement} \\ 
 ## Implementation & Release Status
 
 ### Canonical Roadmap Snapshot
-*Baseline Snapshot Date: 2026-09-06 | Release: v0.2.0-beta*
+*Baseline Snapshot Date: 2026-09-10 | Release: v0.2.0-beta*
 
 | Milestone Gate | Scope & Focus | Status |
 | :--- | :--- | :--- |
 | **Gate 1 (G1)** | **Commercial Pilot Readiness** — Dual-tenant spine, RLS isolation, session boundaries, inventory valuation, job workflows, invoice lifecycle. | **Active / Near Completion** |
-| **Gate 2 (G2)** | **ERP Replacement Readiness** — Full double-entry general ledger, bank reconciliations, multi-currency purchasing, audit trail immutability. | **Active** — implementations merged, acceptance review pending |
+| **Gate 2 (G2)** | **ERP Replacement Readiness** — Full double-entry general ledger, bank reconciliations, multi-currency purchasing, audit trail immutability. | **Active** — tenant-scoped cash-flow and bank reconciliation are on `main` (see recently merged PRs). Remaining Finance stacks (journals COGS mapping, credit-note CoA, migration collision remediation) are still Founder-gated and **not** merged. G2 is not closed; accountant review (SERP-346) is not claimed done. |
 | **Gate 3 (G3)** | **Maldives Competitive Advantage** — Native MIRA GST filing integration, Dhivehi localization, BML payment gateway, offline sync resilience. | **Partially delivered** — GST-201, Dhivehi print and Favara QR merged; offline sync still planned |
 | **Gate 4 (G4)** | **Enterprise Scale & Governance** — Multi-region replication, automated continuous compliance, high-availability tenancy failover. | **Planned** |
 
-*Canonical Board Progress: **179 of 387 tasks completed (46.25%)** across G1-G4. Figures are read from the Nexus board SSOT (`starq-erp-tasks.json`) at each manual snapshot refresh — not a live/automated feed, so treat this number as accurate as of the Baseline Snapshot Date above, not real-time.*
+*Canonical Board Progress (snapshot, not live): **186 of 388 tasks completed (~47.9%)** as recorded in the Nexus board SSOT `starqNexus/data/starq-erp-tasks.json` (`updated_at` 2026-09-08). This README does not auto-refresh; treat the figure as accurate as of that board file, not as a real-time feed. This docs update does not mutate the board.*
+
+### Recently merged on `main` (as of 2026-09-10)
+
+`origin/main` at docs baseline: `e341e83429490122801b57caa06bf32071661467`.
+
+| PR | What landed | Merge commit |
+| :--- | :--- | :--- |
+| [#123](https://github.com/almstq/starqERP/pull/123) | PACKET-3+4 bank/CoA tenant-scoping | `5049b30` |
+| [#124](https://github.com/almstq/starqERP/pull/124) | PACKET-5 cash-flow + bank-reconciliation tenant isolation | `f040561` |
+| [#122](https://github.com/almstq/starqERP/pull/122) | SERP-314 invoice price auto-resolve from customer tier | `e341e83` |
+
+Candidate `bc6d5fc` is **not** marked retired in this file; that is a Finance-register decision after AG records it.
+
+### Separate beta lane (not Finance kernel)
+
+UI / data-provenance smoke-test findings (invoice default garage line item, missing supplier-create path, demo vs live distinction on Multi-Currency and Green Tax, generic wording, GL information styling) are a **separate beta cleanup lane**. They are not part of the Finance packet merges above and are not claimed fixed here.
 
 ---
 
