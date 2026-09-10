@@ -90,6 +90,9 @@ test.describe('SERP-328 complete commercial journey', () => {
         .locator('..')
         .locator('select')
     ).toHaveValue(/\S+/);
+    // Track A emptied modal defaults; journey still quotes MVR 25000 exclusive.
+    await addInvoice.getByPlaceholder('Description of service / parts').fill(SCOPE);
+    await addInvoice.getByPlaceholder('Unit Price').fill(AMOUNT);
     await expect(addInvoice.getByText(/Rf 25,000\.00/).first()).toBeVisible();
     await addInvoice.getByRole('button', { name: 'Issue Tax Invoice' }).click();
     await expect(page.getByText(CUSTOMER, { exact: true }).first()).toBeVisible();
