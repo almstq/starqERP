@@ -4,10 +4,14 @@ import {
   parseMibCsv,
   autoMatchStatementLines,
   createBankAdjustmentEntry,
+  validateBankAdjustmentAccount,
+  calculateTenantLedgerBalance,
   calculateReconciliationSummary,
   BankStatementLine,
   ERPReconciliationCandidate,
 } from './bankReconciliation';
+import { AccountRecord } from './accounts';
+import { JournalEntry } from './journals';
 
 describe('SERP-296: Bank & Cash Ledger Reconciliation Engine', () => {
   const SAMPLE_BML_CSV = `
@@ -92,11 +96,29 @@ Transaction Date,Details,Withdrawal,Deposit,Balance,Ref No
       status: 'unreconciled',
     };
 
+    const authorizedAccounts: AccountRecord[] = [
+      {
+        id: 'coa-1010',
+        code: '1010',
+        name: 'Bank of Maldives (BML MVR)',
+        accountClass: 'ASSET',
+        subtype: 'BANK_AND_CASH',
+        parentId: 'coa-1110',
+        level: 3,
+        currency: 'MVR',
+        status: 'ACTIVE',
+        balance: 0,
+        isSystem: false,
+        description: 'Operating BML MVR account',
+      },
+    ];
+
     const journal = createBankAdjustmentEntry({
       statementLine: feeLine,
       bankAccountCode: '1010',
       adjustmentType: 'bank_fee',
       tenantId: 'tenant-club-ignition',
+      authorizedAccounts,
     });
 
     expect(journal.isBalanced).toBe(true);
@@ -104,6 +126,114 @@ Transaction Date,Details,Withdrawal,Deposit,Balance,Ref No
     expect(journal.totalCredit).toBe(150);
     expect(journal.lines[0].accountCode).toBe('6310'); // Bank fees
     expect(journal.lines[1].accountCode).toBe('1010'); // BML Bank MVR
+  });
+
+  it('rejects bank adjustment when authorizedAccounts does not contain the bank code (cross-tenant guard)', () => {
+    const feeLine: BankStatementLine = {
+      id: 'stmt-line-fee-cross',
+      statementId: 'stmt-cross-001',
+      date: '2026-08-15',
+      description: 'Monthly Service Fee',
+      reference: 'FEE-AUG-2026',
+      debit: 150,
+      credit: 0,
+      balance: 162850,
+      status: 'unreconciled',
+    };
+
+    // Tenant A's accounts — does NOT contain code '1010'
+    const tenantAAccounts: AccountRecord[] = [
+      {
+        id: 'coa-2010',
+        code: '2010',
+        name: 'Accounts Payable',
+        accountClass: 'LIABILITY',
+        subtype: 'CURRENT_LIABILITY',
+        parentId: 'coa-2000',
+        level: 3,
+        currency: 'MVR',
+        status: 'ACTIVE',
+        balance: 0,
+        isSystem: false,
+        description: 'Trade payables',
+      },
+    ];
+
+    expect(() => {
+      createBankAdjustmentEntry({
+        statementLine: feeLine,
+        bankAccountCode: '1010', // BML MVR — belongs to Tenant B, not Tenant A
+        adjustmentType: 'bank_fee',
+        tenantId: 'tenant-a',
+        authorizedAccounts: tenantAAccounts,
+      });
+    }).toThrow(/not in the authorized account set/);
+  });
+
+  it('calculates tenant-scoped ledger balance — other tenants never leak into a bank account', () => {
+    const journals: JournalEntry[] = [
+      {
+        id: 'je-t1a',
+        entryNumber: 'JE-T1A',
+        date: '2026-08-01',
+        source: 'MANUAL',
+        reference: 'T1A',
+        narration: 'Tenant 01 deposit',
+        lines: [
+          { id: 'l1', accountCode: '1111', accountId: 'acc-1111', accountClass: 'ASSET', accountName: 'BML MVR', debit: 10000, credit: 0, narration: '' },
+        ],
+        totalDebit: 10000,
+        totalCredit: 10000,
+        isBalanced: true,
+        postedBy: 'System',
+        postedAt: '2026-08-01T00:00:00Z',
+        tenantId: 'tenant-01',
+        status: 'POSTED',
+      },
+      {
+        id: 'je-t1b',
+        entryNumber: 'JE-T1B',
+        date: '2026-08-02',
+        source: 'MANUAL',
+        reference: 'T1B',
+        narration: 'Tenant 01 withdrawal',
+        lines: [
+          { id: 'l2', accountCode: '1111', accountId: 'acc-1111', accountClass: 'ASSET', accountName: 'BML MVR', debit: 0, credit: 2000, narration: '' },
+        ],
+        totalDebit: 2000,
+        totalCredit: 2000,
+        isBalanced: true,
+        postedBy: 'System',
+        postedAt: '2026-08-02T00:00:00Z',
+        tenantId: 'tenant-01',
+        status: 'POSTED',
+      },
+      {
+        id: 'je-t2',
+        entryNumber: 'JE-T2',
+        date: '2026-08-03',
+        source: 'MANUAL',
+        reference: 'T2',
+        narration: 'Tenant 02 movements must stay out of Tenant 01 ledger',
+        lines: [
+          { id: 'l3', accountCode: '1111', accountId: 'acc-1111', accountClass: 'ASSET', accountName: 'BML MVR', debit: 99999, credit: 0, narration: '' },
+        ],
+        totalDebit: 99999,
+        totalCredit: 99999,
+        isBalanced: true,
+        postedBy: 'System',
+        postedAt: '2026-08-03T00:00:00Z',
+        tenantId: 'tenant-02',
+        status: 'POSTED',
+      },
+    ];
+
+    // Tenant 01 sees only its own movements: 10,000 - 2,000 = 8,000
+    expect(calculateTenantLedgerBalance(journals, 'tenant-01', '1111')).toBe(8000);
+    // Tenant 02 sees only its own movements: 99,999
+    expect(calculateTenantLedgerBalance(journals, 'tenant-02', '1111')).toBe(99999);
+    // Unmatched tenant sees nothing (fail-closed)
+    expect(calculateTenantLedgerBalance(journals, 'tenant-unknown', '1111')).toBe(0);
   });
 
   it('calculates authoritative reconciliation summary and proves mathematical balance', () => {

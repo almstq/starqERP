@@ -31,11 +31,12 @@ export const CashFlowStatementView: React.FC<{
   const cfs: CashFlowStatement = useMemo(() => {
     return computeCashFlowStatement({
       journals,
+      tenantId: currentTenant.id,
       periodStartDate: '2026-01-01',
       periodEndDate: '2026-12-31',
       openingCash: 0,
     });
-  }, [journals]);
+  }, [journals, currentTenant.id]);
 
   const handleExportCsv = () => {
     const rows = [

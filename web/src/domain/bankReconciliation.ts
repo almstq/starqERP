@@ -1,5 +1,6 @@
 import type { JournalEntry } from './journals';
 import { accountClassForCode } from './accounts';
+import type { AccountRecord } from './accounts';
 export interface BankAccountConfig {
   id: string;
   accountCode: string; // canonical bank codes: "1111" BML MVR, "1112" BML USD, "1113" MIB MVR
@@ -334,16 +335,35 @@ export function autoMatchStatementLines(
 }
 
 /**
+ * Validates that a bank account code belongs to the authorized accounts set for the current tenant.
+ * Throws if the account code is not found — prevents cross-tenant account source bypass.
+ */
+export function validateBankAdjustmentAccount(
+  bankAccountCode: string,
+  authorizedAccounts: AccountRecord[]
+): void {
+  if (!authorizedAccounts.some((a) => a.code === bankAccountCode)) {
+    throw new Error(
+      `Account code '${bankAccountCode}' is not in the authorized account set for this tenant. ` +
+      `This operation requires a tenant-scoped account list.`
+    );
+  }
+}
+
+/**
  * Creates double-entry adjustment journal lines for bank fees or interest.
  */
 export function createBankAdjustmentEntry(params: {
   statementLine: BankStatementLine;
-  bankAccountCode: string; // canonical bank code, e.g. "1111" BML MVR Main
+  bankAccountCode: string;
   adjustmentType: 'bank_fee' | 'interest_income';
   narration?: string;
   tenantId: string;
+  authorizedAccounts: AccountRecord[];
 }): JournalEntry {
-  const { statementLine, bankAccountCode, adjustmentType, narration, tenantId } = params;
+  const { statementLine, bankAccountCode, adjustmentType, narration, tenantId, authorizedAccounts } = params;
+
+  validateBankAdjustmentAccount(bankAccountCode, authorizedAccounts);
   const isFee = adjustmentType === 'bank_fee';
   let amount = isFee ? statementLine.debit : statementLine.credit;
   if (amount <= 0) {
@@ -419,6 +439,28 @@ export function createBankAdjustmentEntry(params: {
     tenantId,
     status: 'POSTED',
   };
+}
+
+/**
+ * Calculates the tenant-scoped general ledger balance for a bank account code.
+ * Journals belonging to another tenant are excluded (fail-closed), so the returned
+ * balance can never leak another tenant's movements into the reconciliation.
+ */
+export function calculateTenantLedgerBalance(
+  journals: JournalEntry[],
+  tenantId: string,
+  accountCode: string
+): number {
+  let balance = 0;
+  for (const j of journals) {
+    if (j.tenantId !== tenantId) continue;
+    for (const line of j.lines) {
+      if (line.accountCode === accountCode) {
+        balance += (line.debit || 0) - (line.credit || 0);
+      }
+    }
+  }
+  return balance;
 }
 
 /**

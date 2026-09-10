@@ -37,6 +37,8 @@ export interface CashFlowStatement {
 }
 
 export interface ComputeCashFlowParams {
+  /** Authorized tenant for this statement. Journals from any other tenant are excluded (fail-closed). */
+  tenantId: string;
   journals: JournalEntry[];
   periodStartDate?: string;
   periodEndDate?: string;
@@ -45,10 +47,12 @@ export interface ComputeCashFlowParams {
 
 /**
  * Computes authoritative Cash Flow Statement (Direct & Indirect) from double-entry journal movements.
- * Cash and Cash Equivalents accounts: 1000 to 1099 (1000 Cash on Hand, 1010 BML MVR, 1020 BML USD, 1030 MIB MVR).
+ * Cash and Cash Equivalents are the leaf accounts under canonical 1110 Cash and Bank Equivalents.
+ * The statement is tenant-scoped: journals belonging to another tenant are excluded fail-closed.
  */
 export function computeCashFlowStatement(params: ComputeCashFlowParams): CashFlowStatement {
   const {
+    tenantId,
     journals,
     periodStartDate = '2026-01-01',
     periodEndDate = '2026-12-31',
@@ -70,13 +74,17 @@ export function computeCashFlowStatement(params: ComputeCashFlowParams): CashFlo
   let equityContributions = 0;
   let loanRepayments = 0;
 
+  // Tenant-scoping gate — fail-closed: journals not belonging to the requesting
+  // tenant are excluded before any computation, so no cross-tenant aggregation is possible.
+  const tenantJournals = journals.filter((j) => j.tenantId === tenantId);
+
   // Filter journals in period
-  const periodJournals = journals.filter((j) => {
+  const periodJournals = tenantJournals.filter((j) => {
     const d = j.date || j.postedAt?.slice(0, 10) || '';
     return d >= periodStartDate && d <= periodEndDate;
   });
 
-  // Track all movements in Cash & Bank accounts (1000..1099)
+  // Track movements in canonical Cash & Bank leaf accounts (1111..1115)
   let totalCashDebits = 0;
   let totalCashCredits = 0;
 
@@ -99,22 +107,22 @@ export function computeCashFlowStatement(params: ComputeCashFlowParams): CashFlo
       const netDebit = (ncl.debit || 0) - (ncl.credit || 0);  // Outflow from bank
 
       // 1. Operating Activities
-      if (code.startsWith('11') || code.startsWith('4')) {
-        // Accounts Receivable (1100) or Revenue (4000) -> Customer Receipts
+      if (code.startsWith('12') || code.startsWith('4')) {
+        // Trade Debtors (12xx) or Revenue (4000) -> Customer Receipts
         if (netCredit > 0) receiptsFromCustomers += netCredit;
         else if (netDebit > 0) receiptsFromCustomers -= netDebit;
-      } else if (code.startsWith('20') || code.startsWith('5')) {
-        // Accounts Payable (2000) or COGS (5000) -> Supplier Payments
-        if (netDebit > 0) paymentsToSuppliers += netDebit;
-        else if (netCredit > 0) paymentsToSuppliers -= netCredit;
-      } else if (code.startsWith('6') || code.startsWith('7')) {
-        // Operating Expenses (6000..6999, 7000..7999)
-        if (netDebit > 0) operatingExpensePayments += netDebit;
-        else if (netCredit > 0) operatingExpensePayments -= netCredit;
-      } else if (code.startsWith('21')) {
-        // Statutory Taxes (2150 GST, 2160 Green Tax)
+      } else if (code.startsWith('212') ) {
+        // Statutory Taxes (212x) -> Tax Payments
         if (netDebit > 0) taxPayments += netDebit;
         else if (netCredit > 0) taxPayments -= netCredit;
+      } else if (code.startsWith('21') || code.startsWith('5')) {
+        // Accounts Payable (21x) or COGS (5000) -> Supplier Payments
+        if (netDebit > 0) paymentsToSuppliers += netDebit;
+        else if (netCredit > 0) paymentsToSuppliers -= netCredit;
+      } else if (code.startsWith('6')) {
+        // Operating Expenses (6000..6999)
+        if (netDebit > 0) operatingExpensePayments += netDebit;
+        else if (netCredit > 0) operatingExpensePayments -= netCredit;
       }
 
       // 2. Investing Activities
@@ -224,7 +232,7 @@ export function computeCashFlowStatement(params: ComputeCashFlowParams): CashFlo
 
   // Total cash on balance sheet across all cash accounts
   let balanceSheetCash = 0;
-  for (const j of journals) {
+  for (const j of tenantJournals) {
     for (const l of j.lines) {
       if (isCashOrBankAccount(l.accountCode)) {
         balanceSheetCash += (l.debit || 0) - (l.credit || 0);
@@ -270,7 +278,7 @@ export function computeCashFlowStatement(params: ComputeCashFlowParams): CashFlo
 export function isCashOrBankAccount(code: string): boolean {
   if (!code) return false;
   const num = parseInt(code, 10);
-  return num >= 1000 && num <= 1099;
+  return num >= 1111 && num <= 1115;
 }
 
 function round2(val: number): number {

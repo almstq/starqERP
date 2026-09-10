@@ -27,25 +27,28 @@ import {
   parseMibCsv,
   autoMatchStatementLines,
   createBankAdjustmentEntry,
+  calculateTenantLedgerBalance,
   calculateReconciliationSummary,
 } from '../../domain/bankReconciliation';
 import { JournalEntry } from '../../domain/journals';
+import { AccountRecord } from '../../domain/accounts';
 import { useERP } from '../../context/ERPContext';
 import { Badge, Surface, Button } from '../ui';
 
 interface BankAccountOption {
   code: string;
   name: string;
-  bank: 'BML' | 'MIB' | 'CASH';
+  bank: 'BML' | 'MIB' | 'CASH' | 'OTHER';
   accountNumber: string;
   currency: 'MVR' | 'USD';
 }
 
 const BANK_ACCOUNTS: BankAccountOption[] = [
-  { code: '1010', name: 'Bank of Maldives (BML MVR)', bank: 'BML', accountNumber: '7730000148201', currency: 'MVR' },
-  { code: '1020', name: 'Bank of Maldives (BML USD)', bank: 'BML', accountNumber: '7730000148202', currency: 'USD' },
-  { code: '1030', name: 'Maldives Islamic Bank (MIB MVR)', bank: 'MIB', accountNumber: '9901000293810', currency: 'MVR' },
-  { code: '1000', name: 'Main Operating Cash / Vault', bank: 'CASH', accountNumber: 'VAULT-01', currency: 'MVR' },
+  { code: '1111', name: 'Bank of Maldives (BML MVR)', bank: 'BML', accountNumber: '7730000148201', currency: 'MVR' },
+  { code: '1112', name: 'Bank of Maldives (BML USD)', bank: 'BML', accountNumber: '7730000148202', currency: 'USD' },
+  { code: '1113', name: 'Maldives Islamic Bank (MIB MVR)', bank: 'MIB', accountNumber: '9901000293810', currency: 'MVR' },
+  { code: '1114', name: 'Petty Cash', bank: 'CASH', accountNumber: 'VAULT-01', currency: 'MVR' },
+  { code: '1115', name: 'Favara Clearing', bank: 'OTHER', accountNumber: 'FAVARA-01', currency: 'MVR' },
 ];
 
 export const BankReconciliationView: React.FC<{
@@ -54,6 +57,19 @@ export const BankReconciliationView: React.FC<{
   onAddAdjustmentJournal?: (entry: JournalEntry) => void;
 }> = ({ journals, candidateTransactions, onAddAdjustmentJournal }) => {
   const { invoices, payments, expenses, formatMVR, currentTenant } = useERP();
+
+  // Load tenant-scoped accounts from localStorage (persisted by AccountsView)
+  const authorizedAccounts: AccountRecord[] = useMemo(() => {
+    const saved = localStorage.getItem('starq:chart_of_accounts:v1');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }, []);
 
   const [selectedAccount, setSelectedAccount] = useState<BankAccountOption>(BANK_ACCOUNTS[0]);
   const [statement, setStatement] = useState<BankStatement | null>(null);
@@ -104,18 +120,10 @@ export const BankReconciliationView: React.FC<{
     return list;
   }, [payments, expenses]);
 
-  // Calculate ERP Ledger Balance for the selected bank account from Journals
+  // Calculate ERP Ledger Balance for the selected bank account from tenant-scoped Journals
   const erpLedgerBalance = useMemo(() => {
-    let balance = 0;
-    for (const j of journals) {
-      for (const line of j.lines) {
-        if (line.accountCode === selectedAccount.code) {
-          balance += (line.debit || 0) - (line.credit || 0);
-        }
-      }
-    }
-    return balance;
-  }, [journals, selectedAccount]);
+    return calculateTenantLedgerBalance(journals, currentTenant.id, selectedAccount.code);
+  }, [journals, currentTenant.id, selectedAccount]);
 
   // Calculate Summary & Variance
   const summary = useMemo(() => {
@@ -217,6 +225,7 @@ Date,Description,Debit,Credit,Balance,Reference
       adjustmentType,
       narration: adjustmentNarration,
       tenantId: currentTenant?.id || 'tenant-starq',
+      authorizedAccounts,
     });
 
     if (onAddAdjustmentJournal) {
@@ -584,7 +593,7 @@ Date,Description,Debit,Credit,Balance,Reference
                   onChange={(e) => setAdjustmentType(e.target.value as any)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500"
                 >
-                  <option value="bank_fee">Bank Fee / Service Charge (Account #6300)</option>
+                  <option value="bank_fee">Bank Fee / Service Charge (Account #6310)</option>
                   <option value="interest_income">Interest / Profit Income (Account #8000)</option>
                 </select>
               </div>
@@ -601,7 +610,7 @@ Date,Description,Debit,Credit,Balance,Reference
               </div>
 
               <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-[10px] font-mono text-slate-400">
-                • Debit: <strong>{adjustmentType === 'bank_fee' ? '6300 Bank Fees' : `${selectedAccount.code} Bank`}</strong> ({formatMVR(selectedLineForAdjustment.debit || selectedLineForAdjustment.credit)})<br />
+                • Debit: <strong>{adjustmentType === 'bank_fee' ? '6310 Bank Fees' : `${selectedAccount.code} Bank`}</strong> ({formatMVR(selectedLineForAdjustment.debit || selectedLineForAdjustment.credit)})<br />
                 • Credit: <strong>{adjustmentType === 'bank_fee' ? `${selectedAccount.code} Bank` : '8000 Interest Income'}</strong> ({formatMVR(selectedLineForAdjustment.debit || selectedLineForAdjustment.credit)})
               </div>
             </div>
