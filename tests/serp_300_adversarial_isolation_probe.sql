@@ -286,31 +286,39 @@ reset role;
 -- =============================================================================
 
 -- Fixtures: Tenant B payment records the attacker must not be able to reach.
--- NOTE (Elder, 30 Aug): public.payment_provider_config has NO organisation_id and is
--- unique on (provider_id, environment) — it is a PLATFORM table, not a tenant table.
--- A second per-tenant fixture cannot be inserted, so a cross-tenant assertion against
--- it is not meaningful. Recorded as an open design question rather than a defect:
--- the table carries merchant_id, which is normally per-merchant. See SERP-351.
+-- SERP-351 made provider configuration tenant-scoped and organisation_id NOT NULL.
+-- Keep this fixture in Tenant B so the cross-tenant access assertion is meaningful.
 insert into public.payment_provider_config
-  (id, provider_id, environment, base_url, merchant_id, is_active)
+  (id, organisation_id, provider_id, environment, base_url, merchant_id, is_active)
 values
-  ('30000000-0000-4000-8000-000000000801', 'MOCK', 'sandbox', 'https://mock.example.invalid', 'TENANT_B_MERCHANT', true);
+  ('30000000-0000-4000-8000-000000000801',
+   '30000000-0000-4000-8000-000000000002', -- Tenant B
+   'MOCK', 'sandbox', 'https://mock.example.invalid', 'TENANT_B_MERCHANT', true);
+
+insert into public.payment_provider_config
+  (id, organisation_id, provider_id, environment, base_url, merchant_id, is_active)
+values
+  ('30000000-0000-4000-8000-000000000802',
+   '30000000-0000-4000-8000-000000000001', -- Tenant A
+   'MOCK', 'sandbox', 'https://mock.example.invalid', 'TENANT_A_MERCHANT', true);
 
 insert into public.payment_intents
-  (id, organisation_id, provider_id, status, amount, currency, created_by)
+  (id, organisation_id, provider_id, status, amount, currency, config_id, created_by)
 values
   ('30000000-0000-4000-8000-000000000811',
    '30000000-0000-4000-8000-000000000002',  -- Tenant B
    'MOCK', 'succeeded', 100000::numeric, 'MVR',
+   '30000000-0000-4000-8000-000000000801',
    '30000000-0000-4000-8000-000000000101');
 
 insert into public.payment_attempts
-  (id, organisation_id, intent_id, provider_id, status, amount, currency, provider_reference)
+  (id, organisation_id, intent_id, provider_id, status, amount, currency, provider_reference, config_id)
 values
   ('30000000-0000-4000-8000-000000000821',
    '30000000-0000-4000-8000-000000000002',  -- Tenant B
    '30000000-0000-4000-8000-000000000811', 'MOCK',
-   'succeeded', 100000::numeric, 'MVR', 'MOCK-REF-B-001');
+   'succeeded', 100000::numeric, 'MVR', 'MOCK-REF-B-001',
+   '30000000-0000-4000-8000-000000000801');
 
 insert into public.payment_refunds
   (id, organisation_id, intent_id, provider_id, status, amount, currency, reason, requested_by)
@@ -385,11 +393,12 @@ values
 -- Fixtures: Tenant A (attacker is member of Tenant A, Book A1 only).
 
 insert into public.payment_intents
-  (id, organisation_id, provider_id, status, amount, currency, created_by)
+  (id, organisation_id, provider_id, status, amount, currency, config_id, created_by)
 values
   ('30000000-0000-4000-8000-000000000812',
    '30000000-0000-4000-8000-000000000001',  -- Tenant A
    'MOCK', 'succeeded', 200000::numeric, 'MVR',
+   '30000000-0000-4000-8000-000000000802',
    '30000000-0000-4000-8000-000000000101');
 
 -- Also seed Tenant B provider_events with no organisation_id (attributable-to-null)

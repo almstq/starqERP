@@ -1708,6 +1708,24 @@ Deno.test('SERP-167: CUSTOMER command is authorized for counter/director/owner a
   if (!techDec.ok) assertEquals(techDec.error, 'seat_not_authorized');
 });
 
+Deno.test('SERP-339: SUPPLIER command mirrors CUSTOMER seat authorization', () => {
+  const supplierEnvelope: CommandEnvelope = {
+    contract: CONTRACT_VERSION,
+    command: 'SUPPLIER',
+    payload: { name: 'Harbour Supplies' },
+    csrf: 'test-csrf',
+  };
+
+  for (const seat of ['counter', 'director', 'managing_director', 'owner'] as const) {
+    assertEquals(authorizeCommand(principal(seat), supplierEnvelope).ok, true);
+  }
+  for (const seat of ['technician', 'financial_controller'] as const) {
+    const decision = authorizeCommand(principal(seat), supplierEnvelope);
+    assertEquals(decision.ok, false);
+    if (!decision.ok) assertEquals(decision.error, 'seat_not_authorized');
+  }
+});
+
 Deno.test('SERP-167: validateInvoiceCommandPayload enforces items or jobRef and computes subtotal/totals', () => {
   // Missing items and jobRef
   assertEquals(validateInvoiceCommandPayload({}).valid, false);
