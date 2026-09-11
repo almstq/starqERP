@@ -16,12 +16,27 @@ import { Modal } from '../common/Modal';
 
 export const SuppliersView: React.FC = () => {
   const navigate = useNavigate();
-  const { suppliers, formatMVR, createSupplier } = useERP();
+  const { suppliers, formatMVR, createSupplier, updateSupplier } = useERP();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [draft, setDraft] = useState({ name: '', contactPerson: '', phone: '', email: '', address: '', islandOrCountry: '', category: '', leadTimeDays: '7' });
+
+  const openEdit = (supplier: Supplier) => {
+    setEditingSupplier(supplier);
+    setDraft({
+      name: supplier.name,
+      contactPerson: supplier.contactPerson,
+      phone: supplier.phone,
+      email: supplier.email,
+      address: supplier.address,
+      islandOrCountry: supplier.islandOrCountry,
+      category: supplier.category,
+      leadTimeDays: String(supplier.leadTimeDays),
+    });
+  };
 
   const categories = ['All', ...Array.from(new Set(suppliers.map((s) => s.category)))];
 
@@ -44,6 +59,14 @@ export const SuppliersView: React.FC = () => {
     createSupplier({ ...draft, name: draft.name.trim(), leadTimeDays: Math.max(0, Number(draft.leadTimeDays) || 7) });
     setDraft({ name: '', contactPerson: '', phone: '', email: '', address: '', islandOrCountry: '', category: '', leadTimeDays: '7' });
     setIsCreateOpen(false);
+  };
+
+  const submitSupplierUpdate = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editingSupplier || !draft.name.trim()) return;
+    updateSupplier({ ...editingSupplier, ...draft, name: draft.name.trim(), leadTimeDays: Math.max(0, Number(draft.leadTimeDays) || 7) });
+    setEditingSupplier(null);
+    setDraft({ name: '', contactPerson: '', phone: '', email: '', address: '', islandOrCountry: '', category: '', leadTimeDays: '7' });
   };
 
   const columns: ColumnDef<Supplier>[] = [
@@ -96,6 +119,16 @@ export const SuppliersView: React.FC = () => {
         >
           {s.outstandingPayable > 0 ? formatMVR(s.outstandingPayable) : 'Settled'}
         </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      render: (s) => (
+        <Button variant="outlined" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(s); }}>
+          Edit
+        </Button>
       ),
     },
   ];
@@ -171,6 +204,11 @@ export const SuppliersView: React.FC = () => {
       />
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Add supplier" subtitle="Create a tenant-scoped supplier contact" maxWidth="lg" actions={<><Button variant="outlined" onClick={() => setIsCreateOpen(false)}>Cancel</Button><Button variant="filled" onClick={submitSupplier}>Save supplier</Button></>}>
         <form onSubmit={submitSupplier} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {(['name', 'contactPerson', 'phone', 'email', 'address', 'islandOrCountry', 'category', 'leadTimeDays'] as const).map((field) => <label key={field} className="text-xs font-semibold">{field === 'name' ? 'Supplier name *' : field.replace(/[A-Z]/g, (m) => ` ${m}`).replace(/^./, (m) => m.toUpperCase())}<input required={field === 'name'} value={draft[field]} onChange={(e) => setDraft({ ...draft, [field]: e.target.value })} className="mt-1 w-full px-3 py-2 rounded-xl border text-xs font-normal" /></label>)}
+        </form>
+      </Modal>
+      <Modal isOpen={editingSupplier !== null} onClose={() => { setEditingSupplier(null); setDraft({ name: '', contactPerson: '', phone: '', email: '', address: '', islandOrCountry: '', category: '', leadTimeDays: '7' }); }} title="Edit supplier" subtitle="Update a tenant-scoped supplier contact" maxWidth="lg" actions={<><Button variant="outlined" onClick={() => { setEditingSupplier(null); setDraft({ name: '', contactPerson: '', phone: '', email: '', address: '', islandOrCountry: '', category: '', leadTimeDays: '7' }); }}>Cancel</Button><Button variant="filled" onClick={submitSupplierUpdate}>Save changes</Button></>}>
+        <form onSubmit={submitSupplierUpdate} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {(['name', 'contactPerson', 'phone', 'email', 'address', 'islandOrCountry', 'category', 'leadTimeDays'] as const).map((field) => <label key={field} className="text-xs font-semibold">{field === 'name' ? 'Supplier name *' : field.replace(/[A-Z]/g, (m) => ` ${m}`).replace(/^./, (m) => m.toUpperCase())}<input required={field === 'name'} value={draft[field]} onChange={(e) => setDraft({ ...draft, [field]: e.target.value })} className="mt-1 w-full px-3 py-2 rounded-xl border text-xs font-normal" /></label>)}
         </form>
       </Modal>
