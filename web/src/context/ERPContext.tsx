@@ -241,6 +241,7 @@ export interface ERPContextType {
   createJob: (jobData: Omit<JobOrder, 'id' | 'jobId' | 'materialsUsed' | 'actualMaterialCost' | 'actualLaborCost' | 'totalLaborHours' | 'actualProfit'>) => JobOrder;
   createCustomer: (customerData: Omit<Customer, 'id' | 'createdAt' | 'activeJobsCount' | 'totalInvoiced' | 'outstandingBalance'>) => Customer;
   createSupplier: (supplierData: Omit<Supplier, 'id' | 'outstandingPayable' | 'rating'>) => Supplier;
+  updateSupplier: (supplierData: Supplier) => Supplier;
   createInvoice: (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber'> & { priceList?: PriceList }) => Invoice;
   priceLists: PriceList[];
   priceListsLoading: boolean;
@@ -2119,6 +2120,36 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return newSupplier;
   };
 
+  const updateSupplier = (supplierData: Supplier): Supplier => {
+    const prevSupplier = suppliers.find((s) => s.id === supplierData.id);
+    const updatedSupplier: Supplier = { ...(prevSupplier ?? supplierData), ...supplierData };
+    setSuppliers((prev) => prev.map((s) => (s.id === supplierData.id ? updatedSupplier : s)));
+    setMutationPending(true);
+    setLastMutationError(null);
+    dispatchCommand({
+      command: 'SUPPLIER_UPDATE',
+      payload: {
+        supplier_id: supplierData.id,
+        name: supplierData.name.trim(),
+        phone: supplierData.phone,
+        email: supplierData.email,
+        contact_person: supplierData.contactPerson,
+        address: supplierData.address,
+        island: supplierData.islandOrCountry,
+        category: supplierData.category,
+        lead_time_days: supplierData.leadTimeDays,
+      },
+    })
+      .then(() => setMutationPending(false))
+      .catch((err) => {
+        setMutationPending(false);
+        setLastMutationError(err instanceof Error ? err.message : 'SUPPLIER_UPDATE command failed');
+        if (session || err instanceof ApiError) setSuppliers((prev) => prev.map((s) => (s.id === supplierData.id ? (prevSupplier ?? s) : s)));
+      });
+    logAuditEvent({ action: 'UPDATED', module: 'suppliers', entityType: 'Supplier', entityId: supplierData.id, entityName: supplierData.name, summary: `Updated supplier record for ${supplierData.name}.` });
+    return updatedSupplier;
+  };
+
   const createPriceList = async (
     priceListData: Omit<PriceList, 'id' | 'registryId' | 'version' | 'createdAt' | 'updatedAt'>,
   ): Promise<PriceList> => {
@@ -3307,6 +3338,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         createJob,
         createCustomer,
         createSupplier,
+        updateSupplier,
         createPriceList,
         updatePriceList,
         archivePriceList,
