@@ -1416,13 +1416,18 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
     }
 
     if (req.method === "GET" && path === "/api/ops/suppliers") {
-      const { data, error } = await db.from("contacts").select("*")
-        .eq("organisation_id", session.organisation_id)
-        .eq("kind", "supplier")
-        .eq("status", "active")
-        .order("created_at", { ascending: false });
-      if (error) throw new Error("suppliers_query_failed");
-      return json(200, { ok: true, suppliers: data ?? [] }, origin);
+      const { data, error } = await db.rpc("api_supplier_registry", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+      });
+      if (error) {
+        if (error.message?.includes("supplier_seat_not_authorized")) {
+          return await deny(403, "seat_not_authorized", session);
+        }
+        throw new Error("suppliers_query_failed");
+      }
+      return json(200, data as Json, origin);
     }
 
     if (req.method === "GET" && path === "/api/ops/invoices") {
