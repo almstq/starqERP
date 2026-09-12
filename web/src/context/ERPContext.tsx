@@ -242,6 +242,7 @@ export interface ERPContextType {
   createCustomer: (customerData: Omit<Customer, 'id' | 'createdAt' | 'activeJobsCount' | 'totalInvoiced' | 'outstandingBalance'>) => Customer;
   createSupplier: (supplierData: Omit<Supplier, 'id' | 'outstandingPayable' | 'rating'>) => Supplier;
   updateSupplier: (supplierData: Supplier) => Supplier;
+  deactivateSupplier: (supplierId: string) => void;
   createInvoice: (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber'> & { priceList?: PriceList }) => Invoice;
   priceLists: PriceList[];
   priceListsLoading: boolean;
@@ -2150,6 +2151,25 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return updatedSupplier;
   };
 
+  const deactivateSupplier = (supplierId: string): void => {
+    const removed = suppliers.find((s) => s.id === supplierId);
+    if (!removed) return;
+    setSuppliers((prev) => prev.filter((s) => s.id !== supplierId));
+    setMutationPending(true);
+    setLastMutationError(null);
+    dispatchCommand({ command: 'SUPPLIER_DEACTIVATE', payload: { supplier_id: supplierId } })
+      .then(() => setMutationPending(false))
+      .catch((err) => {
+        setMutationPending(false);
+        setLastMutationError(err instanceof Error ? err.message : 'SUPPLIER_DEACTIVATE command failed');
+        if (session || err instanceof ApiError) {
+          const restored = suppliers.find((s) => s.id === supplierId);
+          setSuppliers((prev) => [...prev.filter((s) => s.id !== supplierId), ...(restored ? [restored] : [])]);
+        }
+      });
+    logAuditEvent({ action: 'DELETED', module: 'suppliers', entityType: 'Supplier', entityId: supplierId, entityName: removed.name, summary: `Deactivated supplier record for ${removed.name}.` });
+  };
+
   const createPriceList = async (
     priceListData: Omit<PriceList, 'id' | 'registryId' | 'version' | 'createdAt' | 'updatedAt'>,
   ): Promise<PriceList> => {
@@ -3339,6 +3359,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         createCustomer,
         createSupplier,
         updateSupplier,
+        deactivateSupplier,
         createPriceList,
         updatePriceList,
         archivePriceList,
