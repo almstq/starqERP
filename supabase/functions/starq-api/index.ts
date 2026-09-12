@@ -1782,7 +1782,9 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
           ? await db.rpc("api_supplier_command", rpcArgs)
           : intent.command === "SUPPLIER_UPDATE"
             ? await db.rpc("api_supplier_update_command", rpcArgs)
-            : await db.rpc("api_garage_command", rpcArgs);
+            : intent.command === "SUPPLIER_DEACTIVATE"
+              ? await db.rpc("api_supplier_deactivate_command", rpcArgs)
+              : await db.rpc("api_garage_command", rpcArgs);
       if (error) {
         await securityEvent(req, "garage.command", "rejected", session, { code: error.code ?? "database_rejection" });
         return json(400, { ok: false, error: "command_rejected", request_id: requestId }, origin);
