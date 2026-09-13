@@ -34,6 +34,10 @@ import { JournalEntry } from '../../domain/journals';
 import { AccountRecord } from '../../domain/accounts';
 import { useERP } from '../../context/ERPContext';
 import { Badge, Surface, Button } from '../ui';
+import {
+  DEMO_BML_RECONCILIATION_MVR_ACCOUNT,
+  DEMO_BML_RECONCILIATION_USD_ACCOUNT,
+} from '../../data/demoFixtures';
 
 interface BankAccountOption {
   code: string;
@@ -44,8 +48,8 @@ interface BankAccountOption {
 }
 
 const BANK_ACCOUNTS: BankAccountOption[] = [
-  { code: '1111', name: 'Bank of Maldives (BML MVR)', bank: 'BML', accountNumber: '7730000148201', currency: 'MVR' },
-  { code: '1112', name: 'Bank of Maldives (BML USD)', bank: 'BML', accountNumber: '7730000148202', currency: 'USD' },
+  { code: '1111', name: 'Bank of Maldives (BML MVR)', bank: 'BML', accountNumber: DEMO_BML_RECONCILIATION_MVR_ACCOUNT, currency: 'MVR' },
+  { code: '1112', name: 'Bank of Maldives (BML USD)', bank: 'BML', accountNumber: DEMO_BML_RECONCILIATION_USD_ACCOUNT, currency: 'USD' },
   { code: '1113', name: 'Maldives Islamic Bank (MIB MVR)', bank: 'MIB', accountNumber: '9901000293810', currency: 'MVR' },
   { code: '1114', name: 'Petty Cash', bank: 'CASH', accountNumber: 'VAULT-01', currency: 'MVR' },
   { code: '1115', name: 'Favara Clearing', bank: 'OTHER', accountNumber: 'FAVARA-01', currency: 'MVR' },

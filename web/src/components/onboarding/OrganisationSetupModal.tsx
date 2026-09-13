@@ -490,7 +490,7 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
                     type="text"
                     value={bmlAccount}
                     onChange={(e) => setBmlAccount(e.target.value)}
-                    placeholder="e.g. 7730000189201 (Leave empty if none)"
+                    placeholder="Configured BML account (leave empty if none)"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)]/80 border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] focus:outline-hidden focus:border-blue-500 font-mono text-xs"
                     data-testid="input-bml-account"
                   />

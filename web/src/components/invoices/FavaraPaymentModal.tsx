@@ -42,7 +42,7 @@ export interface FavaraPaymentModalProps {
  * payment surface is therefore a money-misrouting bug, not a cosmetic one, and
  * there is deliberately no fallback here now.
  *
- * `bmlAccount` is stored formatted, e.g. '7730000189201 (BML MVR Main Account)',
+ * `bmlAccount` is stored as a formatted configured BML account,
  * and an unconfigured tenant holds 'BML MVR (Pending Configuration)'. BML
  * account numbers are 13 digits, so anything else returns null and the caller
  * refuses to draw a QR.
