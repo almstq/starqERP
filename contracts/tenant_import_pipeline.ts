@@ -10,7 +10,7 @@
 import {
   TaxRegistrationRecord,
   BankAccountRecord,
-  RoleCode,
+  SeatCode,
 } from './commands.ts';
 
 export interface TenantImportPack {
@@ -31,7 +31,7 @@ export interface TenantImportPack {
     readonly requiredRole?: string;
   }[];
   readonly roles: readonly {
-    readonly roleCode: RoleCode;
+    readonly roleCode: SeatCode;
     readonly roleName: string;
     readonly permissions: readonly string[];
   }[];
@@ -97,18 +97,18 @@ export function validateTenantImportPack(pack: TenantImportPack): ImportValidati
   if (!pack.taxRegistration) {
     errors.push('taxRegistration is required');
   } else {
-    if (pack.taxRegistration.tenantId !== pack.tenantId) {
-      errors.push(`taxRegistration.tenantId (${pack.taxRegistration.tenantId}) does not match pack.tenantId (${pack.tenantId})`);
+    if (pack.taxRegistration.organisationId !== pack.tenantId) {
+      errors.push(`taxRegistration.organisationId (${pack.taxRegistration.organisationId}) does not match pack.tenantId (${pack.tenantId})`);
     }
-    if (pack.taxRegistration.registrationStatus === 'registered' && !pack.taxRegistration.tinNumber) {
-      errors.push('registered tenant requires tinNumber');
+    if (pack.taxRegistration.registrationStatus === 'registered' && !pack.taxRegistration.tin) {
+      errors.push('registered tenant requires tin');
     }
   }
 
   // Bank accounts isolation
   for (const b of pack.bankAccounts) {
-    if (b.tenantId !== pack.tenantId) {
-      errors.push(`bankAccount ${b.id} tenantId (${b.tenantId}) does not match pack.tenantId (${pack.tenantId})`);
+    if (b.organisationId !== pack.tenantId) {
+      errors.push(`bankAccount ${b.id} organisationId (${b.organisationId}) does not match pack.tenantId (${pack.tenantId})`);
     }
   }
 
@@ -228,24 +228,27 @@ export const CLUB_IGNITION_TEST_PACK_V1: TenantImportPack = {
   industry: 'Automotive & Body Repair',
   currency: 'MVR',
   taxRegistration: {
-    tenantId: 'tenant-ignition',
-    taxType: 'GGST',
+    id: 'tax-reg-ign-01',
+    organisationId: 'tenant-ignition',
+    taxType: 'gst_general',
     registrationStatus: 'registered',
-    tinNumber: '1004829GST001',
+    tin: '1004829GST001',
     effectiveFrom: '2023-01-01',
-    filingFrequency: 'monthly',
+    createdAt: '2026-09-13T00:00:00Z',
   },
   bankAccounts: [
     {
       id: 'bnk-ign-01',
-      tenantId: 'tenant-ignition',
-      accountType: 'checking',
+      organisationId: 'tenant-ignition',
+      institutionCode: 'BML',
+      accountType: 'operating',
       accountName: 'BML MVR Main Garage Operating',
+      institutionName: 'Bank of Maldives',
       currency: 'MVR',
-      bankName: 'Bank of Maldives',
-      accountNumberMasked: '7730******201',
+      accountIdentifierMask: '7730******201',
       isDefault: true,
-      isActive: true,
+      active: true,
+      createdAt: '2026-09-13T00:00:00Z',
     },
   ],
   workflowStages: [
@@ -309,24 +312,27 @@ export const STARQ_PARENT_TEST_PACK_V1: TenantImportPack = {
   industry: 'Software & Engineering Services',
   currency: 'MVR',
   taxRegistration: {
-    tenantId: 'tenant-starq',
-    taxType: 'GGST',
+    id: 'tax-reg-starq-01',
+    organisationId: 'tenant-starq',
+    taxType: 'gst_general',
     registrationStatus: 'not_registered',
-    tinNumber: '',
+    tin: '',
     effectiveFrom: '2024-01-01',
-    filingFrequency: 'monthly',
+    createdAt: '2026-09-13T00:00:00Z',
   },
   bankAccounts: [
     {
       id: 'bnk-starq-01',
-      tenantId: 'tenant-starq',
-      accountType: 'checking',
+      organisationId: 'tenant-starq',
+      institutionCode: 'BML',
+      accountType: 'operating',
       accountName: 'BML MVR Corporate Main',
+      institutionName: 'Bank of Maldives',
       currency: 'MVR',
-      bankName: 'Bank of Maldives',
-      accountNumberMasked: '7730******201',
+      accountIdentifierMask: '7730******201',
       isDefault: true,
-      isActive: true,
+      active: true,
+      createdAt: '2026-09-13T00:00:00Z',
     },
   ],
   workflowStages: [
