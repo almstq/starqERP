@@ -73,13 +73,15 @@ Deno.test("M1-ORGS-001: Rejects adversarial pack with cross-tenant bank account 
     bankAccounts: [
       {
         id: "bnk-smuggled",
-        tenantId: "tenant-starq", // Illegally trying to attach Starq bank account to Ignition
-        accountType: "checking",
+        organisationId: "tenant-starq", // Illegally trying to attach Starq bank account to Ignition
+        institutionCode: "BML",
+        accountType: "operating",
         accountName: "Smuggled Bank",
+        institutionName: "Bank of Maldives",
         currency: "MVR",
-        bankName: "BML",
+        active: true,
         isDefault: false,
-        isActive: true,
+        createdAt: "2026-09-13T00:00:00Z",
       },
     ],
   };
