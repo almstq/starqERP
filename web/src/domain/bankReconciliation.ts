@@ -6,7 +6,7 @@ export interface BankAccountConfig {
   accountCode: string; // canonical bank codes: "1111" BML MVR, "1112" BML USD, "1113" MIB MVR
   accountName: string; // e.g. "Bank of Maldives (BML MVR)"
   bankName: 'BML' | 'MIB' | 'CASH' | 'OTHER';
-  accountNumber: string; // e.g. "7730000123456"
+  accountNumber: string; // supplied by the configured tenant bank account
   currency: 'MVR' | 'USD';
   branchCode?: string;
   currentLedgerBalance: number;

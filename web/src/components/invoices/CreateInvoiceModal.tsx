@@ -5,6 +5,7 @@ import { InvoiceLineItem } from '../../types/erp';
 import { Plus, Trash2, Receipt, Tag } from 'lucide-react';
 import { resolveTaxRate, taxOnExclusive } from '../../domain/taxRates';
 import { priceListBindingName, resolveItemPrice, resolvePriceListForCustomer, roundToTwoDecimals } from '../../domain/priceLists';
+import { DEMO_BML_PRIMARY_ACCOUNT } from '../../data/demoFixtures';
 
 export const CreateInvoiceModal: React.FC = () => {
   const {
@@ -135,7 +136,7 @@ export const CreateInvoiceModal: React.FC = () => {
       balanceDue: totalAmount,
       status: 'Sent',
       notes,
-      bankDetails: 'BML MVR Account: 7730000189201'
+      bankDetails: `BML MVR Account: ${DEMO_BML_PRIMARY_ACCOUNT}`
     });
 
     setIsCreateInvoiceOpen(false);

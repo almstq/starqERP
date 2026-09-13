@@ -6,7 +6,7 @@
 export interface FavaraQrConfig {
   merchantName: string;
   merchantCity: string; // e.g. "Male"
-  favaraId?: string; // e.g. "STARQ@BML" or "7701192837101"
+  favaraId?: string; // e.g. "STARQ@BML" or a configured BML account
   bmlMerchantId?: string; // e.g. "BMLMERCH99210"
   accountNumber: string;
   bankName: 'BML' | 'MIB' | 'SBI' | 'MCB' | 'BOC';

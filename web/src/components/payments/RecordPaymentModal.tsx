@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useERP } from '../../context/ERPContext';
 import { Modal } from '../common/Modal';
 import { PaymentMethod } from '../../types/erp';
+import { DEMO_BML_PRIMARY_ACCOUNT } from '../../data/demoFixtures';
 
 export const RecordPaymentModal: React.FC = () => {
   const {
@@ -19,7 +20,7 @@ export const RecordPaymentModal: React.FC = () => {
   const [amount, setAmount] = useState<number>(0);
   const [method, setMethod] = useState<PaymentMethod>('BML Bank Transfer');
   const [referenceNumber, setReferenceNumber] = useState('');
-  const [bankAccount, setBankAccount] = useState('BML Main Operations (7730000189201)');
+  const [bankAccount, setBankAccount] = useState(`BML Main Operations (${DEMO_BML_PRIMARY_ACCOUNT})`);
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
