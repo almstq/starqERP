@@ -41,6 +41,7 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "http://127.0.0.1:3000",
   "https://web-dhivashi.vercel.app",
   "https://web-eight-psi-92.vercel.app",
+  "https://starq-erp.vercel.app",
   "https://erp.starq.mv",
   "https://starq.mv",
 ];
