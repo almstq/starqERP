@@ -28,6 +28,7 @@ const SESSION_SECRET = Deno.env.get("STARQBOOKS_SESSION_SECRET") ?? "";
 // it cannot pass the `!session` gate below by design. It authenticates with
 // a distinct shared secret instead, scoped to exactly one read-only route.
 const ALERT_RELAY_SECRET = Deno.env.get("STARQBOOKS_ALERT_RELAY_SECRET") ?? "";
+const HOADHA_BRIDGE_SECRET = Deno.env.get("STARQBOOKS_HOADHA_BRIDGE_SECRET") ?? Deno.env.get("HOADHA_BRIDGE_SECRET") ?? ALERT_RELAY_SECRET;
 // GOOGLE_CLIENT_IDS (a combined allowlist across both platforms) was audit
 // critical #5 and has been replaced by AUDIENCE_POLICIES, which maps exactly one
 // audience to each client kind. Do not reintroduce a flat list of client ids.
@@ -1010,6 +1011,31 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       return json(200, { ok: true, since, events: recent.data ?? [] }, origin);
     }
 
+    // SERP-437: Hoadha owner live-view summary read surface (machine-to-machine, no ERP user session required).
+    if (req.method === "GET" && path === "/api/hoadha/owner-summary") {
+      const providedSecret = req.headers.get("x-hoadha-bridge-secret") ?? "";
+      if (!HOADHA_BRIDGE_SECRET || !timingSafeEqual(providedSecret, HOADHA_BRIDGE_SECRET)) {
+        return await deny(401, "hoadha_bridge_unauthorized");
+      }
+      const businessId = new URL(req.url).searchParams.get("business_id");
+      if (!businessId || !uuid(businessId)) {
+        return json(400, { ok: false, error: "valid_business_id_required" }, origin);
+      }
+      const { data, error } = await db.rpc("api_get_owner_summary_for_hoadha", {
+        p_hoadha_business_id: businessId,
+      });
+      if (error) {
+        if (error.message.includes("owner_summary_consent_required")) {
+          return json(403, { ok: false, error: "owner_summary_consent_required" }, origin);
+        }
+        if (error.message.includes("hoadha_link_not_found")) {
+          return json(404, { ok: false, error: "hoadha_link_not_found" }, origin);
+        }
+        throw new Error(error.message || "owner_summary_query_failed");
+      }
+      return json(200, data, origin);
+    }
+
     const diag: { reason?: string } = {};
     const signedSession = await readSession(req, diag);
     const session = signedSession ? await refreshSessionAuthority(signedSession, diag) : null;
@@ -1250,6 +1276,36 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         return json(200, { ok: true, result: data }, origin);
       }
 
+      // SERP-436: Automated Hoadha business provisioning entry point
+      if (req.method === "POST" && path === "/api/platform/hoadha/provision") {
+        const body = await readJson(req);
+        const bridgeSecret = req.headers.get("x-hoadha-bridge-secret") ?? "";
+        const isAuthorizedSecret = HOADHA_BRIDGE_SECRET && timingSafeEqual(bridgeSecret, HOADHA_BRIDGE_SECRET);
+        const isPlatformAdmin = session?.platform_entitlement?.operator_role === "platform_admin";
+        if (!isAuthorizedSecret && !isPlatformAdmin) {
+          return await deny(403, "unauthorized_hoadha_provisioner", session);
+        }
+
+        const hoadhaBizId = typeof body.hoadha_business_id === "string" ? body.hoadha_business_id : null;
+        if (!hoadhaBizId || !uuid(hoadhaBizId)) return json(400, { ok: false, error: "invalid_hoadha_business_id" }, origin);
+
+        const requestKey = req.headers.get("x-idempotency-key");
+        const claimantId = typeof body.hoadha_claimant_id === "string" && uuid(body.hoadha_claimant_id) ? body.hoadha_claimant_id : null;
+        const { data, error } = await db.schema("platform").rpc("provision_hoadha_business", {
+          p_hoadha_business_id: hoadhaBizId,
+          p_business_name: String(body.business_name ?? ""),
+          p_owner_email: String(body.owner_email ?? ""),
+          p_owner_name: String(body.owner_name ?? ""),
+          p_owner_phone: body.owner_phone ? String(body.owner_phone) : null,
+          p_hoadha_claimant_id: claimantId,
+          p_archetype_id: body.archetype_id ? String(body.archetype_id) : "retail",
+          p_request_key: requestKey && uuid(requestKey) ? requestKey : null,
+        });
+
+        if (error) throw new Error(error.message || "hoadha_provisioning_failed");
+        return json(200, { ok: true, result: data }, origin);
+      }
+
       if (req.method === "POST" && path.match(/^\/api\/platform\/tenants\/[^\/]+\/status$/)) {
         if (session.platform_entitlement.operator_role !== "platform_admin") {
           return await deny(403, "platform_admin_required", session);
@@ -1482,6 +1538,504 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       return json(200, { ok: true, items: items ?? [], movements: movements ?? [] }, origin);
     }
 
+    // SERP-085/086: Counter catalogue — the point-of-sale read surface. This
+    // route aggregates the things the counter needs in ONE tenant-scoped call:
+    // active outlets (locations), sale-eligible products, LIVE derived on-hand
+    // per outlet+product from stock_movements_derived_onhand(), and SERP-086
+    // server-resolved approved prices (opaque rows — the client never marks a
+    // price up). It is read-only and carries NO sale authority — a completed
+    // COUNTER_SALE is the only path that mutates stock, and that still routes
+    // through api_garage_command with server-authoritative pricing.
+    if (req.method === "GET" && path === "/api/ops/counter/catalogue") {
+      const priceListCode = new URL(req.url).searchParams.get("price_list_code") ?? undefined;
+      const [outlets, products, onHand] = await Promise.allSettled([
+        db.from("locations").select("id, code, name, kind, active")
+          .eq("organisation_id", session.organisation_id)
+          .eq("active", true)
+          .order("name"),
+        db.from("products").select("id, sku, barcode, kind, name, sale_allowed, active, reorder_threshold")
+          .eq("organisation_id", session.organisation_id)
+          .eq("active", true)
+          .eq("sale_allowed", true)
+          .order("name"),
+        db.rpc("stock_movements_derived_onhand", {
+          p_organisation_id: session.organisation_id,
+        }),
+      ]);
+      if (outlets.status === "rejected" || outlets.value.error) throw new Error("counter_outlets_query_failed");
+      if (products.status === "rejected" || products.value.error) throw new Error("counter_products_query_failed");
+      if (onHand.status === "rejected" || onHand.value.error) throw new Error("counter_onhand_query_failed");
+      const { data: approvedData, error: approvedError } = await db.rpc("api_counter_approved_prices", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+        p_price_list_code: priceListCode ?? null,
+      });
+      if (approvedError) {
+        if (approvedError.message?.includes("seat_not_authorized")) {
+          return await deny(403, "seat_not_authorized", session);
+        }
+        if (approvedError.message?.includes("stock_line_price_list_not_found")) {
+          return json(400, { ok: false, error: "price_list_not_found" }, origin);
+        }
+        throw new Error("counter_prices_query_failed");
+      }
+      const priceRows = Array.isArray((approvedData as { prices?: Array<Record<string, unknown>> } | null)?.prices)
+        ? (approvedData as { prices: Array<Record<string, unknown>> }).prices
+        : [];
+      return json(200, {
+        ok: true,
+        locations: outlets.value.data ?? [],
+        products: products.value.data ?? [],
+        on_hand: onHand.value.data ?? [],
+        prices: priceRows,
+      }, origin);
+    }
+
+    // SERP-086: Counter resolve — scan a barcode (or product id) and get the
+    // server-resolved approved unit price INCLUDING the bound price-list
+    // discount and GST, plus on-hand per product. Purely a read; the price the
+    // operator sees is the authoritative resolution, and the completed sale
+    // re-resolves it transactionally.
+    if (req.method === "GET" && path === "/api/ops/counter/resolve") {
+      const searchParams = new URL(req.url).searchParams;
+      const barcode = searchParams.get("barcode") ?? undefined;
+      const productId = searchParams.get("product_id");
+      const priceListCode = searchParams.get("price_list_code") ?? undefined;
+      if (!barcode && !productId) {
+        return json(400, { ok: false, error: "product_identifier_required" }, origin);
+      }
+      const productIdOk = uuid(productId);
+      const { data, error } = await db.rpc("api_counter_price_resolution", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+        p_product_id: productIdOk ? productId : null,
+        p_barcode: barcode ? barcode : null,
+        p_price_list_code: priceListCode ?? null,
+        p_tax_mode: "exclusive",
+      });
+      if (error) {
+        if (error.message?.includes("seat_not_authorized") || error.message?.includes("price_list_seat_not_authorized")) {
+          return await deny(403, "seat_not_authorized", session);
+        }
+        if (error.message?.includes("product_not_found")) {
+          return json(404, { ok: false, error: "product_not_found" }, origin);
+        }
+        if (error.message?.includes("product_identifier_required") || error.message?.includes("product_identifier_ambiguous")) {
+          return json(400, { ok: false, error: error.message }, origin);
+        }
+        if (error.message?.includes("stock_line_price_list_not_found")) {
+          return json(400, { ok: false, error: "price_list_not_found" }, origin);
+        }
+        throw new Error("counter_resolve_failed");
+      }
+      return json(200, data as Json, origin);
+    }
+
+    // SERP-087: Counter receipt — the duplicate-proof receipt surface. Reads
+    // the tender/receipt register row the sale minted and renders it UNCHANGED
+    // on every call: one financial record per sale, so a reprint (duplicate)
+    // is provably the same record and never mints a second document or number.
+    // All totals are the server-authoritative values captured at sale time.
+    if (req.method === "GET" && path === "/api/ops/counter/receipt") {
+      const receiptId = new URL(req.url).searchParams.get("receipt_id") ?? "";
+      if (!uuid(receiptId)) {
+        return json(400, { ok: false, error: "valid_receipt_id_required" }, origin);
+      }
+      const { data, error } = await db.rpc("api_counter_receipt_get", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+        p_receipt_id: receiptId,
+      });
+      if (error) {
+        if (error.message?.includes("seat_not_authorized")) {
+          return await deny(403, "seat_not_authorized", session);
+        }
+        if (error.message?.includes("receipt_not_found") || error.message?.includes("counter_receipt_sale_not_found")) {
+          return json(404, { ok: false, error: "receipt_not_found" }, origin);
+        }
+        throw new Error("counter_receipt_get_failed");
+      }
+      return json(200, data as Json, origin);
+    }
+
+    // SERP-087: mark a receipt rendered (print or duplicate). Increments the
+    // render counter and writes an audit event — every reprint reuses the same
+    // receipt_number, so duplicates are traceable to ONE financial record.
+    if (req.method === "POST" && path === "/api/ops/counter/receipt/render") {
+      const body = await readJson(req);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
+      const receiptId = typeof body?.receipt_id === "string" ? body.receipt_id : "";
+      if (!uuid(receiptId)) {
+        return json(400, { ok: false, error: "valid_receipt_id_required" }, origin);
+      }
+      const { data, error } = await db.rpc("api_counter_receipt_mark_rendered", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+        p_receipt_id: receiptId,
+        p_request_identifier: requestId,
+      });
+      if (error) {
+        if (error.message?.includes("seat_not_authorized")) {
+          return await deny(403, "seat_not_authorized", session);
+        }
+        if (error.message?.includes("receipt_not_found")) {
+          return json(404, { ok: false, error: "receipt_not_found" }, origin);
+        }
+        throw new Error("counter_receipt_render_failed");
+      }
+      return json(200, data as Json, origin);
+    }
+
+    // SERP-089: Counter cash session — read active session / window summary
+    if (req.method === "GET" && path === "/api/ops/counter/session/current") {
+      const locationId = new URL(req.url).searchParams.get("location_id");
+      if (!uuid(locationId)) {
+        return json(400, { ok: false, error: "valid_location_id_required" }, origin);
+      }
+      const { data, error } = await db.rpc("api_counter_session_current", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+        p_location_id: locationId,
+      });
+      if (error) {
+        if (error.message?.includes("seat_not_authorized")) {
+          return await deny(403, "seat_not_authorized", session);
+        }
+        if (error.message?.includes("location_not_found")) {
+          return json(404, { ok: false, error: "location_not_found" }, origin);
+        }
+        throw new Error("counter_session_current_failed");
+      }
+      return json(200, data as Json, origin);
+    }
+
+    // SERP-089: Open counter cash session with opening float
+    if (req.method === "POST" && path === "/api/ops/counter/session/open") {
+      const body = await readJson(req);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
+      const locationId = typeof body?.location_id === "string" ? body.location_id : null;
+      if (!uuid(locationId)) {
+        return json(400, { ok: false, error: "valid_location_id_required" }, origin);
+      }
+      const openingFloat = Number(body?.opening_float ?? 0);
+      if (isNaN(openingFloat) || openingFloat < 0) {
+        return json(400, { ok: false, error: "counter_session_float_negative" }, origin);
+      }
+      const clientSessionKey = req.headers.get("x-idempotency-key");
+      const sessionKey = (clientSessionKey && uuid(clientSessionKey)) ? clientSessionKey
+        : (typeof body?.command_key === "string" && uuid(body.command_key) ? body.command_key : requestId);
+
+      const { data, error } = await db.rpc("api_counter_session_open", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+        p_location_id: locationId,
+        p_opening_float: openingFloat,
+        p_command_key: sessionKey,
+      });
+      if (error) {
+        if (error.message?.includes("seat_not_authorized")) {
+          return await deny(403, "seat_not_authorized", session);
+        }
+        if (error.message?.includes("location_not_found")) {
+          return json(404, { ok: false, error: "location_not_found" }, origin);
+        }
+        if (error.message?.includes("counter_session_already_open")) {
+          return json(409, { ok: false, error: "counter_session_already_open" }, origin);
+        }
+        if (error.message?.includes("idempotency_key_conflict")) {
+          return json(409, { ok: false, error: "idempotency_key_conflict" }, origin);
+        }
+        throw new Error("counter_session_open_failed");
+      }
+      return json(200, data as Json, origin);
+    }
+
+    // SERP-089: Close counter cash session & record variance
+    if (req.method === "POST" && path === "/api/ops/counter/session/close") {
+      const body = await readJson(req);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
+      const locationId = typeof body?.location_id === "string" ? body.location_id : null;
+      if (!uuid(locationId)) {
+        return json(400, { ok: false, error: "valid_location_id_required" }, origin);
+      }
+      if (body?.counted_cash === undefined || body?.counted_cash === null || isNaN(Number(body.counted_cash)) || Number(body.counted_cash) < 0) {
+        return json(400, { ok: false, error: "counter_session_counted_cash_invalid" }, origin);
+      }
+      const countedCash = Number(body.counted_cash);
+      const notes = typeof body?.notes === "string" ? body.notes : null;
+      const openingFloat = body?.opening_float !== undefined && !isNaN(Number(body.opening_float)) ? Number(body.opening_float) : null;
+      const clientSessionKey = req.headers.get("x-idempotency-key");
+      const sessionKey = (clientSessionKey && uuid(clientSessionKey)) ? clientSessionKey
+        : (typeof body?.command_key === "string" && uuid(body.command_key) ? body.command_key : requestId);
+
+      const { data, error } = await db.rpc("api_counter_session_close", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+        p_location_id: locationId,
+        p_counted_cash: countedCash,
+        p_notes: notes,
+        p_command_key: sessionKey,
+        p_opening_float: openingFloat,
+      });
+      if (error) {
+        if (error.message?.includes("seat_not_authorized")) {
+          return await deny(403, "seat_not_authorized", session);
+        }
+        if (error.message?.includes("location_not_found")) {
+          return json(404, { ok: false, error: "location_not_found" }, origin);
+        }
+        if (error.message?.includes("no_open_session")) {
+          return json(409, { ok: false, error: "no_open_session" }, origin);
+        }
+        if (error.message?.includes("idempotency_key_conflict")) {
+          return json(409, { ok: false, error: "idempotency_key_conflict" }, origin);
+        }
+        if (error.message?.includes("counter_session_counted_cash_invalid")) {
+          return json(400, { ok: false, error: "counter_session_counted_cash_invalid" }, origin);
+        }
+        throw new Error("counter_session_close_failed");
+      }
+      return json(200, data as Json, origin);
+    }
+
+    // SERP-089: Get closed session record
+    if (req.method === "GET" && path === "/api/ops/counter/session") {
+      const sessionId = new URL(req.url).searchParams.get("session_id");
+      if (!uuid(sessionId)) {
+        return json(400, { ok: false, error: "valid_session_id_required" }, origin);
+      }
+      const { data, error } = await db.rpc("api_counter_session_get", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+        p_session_id: sessionId,
+      });
+      if (error) {
+        if (error.message?.includes("seat_not_authorized")) {
+          return await deny(403, "seat_not_authorized", session);
+        }
+        if (error.message?.includes("counter_session_not_found")) {
+          return json(404, { ok: false, error: "counter_session_not_found" }, origin);
+        }
+        throw new Error("counter_session_get_failed");
+      }
+      return json(200, data as Json, origin);
+    }
+
+    // SERP-438: Low-stock signals — live derived from stock_movements_derived_onhand
+    if (req.method === "GET" && path === "/api/ops/counter/low-stock") {
+      const locationId = new URL(req.url).searchParams.get("location_id");
+      if (locationId && !uuid(locationId)) {
+        return json(400, { ok: false, error: "invalid_location_id" }, origin);
+      }
+      const { data, error } = await db.rpc("api_counter_low_stock_signals", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+        p_location_id: locationId ?? null,
+      });
+      if (error) {
+        if (error.message?.includes("seat_not_authorized")) {
+          return await deny(403, "seat_not_authorized", session);
+        }
+        if (error.message?.includes("location_not_found")) {
+          return json(404, { ok: false, error: "location_not_found" }, origin);
+        }
+        throw new Error("counter_low_stock_signals_failed");
+      }
+      return json(200, data as Json, origin);
+    }
+
+    // SERP-090: Server-Authoritative Counter Resilience Status
+    if (req.method === "GET" && path === "/api/ops/counter/resilience") {
+      const url = new URL(req.url);
+      const locId = url.searchParams.get("location_id");
+      const locationId = (locId && uuid(locId)) ? locId : null;
+
+      const { data, error } = await db.rpc("api_counter_resilience_status", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+        p_location_id: locationId,
+      });
+      if (error) {
+        if (error.message?.includes("seat_not_authorized")) {
+          return await deny(403, "seat_not_authorized", session);
+        }
+        if (error.message?.includes("location_not_found")) {
+          return json(404, { ok: false, error: "location_not_found" }, origin);
+        }
+        return json(400, { ok: false, error: error.message }, origin);
+      }
+      return json(200, data as Json, origin);
+    }
+
+    // SERP-088: Controlled Return / Refund
+    if (req.method === "POST" && path === "/api/ops/counter/return") {
+      const body = await readJson(req);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
+      const clientReversalKey = req.headers.get("x-idempotency-key");
+      const reversalKey = (clientReversalKey && uuid(clientReversalKey)) ? clientReversalKey
+        : (typeof body?.command_key === "string" && uuid(body.command_key) ? body.command_key : crypto.randomUUID());
+
+      const { data, error } = await db.rpc("api_counter_sale_reversal", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+        command_key: reversalKey,
+        command: { ...(body ?? {}), type: "return" },
+        request_identifier: crypto.randomUUID(),
+      });
+      if (error) {
+        if (error.message?.includes("seat_not_authorized")) {
+          return await deny(403, "seat_not_authorized", session);
+        }
+        if (error.message?.includes("reversal_approval_required")) {
+          return json(403, { ok: false, error: "reversal_approval_required", detail: error.message }, origin);
+        }
+        if (error.message?.includes("reversal_approver_unauthorized")) {
+          return json(403, { ok: false, error: "reversal_approver_unauthorized" }, origin);
+        }
+        if (error.message?.includes("sale_not_found")) {
+          return json(404, { ok: false, error: "sale_not_found" }, origin);
+        }
+        if (error.message?.includes("location_not_found")) {
+          return json(404, { ok: false, error: "location_not_found" }, origin);
+        }
+        if (error.message?.includes("sale_already_voided")) {
+          return json(409, { ok: false, error: "sale_already_voided" }, origin);
+        }
+        if (error.message?.includes("cannot_void_partially_returned_sale")) {
+          return json(409, { ok: false, error: "cannot_void_partially_returned_sale" }, origin);
+        }
+        if (error.message?.includes("idempotency_key_conflict")) {
+          return json(409, { ok: false, error: "idempotency_key_conflict" }, origin);
+        }
+        if (error.message?.includes("return_quantity_exceeds_sale")) {
+          return json(400, { ok: false, error: "return_quantity_exceeds_sale", detail: error.message }, origin);
+        }
+        if (error.message?.includes("product_not_on_sale")) {
+          return json(400, { ok: false, error: "product_not_on_sale" }, origin);
+        }
+        if (error.message?.includes("reversal_refund_mismatch")) {
+          return json(400, { ok: false, error: "reversal_refund_mismatch", detail: error.message }, origin);
+        }
+        if (error.message?.includes("reversal_reason_required")) {
+          return json(400, { ok: false, error: "reversal_reason_required" }, origin);
+        }
+        return json(400, { ok: false, error: error.message }, origin);
+      }
+      return json(200, data as Json, origin);
+    }
+
+    // SERP-088: Controlled Void
+    if (req.method === "POST" && path === "/api/ops/counter/void") {
+      const body = await readJson(req);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
+      const clientReversalKey = req.headers.get("x-idempotency-key");
+      const reversalKey = (clientReversalKey && uuid(clientReversalKey)) ? clientReversalKey
+        : (typeof body?.command_key === "string" && uuid(body.command_key) ? body.command_key : crypto.randomUUID());
+
+      const { data, error } = await db.rpc("api_counter_sale_reversal", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+        command_key: reversalKey,
+        command: { ...(body ?? {}), type: "void" },
+        request_identifier: crypto.randomUUID(),
+      });
+      if (error) {
+        if (error.message?.includes("seat_not_authorized")) {
+          return await deny(403, "seat_not_authorized", session);
+        }
+        if (error.message?.includes("reversal_approval_required")) {
+          return json(403, { ok: false, error: "reversal_approval_required", detail: error.message }, origin);
+        }
+        if (error.message?.includes("reversal_approver_unauthorized")) {
+          return json(403, { ok: false, error: "reversal_approver_unauthorized" }, origin);
+        }
+        if (error.message?.includes("sale_not_found")) {
+          return json(404, { ok: false, error: "sale_not_found" }, origin);
+        }
+        if (error.message?.includes("location_not_found")) {
+          return json(404, { ok: false, error: "location_not_found" }, origin);
+        }
+        if (error.message?.includes("sale_already_voided")) {
+          return json(409, { ok: false, error: "sale_already_voided" }, origin);
+        }
+        if (error.message?.includes("cannot_void_partially_returned_sale")) {
+          return json(409, { ok: false, error: "cannot_void_partially_returned_sale" }, origin);
+        }
+        if (error.message?.includes("idempotency_key_conflict")) {
+          return json(409, { ok: false, error: "idempotency_key_conflict" }, origin);
+        }
+        if (error.message?.includes("reversal_refund_mismatch")) {
+          return json(400, { ok: false, error: "reversal_refund_mismatch", detail: error.message }, origin);
+        }
+        if (error.message?.includes("reversal_reason_required")) {
+          return json(400, { ok: false, error: "reversal_reason_required" }, origin);
+        }
+        return json(400, { ok: false, error: error.message }, origin);
+      }
+      return json(200, data as Json, origin);
+    }
+
+    // SERP-088: Get Return Record
+    if (req.method === "GET" && path === "/api/ops/counter/return") {
+      const returnId = new URL(req.url).searchParams.get("return_id");
+      if (!returnId || !uuid(returnId)) {
+        return json(400, { ok: false, error: "return_id_required" }, origin);
+      }
+      const { data, error } = await db.rpc("api_counter_return_get", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+        p_return_id: returnId,
+      });
+      if (error) {
+        if (error.message?.includes("seat_not_authorized")) {
+          return await deny(403, "seat_not_authorized", session);
+        }
+        if (error.message?.includes("return_not_found")) {
+          return json(404, { ok: false, error: "return_not_found" }, origin);
+        }
+        throw new Error("counter_return_get_failed");
+      }
+      return json(200, data as Json, origin);
+    }
+
+    // SERP-088: List Returns for Sale / Location
+    if (req.method === "GET" && path === "/api/ops/counter/returns") {
+      const url = new URL(req.url);
+      const saleId = url.searchParams.get("original_sale_id");
+      const locationId = url.searchParams.get("location_id");
+      const limit = Math.min(Number(url.searchParams.get("limit") ?? "50"), 100);
+
+      const { data, error } = await db.rpc("api_counter_return_list", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+        p_original_sale_id: saleId ?? null,
+        p_location_id: locationId ?? null,
+        p_limit: limit,
+      });
+      if (error) {
+        if (error.message?.includes("seat_not_authorized")) {
+          return await deny(403, "seat_not_authorized", session);
+        }
+        throw new Error("counter_return_list_failed");
+      }
+      return json(200, data as Json, origin);
+    }
+
+
     if (req.method === "GET" && path === "/api/ops/jobs") {
       const { data, error } = await db.from("garage_jobs").select("*")
         .eq("organisation_id", session.organisation_id)
@@ -1656,6 +2210,47 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       return json(200, { ok: true, status: "revoked" }, origin);
     }
 
+    // SERP-437: Merchant-controlled Hoadha owner-summary publication consent management
+    if (req.method === "POST" && path === "/api/ops/owner-summary/consent") {
+      const body = await readJson(req);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
+      if (!session.organisation_id) return json(403, { ok: false, error: "organisation_context_required" }, origin);
+      const reqId = req.headers.get("x-idempotency-key") && uuid(req.headers.get("x-idempotency-key")) ? req.headers.get("x-idempotency-key") : null;
+      const { data, error } = await db.rpc("api_consent_owner_summary", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+        request_identifier: reqId,
+      });
+      if (error) {
+        if (error.message.includes("acting_seat_not_legal_for_command")) {
+          return json(403, { ok: false, error: "acting_seat_not_legal_for_command" }, origin);
+        }
+        throw new Error(error.message || "consent_failed");
+      }
+      return json(200, { ok: true, result: data }, origin);
+    }
+
+    if (req.method === "POST" && path === "/api/ops/owner-summary/revoke") {
+      const body = await readJson(req);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
+      if (!session.organisation_id) return json(403, { ok: false, error: "organisation_context_required" }, origin);
+      const reqId = req.headers.get("x-idempotency-key") && uuid(req.headers.get("x-idempotency-key")) ? req.headers.get("x-idempotency-key") : null;
+      const { data, error } = await db.rpc("api_revoke_owner_summary", {
+        target_org: session.organisation_id,
+        target_person: session.person_uuid,
+        target_seat: session.acting_as,
+        request_identifier: reqId,
+      });
+      if (error) {
+        if (error.message.includes("acting_seat_not_legal_for_command")) {
+          return json(403, { ok: false, error: "acting_seat_not_legal_for_command" }, origin);
+        }
+        throw new Error(error.message || "revoke_failed");
+      }
+      return json(200, { ok: true, result: data }, origin);
+    }
+
     if (req.method === "POST" && path === "/api/ops/event") {
       const body = await readJson(req);
       if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
@@ -1786,8 +2381,26 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
               ? await db.rpc("api_supplier_deactivate_command", rpcArgs)
               : await db.rpc("api_garage_command", rpcArgs);
       if (error) {
-        await securityEvent(req, "garage.command", "rejected", session, { code: error.code ?? "database_rejection" });
-        return json(400, { ok: false, error: "command_rejected", request_id: requestId }, origin);
+        const rawCode: string =
+          typeof error.code === "string" ? error.code
+            : typeof error.message === "string" ? error.message
+            : "database_rejection";
+        // SERP-087: surface the tender-rejection so the counter operator sees
+        // WHY nothing was deducted — a tender/change failure fails the sale
+        // closed inside the same transaction. Non-tender command errors keep
+        // the generic collapsed code (attributable via securityEvent).
+        const publicCode = intent.command === "COUNTER_SALE" && rawCode.startsWith("counter_sale_tender_")
+          ? rawCode === "counter_sale_tender_insufficient" ? "tender_insufficient"
+          : rawCode === "counter_sale_change_exceeds_cash" ? "change_exceeds_cash"
+          : "tender_rejected"
+          : intent.command === "COUNTER_SALE" && rawCode === "idempotency_key_conflict"
+            ? "idempotency_key_conflict"
+          : intent.command === "COUNTER_SALE" && (rawCode === "stock_insufficient" || rawCode.startsWith("stock_line_quantity_exceeds_onhand"))
+            ? "stock_insufficient"
+          : "command_rejected";
+        await securityEvent(req, "garage.command", "rejected", session, { code: rawCode });
+        const statusCode = rawCode === "idempotency_key_conflict" ? 409 : 400;
+        return json(statusCode, { ok: false, error: publicCode, request_id: requestId }, origin);
       }
       await securityEvent(req, "garage.command", "accepted", session, { idempotency_key: commandKey });
       return json(200, data as Json, origin);
