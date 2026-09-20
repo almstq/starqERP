@@ -1561,7 +1561,7 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
           supplierId: "",
           supplierName: "Default Supplier", // Placeholder - not in canonical model yet
           locationInShop: "Main Bay", // Placeholder - not in canonical model yet
-          stockStatus: "In Stock" as const,
+          stockStatus: "In Stock" as "In Stock" | "Low Stock" | "Out of Stock",
           lastRestockedDate: new Date().toISOString(),
         };
       });
@@ -2103,6 +2103,196 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         throw new Error("counter_return_list_failed");
       }
       return json(200, data as Json, origin);
+    }
+
+    // SERP-088: Cashier Sale Lookup by Receipt #, Invoice #, or UUID for Returns/Voids
+    if (req.method === "GET" && path === "/api/ops/counter/sale/lookup") {
+      const q = (new URL(req.url).searchParams.get("query") ?? "").trim();
+      if (!q) {
+        return json(400, { ok: false, error: "query_required" }, origin);
+      }
+
+      let saleId: string | null = null;
+      let matchedReceipt: { receipt_id: string; receipt_number: string; sale_id: string } | null = null;
+
+      // 1. Try finding by receipt number or receipt UUID in counter_receipts
+      if (uuid(q)) {
+        const { data: rById } = await db
+          .from("counter_receipts")
+          .select("receipt_id, receipt_number, sale_id")
+          .eq("organisation_id", session.organisation_id)
+          .eq("receipt_id", q)
+          .maybeSingle();
+        if (rById) {
+          matchedReceipt = rById;
+          saleId = rById.sale_id;
+        }
+      }
+
+      if (!saleId) {
+        const { data: rByNum } = await db
+          .from("counter_receipts")
+          .select("receipt_id, receipt_number, sale_id")
+          .eq("organisation_id", session.organisation_id)
+          .ilike("receipt_number", `%${q}%`)
+          .limit(1);
+        if (rByNum && rByNum.length > 0) {
+          matchedReceipt = rByNum[0];
+          saleId = rByNum[0].sale_id;
+        }
+      }
+
+      // 2. If not found by receipt, try commercial_documents (invoice number or ID)
+      if (!saleId) {
+        if (uuid(q)) {
+          const { data: docById } = await db
+            .from("commercial_documents")
+            .select("id")
+            .eq("organisation_id", session.organisation_id)
+            .eq("id", q)
+            .eq("document_type", "sales_invoice")
+            .maybeSingle();
+          if (docById) {
+            saleId = docById.id;
+          }
+        }
+      }
+
+      if (!saleId) {
+        const { data: docByNum } = await db
+          .from("commercial_documents")
+          .select("id")
+          .eq("organisation_id", session.organisation_id)
+          .eq("document_type", "sales_invoice")
+          .ilike("document_no", `%${q}%`)
+          .limit(1);
+        if (docByNum && docByNum.length > 0) {
+          saleId = docByNum[0].id;
+        }
+      }
+
+      if (!saleId) {
+        return json(404, { ok: false, error: "sale_not_found" }, origin);
+      }
+
+      // 3. Fetch the full sales invoice
+      const { data: saleDoc, error: saleErr } = await db
+        .from("commercial_documents")
+        .select("*")
+        .eq("organisation_id", session.organisation_id)
+        .eq("id", saleId)
+        .single();
+
+      if (saleErr || !saleDoc) {
+        return json(404, { ok: false, error: "sale_not_found" }, origin);
+      }
+
+      // 4. If matchedReceipt was not found earlier, lookup receipt by sale_id
+      if (!matchedReceipt) {
+        const { data: r } = await db
+          .from("counter_receipts")
+          .select("receipt_id, receipt_number, sale_id")
+          .eq("organisation_id", session.organisation_id)
+          .eq("sale_id", saleId)
+          .maybeSingle();
+        if (r) matchedReceipt = r;
+      }
+
+      // 5. Fetch line items
+      const { data: lines } = await db
+        .from("commercial_document_lines")
+        .select("*")
+        .eq("organisation_id", session.organisation_id)
+        .eq("document_id", saleId)
+        .order("line_no", { ascending: true });
+
+      // 6. Fetch any prior returns for this sale to compute remaining returnable quantities
+      const { data: priorReturns } = await db
+        .from("counter_returns")
+        .select("id, return_number, reversal_type, total_refund_amount, items, created_at")
+        .eq("organisation_id", session.organisation_id)
+        .eq("original_sale_id", saleId);
+
+      // Compute returned quantities per product
+      const returnedQtyByProduct: Record<string, number> = {};
+      let isFullyVoided = false;
+      for (const ret of priorReturns ?? []) {
+        if (ret.reversal_type === "void") {
+          isFullyVoided = true;
+        }
+        if (Array.isArray(ret.items)) {
+          for (const item of ret.items) {
+            if (item && item.product_id) {
+              const pId = String(item.product_id);
+              const qty = Number(item.quantity) || 0;
+              returnedQtyByProduct[pId] = (returnedQtyByProduct[pId] || 0) + qty;
+            }
+          }
+        }
+      }
+
+      return json(200, {
+        ok: true,
+        sale: {
+          sale_id: saleDoc.id,
+          invoice_number: saleDoc.document_no,
+          receipt_number: matchedReceipt?.receipt_number ?? null,
+          receipt_id: matchedReceipt?.receipt_id ?? null,
+          created_at: saleDoc.created_at,
+          currency: saleDoc.currency ?? "MVR",
+          gross_total: Number(saleDoc.gross_total),
+          tax_total: Number(saleDoc.tax_total ?? 0),
+          net_total: Number(saleDoc.gross_total) - Number(saleDoc.tax_total ?? 0),
+          is_fully_voided: isFullyVoided,
+          lines: (lines ?? []).map((l: any) => {
+            const purchasedQty = Number(l.quantity) || 0;
+            const alreadyReturned = isFullyVoided ? purchasedQty : (returnedQtyByProduct[l.product_id] || 0);
+            return {
+              line_no: l.line_no,
+              product_id: l.product_id,
+              description: l.description,
+              quantity: purchasedQty,
+              returned_quantity: alreadyReturned,
+              remaining_quantity: Math.max(0, purchasedQty - alreadyReturned),
+              unit_price: Number(l.unit_price),
+              net_amount: Number(l.net_amount),
+              tax_amount: Number(l.tax_amount ?? 0),
+              gross_amount: Number(l.gross_amount ?? l.net_amount),
+            };
+          }),
+          prior_returns: priorReturns ?? [],
+        },
+      }, origin);
+    }
+
+    // SERP-088: List authorized manager/supervisor personnel for return/void approvals
+    if (req.method === "GET" && path === "/api/ops/counter/supervisors") {
+      const { data, error } = await db
+        .from("memberships")
+        .select("person_id, persons(id, display_label, person_key), membership_seats(seat_code)")
+        .eq("organisation_id", session.organisation_id)
+        .eq("status", "active");
+      if (error) throw new Error("supervisors_query_failed");
+
+      const supervisors = (data ?? [])
+        .filter((m: any) =>
+          Array.isArray(m.membership_seats) &&
+          m.membership_seats.some((s: any) =>
+            ["owner", "managing_director", "director"].includes(s.seat_code)
+          )
+        )
+        .map((m: any) => {
+          const seat = m.membership_seats.find((s: any) =>
+            ["owner", "managing_director", "director"].includes(s.seat_code)
+          )?.seat_code;
+          return {
+            person_id: m.person_id,
+            name: m.persons?.display_label || m.persons?.person_key || "Manager",
+            seat: seat ?? "manager",
+          };
+        });
+
+      return json(200, { ok: true, supervisors }, origin);
     }
 
 
