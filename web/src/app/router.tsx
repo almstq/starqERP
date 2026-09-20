@@ -14,6 +14,7 @@ import { InvoiceDetailView } from '../components/invoices/InvoiceDetailView';
 import { PaymentsView } from '../components/payments/PaymentsView';
 import { PaymentDetailView } from '../components/payments/PaymentDetailView';
 import { ExpensesView } from '../components/expenses/ExpensesView';
+import { CounterView } from '../components/counter/CounterView';
 import { InventoryView } from '../components/inventory/InventoryView';
 import { PurchasingView } from '../components/purchasing/PurchasingView';
 import { PODetailView } from '../components/purchasing/PODetailView';
@@ -46,7 +47,10 @@ const AuthGate: React.FC = () => {
   return <Outlet />;
 };
 
-export const router = createBrowserRouter([
+// Extracted so tests can build a createMemoryRouter from the exact same route
+// tree (createBrowserRouter isn't practical in jsdom) - zero change to the
+// real app, which still gets createBrowserRouter(appRoutes) below.
+export const appRoutes: Parameters<typeof createBrowserRouter>[0] = [
   {
     path: '/login',
     element: <LoginPage />,
@@ -74,6 +78,7 @@ export const router = createBrowserRouter([
 
           { path: 'expenses', element: <ExpensesView /> },
           { path: 'accounts', element: <AccountsView /> },
+          { path: 'pos', element: <CounterView /> },
           { path: 'inventory', element: <InventoryView /> },
 
           { path: 'purchasing', element: <PurchasingView /> },
@@ -93,4 +98,6 @@ export const router = createBrowserRouter([
     path: '*',
     element: <Navigate to="/" replace />,
   },
-]);
+];
+
+export const router = createBrowserRouter(appRoutes);
