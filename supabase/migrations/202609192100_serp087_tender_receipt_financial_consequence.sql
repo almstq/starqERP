@@ -83,6 +83,9 @@ create table public.counter_tenders (
     references public.commercial_documents(organisation_id, id)
 );
 
+revoke all on table public.counter_tenders from public, anon, authenticated;
+grant select, insert on table public.counter_tenders to service_role;
+
 -- The register of financial consequence: exactly one row per counter sale.
 -- renders counts every print/duplicate retrieval; each reprint reuses the same
 -- receipt_number, so duplicates are provably one financial record.
@@ -108,6 +111,9 @@ create table public.counter_receipts (
   foreign key (organisation_id, sale_id)
     references public.commercial_documents(organisation_id, id)
 );
+
+revoke all on table public.counter_receipts from public, anon, authenticated;
+grant select, insert, update on table public.counter_receipts to service_role;
 
 create or replace function public.api_garage_command(
   target_org uuid,

@@ -4,7 +4,7 @@ Date: 2026-09-19
 Author: Antigravity, final M6 Counter POS milestone delivery.  
 Scope: Server-authoritative online transaction enforcement, idempotency key replay & conflict resilience, in-flight timeout/retry safety, fail-closed negative authorization paths, negative-stock prevention, and authoritative resilience status reporting.  
 Files:
-- `supabase/migrations/202609192500_serp090_counter_retry_resilience.sql`
+- `supabase/migrations/202609200029_serp090_counter_retry_resilience.sql`
 - `supabase/functions/starq-api/index.ts`
 - `web/src/services/apiGateway.ts`
 - `web/src/domain/counter.ts`
@@ -44,7 +44,7 @@ SERP-090 delivers the resilience, retry safety, and fail-closed negative-authori
 
 ## Architecture & Implementation
 
-### 1. Database Migration (`supabase/migrations/202609192500_serp090_counter_retry_resilience.sql`)
+### 1. Database Migration (`supabase/migrations/202609200029_serp090_counter_retry_resilience.sql`)
 - **`public.api_counter_sale_reversal`:**
   - Enforces active seat check first.
   - Parses target sale ID and reversal type before checking existing key.

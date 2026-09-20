@@ -642,7 +642,7 @@ Deno.test('SERP-088 mirror: replay idempotency returns stored return record', ()
 // ─────────────────────────────────────────────────────────────────────────────
 
 Deno.test('SERP-088 conformance: migration 202609192400 defines counter_returns and refund tables', () => {
-  const migrationUrl = new URL('202609192400_serp088_counter_return_refund_void.sql', EDGE_MIGRATIONS);
+  const migrationUrl = new URL('202609192359_serp088_counter_return_refund_void.sql', EDGE_MIGRATIONS);
   const sql = Deno.readTextFileSync(migrationUrl);
 
   assert(sql.includes('create table if not exists public.counter_returns'), 'must create public.counter_returns');
@@ -655,7 +655,7 @@ Deno.test('SERP-088 conformance: migration 202609192400 defines counter_returns 
 });
 
 Deno.test('SERP-088 conformance: api_counter_sale_reversal defined with seat gate and service_role permissions', () => {
-  const migrationUrl = new URL('202609192400_serp088_counter_return_refund_void.sql', EDGE_MIGRATIONS);
+  const migrationUrl = new URL('202609192359_serp088_counter_return_refund_void.sql', EDGE_MIGRATIONS);
   const sql = Deno.readTextFileSync(migrationUrl);
 
   assert(sql.includes('create or replace function public.api_counter_sale_reversal'), 'must define api_counter_sale_reversal');
@@ -667,7 +667,7 @@ Deno.test('SERP-088 conformance: api_counter_sale_reversal defined with seat gat
 });
 
 Deno.test('SERP-088 conformance: stock movements insert type is return with positive quantity', () => {
-  const migrationUrl = new URL('202609192400_serp088_counter_return_refund_void.sql', EDGE_MIGRATIONS);
+  const migrationUrl = new URL('202609192359_serp088_counter_return_refund_void.sql', EDGE_MIGRATIONS);
   const sql = Deno.readTextFileSync(migrationUrl);
 
   assert(sql.includes("'return', v_return_qty"), 'must insert return movement with positive quantity');
@@ -676,7 +676,7 @@ Deno.test('SERP-088 conformance: stock movements insert type is return with posi
 });
 
 Deno.test('SERP-088 conformance: audit event and outbox event emitted on reversal', () => {
-  const migrationUrl = new URL('202609192400_serp088_counter_return_refund_void.sql', EDGE_MIGRATIONS);
+  const migrationUrl = new URL('202609192359_serp088_counter_return_refund_void.sql', EDGE_MIGRATIONS);
   const sql = Deno.readTextFileSync(migrationUrl);
 
   assert(sql.includes('insert into public.audit_events'), 'must insert attributable audit event');
@@ -686,7 +686,7 @@ Deno.test('SERP-088 conformance: audit event and outbox event emitted on reversa
 });
 
 Deno.test('SERP-088 conformance: cash session close reconciles cash refunds', () => {
-  const migrationUrl = new URL('202609192400_serp088_counter_return_refund_void.sql', EDGE_MIGRATIONS);
+  const migrationUrl = new URL('202609192359_serp088_counter_return_refund_void.sql', EDGE_MIGRATIONS);
   const sql = Deno.readTextFileSync(migrationUrl);
 
   assert(sql.includes('v_cash_refunds'), 'must query cash refunds in session current/close');
@@ -694,7 +694,7 @@ Deno.test('SERP-088 conformance: cash session close reconciles cash refunds', ()
 });
 
 Deno.test('SERP-088 conformance: currency derived from organisations.base_currency (commit 0c46cde)', () => {
-  const migrationUrl = new URL('202609192400_serp088_counter_return_refund_void.sql', EDGE_MIGRATIONS);
+  const migrationUrl = new URL('202609192359_serp088_counter_return_refund_void.sql', EDGE_MIGRATIONS);
   const sql = Deno.readTextFileSync(migrationUrl);
 
   assert(sql.includes('select base_currency into v_org_currency'), 'must select base_currency from organisations');
@@ -711,7 +711,7 @@ Deno.test('SERP-088 conformance: starq-api wires return, void, and returns query
 });
 
 Deno.test('SERP-088 conformance: full-void auto-tender-mirror builds jsonb_build_object to prevent scalar-cast crash', () => {
-  const migrationUrl = new URL('202609192400_serp088_counter_return_refund_void.sql', EDGE_MIGRATIONS);
+  const migrationUrl = new URL('202609192359_serp088_counter_return_refund_void.sql', EDGE_MIGRATIONS);
   const sql = Deno.readTextFileSync(migrationUrl);
 
   assert(
@@ -721,7 +721,7 @@ Deno.test('SERP-088 conformance: full-void auto-tender-mirror builds jsonb_build
 });
 
 Deno.test('SERP-088 regression: managerial-seat approval gate only references seat codes that exist in the canonical vocabulary (DEC-008/202608210009)', () => {
-  const migrationUrl = new URL('202609192400_serp088_counter_return_refund_void.sql', EDGE_MIGRATIONS);
+  const migrationUrl = new URL('202609192359_serp088_counter_return_refund_void.sql', EDGE_MIGRATIONS);
   const sql = Deno.readTextFileSync(migrationUrl);
 
   // Canonical seat vocabulary per 202608210009_seat_vocabulary.sql (DEC-008).

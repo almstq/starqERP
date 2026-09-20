@@ -1,5 +1,5 @@
 -- =============================================================================
--- Migration: 202609192400_serp088_counter_return_refund_void.sql
+-- Migration: 202609192359_serp088_counter_return_refund_void.sql
 -- SERP-088 (M6-COUNTER) — Controlled return, refund and void.
 --
 -- Real dependencies: SERP-087 (accepted) and SERP-030 (done).

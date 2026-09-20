@@ -40,7 +40,14 @@ insert into expected_public_tables (table_name) values
   ('sod_exceptions'), ('sod_exception_dispositions'),
   ('tax_registrations'), ('tax_rate_schedules'),
   ('roles'), ('role_permissions'), ('invitations'),
-  ('transactional_outbox');
+  ('transactional_outbox'),
+  -- Added 2026-09-20, alongside the accepted standalone counter POS acceptance
+  -- chain (SERP-085 through 091, 436-438). Verified by grepping
+  -- `create table (if not exists) public.<table>` across
+  -- supabase/migrations/202609191720*, 202609191725*, 202609192100*,
+  -- 202609192200*, 202609192359* for each of these 6 tables - nothing invented.
+  ('counter_tenders'), ('counter_receipts'), ('counter_cash_sessions'),
+  ('counter_returns'), ('counter_refund_tenders'), ('owner_summary_consents');
 
 create temporary table expected_policies (
   table_name text not null,
@@ -129,7 +136,17 @@ insert into expected_policies (table_name, policy_name) values
   ('roles', 'roles_tenant'),                                  -- 202608250015_roles_as_data.sql
   ('role_permissions', 'role_permissions_tenant'),            -- 202608250015_roles_as_data.sql
   ('invitations', 'invitations_tenant_isolation'),            -- 202608270027_staff_invitations_and_lifecycle.sql
-  ('transactional_outbox', 'transactional_outbox_current');   -- 202608260022_transactional_outbox_and_audit.sql
+  ('transactional_outbox', 'transactional_outbox_current'),   -- 202608260022_transactional_outbox_and_audit.sql
+  -- Added 2026-09-20, alongside the expected_public_tables addition above. Of the
+  -- 6 new POS tables, only owner_summary_consents carries client-facing RLS
+  -- policies. The other 5 (counter_tenders, counter_receipts,
+  -- counter_cash_sessions, counter_returns, counter_refund_tenders) are
+  -- deny-by-default, service-role only (explicit `revoke all ... from public,
+  -- anon, authenticated` + `grant select[,insert] ... to service_role` in their
+  -- migrations, same pattern as payment_provider_config/provider_events above)
+  -- and correctly have no row here.
+  ('owner_summary_consents', 'owner_summary_consents_current'),   -- 202609191725_serp_437_erp_owner_summary_api.sql
+  ('owner_summary_consents', 'owner_summary_consents_public');    -- 202609191725_serp_437_erp_owner_summary_api.sql
 
 do $$
 begin
@@ -207,16 +224,25 @@ select e.table_name,
 -- only asks "is there RLS + a policy") and 2 are deny-by-default with no policy
 -- and no authenticated grant (payment_provider_config, provider_events), landing
 -- in protected-by-revoked-grant like the original 4. 32+27=59, 27+25=52, 4+2=6.
+--
+-- Counts updated 2026-09-20 for the 6 new standalone counter POS tables
+-- (SERP-085 through 091, 436-438): owner_summary_consents has real RLS
+-- policies (protected-by-RLS, 52+1=53). The other 5 (counter_tenders,
+-- counter_receipts, counter_cash_sessions, counter_returns,
+-- counter_refund_tenders) have no policy and no authenticated grant -
+-- verified live (has_table_privilege('authenticated', ..., 'SELECT') = false
+-- for all 5, same as payment_provider_config/provider_events above), landing
+-- in protected-by-revoked-grant (6+5=11). Total 59+6=65.
 do $$
 begin
-  if (select count(*) from protection_report) <> 59 then
-    raise exception 'SERP-124/337 expected 59 classified public tables';
+  if (select count(*) from protection_report) <> 65 then
+    raise exception 'SERP-124/337 expected 65 classified public tables';
   end if;
-  if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 52 then
-    raise exception 'SERP-124/337 expected 52 RLS-protected tables';
+  if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 53 then
+    raise exception 'SERP-124/337 expected 53 RLS-protected tables';
   end if;
-  if (select count(*) from protection_report where protection = 'protected-by-revoked-grant') <> 6 then
-    raise exception 'SERP-124/337 expected 6 revoked-grant-protected tables';
+  if (select count(*) from protection_report where protection = 'protected-by-revoked-grant') <> 11 then
+    raise exception 'SERP-124/337 expected 11 revoked-grant-protected tables';
   end if;
   if (select count(*) from protection_report where protection = 'protected-with-scoped-public-read') <> 1 then
     raise exception 'SERP-125 expected exactly 1 scoped-public-read table (product_publications)';

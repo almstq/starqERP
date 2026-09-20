@@ -14,6 +14,8 @@
 --   4. Currency Architecture:
 --      Derived dynamically from organisations.base_currency per commit 0c46cde, never hardcoded.
 
+begin;
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 1. Harden api_counter_sale_reversal: conflict detection on key reuse
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -945,3 +947,5 @@ $$;
 
 revoke all on function public.api_counter_resilience_status(uuid, uuid, text, uuid) from public, anon, authenticated;
 grant execute on function public.api_counter_resilience_status(uuid, uuid, text, uuid) to service_role;
+
+commit;

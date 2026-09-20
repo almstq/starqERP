@@ -527,7 +527,7 @@ Deno.test('SERP-090 behavior: till session open/close replay and conflict detect
 // ─────────────────────────────────────────────────────────────────────────────
 
 Deno.test('SERP-090 conformance: migration defines idempotency conflict guards on reversals and sessions', () => {
-  const migrationUrl = new URL('202609192500_serp090_counter_retry_resilience.sql', EDGE_MIGRATIONS);
+  const migrationUrl = new URL('202609200029_serp090_counter_retry_resilience.sql', EDGE_MIGRATIONS);
   const sql = Deno.readTextFileSync(migrationUrl);
 
   assert(sql.includes("raise exception 'idempotency_key_conflict'"), 'must raise idempotency_key_conflict');
@@ -539,7 +539,7 @@ Deno.test('SERP-090 conformance: migration defines idempotency conflict guards o
 });
 
 Deno.test('SERP-090 conformance: api_counter_resilience_status enforces server-authoritative online invariant', () => {
-  const migrationUrl = new URL('202609192500_serp090_counter_retry_resilience.sql', EDGE_MIGRATIONS);
+  const migrationUrl = new URL('202609200029_serp090_counter_retry_resilience.sql', EDGE_MIGRATIONS);
   const sql = Deno.readTextFileSync(migrationUrl);
 
   assert(sql.includes("'server_authoritative', true"), 'resilience status declares server_authoritative true');
@@ -625,7 +625,7 @@ Deno.test('SERP-090 regression (1): itemized-return refund formula under tax_mod
   assertEquals(buggyNet, 92.59, 'confirms buggy formula produces 92.59');
 
   // Static migration check: assert migration contains the pro-rata formula and NOT the buggy formula
-  const migrationUrl = new URL('202609192500_serp090_counter_retry_resilience.sql', EDGE_MIGRATIONS);
+  const migrationUrl = new URL('202609200029_serp090_counter_retry_resilience.sql', EDGE_MIGRATIONS);
   const sql = Deno.readTextFileSync(migrationUrl);
 
   assert(
@@ -643,7 +643,7 @@ Deno.test('SERP-090 regression (1): itemized-return refund formula under tax_mod
 });
 
 Deno.test('SERP-090 regression (2): counter_refund_tenders insert always populates recorded_by and recorded_seat', () => {
-  const migrationUrl = new URL('202609192500_serp090_counter_retry_resilience.sql', EDGE_MIGRATIONS);
+  const migrationUrl = new URL('202609200029_serp090_counter_retry_resilience.sql', EDGE_MIGRATIONS);
   const sql = Deno.readTextFileSync(migrationUrl);
 
   // Search for the insert statement into counter_refund_tenders
@@ -726,7 +726,7 @@ Deno.test('SERP-090 regression (3): idempotency-key-conflict on reversal command
 });
 
 Deno.test('SERP-090 regression (4): ensure_return_sequences is called in api_counter_sale_reversal before document allocation', () => {
-  const migrationUrl = new URL('202609192500_serp090_counter_retry_resilience.sql', EDGE_MIGRATIONS);
+  const migrationUrl = new URL('202609200029_serp090_counter_retry_resilience.sql', EDGE_MIGRATIONS);
   const sql = Deno.readTextFileSync(migrationUrl);
 
   const ensureIndex = sql.indexOf('perform app_private.ensure_return_sequences(target_org);');
@@ -749,7 +749,7 @@ Deno.test('SERP-090 regression (4): ensure_return_sequences is called in api_cou
 });
 
 Deno.test('SERP-090 regression (5): cash_session document_sequences row is self-seeded before allocation, fresh-org safe', () => {
-  const migrationUrl = new URL('202609192500_serp090_counter_retry_resilience.sql', EDGE_MIGRATIONS);
+  const migrationUrl = new URL('202609200029_serp090_counter_retry_resilience.sql', EDGE_MIGRATIONS);
   const sql = Deno.readTextFileSync(migrationUrl);
 
   const seedIndex = sql.indexOf(
@@ -767,7 +767,7 @@ Deno.test('SERP-090 regression (5): cash_session document_sequences row is self-
 });
 
 Deno.test('SERP-090 regression (6): audit_events inserts never supply an id column (bigint identity, auto-generated)', () => {
-  const migrationUrl = new URL('202609192500_serp090_counter_retry_resilience.sql', EDGE_MIGRATIONS);
+  const migrationUrl = new URL('202609200029_serp090_counter_retry_resilience.sql', EDGE_MIGRATIONS);
   const sql = Deno.readTextFileSync(migrationUrl);
 
   const columnListRegex = /insert into public\.audit_events\s*\(([^)]*)\)/g;

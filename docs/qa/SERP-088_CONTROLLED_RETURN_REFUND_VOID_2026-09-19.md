@@ -4,7 +4,7 @@ Date: 2026-09-19
 Author: Antigravity, under SERP-087 (accepted) and SERP-030 (done) authority.  
 Scope: Server-authoritative counter sale reversals (`return`, `void`, `refund`), positive stock restoration, credit note commercial document, SoD approval controls, register tables (`counter_returns`, `counter_refund_tenders`), and cash session reconciliation.  
 Files:
-- `supabase/migrations/202609192400_serp088_counter_return_refund_void.sql`
+- `supabase/migrations/202609192359_serp088_counter_return_refund_void.sql`
 - `supabase/functions/starq-api/index.ts`
 - `web/src/domain/counter.ts`
 - `web/src/domain/counter.test.ts`
@@ -35,7 +35,7 @@ SERP-088 delivers the controlled return, refund, and void subsystem for POS coun
 
 ## Architecture & Implementation
 
-### 1. Database Schema (`supabase/migrations/202609192400_serp088_counter_return_refund_void.sql`)
+### 1. Database Schema (`supabase/migrations/202609192359_serp088_counter_return_refund_void.sql`)
 - Document sequences: initializes `credit_note` (`CRN-`) and `counter_return` (`RET-`).
 - `public.counter_returns`: register table recording `id`, `organisation_id`, `return_number`, `original_sale_id`, `credit_note_id`, `location_id`, `reversal_type`, `currency`, `subtotal`, `tax_total`, `total_refund_amount`, `items`, `refund_tenders`, `reason`, `approval_mode`, `approver_person_id`, `approver_seat`, `idempotency_key`, `created_at`, `created_by`, `created_seat`.
 - `public.counter_refund_tenders`: register table recording `id`, `organisation_id`, `return_id`, `payment_method` (`cash`, `card`, `transfer`, `store_credit`), `amount`, `currency`.
