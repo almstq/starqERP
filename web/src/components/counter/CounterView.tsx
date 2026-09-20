@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -491,6 +491,24 @@ export const CounterView: React.FC = () => {
     if (scope.organisationId && scope.personUuid && scope.locationId) {
       saveHolds(scope, next);
     }
+  };
+
+  const lastClickTimeRef = useRef<number>(0);
+
+  const handleProductTileClick = (productId: string) => {
+    lastClickTimeRef.current = Date.now();
+    setSelectedProduct(productId);
+    persistCart(addToCart(cart, productId, 1));
+  };
+
+  const handleProductTileDoubleClick = (productId: string) => {
+    // If a click just fired, browser already added the item; avoid phantom 3rd item
+    const elapsed = Date.now() - lastClickTimeRef.current;
+    if (elapsed < 300) {
+      return;
+    }
+    setSelectedProduct(productId);
+    persistCart(addToCart(cart, productId, 1));
   };
 
   const products = selectableProducts(allProducts);
@@ -1004,8 +1022,8 @@ export const CounterView: React.FC = () => {
                     <button
                       key={product.id}
                       type="button"
-                      onClick={() => setSelectedProduct(product.id)}
-                      onDoubleClick={() => persistCart(addToCart(cart, product.id, 1))}
+                      onClick={() => handleProductTileClick(product.id)}
+                      onDoubleClick={() => handleProductTileDoubleClick(product.id)}
                       aria-pressed={selected}
                       style={{
                         backgroundColor: selected
