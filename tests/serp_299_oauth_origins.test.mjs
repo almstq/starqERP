@@ -18,6 +18,10 @@ console.log('=== SERP-299: Running Google OAuth, Origins & Secrets Verification 
   // Verify canonical production origin is in default allowlist (quote-agnostic)
   assert.match(content, /['"]https:\/\/erp\.starq\.mv['"]/, 'DEFAULT_ALLOWED_ORIGINS must include https://erp.starq.mv');
   assert.match(content, /['"]https:\/\/starq\.mv['"]/, 'DEFAULT_ALLOWED_ORIGINS must include https://starq.mv');
+  // SERP-437/#137 incident: the stable Vercel production alias must be an exact,
+  // explicit allowlist entry - never covered by the wildcard vercel.app pattern below,
+  // which SERP-299/Founder Ruling #1475 deliberately restricts to non-production.
+  assert.match(content, /['"]https:\/\/starq-erp\.vercel\.app['"]/, 'DEFAULT_ALLOWED_ORIGINS must include https://starq-erp.vercel.app');
 
   // Verify production guard against arbitrary vercel preview wildcards
   assert.match(content, /const IS_PROD =/, 'Edge function must determine production environment');
@@ -37,6 +41,7 @@ console.log('=== SERP-299: Running Google OAuth, Origins & Secrets Verification 
     "http://127.0.0.1:3000",
     "https://web-dhivashi.vercel.app",
     "https://web-eight-psi-92.vercel.app",
+    "https://starq-erp.vercel.app",
     "https://erp.starq.mv",
     "https://starq.mv",
   ]);
@@ -68,6 +73,17 @@ console.log('=== SERP-299: Running Google OAuth, Origins & Secrets Verification 
   assert.equal(testOriginAllowed('https://starq.mv', true, false), true, 'Root domain starq.mv must be allowed');
   assert.equal(testOriginAllowed('https://arbitrary-attacker.vercel.app', true, false), false, 'Wildcard vercel apps must be REJECTED in production');
   assert.equal(testOriginAllowed('https://malicious-site.com', true, false), false, 'Unauthorized domains must be REJECTED');
+
+  // SERP-437/#137 incident regression fixture: production v33 accepted ANY *.vercel.app
+  // via an unconditional wildcard that predated SERP-299. v34 (this codebase) must
+  // accept the stable production alias by EXACT allowlist entry only, and must
+  // continue to reject every other vercel.app origin - including the app's own
+  // ephemeral per-deployment Vercel aliases - exactly as it would reject any other
+  // unlisted domain. Explicit allowlisting must never be confused with, or replaced
+  // by, relaxing the wildcard guard.
+  assert.equal(testOriginAllowed('https://starq-erp.vercel.app', true, false), true, 'Stable production origin https://starq-erp.vercel.app must be allowed by exact match');
+  assert.equal(testOriginAllowed('https://starq-ufzoi99nt-starq-tech.vercel.app', true, false), false, 'Ephemeral per-deployment Vercel aliases must remain REJECTED in production unless explicitly authorized');
+  assert.equal(testOriginAllowed('https://starq-ebdbrzyks-starq-tech.vercel.app', true, false), false, 'A different ephemeral per-deployment Vercel alias must also remain REJECTED');
 
   // Preview / non-prod behavior
   assert.equal(testOriginAllowed('https://preview-feat-branch.vercel.app', false, false), true, 'Preview vercel apps permitted in non-prod');
