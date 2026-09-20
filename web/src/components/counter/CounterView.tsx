@@ -1,21 +1,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  Banknote,
   CheckCircle2,
+  Clock,
   Copy,
+  CreditCard,
+  Lock,
   Minus,
   Package,
   Plus,
   Receipt,
+  RefreshCw,
   RotateCcw,
   Search,
   ShoppingCart,
+  Sparkles,
   Store,
   Trash2,
-  Lock,
-  Clock,
+  User,
   WifiOff,
-  RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { apiGet, apiPost, ApiError, dispatchCommand } from '../../services/apiGateway';
@@ -350,6 +354,31 @@ export const CounterView: React.FC = () => {
     );
   }, [products, query]);
 
+  // LIVE running subtotal/total shown in large type purely for cashier glanceability.
+  // The authoritative financial calculation and taxes remain strictly server-resolved on complete().
+  const liveTotals = useMemo(() => {
+    let subtotal = 0;
+    let hasUnpricedItem = false;
+    for (const line of cart) {
+      const approved = approvedPriceFor(catalogue?.prices ?? [], line.productId);
+      if (approved && approved.source !== 'none' && approved.unit_amount > 0) {
+        const discountFactor = approved.discount_percent > 0 ? 1 - approved.discount_percent / 100 : 1;
+        subtotal += line.quantity * (approved.unit_amount * discountFactor);
+      } else {
+        hasUnpricedItem = true;
+      }
+    }
+    return { subtotal, hasUnpricedItem };
+  }, [cart, catalogue?.prices]);
+
+  const resetForNewSale = () => {
+    setSaleResult(null);
+    setReceipt(null);
+    setSaleError(null);
+    setReceiptError(null);
+    setTenderInput({ cash: '', card: '', transfer: '' });
+  };
+
   const hold = () => {
     if (cartIsEmpty(cart)) return;
     const held = createHeldCart(cart, Date.now());
@@ -522,11 +551,11 @@ export const CounterView: React.FC = () => {
     .filter((entry) => !filterLowStockOnly || entry.isLow || entry.onHand <= 0);
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+    <div className="w-full max-w-[1700px] mx-auto px-3 sm:px-6 py-4 space-y-4 font-sans">
       {!isOnline && (
         <div
           role="alert"
-          className="mb-4 p-3.5 rounded-lg flex items-center justify-between gap-3 text-sm font-medium"
+          className="p-3.5 rounded-xl flex items-center justify-between gap-3 text-sm font-semibold"
           style={{
             backgroundColor: 'var(--md-sys-color-error-container, #fde8e8)',
             color: 'var(--md-sys-color-on-error-container, #9b1c1c)',
@@ -536,31 +565,51 @@ export const CounterView: React.FC = () => {
           <div className="flex items-center gap-2">
             <WifiOff size={18} aria-hidden="true" />
             <span>
-              <strong>Counter POS is Online-Only</strong> — Transactions cannot be processed while offline. Reconnect to the network to trade.
+              <strong>Counter POS is Online-Only</strong> — Transactions cannot be processed while offline. Reconnect to trade.
             </span>
           </div>
           <Badge variant="destructive" size="sm">Offline</Badge>
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2.5">
+      {/* 1. Cashier & Outlet Identity Bar */}
+      <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-surface-container border border-outline-variant/60 shadow-sm">
+        <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: 'var(--md-sys-color-primary-container)', color: 'var(--md-sys-color-on-primary-container)' }}
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 shadow-inner"
+            style={{
+              backgroundColor: 'var(--md-sys-color-primary-container)',
+              color: 'var(--md-sys-color-on-primary-container)',
+            }}
           >
-            <Store size={20} aria-hidden="true" />
+            <Store size={22} aria-hidden="true" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold" style={{ color: 'var(--md-sys-color-on-surface)' }}>Counter</h1>
-            <p className="text-xs" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-              {outlet?.name ?? 'No outlet'} — cart & holds are scoped to this outlet
-            </p>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-lg sm:text-xl font-black tracking-tight" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                Counter
+              </h1>
+              <Badge variant={isOnline ? 'positive' : 'destructive'} dot size="sm">
+                {isOnline ? 'Online' : 'Offline'}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2 text-xs font-medium mt-0.5" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+              <span className="flex items-center gap-1 font-semibold text-primary">
+                <User size={13} aria-hidden="true" />
+                {session?.name || session?.email || session?.seat_label || 'Cashier'}
+              </span>
+              <span>•</span>
+              <span className="truncate max-w-[200px] sm:max-w-none">{outlet?.name ?? 'No outlet'}</span>
+              <span className="font-mono text-[11px] opacity-75">
+                ({scope.locationId ? `Till #${scope.locationId.slice(-4)}` : 'No Till'})
+              </span>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2 flex-wrap self-end md:self-auto">
           {outlets.length > 1 && (
-            <div className="w-full sm:w-56">
+            <div className="w-44 sm:w-56">
               <Select
                 label="Outlet"
                 aria-label="Outlet"
@@ -594,15 +643,15 @@ export const CounterView: React.FC = () => {
             Till Close
           </Button>
         </div>
-      </div>
+      </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Catalogue */}
-        <div className="lg:col-span-2 space-y-4">
-          <Surface variant="elevated" padding="md">
-            <div className="flex flex-col gap-3">
-              {/* SERP-086: barcode scan into the counter. Identifier in, server
-                  resolves the approved price; the client never prices an item. */}
+      {/* 2. Two-Pane Terminal Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* LEFT / Majority Width (Catalogue & Holds) */}
+        <main className="lg:col-span-7 xl:col-span-7 2xl:col-span-8 space-y-4">
+          <Surface variant="elevated" padding="md" className="rounded-2xl border border-outline-variant/60 shadow-sm">
+            <div className="flex flex-col gap-3.5">
+              {/* Barcode scanner bar pinned at top */}
               <form
                 className="flex items-center gap-2"
                 onSubmit={(event) => {
@@ -610,43 +659,51 @@ export const CounterView: React.FC = () => {
                   void resolveScan(scanInput);
                 }}
               >
-                <Input
-                  aria-label="Scan or type a barcode"
-                  placeholder="Scan barcode…"
-                  value={scanInput}
-                  onChange={(event) => setScanInput(event.target.value)}
-                  disabled={scanning}
-                  onBlur={() => {
-                    if (scanInput && !scanning) void resolveScan(scanInput);
-                  }}
-                  className="flex-1"
-                />
+                <div className="flex-1 relative">
+                  <Input
+                    aria-label="Scan or type a barcode"
+                    placeholder="Scan barcode or enter code…"
+                    value={scanInput}
+                    onChange={(event) => setScanInput(event.target.value)}
+                    disabled={scanning}
+                    onBlur={() => {
+                      if (scanInput && !scanning) void resolveScan(scanInput);
+                    }}
+                    className="w-full text-sm font-mono h-11"
+                  />
+                </div>
                 <Button
                   type="submit"
                   variant="filled"
+                  className="h-11 px-4 font-bold"
                   disabled={scanning || !isPlausibleBarcode(normalizeBarcodeInput(scanInput))}
                   loading={scanning}
                 >
                   Add
                 </Button>
               </form>
+
               {scanError && (
-                <p role="alert" className="text-[11px] font-medium" style={{ color: 'var(--md-sys-color-error)' }}>
+                <p role="alert" className="text-xs font-semibold" style={{ color: 'var(--md-sys-color-error)' }}>
                   Scan rejected: {scanError}. No price was resolved.
                 </p>
               )}
-              <div className="flex items-center gap-2">
+
+              {/* Search & Filter bar */}
+              <div className="flex items-center gap-2.5">
                 <div className="flex-1">
                   <Input
                     aria-label="Search products"
-                    placeholder="Search by name, SKU or barcode"
+                    placeholder="Search by product name, SKU, or barcode…"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    icon={<Search size={16} aria-hidden="true" />}
+                    icon={<Search size={18} aria-hidden="true" />}
+                    className="text-sm h-11"
                   />
                 </div>
                 <Button
-                  size="sm"
+                  size="md"
+                  className="h-11 font-semibold text-xs sm:text-sm shrink-0"
                   variant={filterLowStockOnly ? 'filled' : 'outlined'}
                   onClick={() => setFilterLowStockOnly((prev) => !prev)}
                   aria-pressed={filterLowStockOnly}
@@ -655,8 +712,10 @@ export const CounterView: React.FC = () => {
                   {filterLowStockOnly ? 'Low Stock Only ✓' : 'Low Stock Only'}
                 </Button>
               </div>
+
+              {/* Product Grid - Large, touch-friendly retail tiles */}
               <div
-                className="grid grid-cols-2 md:grid-cols-3 gap-2.5 max-h-[52vh] overflow-y-auto erp-scroll-region"
+                className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3 max-h-[62vh] overflow-y-auto erp-scroll-region p-1"
                 role="region"
                 aria-label="Product grid"
               >
@@ -675,57 +734,88 @@ export const CounterView: React.FC = () => {
                           : 'var(--md-sys-color-surface-container-low)',
                         color: 'var(--md-sys-color-on-surface)',
                         border: selected
-                          ? '1px solid var(--md-sys-color-primary)'
+                          ? '2px solid var(--md-sys-color-primary)'
                           : isLow
-                            ? '1px solid var(--md-sys-color-warning, #f59e0b)'
+                            ? '2px solid var(--md-sys-color-warning, #f59e0b)'
                             : '1px solid var(--md-sys-color-outline-variant)',
-                        borderRadius: 'var(--md-sys-shape-corner-medium)',
+                        borderRadius: 'var(--md-sys-shape-corner-large, 14px)',
                       }}
-                      className="flex flex-col items-start gap-1 px-3 py-3 text-left min-h-[76px] transition-colors"
+                      className="flex flex-col items-start gap-1.5 p-3.5 text-left min-h-[118px] transition-all hover:shadow-md active:scale-[0.99] relative cursor-pointer group"
                     >
-                      <span className="text-xs font-semibold leading-tight line-clamp-2">{product.name}</span>
-                      <span className="text-[10px] font-mono" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                        {product.sku}
-                      </span>
-                      {product.barcode && (
-                        <span className="text-[10px] font-mono" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                          {product.barcode}
+                      <div className="w-full flex items-start justify-between gap-1">
+                        <span className="text-sm font-bold leading-tight line-clamp-2" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                          {product.name}
+                        </span>
+                        {inCart > 0 && (
+                          <Badge variant="info" size="sm" className="shrink-0 font-bold">
+                            in cart ×{inCart}
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-[11px] font-mono" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                        <span className="font-semibold">{product.sku}</span>
+                        {product.barcode && (
+                          <>
+                            <span>•</span>
+                            <span>{product.barcode}</span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Prominent Price & Stock display */}
+                      <div className="mt-auto w-full pt-2 flex items-baseline justify-between gap-2 border-t border-outline-variant/30">
+                        <div>
+                          {approved && approved.source !== 'none' && approved.unit_amount > 0 ? (
+                            <span className="text-base sm:text-lg font-black font-mono tracking-tight text-primary tabular-nums">
+                              MVR {Number(approved.unit_amount).toFixed(2)}
+                              {approved.source === 'price_list_override' ? (
+                                <span className="text-[10px] font-normal text-on-surface-variant ml-1">(list)</span>
+                              ) : null}
+                            </span>
+                          ) : (
+                            <span className="text-xs font-medium text-on-surface-variant italic">
+                              no approved price
+                            </span>
+                          )}
+                        </div>
+                        <div className="shrink-0">
+                          <Badge variant={onHand > 0 ? 'positive' : 'warning'} dot size="sm">
+                            {onHand} in stock
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {isLow && onHand > 0 && (
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                          Low (≤ {product.reorder_threshold})
                         </span>
                       )}
-                      <span className="flex items-center gap-1.5 mt-auto flex-wrap">
-                        {approved && approved.source !== 'none' && approved.unit_amount > 0 ? (
-                          <Badge variant="info">
-                            MVR {Number(approved.unit_amount).toFixed(2)}
-                            {approved.source === 'price_list_override' ? ' (list)' : ''}
-                          </Badge>
-                        ) : (
-                          <Badge variant="neutral">no approved price</Badge>
-                        )}
-                        <Badge variant={onHand > 0 ? 'positive' : 'warning'} dot>{onHand} in stock</Badge>
-                        {isLow && onHand > 0 && (
-                          <Badge variant="warning">Low (≤ {product.reorder_threshold})</Badge>
-                        )}
-                        {onHand <= 0 && (
-                          <Badge variant="destructive">Out of stock</Badge>
-                        )}
-                        {inCart > 0 && <Badge variant="info">in cart ×{inCart}</Badge>}
-                      </span>
+                      {onHand <= 0 && (
+                        <span className="text-[10px] text-red-600 dark:text-red-400 font-medium">
+                          Out of stock
+                        </span>
+                      )}
                     </button>
                   );
                 })}
                 {availableProducts.length === 0 && (
-                  <p className="text-xs col-span-full py-8 text-center" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                    {filterLowStockOnly ? 'No low-stock products at this outlet.' : `No products match “${query}”.`}
-                  </p>
+                  <div className="col-span-full py-12 text-center" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                    <Package size={36} className="mx-auto mb-2 opacity-40" aria-hidden="true" />
+                    <p className="text-sm font-semibold">
+                      {filterLowStockOnly ? 'No low-stock products at this outlet.' : `No products match “${query}”.`}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
           </Surface>
 
-          {/* Holds */}
+          {/* Held Carts Section */}
           {holds.length > 0 && (
-            <Surface variant="elevated" padding="md">
-              <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+            <Surface variant="elevated" padding="md" className="rounded-2xl border border-outline-variant/60 shadow-sm">
+              <h2 className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                <Clock size={16} aria-hidden="true" />
                 Held carts{holds.length > 0 ? ` (${holds.filter((h) => !isExpired(h, now)).length} active)` : ''}
               </h2>
               <div className="space-y-2">
@@ -746,19 +836,30 @@ export const CounterView: React.FC = () => {
                       }}
                     >
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold truncate" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                        <p className="text-sm font-bold truncate" style={{ color: 'var(--md-sys-color-on-surface)' }}>
                           {cartLineCount(held.cart)} line(s), {cartItemCount(held.cart)} item(s)
                         </p>
-                        <p className="text-[11px]" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                        <p className="text-xs font-medium" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
                           {expired ? 'Expired' : `${minutes} min remaining`}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0">
                         <Badge variant={expired ? 'neutral' : 'warning'} dot>{expired ? 'expired' : 'held'}</Badge>
-                        <Button size="sm" variant="tonal" disabled={expired} onClick={() => resume(held)} icon={<RotateCcw size={14} aria-hidden="true" />}>
+                        <Button
+                          size="sm"
+                          variant="tonal"
+                          disabled={expired}
+                          onClick={() => resume(held)}
+                          icon={<RotateCcw size={14} aria-hidden="true" />}
+                        >
                           Resume
                         </Button>
-                        <Button size="sm" variant="text" onClick={() => discard(held)} icon={<Trash2 size={14} aria-hidden="true" />}>
+                        <Button
+                          size="sm"
+                          variant="text"
+                          onClick={() => discard(held)}
+                          icon={<Trash2 size={14} aria-hidden="true" />}
+                        >
                           Discard
                         </Button>
                       </div>
@@ -768,78 +869,144 @@ export const CounterView: React.FC = () => {
               </div>
             </Surface>
           )}
-        </div>
+        </main>
 
-        {/* Cart */}
-        <div className="space-y-4">
-          <Surface variant="elevated" padding="md">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--md-sys-color-on-surface)' }}>
-                <ShoppingCart size={16} aria-hidden="true" /> Cart
-              </h2>
+        {/* RIGHT / Dominant Sticky Cart Panel */}
+        <aside className="lg:col-span-5 xl:col-span-5 2xl:col-span-4 sticky top-4 space-y-4">
+          <Surface variant="elevated" padding="md" className="rounded-2xl border border-outline-variant/70 shadow-md">
+            {/* Cart Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/60">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: 'var(--md-sys-color-primary-container)', color: 'var(--md-sys-color-on-primary-container)' }}
+                >
+                  <ShoppingCart size={17} aria-hidden="true" />
+                </div>
+                <h2 className="text-base sm:text-lg font-black tracking-tight" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                  Cart
+                </h2>
+              </div>
               {!cartIsEmpty(cart) && (
-                <Badge variant="neutral">{cartLineCount(cart)} line(s) · {cartItemCount(cart)} item(s)</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="neutral" size="sm" className="font-mono font-bold">
+                    {cartLineCount(cart)} line(s) · {cartItemCount(cart)} item(s)
+                  </Badge>
+                  <Button
+                    size="xs"
+                    variant="text"
+                    onClick={() => persistCart([])}
+                    icon={<Trash2 size={13} aria-hidden="true" />}
+                    aria-label="Clear cart"
+                  >
+                    Clear
+                  </Button>
+                </div>
               )}
             </div>
 
+            {/* Cart Line Items */}
             {cartIsEmpty(cart) ? (
               <div
-                className="flex flex-col items-center justify-center py-10 text-center rounded-xl"
-                style={{ border: '1px dashed var(--md-sys-color-outline-variant)' }}
+                className="flex flex-col items-center justify-center py-12 px-4 text-center rounded-2xl my-3"
+                style={{
+                  border: '2px dashed var(--md-sys-color-outline-variant)',
+                  backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                }}
               >
-                <Package size={28} style={{ color: 'var(--md-sys-color-outline)' }} aria-hidden="true" />
-                <p className="text-xs mt-3" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                <Package size={34} style={{ color: 'var(--md-sys-color-outline)' }} aria-hidden="true" />
+                <p className="text-sm font-bold mt-3 text-on-surface">Cart is empty</p>
+                <p className="text-xs mt-1 text-on-surface-variant max-w-xs">
                   Select a product to start. Totals are resolved server-side when the sale completes.
                 </p>
               </div>
             ) : (
-              <div className="space-y-2 max-h-[44vh] overflow-y-auto erp-scroll-region">
+              <div className="space-y-2.5 max-h-[38vh] overflow-y-auto erp-scroll-region my-3 p-1">
                 {cart.map((line) => {
                   const product = catalogue.products.find((p) => p.id === line.productId);
                   const onHand = onHandAt(catalogue.on_hand, outlet?.id ?? '', line.productId);
                   const approved = approvedPriceFor(catalogue.prices, line.productId);
                   const short = line.quantity > onHand;
+                  const unitPrice = (approved && approved.source !== 'none' && approved.unit_amount > 0) ? Number(approved.unit_amount) : 0;
+                  const lineTotal = unitPrice * line.quantity;
+
                   return (
                     <div
                       key={line.productId}
-                      className="flex items-center gap-2 p-2 rounded-xl"
-                      style={{ border: `1px solid ${short ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-outline-variant)'}` }}
+                      className="p-3 rounded-xl transition-all"
+                      style={{
+                        backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                        border: `1px solid ${short ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-outline-variant)'}`,
+                      }}
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold truncate" style={{ color: 'var(--md-sys-color-on-surface)' }}>
-                          {product?.name ?? line.productId}
-                        </p>
-                        {approved && approved.source !== 'none' && approved.unit_amount > 0 && (
-                          <p className="text-[10px] font-mono" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                            MVR {Number(approved.unit_amount).toFixed(2)}
-                            {approved.source === 'price_list_override' ? ' · list' : ''}
-                            {approved.discount_percent > 0 ? ` · −${approved.discount_percent}%` : ''}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold leading-tight truncate" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                            {product?.name ?? line.productId}
                           </p>
-                        )}
-                        {short && (
-                          <p className="text-[10px] flex items-center gap-1" style={{ color: 'var(--md-sys-color-error)' }}>
-                            <AlertTriangle size={10} aria-hidden="true" /> only {onHand} in stock
-                          </p>
-                        )}
-                        {!short && product && isLowStock(product, onHand) && (
-                          <p className="text-[10px] flex items-center gap-1" style={{ color: 'var(--md-sys-color-warning, #d97706)' }}>
-                            <AlertTriangle size={10} aria-hidden="true" /> Low stock: {onHand} on hand (threshold: {product.reorder_threshold})
-                          </p>
-                        )}
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {approved && approved.source !== 'none' && approved.unit_amount > 0 ? (
+                              <p className="text-xs font-mono font-semibold" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                                MVR {Number(approved.unit_amount).toFixed(2)}
+                                {approved.source === 'price_list_override' ? ' · list' : ''}
+                                {approved.discount_percent > 0 ? ` · −${approved.discount_percent}%` : ''}
+                              </p>
+                            ) : (
+                              <p className="text-xs text-on-surface-variant italic">no approved price</p>
+                            )}
+                          </div>
+                          {short && (
+                            <p className="text-xs font-medium flex items-center gap-1 mt-1" style={{ color: 'var(--md-sys-color-error)' }}>
+                              <AlertTriangle size={12} aria-hidden="true" /> only {onHand} in stock
+                            </p>
+                          )}
+                          {!short && product && isLowStock(product, onHand) && (
+                            <p className="text-[11px] font-medium flex items-center gap-1 mt-0.5" style={{ color: 'var(--md-sys-color-warning, #d97706)' }}>
+                              <AlertTriangle size={11} aria-hidden="true" /> Low stock: {onHand} left
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Line Total */}
+                        <div className="text-right shrink-0">
+                          <span className="text-sm font-bold font-mono text-on-surface tabular-nums">
+                            MVR {lineTotal.toFixed(2)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button size="xs" variant="outlined" aria-label={`Decrease ${product?.name ?? 'item'}`}
-                          onClick={() => persistCart(setCartQuantity(cart, line.productId, line.quantity - 1))}
-                          icon={<Minus size={12} aria-hidden="true" />} />
-                        <span className="w-8 text-center text-xs font-semibold tabular-nums" aria-label="quantity">
-                          {line.quantity}
-                        </span>
-                        <Button size="xs" variant="outlined" aria-label={`Increase ${product?.name ?? 'item'}`}
-                          onClick={() => persistCart(addToCart(cart, line.productId, 1))}
-                          icon={<Plus size={12} aria-hidden="true" />} />
-                        <Button size="xs" variant="text" aria-label={`Remove ${product?.name ?? 'item'}`}
-                          onClick={() => persistCart(removeFromCart(cart, line.productId))}
-                          icon={<Trash2 size={13} aria-hidden="true" />} />
+
+                      {/* Quantity Stepper */}
+                      <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-outline-variant/40">
+                        <span className="text-[11px] text-on-surface-variant font-medium">Quantity</span>
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            size="xs"
+                            variant="outlined"
+                            className="w-8 h-8 rounded-lg"
+                            aria-label={`Decrease ${product?.name ?? 'item'}`}
+                            onClick={() => persistCart(setCartQuantity(cart, line.productId, line.quantity - 1))}
+                            icon={<Minus size={13} aria-hidden="true" />}
+                          />
+                          <span className="w-8 text-center text-sm font-extrabold tabular-nums font-mono" aria-label="quantity">
+                            {line.quantity}
+                          </span>
+                          <Button
+                            size="xs"
+                            variant="outlined"
+                            className="w-8 h-8 rounded-lg"
+                            aria-label={`Increase ${product?.name ?? 'item'}`}
+                            onClick={() => persistCart(addToCart(cart, line.productId, 1))}
+                            icon={<Plus size={13} aria-hidden="true" />}
+                          />
+                          <Button
+                            size="xs"
+                            variant="text"
+                            className="w-8 h-8 rounded-lg text-error hover:bg-error-container/30"
+                            aria-label={`Remove ${product?.name ?? 'item'}`}
+                            onClick={() => persistCart(removeFromCart(cart, line.productId))}
+                            icon={<Trash2 size={14} aria-hidden="true" />}
+                          />
+                        </div>
                       </div>
                     </div>
                   );
@@ -847,63 +1014,137 @@ export const CounterView: React.FC = () => {
               </div>
             )}
 
-            <div className="flex flex-col gap-2 mt-4">
-              <div role="group" aria-label="Tender">
-                <p className="text-[11px] font-semibold mb-1.5" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                  Tender — declare what was handed over; totals &amp; change are server-authoritative
-                </p>
-                <div className="flex gap-1.5 mb-2">
-                  {(['cash', 'card', 'transfer', 'mixed'] as const).map((method) => (
-                    <button
-                      key={method}
-                      type="button"
-                      aria-pressed={paymentMethod === method}
-                      onClick={() => setPaymentMethod(method)}
-                      className="px-2.5 py-1 text-[11px] font-semibold rounded-full capitalize transition-colors"
-                      style={{
-                        backgroundColor: paymentMethod === method
-                          ? 'var(--md-sys-color-primary)'
-                          : 'var(--md-sys-color-surface-container-high)',
-                        color: paymentMethod === method
-                          ? 'var(--md-sys-color-on-primary)'
-                          : 'var(--md-sys-color-on-surface)',
-                        border: `1px solid ${paymentMethod === method ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-outline-variant)'}`,
-                      }}
-                    >
-                      {method}
-                    </button>
-                  ))}
+            {/* LIVE Running Subtotal & Total Display (Requirement 1 & 2) */}
+            <div
+              className="p-4 rounded-2xl border space-y-2 mb-4"
+              style={{
+                backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                borderColor: 'var(--md-sys-color-outline-variant)',
+              }}
+            >
+              <div className="flex justify-between items-baseline text-xs sm:text-sm">
+                <span className="font-semibold text-on-surface-variant">Estimated Subtotal</span>
+                <span className="font-mono font-bold text-on-surface tabular-nums">
+                  MVR {liveTotals.subtotal.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-baseline pt-2 border-t border-outline-variant/60">
+                <div>
+                  <span className="text-base sm:text-lg font-black tracking-tight text-on-surface block">
+                    TOTAL DUE
+                  </span>
+                  <span className="text-[10px] text-on-surface-variant">
+                    Server resolves exact final total on complete
+                  </span>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="text-right">
+                  <span className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-primary tabular-nums block">
+                    MVR {liveTotals.subtotal.toFixed(2)}
+                  </span>
+                  {liveTotals.hasUnpricedItem && (
+                    <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                      Unapproved prices in cart
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Tender & Payment Controls */}
+            <div className="space-y-3">
+              <div role="group" aria-label="Tender">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+                    Payment Method
+                  </p>
+                  <span className="text-[11px] text-on-surface-variant">Server calculates change</span>
+                </div>
+
+                {/* Big Tender Buttons */}
+                <div className="grid grid-cols-4 gap-2 mb-3">
+                  {(['cash', 'card', 'transfer', 'mixed'] as const).map((method) => {
+                    const active = paymentMethod === method;
+                    return (
+                      <button
+                        key={method}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => setPaymentMethod(method)}
+                        className="h-11 sm:h-12 px-1 text-xs sm:text-sm font-bold rounded-xl capitalize transition-all flex items-center justify-center gap-1 shadow-sm"
+                        style={{
+                          backgroundColor: active
+                            ? 'var(--md-sys-color-primary)'
+                            : 'var(--md-sys-color-surface-container-high)',
+                          color: active
+                            ? 'var(--md-sys-color-on-primary)'
+                            : 'var(--md-sys-color-on-surface)',
+                          border: `2px solid ${active ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-outline-variant)'}`,
+                        }}
+                      >
+                        {method === 'cash' && <Banknote size={15} aria-hidden="true" />}
+                        {method === 'card' && <CreditCard size={15} aria-hidden="true" />}
+                        {method === 'transfer' && <RotateCcw size={14} aria-hidden="true" />}
+                        {method === 'mixed' && <Sparkles size={14} aria-hidden="true" />}
+                        <span>{method}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Tender Inputs */}
+                <div className="flex flex-wrap gap-2.5">
                   {(['cash', 'card', 'transfer'] as const)
                     .filter((m) => paymentMethod === 'mixed' || paymentMethod === m)
                     .map((m) => (
-                      <Input
-                        key={m}
-                        aria-label={`${m} tendered`}
-                        type="number"
-                        inputMode="decimal"
-                        min={0}
-                        step="0.01"
-                        placeholder={`${m} tendered`}
-                        className="w-[9.5rem] shrink-0"
-                        value={tenderInput[m] ?? ''}
-                        onChange={(e) => setTenderInput((t) => ({ ...t, [m]: e.target.value }))}
-                      />
+                      <div key={m} className="flex-1 min-w-[130px]">
+                        <label className="block text-[11px] font-bold capitalize text-on-surface-variant mb-1">
+                          {m} Tendered
+                        </label>
+                        <Input
+                          aria-label={`${m} tendered`}
+                          type="number"
+                          inputMode="decimal"
+                          min={0}
+                          step="0.01"
+                          placeholder="0.00"
+                          className="w-full text-base font-mono font-bold h-11"
+                          value={tenderInput[m] ?? ''}
+                          onChange={(e) => setTenderInput((t) => ({ ...t, [m]: e.target.value }))}
+                        />
+                      </div>
                     ))}
                 </div>
               </div>
-              <Button variant="tonal" disabled={cartIsEmpty(cart) || !canTransact(isOnline)} onClick={hold} icon={<ShoppingCart size={15} aria-hidden="true" />}>
-                Hold cart
-              </Button>
-              <Button variant="filled" loading={completing} disabled={cartIsEmpty(cart) || !outlet || completing || !canTransact(isOnline)}
-                onClick={complete} icon={<CheckCircle2 size={15} aria-hidden="true" />}>
-                Complete sale
-              </Button>
+
+              {/* Action Buttons: Hold and Big Complete Sale / Charge */}
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                <Button
+                  variant="tonal"
+                  size="md"
+                  className="col-span-1 h-12 font-bold text-xs sm:text-sm"
+                  disabled={cartIsEmpty(cart) || !canTransact(isOnline)}
+                  onClick={hold}
+                  icon={<ShoppingCart size={16} aria-hidden="true" />}
+                >
+                  Hold cart
+                </Button>
+                <Button
+                  variant="filled"
+                  size="lg"
+                  className="col-span-2 h-12 sm:h-14 text-base font-black tracking-wide shadow-lg active:scale-[0.99] transition-transform"
+                  loading={completing}
+                  disabled={cartIsEmpty(cart) || !outlet || completing || !canTransact(isOnline)}
+                  onClick={complete}
+                  icon={<CheckCircle2 size={19} aria-hidden="true" />}
+                >
+                  Complete sale
+                </Button>
+              </div>
+
               {saleError && (
-                <div className="space-y-2 mt-1">
-                  <p role="alert" className="text-[11px] font-medium" style={{ color: 'var(--md-sys-color-error)' }}>
-                    Sale rejected: {formatResilienceErrorMessage(saleError)}. Nothing was deducted — the server failed the transaction closed.
+                <div className="space-y-2 mt-2 p-3 rounded-xl bg-error-container/40 border border-error/30">
+                  <p role="alert" className="text-xs font-semibold text-error">
+                    Sale rejected: {formatResilienceErrorMessage(saleError)}. Nothing was deducted — the transaction failed closed.
                   </p>
                   {isRetryableError(saleError) && (
                     <Button
@@ -921,54 +1162,99 @@ export const CounterView: React.FC = () => {
             </div>
           </Surface>
 
+          {/* 4. Post-Sale State with Clear "New Sale" & Restyled Receipt (Requirements 4 & 5) */}
           {saleResult && (
-            <Surface variant="elevated" padding="md" style={{ border: '1px solid var(--positive-subtle)' }}>
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle2 size={18} style={{ color: 'var(--positive)' }} aria-hidden="true" />
-                <h2 className="text-sm font-semibold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
-                  Sale complete
-                </h2>
-              </div>
-              <p className="text-xs mb-3" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                Invoice <span className="font-mono font-semibold">{saleResult.invoice_number}</span> settled.
-                These totals are the server-authoritative values from the sale transaction.
-              </p>
-              <div className="text-xs space-y-1">
-                <div className="flex justify-between">
-                  <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Subtotal</span>
-                  <span className="font-semibold tabular-nums">MVR {Number(saleResult.subtotal).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Tax</span>
-                  <span className="font-semibold tabular-nums">MVR {Number(saleResult.tax_total).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between pt-1 border-t" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}>
-                  <span className="font-semibold">Total</span>
-                  <span className="font-bold tabular-nums">MVR {Number(saleResult.total_amount).toFixed(2)}</span>
-                </div>
-                {saleResult.tendered_amount !== undefined && (
-                  <>
-                    <div className="flex justify-between">
-                      <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Tendered</span>
-                      <span className="font-semibold tabular-nums">MVR {Number(saleResult.tendered_amount).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                        Change{Number(saleResult.change_amount ?? 0) > 0 ? '' : ' (none)'}
-                      </span>
-                      <span className="font-semibold tabular-nums">MVR {Number(saleResult.change_amount ?? 0).toFixed(2)}</span>
-                    </div>
-                  </>
-                )}
-                {saleResult.receipt_number && (
-                  <div className="flex justify-between">
-                    <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Receipt</span>
-                    <span className="font-mono font-semibold">{saleResult.receipt_number}</span>
+            <Surface variant="elevated" padding="md" className="rounded-2xl border-2 border-positive shadow-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={22} className="text-positive" aria-hidden="true" />
+                  <div>
+                    <h2 className="text-base font-bold text-on-surface">Sale complete</h2>
+                    <p className="text-xs text-on-surface-variant font-mono">
+                      Invoice <span className="font-bold text-on-surface">{saleResult.invoice_number}</span> settled.
+                    </p>
                   </div>
-                )}
+                </div>
+                <Badge variant="positive" size="sm">Settled</Badge>
               </div>
 
-              <div className="flex flex-wrap gap-2 mt-3">
+              {/* Requirement 4: Obvious New Sale Action */}
+              <Button
+                variant="filled"
+                size="lg"
+                className="w-full h-12 text-base font-black shadow-md rounded-xl"
+                onClick={resetForNewSale}
+                icon={<Plus size={18} aria-hidden="true" />}
+              >
+                Start New Sale
+              </Button>
+
+              {/* Requirement 5: Restyled Authentic Receipt Display */}
+              <div className="p-4 rounded-xl font-mono text-xs bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 border-2 border-dashed border-zinc-300 dark:border-zinc-700 shadow-inner space-y-2">
+                <div className="text-center pb-2 border-b border-dashed border-zinc-300 dark:border-zinc-700">
+                  <p className="font-black text-sm tracking-wider uppercase">{outlet?.name ?? 'starqPOS'}</p>
+                  <p className="text-[10px] text-zinc-500 font-sans font-medium uppercase mt-0.5">Tax Invoice / Receipt</p>
+                  <p className="text-[10px] text-zinc-400 mt-1 uppercase tracking-wider">
+                    Official Tax Receipt
+                  </p>
+                  {saleResult.receipt_number && (
+                    <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200 mt-0.5">
+                      Receipt: <span className="font-mono font-bold">{saleResult.receipt_number}</span>
+                    </p>
+                  )}
+                </div>
+
+                {saleResult.lines && saleResult.lines.length > 0 && (
+                  <div className="py-2 border-b border-dashed border-zinc-300 dark:border-zinc-700 space-y-1">
+                    {saleResult.lines.map((line, idx) => (
+                      <div key={idx} className="flex justify-between items-start text-[11px]">
+                        <div className="pr-2 truncate">
+                          <span>{line.name}</span>
+                          <span className="text-zinc-400 ml-1">×{line.quantity}</span>
+                        </div>
+                        <span className="tabular-nums font-semibold shrink-0">
+                          MVR {Number(line.net_amount).toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="space-y-1 pt-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Subtotal</span>
+                    <span className="font-semibold tabular-nums">MVR {Number(saleResult.subtotal).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Tax</span>
+                    <span className="font-semibold tabular-nums">MVR {Number(saleResult.tax_total).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-sm pt-1.5 border-t border-dashed border-zinc-300 dark:border-zinc-700">
+                    <span>TOTAL</span>
+                    <span className="font-black tabular-nums">MVR {Number(saleResult.total_amount).toFixed(2)}</span>
+                  </div>
+                  {saleResult.tendered_amount !== undefined && (
+                    <>
+                      <div className="flex justify-between text-zinc-600 dark:text-zinc-400 pt-1">
+                        <span>Tendered</span>
+                        <span className="font-semibold tabular-nums">MVR {Number(saleResult.tendered_amount).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-emerald-600 dark:text-emerald-400">
+                        <span>Change{Number(saleResult.change_amount ?? 0) > 0 ? '' : ' (none)'}</span>
+                        <span className="tabular-nums">MVR {Number(saleResult.change_amount ?? 0).toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="text-center pt-2 border-t border-dashed border-zinc-300 dark:border-zinc-700 text-[10px] text-zinc-400 font-sans">
+                  <p>Thank you for your business!</p>
+                  <p className="text-[9px]">Duplicate-proof • Server Authoritative</p>
+                </div>
+              </div>
+
+              {/* Receipt Action Buttons */}
+              <div className="flex flex-wrap gap-2 pt-1">
                 <Button size="sm" variant="tonal" loading={receiptBusy} onClick={loadReceipt} icon={<Receipt size={14} aria-hidden="true" />}>
                   View receipt
                 </Button>
@@ -976,37 +1262,40 @@ export const CounterView: React.FC = () => {
                   Re-print (duplicate)
                 </Button>
               </div>
+
               {receiptError && (
-                <p role="alert" className="text-[11px] font-medium mt-2" style={{ color: 'var(--md-sys-color-error)' }}>
+                <p role="alert" className="text-xs font-semibold text-error mt-1">
                   Receipt unavailable: {receiptError}
                 </p>
               )}
+
               {receipt && (
-                <div className="mt-3 p-3 rounded-xl text-xs" style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)' }}>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold">Receipt {receipt.receipt.receipt_number}</span>
+                <div className="mt-2 p-3 rounded-xl text-xs bg-surface-container-high border border-outline-variant space-y-1">
+                  <div className="flex items-center justify-between gap-2 pb-1 border-b border-outline-variant/50">
+                    <span className="font-bold">Receipt {receipt.receipt.receipt_number}</span>
                     <Badge variant="neutral">rendered ×{receipt.receipt.renders}</Badge>
                   </div>
                   {receipt.receipt.tender.map((leg) => (
-                    <div key={leg.payment_method} className="flex justify-between mt-1">
-                      <span className="capitalize" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>{leg.payment_method}</span>
-                      <span className="tabular-nums">MVR {Number(leg.amount_tendered).toFixed(2)}</span>
+                    <div key={leg.payment_method} className="flex justify-between text-on-surface-variant">
+                      <span className="capitalize">{leg.payment_method}</span>
+                      <span className="tabular-nums font-semibold">MVR {Number(leg.amount_tendered).toFixed(2)}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between mt-1">
-                    <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Change</span>
+                  <div className="flex justify-between font-bold text-on-surface pt-1 border-t border-outline-variant/30">
+                    <span>Change</span>
                     <span className="tabular-nums">MVR {Number(receipt.receipt.change_amount).toFixed(2)}</span>
                   </div>
-                  <p className="mt-1 text-[10px]" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                  <p className="mt-1 text-[10px] text-on-surface-variant">
                     Duplicate-proof: every re-print reuses receipt {receipt.receipt.receipt_number} — one financial record per sale.
                   </p>
                 </div>
               )}
             </Surface>
           )}
-        </div>
+        </aside>
       </div>
 
+      {/* Till Close Modal */}
       {tillModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <div className="w-full max-w-lg">
@@ -1015,7 +1304,7 @@ export const CounterView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Lock size={18} style={{ color: 'var(--md-sys-color-primary)' }} aria-hidden="true" />
                   <h2 className="text-base font-semibold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
-                    Cash Session & Till Close
+                    Cash Session &amp; Till Close
                   </h2>
                 </div>
                 <Button
@@ -1125,7 +1414,7 @@ export const CounterView: React.FC = () => {
                       <span className="font-bold tabular-nums">
                         {formatVarianceLabel(
                           calculateVariance(tillSession?.expected_cash ?? 0, parseFloat(countedCashInput)),
-                          tillSession?.currency ?? 'MVR'
+                          tillSession?.currency ?? 'MVR',
                         )}
                       </span>
                     </div>
@@ -1159,7 +1448,7 @@ export const CounterView: React.FC = () => {
                       loading={closingTill}
                       disabled={countedCashInput === '' || isNaN(parseFloat(countedCashInput))}
                     >
-                      Close Till & Record Variance
+                      Close Till &amp; Record Variance
                     </Button>
                   </div>
                 </div>
@@ -1169,6 +1458,7 @@ export const CounterView: React.FC = () => {
         </div>
       )}
 
+      {/* Return & Void Modal */}
       {returnModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <div className="w-full max-w-lg">
@@ -1177,7 +1467,7 @@ export const CounterView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <RotateCcw size={18} style={{ color: 'var(--md-sys-color-primary)' }} aria-hidden="true" />
                   <h2 className="text-base font-semibold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
-                    Controlled Return & Void (SERP-088)
+                    Controlled Return &amp; Void (SERP-088)
                   </h2>
                 </div>
                 <Button
