@@ -803,6 +803,9 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (isCurrentLoad() && inventoryRes.status === 'fulfilled' && inventoryRes.value.ok) {
           setInventory(Array.isArray(inventoryRes.value.items) ? inventoryRes.value.items : []);
         }
+        if (isCurrentLoad() && inventoryRes.status === 'fulfilled' && inventoryRes.value.ok) {
+          setInventory(inventoryRes.value.items);
+        }
         if (isCurrentLoad() && suppliersRes.status === 'fulfilled' && suppliersRes.value.ok) {
           setSuppliers(mapBackendSuppliers(suppliersRes.value.suppliers ?? []));
         }
@@ -911,12 +914,12 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const list: NeedsAttentionAlert[] = [];
 
     // 1. Real Overdue Invoices
-    const overdueInvoices = invoices.filter((inv) => {
+    const overdueInvoices = Array.isArray(invoices) ? invoices.filter((inv) => {
       if (inv.status === 'Paid' || inv.status === 'Draft') return false;
       if (inv.status === 'Overdue') return true;
       if (inv.dueDate && new Date(inv.dueDate) < new Date() && (inv.amountPaid || 0) < inv.totalAmount) return true;
       return false;
-    });
+    }) : [];
     for (const inv of overdueInvoices.slice(0, 3)) {
       list.push({
         id: `alert-inv-${inv.id}`,
@@ -932,7 +935,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     // 2. Real Low Stock Items
-    const lowStock = inventory.filter((item) => item.quantityOnHand <= item.reorderLevel);
+    const lowStock = Array.isArray(inventory) ? inventory.filter((item) => item.quantityOnHand <= item.reorderLevel) : [];
     if (lowStock.length > 0) {
       const first = lowStock[0];
       list.push({
@@ -948,7 +951,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     // 3. Real Pending Payments
-    const pendingPayments = payments.filter((p) => p.status === 'Pending Reconciliation');
+    const pendingPayments = Array.isArray(payments) ? payments.filter((p) => p.status === 'Pending Reconciliation') : [];
     for (const p of pendingPayments.slice(0, 2)) {
       list.push({
         id: `alert-pay-${p.id}`,
@@ -968,12 +971,12 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Dynamic real AI insights derived from active operational conditions
   useEffect(() => {
-    if (jobs.length === 0 && invoices.length === 0) {
+    if ((Array.isArray(jobs) && jobs.length === 0) && (Array.isArray(invoices) && invoices.length === 0)) {
       setAiInsights([]);
       return;
     }
     const list: AIAssistantInsight[] = [];
-    const overdue = invoices.filter((i) => i.status === 'Overdue');
+    const overdue = Array.isArray(invoices) ? invoices.filter((i) => i.status === 'Overdue') : [];
     const overdueCount = overdue.length;
     const overdueValue = overdue.reduce(
       (sum, i) => sum + (i.totalAmount - (i.amountPaid || 0)), 0,
@@ -1136,28 +1139,28 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Quick stats calculations
   const totalSalesToday = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    return invoices
-      .filter((inv) => inv.date === today)
-      .reduce((acc, inv) => acc + inv.totalAmount, 0);
+    return Array.isArray(invoices)
+      ? invoices.filter((inv) => inv.date === today).reduce((acc, inv) => acc + inv.totalAmount, 0)
+      : 0;
   }, [invoices]);
   const totalCashReceived = useMemo(() => {
-    return payments.reduce((acc, p) => acc + p.amount, 0);
+    return Array.isArray(payments) ? payments.reduce((acc, p) => acc + p.amount, 0) : 0;
   }, [payments]);
 
   const totalOutstandingInvoices = useMemo(() => {
-    return invoices.reduce((acc, inv) => acc + inv.balanceDue, 0);
+    return Array.isArray(invoices) ? invoices.reduce((acc, inv) => acc + inv.balanceDue, 0) : 0;
   }, [invoices]);
 
   const totalAccountsPayable = useMemo(() => {
-    return suppliers.reduce((acc, sup) => acc + sup.outstandingPayable, 0);
+    return Array.isArray(suppliers) ? suppliers.reduce((acc, sup) => acc + sup.outstandingPayable, 0) : 0;
   }, [suppliers]);
 
   const activeJobsCount = useMemo(() => {
-    return jobs.filter((j) => !['Completed', 'Paid', 'Tax Invoiced & Settled'].includes(j.status)).length;
+    return Array.isArray(jobs) ? jobs.filter((j) => !['Completed', 'Paid', 'Tax Invoiced & Settled'].includes(j.status)).length : 0;
   }, [jobs]);
 
   const lowStockItemsCount = useMemo(() => {
-    return inventory.filter((item) => item.quantityOnHand <= item.reorderLevel).length;
+    return Array.isArray(inventory) ? inventory.filter((item) => item.quantityOnHand <= item.reorderLevel).length : 0;
   }, [inventory]);
 
   // Create new Tenant (Organisation Setup)

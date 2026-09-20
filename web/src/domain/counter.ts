@@ -96,6 +96,7 @@ export interface CounterCatalogue {
   products: CounterProduct[];
   on_hand: OnHandRow[];
   prices: ApprovedPriceRow[];
+  gst_registration_status: 'registered' | 'not_registered' | 'pending' | 'suspended' | 'cancelled';
 }
 
 export interface CartLine {

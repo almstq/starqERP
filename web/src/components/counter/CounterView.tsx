@@ -552,6 +552,22 @@ export const CounterView: React.FC = () => {
     setTenderInput({ cash: '', card: '', transfer: '' });
   };
 
+  const estimatedTax = useMemo(() => {
+    if (!catalogue || cartIsEmpty(cart)) return 0;
+    if (catalogue.gst_registration_status !== 'registered') return 0;
+    const rate = catalogue.gst_rate ?? 0.08;
+    let totalTax = 0;
+    for (const line of cart) {
+      const approved = approvedPriceFor(activePrices, line.productId);
+      if (approved && approved.source !== 'none' && approved.unit_amount > 0) {
+        const discountFactor = approved.discount_percent > 0 ? 1 - approved.discount_percent / 100 : 1;
+        const lineAmount = line.quantity * (approved.unit_amount * discountFactor);
+        totalTax += lineAmount * rate;
+      }
+    }
+    return totalTax;
+  }, [catalogue, cart, activePrices]);
+
   const hold = () => {
     if (cartIsEmpty(cart)) return;
     const held = createHeldCart(cart, Date.now());
@@ -777,6 +793,17 @@ export const CounterView: React.FC = () => {
               <Badge variant={isOnline ? 'positive' : 'destructive'} dot size="sm">
                 {isOnline ? 'Online' : 'Offline'}
               </Badge>
+              {catalogue && (
+                <Badge
+                  variant={catalogue.gst_registration_status === 'registered' ? 'info' : 'outline'}
+                  size="sm"
+                  className="font-medium"
+                >
+                  {catalogue.gst_registration_status === 'registered'
+                    ? `GST Registered (${catalogue.gst_rate_percent ?? 8}%)`
+                    : 'Not GST Registered'}
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-2 text-xs font-medium mt-0.5" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
               <span className="flex items-center gap-1 font-semibold text-primary">
@@ -784,10 +811,12 @@ export const CounterView: React.FC = () => {
                 {session?.name || session?.email || session?.seat_label || 'Cashier'}
               </span>
               <span>•</span>
-              <span className="truncate max-w-[200px] sm:max-w-none">{outlet.name}</span>
-              <span className="font-mono text-[11px] opacity-75">
-                (Till #{outlet.id.slice(-4)})
-              </span>
+              <span className="truncate max-w-[200px] sm:max-w-none">{outlet?.name ?? 'No outlet'}</span>
+              {outlet && (
+                <span className="font-mono text-[11px] opacity-75">
+                  (Till #{outlet.id.slice(-4)})
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -1335,6 +1364,16 @@ export const CounterView: React.FC = () => {
                   MVR {liveTotals.subtotal.toFixed(2)}
                 </span>
               </div>
+              {catalogue?.gst_registration_status === 'registered' && (
+                <div className="flex justify-between items-baseline text-xs sm:text-sm">
+                  <span className="font-semibold text-on-surface-variant">
+                    Estimated Tax ({catalogue.gst_rate_percent ?? 8}%)
+                  </span>
+                  <span className="font-mono font-bold text-on-surface tabular-nums">
+                    MVR {estimatedTax.toFixed(2)}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between items-baseline pt-2 border-t border-outline-variant/60">
                 <div>
                   <span className="text-base sm:text-lg font-black tracking-tight text-on-surface block">
@@ -1346,7 +1385,7 @@ export const CounterView: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <span className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-primary tabular-nums block">
-                    MVR {liveTotals.subtotal.toFixed(2)}
+                    MVR {(liveTotals.subtotal + estimatedTax).toFixed(2)}
                   </span>
                   {liveTotals.hasUnpricedItem && (
                     <span className="text-[10px] font-semibold text-[var(--warning)]">

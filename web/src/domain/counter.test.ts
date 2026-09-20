@@ -189,6 +189,7 @@ describe('SERP-085 counter uses only server-authoritative data', () => {
         { organisation_id: 'org', location_id: OUTLET, product_id: PRODUCT, derived_quantity: 12.5 },
       ],
       prices: [],
+      gst_registration_status: 'not_registered',
     };
     expect(onHandAt(catalogue.on_hand, OUTLET, PRODUCT)).toBe(12.5);
     expect(onHandAt(catalogue.on_hand, OUTLET, 'other-product')).toBe(0);
