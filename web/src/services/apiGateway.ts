@@ -38,6 +38,7 @@ export interface ApiCommandParams<T> {
   command: CommandName;
   step?: ScmStep;
   payload: T;
+  idempotencyKey?: string;
 }
 
 export interface ApiResponse<T> {
@@ -62,7 +63,7 @@ export async function dispatchCommand<TReq = Record<string, unknown>, TRes = unk
   params: ApiCommandParams<TReq>,
 ): Promise<TRes & { ok: boolean }> {
   const base = getApiBaseUrl();
-  const idempotencyKey = generateIdempotencyKey();
+  const idempotencyKey = params.idempotencyKey || generateIdempotencyKey();
 
   const body: Record<string, unknown> = {
     ...params.payload as Record<string, unknown>,
@@ -116,7 +117,11 @@ export async function apiGet<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function apiPost<T>(path: string, payload: Record<string, unknown>): Promise<T> {
+export async function apiPost<T>(
+  path: string,
+  payload: Record<string, unknown>,
+  idempotencyKey?: string,
+): Promise<T> {
   const base = getApiBaseUrl();
   const response = await fetch(`${base}${path}`, {
     method: 'POST',
@@ -125,7 +130,7 @@ export async function apiPost<T>(path: string, payload: Record<string, unknown>)
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       'x-csrf-token': getCsrfToken(),
-      'x-idempotency-key': generateIdempotencyKey(),
+      'x-idempotency-key': idempotencyKey || generateIdempotencyKey(),
       ...getClientVersionHeaders(),
     },
     body: JSON.stringify({ ...payload, csrf: getCsrfToken() }),

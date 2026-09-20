@@ -40,7 +40,14 @@ insert into expected_public_tables (table_name) values
   ('sod_exceptions'), ('sod_exception_dispositions'),
   ('tax_registrations'), ('tax_rate_schedules'),
   ('roles'), ('role_permissions'), ('invitations'),
-  ('transactional_outbox');
+  ('transactional_outbox'),
+  -- Added 2026-09-20, alongside the accepted standalone counter POS acceptance
+  -- chain (SERP-085 through 091, 436-438). Verified by grepping
+  -- `create table (if not exists) public.<table>` across
+  -- supabase/migrations/202609191720*, 202609191725*, 202609192100*,
+  -- 202609192200*, 202609192359* for each of these 6 tables - nothing invented.
+  ('counter_tenders'), ('counter_receipts'), ('counter_cash_sessions'),
+  ('counter_returns'), ('counter_refund_tenders'), ('owner_summary_consents');
 
 create temporary table expected_policies (
   table_name text not null,
@@ -129,7 +136,17 @@ insert into expected_policies (table_name, policy_name) values
   ('roles', 'roles_tenant'),                                  -- 202608250015_roles_as_data.sql
   ('role_permissions', 'role_permissions_tenant'),            -- 202608250015_roles_as_data.sql
   ('invitations', 'invitations_tenant_isolation'),            -- 202608270027_staff_invitations_and_lifecycle.sql
-  ('transactional_outbox', 'transactional_outbox_current');   -- 202608260022_transactional_outbox_and_audit.sql
+  ('transactional_outbox', 'transactional_outbox_current'),   -- 202608260022_transactional_outbox_and_audit.sql
+  -- Added 2026-09-20, alongside the expected_public_tables addition above. Of the
+  -- 6 new POS tables, only owner_summary_consents carries client-facing RLS
+  -- policies. The other 5 (counter_tenders, counter_receipts,
+  -- counter_cash_sessions, counter_returns, counter_refund_tenders) are
+  -- deny-by-default, service-role only (explicit `revoke all ... from public,
+  -- anon, authenticated` + `grant select[,insert] ... to service_role` in their
+  -- migrations, same pattern as payment_provider_config/provider_events above)
+  -- and correctly have no row here.
+  ('owner_summary_consents', 'owner_summary_consents_current'),   -- 202609191725_serp_437_erp_owner_summary_api.sql
+  ('owner_summary_consents', 'owner_summary_consents_public');    -- 202609191725_serp_437_erp_owner_summary_api.sql
 
 do $$
 begin
@@ -207,16 +224,25 @@ select e.table_name,
 -- only asks "is there RLS + a policy") and 2 are deny-by-default with no policy
 -- and no authenticated grant (payment_provider_config, provider_events), landing
 -- in protected-by-revoked-grant like the original 4. 32+27=59, 27+25=52, 4+2=6.
+--
+-- Counts updated 2026-09-20 for the 6 new standalone counter POS tables
+-- (SERP-085 through 091, 436-438): owner_summary_consents has real RLS
+-- policies (protected-by-RLS, 52+1=53). The other 5 (counter_tenders,
+-- counter_receipts, counter_cash_sessions, counter_returns,
+-- counter_refund_tenders) have no policy and no authenticated grant -
+-- verified live (has_table_privilege('authenticated', ..., 'SELECT') = false
+-- for all 5, same as payment_provider_config/provider_events above), landing
+-- in protected-by-revoked-grant (6+5=11). Total 59+6=65.
 do $$
 begin
-  if (select count(*) from protection_report) <> 59 then
-    raise exception 'SERP-124/337 expected 59 classified public tables';
+  if (select count(*) from protection_report) <> 65 then
+    raise exception 'SERP-124/337 expected 65 classified public tables';
   end if;
-  if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 52 then
-    raise exception 'SERP-124/337 expected 52 RLS-protected tables';
+  if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 53 then
+    raise exception 'SERP-124/337 expected 53 RLS-protected tables';
   end if;
-  if (select count(*) from protection_report where protection = 'protected-by-revoked-grant') <> 6 then
-    raise exception 'SERP-124/337 expected 6 revoked-grant-protected tables';
+  if (select count(*) from protection_report where protection = 'protected-by-revoked-grant') <> 11 then
+    raise exception 'SERP-124/337 expected 11 revoked-grant-protected tables';
   end if;
   if (select count(*) from protection_report where protection = 'protected-with-scoped-public-read') <> 1 then
     raise exception 'SERP-125 expected exactly 1 scoped-public-read table (product_publications)';
@@ -286,6 +312,21 @@ begin
   -- 202608290031_payment_provider_registry.sql section 5; the statutory GST
   -- rate table -- 202608250017_tax_regimes_and_periods.sql section 6). A
   -- no-claim session is expected to see these rows; that is not a leak.
+  --
+  -- owner_summary_consents (SERP-437/added 2026-09-20) is skipped for the
+  -- same reason as product_publications: its owner_summary_consents_public
+  -- policy checks only state = 'consented', with no organisation/person
+  -- claim check at all, by design - a consented row is meant to be visible
+  -- with NO tenant claim (that is what makes the Hoadha owner-summary bridge
+  -- work without ERP session credentials, per SERP-437 AC3). This is an
+  -- intentional, evidenced cross-tenant/no-claim exception, not RLS not
+  -- being enforced. See tests/owner_summary_consent_boundary_probe.sql for
+  -- the dedicated behavioural proof of that boundary, and rls_isolation_probe.sql's
+  -- own comment above product_publications' equivalent skip for why fixture-
+  -- seeding this table into the strict loop instead would be worse than an
+  -- explicit skip. Not weakened: the ordinary owner_summary_consents_current
+  -- policy still requires organisation access for anything other than a
+  -- consented row, and no client-writable policy exists on this table at all.
   perform set_config('app.organisation_id', '', true);
   perform set_config('app.person_id', '', true);
   for table_record in
@@ -293,7 +334,7 @@ begin
       from pg_class c
       join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity
-       and c.relname not in ('product_publications', 'payment_providers', 'tax_rate_schedules')
+       and c.relname not in ('product_publications', 'payment_providers', 'tax_rate_schedules', 'owner_summary_consents')
      order by c.relname
   loop
     execute format('select exists (select 1 from public.%I limit 1)', table_record.table_name)
@@ -340,7 +381,23 @@ begin
      -- boundary for this loop to prove on them, and running the composed query
      -- would fail with "column organisation_id does not exist" rather than a
      -- meaningful assertion.
-     where table_name not in ('product_publications', 'payment_providers', 'tax_rate_schedules')
+     --
+     -- owner_summary_consents (SERP-437/added 2026-09-20) is skipped for the
+     -- same reason as product_publications: its owner_summary_consents_public
+     -- policy deliberately admits another tenant's CONSENTED row - that is
+     -- the whole point of the Hoadha owner-summary bridge. Seeding this
+     -- loop's fixture with a consented row would fail on correct behaviour
+     -- (a genuine cross-tenant read); seeding only a revoked row would pass
+     -- by accident, hiding a real leak the moment a consented row exists in
+     -- the fixture - both worse than an explicit skip, per the identical
+     -- reasoning already given above for product_publications. The boundary
+     -- this table actually promises (consented rows readable cross-tenant,
+     -- revoked rows never leaked, own-tenant read always works regardless of
+     -- state, zero client-writable policy) is proved instead by
+     -- tests/owner_summary_consent_boundary_probe.sql, which uses positive
+     -- controls in both directions so "nothing visible" can never pass as
+     -- "nothing leaked".
+     where table_name not in ('product_publications', 'payment_providers', 'tax_rate_schedules', 'owner_summary_consents')
      order by table_name
   loop
     tenant_column := case when policy_table.table_name = 'organisations' then 'id' else 'organisation_id' end;
@@ -364,7 +421,7 @@ select current_user as asserted_probe_role,
        (select rolsuper from pg_roles where rolname = current_user) as superuser,
        (select rolbypassrls from pg_roles where rolname = current_user) as bypass_rls,
        (select count(distinct table_name) from expected_policies
-         where table_name not in ('product_publications', 'payment_providers', 'tax_rate_schedules')
+         where table_name not in ('product_publications', 'payment_providers', 'tax_rate_schedules', 'owner_summary_consents')
        ) as policies_behaviorally_exercised,
        (select count(*) from public.organisations) as visible_organisations,
        (select count(*) from public.memberships) as visible_memberships;
