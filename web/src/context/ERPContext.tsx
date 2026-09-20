@@ -772,12 +772,13 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const loadDomainData = async () => {
       try {
         const [customersRes, jobsRes, invoicesRes, expensesRes, paymentsRes,
-                suppliersRes, poRes, auditRes, priceListsRes] = await Promise.allSettled([
+                inventoryRes, suppliersRes, poRes, auditRes, priceListsRes] = await Promise.allSettled([
           apiGet<{ ok: boolean; customers: unknown[] }>('/api/ops/customers'),
           apiGet<{ ok: boolean; jobs: unknown[] }>('/api/ops/jobs'),
           apiGet<{ ok: boolean; invoices: unknown[] }>('/api/ops/invoices'),
           apiGet<{ ok: boolean; expenses: unknown[] }>('/api/ops/expenses'),
           apiGet<{ ok: boolean; payments: unknown[] }>('/api/ops/payments'),
+          apiGet<{ ok: boolean; items: InventoryItem[]; movements: unknown[] }>('/api/ops/inventory'),
           apiGet<{ ok: boolean; suppliers: unknown[] }>('/api/ops/suppliers'),
           apiGet<{ ok: boolean; purchaseOrders: unknown[] }>('/api/ops/purchase-orders'),
           apiGet<{ ok: boolean; events: unknown[] }>('/api/ops/audit?limit=100'),
@@ -785,31 +786,34 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ]);
 
         if (isCurrentLoad() && customersRes.status === 'fulfilled' && customersRes.value.ok) {
-          setCustomers(mapBackendCustomers(customersRes.value.customers));
+          setCustomers(mapBackendCustomers(customersRes.value.customers ?? []));
         }
         if (isCurrentLoad() && jobsRes.status === 'fulfilled' && jobsRes.value.ok) {
-          setJobs(mapBackendJobs(jobsRes.value.jobs));
+          setJobs(mapBackendJobs(jobsRes.value.jobs ?? []));
         }
         if (isCurrentLoad() && invoicesRes.status === 'fulfilled' && invoicesRes.value.ok) {
-          setInvoices(mapBackendInvoices(invoicesRes.value.invoices));
+          setInvoices(mapBackendInvoices(invoicesRes.value.invoices ?? []));
         }
         if (isCurrentLoad() && expensesRes.status === 'fulfilled' && expensesRes.value.ok) {
-          setExpenses(mapBackendExpenses(expensesRes.value.expenses));
+          setExpenses(mapBackendExpenses(expensesRes.value.expenses ?? []));
         }
         if (isCurrentLoad() && paymentsRes.status === 'fulfilled' && paymentsRes.value.ok) {
-          setPayments(mapBackendPayments(paymentsRes.value.payments));
+          setPayments(mapBackendPayments(paymentsRes.value.payments ?? []));
+        }
+        if (isCurrentLoad() && inventoryRes.status === 'fulfilled' && inventoryRes.value.ok) {
+          setInventory(Array.isArray(inventoryRes.value.items) ? inventoryRes.value.items : []);
         }
         if (isCurrentLoad() && suppliersRes.status === 'fulfilled' && suppliersRes.value.ok) {
-          setSuppliers(mapBackendSuppliers(suppliersRes.value.suppliers));
+          setSuppliers(mapBackendSuppliers(suppliersRes.value.suppliers ?? []));
         }
         if (isCurrentLoad() && poRes.status === 'fulfilled' && poRes.value.ok) {
-          setPurchaseOrders(mapBackendPurchaseOrders(poRes.value.purchaseOrders));
+          setPurchaseOrders(mapBackendPurchaseOrders(poRes.value.purchaseOrders ?? []));
         }
         if (isCurrentLoad() && auditRes.status === 'fulfilled' && auditRes.value.ok) {
-          setAuditLogs(mapBackendAuditEvents(auditRes.value.events));
+          setAuditLogs(mapBackendAuditEvents(auditRes.value.events ?? []));
         }
         if (isCurrentLoad() && priceListsRes.status === 'fulfilled' && priceListsRes.value.ok) {
-          setPriceLists(mapBackendPriceLists(priceListsRes.value.price_lists));
+          setPriceLists(mapBackendPriceLists(priceListsRes.value.price_lists ?? []));
         }
       } catch (err) {
         console.error('[ERP] Failed to load domain data from backend:', err);

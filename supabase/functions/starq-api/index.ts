@@ -1528,15 +1528,69 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
     }
 
     if (req.method === "GET" && path === "/api/ops/inventory") {
-      const { data: items, error: itemsError } = await db.from("products").select("*, inventory_items(*)")
-        .eq("organisation_id", session.organisation_id);
-      if (itemsError) throw new Error("inventory_query_failed");
+      // Use canonical stock ledger (stock_movements_derived_onhand) instead of inventory_items
+      const [products, onHand, prices] = await Promise.allSettled([
+        db.from("products").select("id, sku, barcode, kind, name, category, active, reorder_threshold")
+          .eq("organisation_id", session.organisation_id)
+          .eq("active", true)
+          .order("name"),
+        db.rpc("stock_movements_derived_onhand", {
+          p_organisation_id: session.organisation_id,
+        }),
+        db.from("product_prices").select("product_id, amount as unit_amount, currency")
+          .eq("organisation_id", session.organisation_id),
+      ]);
+      if (products.status === "rejected" || products.value.error) throw new Error("inventory_products_query_failed");
+      if (onHand.status === "rejected" || onHand.value.error) throw new Error("inventory_onhand_query_failed");
+      if (prices.status === "rejected" || prices.value.error) throw new Error("inventory_prices_query_failed");
+
+      // Map to InventoryItem shape, using defaults for fields not in canonical model
+      const priceMap = new Map((prices.value.data ?? []).map((p: any) => [p.product_id, p.unit_amount]));
+      const inventoryItems = (products.value.data ?? []).map((product: any) => {
+        const unitCost = priceMap.get(product.id) ?? 0;
+        return {
+          id: product.id,
+          sku: product.sku,
+          name: product.name,
+          category: product.category || "General",
+          quantityOnHand: 0, // Will be populated from onHand aggregation
+          unit: "units",
+          reorderLevel: product.reorder_threshold ?? 0,
+          unitCost: unitCost,
+          sellingPrice: unitCost, // Using cost as fallback for selling price
+          supplierId: "",
+          supplierName: "Default Supplier", // Placeholder - not in canonical model yet
+          locationInShop: "Main Bay", // Placeholder - not in canonical model yet
+          stockStatus: "In Stock" as const,
+          lastRestockedDate: new Date().toISOString(),
+        };
+      });
+
+      // Aggregate on-hand by product from the derived on-hand RPC
+      const onHandMap = new Map<string, number>();
+      (onHand.value.data ?? []).forEach((row: any) => {
+        const key = row.product_id;
+        const qty = Number(row.derived_quantity) || 0;
+        onHandMap.set(key, (onHandMap.get(key) || 0) + qty);
+      });
+
+      // Apply on-hand quantities and determine stock status
+      inventoryItems.forEach((item) => {
+        const qty = onHandMap.get(item.id) || 0;
+        item.quantityOnHand = qty;
+        if (qty <= 0) {
+          item.stockStatus = "Out of Stock";
+        } else if (qty <= item.reorderLevel) {
+          item.stockStatus = "Low Stock";
+        }
+      });
+
       const { data: movements, error: movError } = await db.from("stock_movements").select("*")
         .eq("organisation_id", session.organisation_id)
         .order("occurred_at", { ascending: false })
         .limit(100);
       if (movError) throw new Error("stock_movements_query_failed");
-      return json(200, { ok: true, items: items ?? [], movements: movements ?? [] }, origin);
+      return json(200, { ok: true, items: inventoryItems, movements: movements ?? [] }, origin);
     }
 
     // SERP-085/086: Counter catalogue — the point-of-sale read surface. This
