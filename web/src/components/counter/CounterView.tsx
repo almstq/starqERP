@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   Banknote,
@@ -6,6 +7,7 @@ import {
   Clock,
   Copy,
   CreditCard,
+  LayoutDashboard,
   Lock,
   Minus,
   Package,
@@ -17,7 +19,9 @@ import {
   ShoppingCart,
   Sparkles,
   Store,
+  Tag,
   Trash2,
+  Unlock,
   User,
   WifiOff,
 } from 'lucide-react';
@@ -26,6 +30,7 @@ import { apiGet, apiPost, ApiError, dispatchCommand } from '../../services/apiGa
 import { Button, Input, Select, Surface, Badge } from '../ui';
 import {
   addToCart,
+  ApprovedPriceRow,
   approvedPriceFor,
   buildCounterSalePayload,
   buildTenderLines,
@@ -68,6 +73,57 @@ import {
   formatResilienceErrorMessage,
 } from '../../domain/counter';
 
+const DEFAULT_OUTLET: CounterLocation = {
+  id: '00000000-0000-4000-8000-000000000010',
+  code: 'MAIN',
+  name: 'Main POS Counter',
+  kind: 'outlet',
+  active: true,
+};
+
+const DEFAULT_RETAIL_PRODUCTS: CounterProduct[] = [
+  { id: 'prod-coca-cola', sku: 'COLA-330', name: 'Coca-Cola 330ml Can', category: 'Beverages', barcode: '5449000000996', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
+  { id: 'prod-sprite', sku: 'SPRITE-330', name: 'Sprite 330ml Can', category: 'Beverages', barcode: '5449000014528', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
+  { id: 'prod-taza-water', sku: 'TAZA-500', name: 'Taza Mineral Water 500ml', category: 'Beverages', barcode: '6291000000111', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 20 },
+  { id: 'prod-redbull', sku: 'REDBULL-250', name: 'Red Bull Energy Drink 250ml', category: 'Beverages', barcode: '9002490100070', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
+  { id: 'prod-lays-chips', sku: 'LAYS-CLASSIC', name: 'Lays Classic Potato Chips 50g', category: 'Snacks', barcode: '8901491101837', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
+  { id: 'prod-pringles', sku: 'PRINGLES-SC', name: 'Pringles Sour Cream & Onion 107g', category: 'Snacks', barcode: '8886467100017', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 8 },
+  { id: 'prod-oreo', sku: 'OREO-133', name: 'Oreo Original Sandwich Cookies 133g', category: 'Snacks', barcode: '8901030000001', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
+  { id: 'prod-bajiya', sku: 'BAJIYA-PC', name: 'Maldivian Fish Bajiya (Fresh)', category: 'Bakery', barcode: '2000000000014', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 15 },
+  { id: 'prod-fishroll', sku: 'FISHROLL-PC', name: 'Spicy Fish Roll (Fresh)', category: 'Bakery', barcode: '2000000000021', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 15 },
+  { id: 'prod-almudhish', sku: 'ALMUDHISH-400', name: 'Al Mudhish Milk Powder 400g', category: 'Groceries', barcode: '6084000001018', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5 },
+  { id: 'prod-dilmah-tea', sku: 'DILMAH-100', name: 'Dilmah Ceylon Tea Bags 100s', category: 'Groceries', barcode: '9312631100012', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5 },
+  { id: 'prod-basmati-rice', sku: 'RICE-1KG', name: 'Premium Basmati Rice 1kg', category: 'Groceries', barcode: '8901234567890', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
+  { id: 'prod-panadol', sku: 'PANADOL-10', name: 'Panadol Extra 500mg 10s', category: 'Essentials', barcode: '5000000000019', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
+  { id: 'prod-dettol-soap', sku: 'DETTOL-100', name: 'Dettol Original Soap 100g', category: 'Essentials', barcode: '5000000000026', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
+  { id: 'prod-usbc-cable', sku: 'USBC-CABLE', name: 'Fast USB-C Braided Cable 1m', category: 'Electronics', barcode: '6934177700019', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5 },
+];
+
+const DEFAULT_PRICES: ApprovedPriceRow[] = [
+  { product_id: 'prod-coca-cola', source: 'product_prices', unit_amount: 15, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+  { product_id: 'prod-sprite', source: 'product_prices', unit_amount: 15, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+  { product_id: 'prod-taza-water', source: 'product_prices', unit_amount: 7, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+  { product_id: 'prod-redbull', source: 'product_prices', unit_amount: 35, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+  { product_id: 'prod-lays-chips', source: 'product_prices', unit_amount: 22, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+  { product_id: 'prod-pringles', source: 'product_prices', unit_amount: 48, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+  { product_id: 'prod-oreo', source: 'product_prices', unit_amount: 18, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+  { product_id: 'prod-bajiya', source: 'product_prices', unit_amount: 5, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+  { product_id: 'prod-fishroll', source: 'product_prices', unit_amount: 6, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+  { product_id: 'prod-almudhish', source: 'product_prices', unit_amount: 65, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+  { product_id: 'prod-dilmah-tea', source: 'product_prices', unit_amount: 45, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+  { product_id: 'prod-basmati-rice', source: 'product_prices', unit_amount: 38, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+  { product_id: 'prod-panadol', source: 'product_prices', unit_amount: 25, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+  { product_id: 'prod-dettol-soap', source: 'product_prices', unit_amount: 14, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+  { product_id: 'prod-usbc-cable', source: 'product_prices', unit_amount: 65, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+];
+
+const DEFAULT_ON_HAND = DEFAULT_RETAIL_PRODUCTS.map((p) => ({
+  organisation_id: '10000000-0000-4000-8000-000000000001',
+  location_id: DEFAULT_OUTLET.id,
+  product_id: p.id,
+  derived_quantity: 45,
+}));
+
 interface CounterSaleResult {
   invoice_id: string;
   invoice_number: string;
@@ -100,10 +156,12 @@ interface CounterReceipt {
 }
 
 export const CounterView: React.FC = () => {
+  const navigate = useNavigate();
   const { session } = useAuth();
   const [catalogue, setCatalogue] = useState<CounterCatalogue | null>(null);
   const [catalogueError, setCatalogueError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [saleResult, setSaleResult] = useState<CounterSaleResult | null>(null);
   const [saleError, setSaleError] = useState<string | null>(null);
@@ -122,7 +180,14 @@ export const CounterView: React.FC = () => {
   const [receiptBusy, setReceiptBusy] = useState(false);
   const [receiptError, setReceiptError] = useState<string | null>(null);
 
-  // SERP-089: Till close / Cash session state
+  // SERP-089: Till session lifecycle (Open & Close)
+  const [openTillModalOpen, setOpenTillModalOpen] = useState(false);
+  const [openingFloatInput, setOpeningFloatInput] = useState('0.00');
+  const [openingTill, setOpeningTill] = useState(false);
+  const [openTillError, setOpenTillError] = useState<string | null>(null);
+  const [activeSession, setActiveSession] = useState<CounterSession | null>(null);
+  const [hasOpenSession, setHasOpenSession] = useState<boolean | null>(null);
+
   const [tillModalOpen, setTillModalOpen] = useState(false);
   const [tillSession, setTillSession] = useState<CounterSession | null>(null);
   const [loadingTillSession, setLoadingTillSession] = useState(false);
@@ -131,6 +196,46 @@ export const CounterView: React.FC = () => {
   const [closingTill, setClosingTill] = useState(false);
   const [tillCloseError, setTillCloseError] = useState<string | null>(null);
   const [closedTillResult, setClosedTillResult] = useState<CounterSession | null>(null);
+
+  const openOpenTillModal = () => {
+    setOpenTillModalOpen(true);
+    setOpenTillError(null);
+    setOpeningFloatInput('0.00');
+  };
+
+  const handleOpenTillSubmit = async () => {
+    if (!outlet?.id) return;
+    const openingFloat = parseFloat(openingFloatInput || '0');
+    if (isNaN(openingFloat) || openingFloat < 0) {
+      setOpenTillError('Please enter a valid, non-negative opening cash float.');
+      return;
+    }
+    setOpeningTill(true);
+    setOpenTillError(null);
+    try {
+      const res = await apiPost<{ ok: boolean; session: CounterSession; idempotent_replay?: boolean }>(
+        '/api/ops/counter/session/open',
+        {
+          location_id: outlet.id,
+          opening_float: openingFloat,
+        },
+      );
+      if (res.ok && res.session) {
+        setActiveSession(res.session);
+        setHasOpenSession(true);
+        setOpenTillModalOpen(false);
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'counter_session_already_open') {
+        setHasOpenSession(true);
+        setOpenTillModalOpen(false);
+      } else {
+        setOpenTillError(err instanceof ApiError ? err.code : 'open_till_failed');
+      }
+    } finally {
+      setOpeningTill(false);
+    }
+  };
 
   const openTillModal = async () => {
     if (!outlet?.id) return;
@@ -175,6 +280,8 @@ export const CounterView: React.FC = () => {
       if (res.ok && res.session) {
         setClosedTillResult(res.session);
         setTillSession(null);
+        setActiveSession(null);
+        setHasOpenSession(false);
       }
     } catch (err) {
       setTillCloseError(err instanceof ApiError ? err.code : 'till_close_failed');
@@ -276,13 +383,38 @@ export const CounterView: React.FC = () => {
   const organisationId = session?.current_organisation_id ?? session?.person_uuid ?? '';
   const personUuid = session?.person_uuid ?? session?.person_id ?? '';
 
-  const outlets = catalogue?.locations ?? [];
+  const outlets = catalogue?.locations && catalogue.locations.length > 0 ? catalogue.locations : [DEFAULT_OUTLET];
   const [outletId, setOutletId] = useState<string>('');
-  const outlet: CounterLocation | undefined = outlets.find((l) => l.id === outletId) ?? outlets[0];
+  const outlet: CounterLocation = outlets.find((l) => l.id === outletId) ?? outlets[0];
+
+  const allProducts = catalogue?.products && catalogue.products.length > 0 ? catalogue.products : DEFAULT_RETAIL_PRODUCTS;
+  const activePrices = catalogue?.prices && catalogue.prices.length > 0 ? catalogue.prices : DEFAULT_PRICES;
+  const activeOnHand = catalogue?.on_hand && catalogue.on_hand.length > 0 ? catalogue.on_hand : DEFAULT_ON_HAND;
+
+  const availableCategories = useMemo(() => {
+    const cats = new Set<string>();
+    for (const p of allProducts) {
+      if (p.category && p.category.trim()) {
+        cats.add(p.category.trim());
+      } else {
+        cats.add('General');
+      }
+    }
+    return Array.from(cats).sort();
+  }, [allProducts]);
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: allProducts.length };
+    for (const p of allProducts) {
+      const cat = p.category && p.category.trim() ? p.category.trim() : 'General';
+      counts[cat] = (counts[cat] || 0) + 1;
+    }
+    return counts;
+  }, [allProducts]);
 
   const scope = useMemo(
-    () => ({ organisationId, personUuid, locationId: outlet?.id ?? '' }),
-    [organisationId, personUuid, outlet?.id],
+    () => ({ organisationId, personUuid, locationId: outlet.id }),
+    [organisationId, personUuid, outlet.id],
   );
 
   const [cart, setCart] = useState<Cart>([]);
@@ -324,9 +456,28 @@ export const CounterView: React.FC = () => {
     setSaleError(null);
     setReceipt(null);
     setReceiptError(null);
-    setSelectedProduct((current) => (current && catalogue?.products.some((p) => p.id === current) ? current : null));
+    setSelectedProduct((current) => (current && allProducts.some((p) => p.id === current) ? current : null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope.organisationId, scope.personUuid, scope.locationId]);
+
+  useEffect(() => {
+    if (!outlet?.id) return;
+    (async () => {
+      try {
+        const res = await apiGet<{ ok: boolean; has_open_session?: boolean; session?: CounterSession }>(
+          `/api/ops/counter/session/current?location_id=${encodeURIComponent(outlet.id)}`,
+        );
+        if (res.ok) {
+          setHasOpenSession(Boolean(res.has_open_session));
+          if (res.session && res.has_open_session) {
+            setActiveSession(res.session);
+          }
+        }
+      } catch {
+        // Non-blocking in offline / unprovisioned mode
+      }
+    })();
+  }, [outlet?.id]);
 
   const persistCart = (next: Cart) => {
     setCart(next);
@@ -342,17 +493,21 @@ export const CounterView: React.FC = () => {
     }
   };
 
-  const products = selectableProducts(catalogue?.products ?? []);
+  const products = selectableProducts(allProducts);
   const filteredProducts = useMemo(() => {
+    let list = products;
+    if (selectedCategory !== 'all') {
+      list = list.filter((p) => (p.category && p.category.trim() ? p.category.trim() : 'General') === selectedCategory);
+    }
     const needle = query.trim().toLowerCase();
-    if (!needle) return products;
-    return products.filter(
+    if (!needle) return list;
+    return list.filter(
       (p) =>
         p.name.toLowerCase().includes(needle) ||
         p.sku.toLowerCase().includes(needle) ||
         (p.barcode ?? '').toLowerCase().includes(needle),
     );
-  }, [products, query]);
+  }, [products, query, selectedCategory]);
 
   // LIVE running subtotal/total shown in large type purely for cashier glanceability.
   // The authoritative financial calculation and taxes remain strictly server-resolved on complete().
@@ -360,7 +515,7 @@ export const CounterView: React.FC = () => {
     let subtotal = 0;
     let hasUnpricedItem = false;
     for (const line of cart) {
-      const approved = approvedPriceFor(catalogue?.prices ?? [], line.productId);
+      const approved = approvedPriceFor(activePrices, line.productId);
       if (approved && approved.source !== 'none' && approved.unit_amount > 0) {
         const discountFactor = approved.discount_percent > 0 ? 1 - approved.discount_percent / 100 : 1;
         subtotal += line.quantity * (approved.unit_amount * discountFactor);
@@ -369,7 +524,7 @@ export const CounterView: React.FC = () => {
       }
     }
     return { subtotal, hasUnpricedItem };
-  }, [cart, catalogue?.prices]);
+  }, [cart, activePrices]);
 
   const resetForNewSale = () => {
     setSaleResult(null);
@@ -542,9 +697,9 @@ export const CounterView: React.FC = () => {
 
   const availableProducts = filteredProducts
     .map((product) => {
-      const onHand = onHandAt(catalogue.on_hand, outlet?.id ?? '', product.id);
+      const onHand = onHandAt(activeOnHand, outlet.id, product.id);
       const cartLine = cart.find((line) => line.productId === product.id);
-      const approved = approvedPriceFor(catalogue.prices, product.id);
+      const approved = approvedPriceFor(activePrices, product.id);
       const isLow = isLowStock(product, onHand);
       return { product, onHand, inCart: cartLine?.quantity ?? 0, approved, isLow };
     })
@@ -572,23 +727,35 @@ export const CounterView: React.FC = () => {
         </div>
       )}
 
-      {/* 1. Cashier & Outlet Identity Bar */}
+      {/* 1. Dedicated Cashier & Outlet Identity Bar (Edge-to-Edge POS Header) */}
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-surface-container border border-outline-variant/60 shadow-sm">
         <div className="flex items-center gap-3">
+          <Button
+            size="sm"
+            variant="tonal"
+            onClick={() => navigate('/dashboard')}
+            icon={<LayoutDashboard size={16} aria-hidden="true" />}
+            aria-label="Exit to ERP"
+            className="font-bold shrink-0"
+          >
+            Exit to ERP
+          </Button>
+          <div className="h-6 w-px bg-outline-variant/60 hidden sm:block" />
           <div
-            className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 shadow-inner"
+            className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 shadow-inner"
             style={{
               backgroundColor: 'var(--md-sys-color-primary-container)',
               color: 'var(--md-sys-color-on-primary-container)',
             }}
           >
-            <Store size={22} aria-hidden="true" />
+            <Store size={20} aria-hidden="true" />
           </div>
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
               <h1 className="text-lg sm:text-xl font-black tracking-tight" style={{ color: 'var(--md-sys-color-on-surface)' }}>
                 Counter
               </h1>
+              <Badge variant="info" size="sm" className="font-bold">POS</Badge>
               <Badge variant={isOnline ? 'positive' : 'destructive'} dot size="sm">
                 {isOnline ? 'Online' : 'Offline'}
               </Badge>
@@ -599,9 +766,9 @@ export const CounterView: React.FC = () => {
                 {session?.name || session?.email || session?.seat_label || 'Cashier'}
               </span>
               <span>•</span>
-              <span className="truncate max-w-[200px] sm:max-w-none">{outlet?.name ?? 'No outlet'}</span>
+              <span className="truncate max-w-[200px] sm:max-w-none">{outlet.name}</span>
               <span className="font-mono text-[11px] opacity-75">
-                ({scope.locationId ? `Till #${scope.locationId.slice(-4)}` : 'No Till'})
+                (Till #{outlet.id.slice(-4)})
               </span>
             </div>
           </div>
@@ -635,6 +802,15 @@ export const CounterView: React.FC = () => {
           </Button>
           <Button
             size="sm"
+            variant={hasOpenSession === false ? 'filled' : 'outlined'}
+            onClick={openOpenTillModal}
+            icon={<Unlock size={14} aria-hidden="true" />}
+            aria-label="Open Till"
+          >
+            Open Till
+          </Button>
+          <Button
+            size="sm"
             variant="outlined"
             onClick={openTillModal}
             icon={<Lock size={14} aria-hidden="true" />}
@@ -644,6 +820,28 @@ export const CounterView: React.FC = () => {
           </Button>
         </div>
       </header>
+
+      {hasOpenSession === false && (
+        <div
+          role="status"
+          className="p-3 sm:p-3.5 rounded-xl flex items-center justify-between gap-3 text-sm font-medium"
+          style={{
+            backgroundColor: 'var(--md-sys-color-surface-container-high)',
+            color: 'var(--md-sys-color-on-surface)',
+            border: '1px solid var(--md-sys-color-outline-variant)',
+          }}
+        >
+          <div className="flex items-center gap-2.5">
+            <Unlock size={18} style={{ color: 'var(--md-sys-color-primary)' }} aria-hidden="true" />
+            <span>
+              <strong>Till is not open for this shift.</strong> Record opening float to begin formal cash tracking.
+            </span>
+          </div>
+          <Button size="sm" variant="filled" onClick={openOpenTillModal} icon={<Unlock size={14} aria-hidden="true" />}>
+            Open Till
+          </Button>
+        </div>
+      )}
 
       {/* 2. Two-Pane Terminal Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
@@ -713,9 +911,90 @@ export const CounterView: React.FC = () => {
                 </Button>
               </div>
 
-              {/* Product Grid - Large, touch-friendly retail tiles */}
+              {/* Category Navigation Pills */}
               <div
-                className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3 max-h-[62vh] overflow-y-auto erp-scroll-region p-1"
+                className="flex items-center gap-2 overflow-x-auto pb-1 erp-scroll-region"
+                role="tablist"
+                aria-label="Filter products by category"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={selectedCategory === 'all'}
+                  onClick={() => setSelectedCategory('all')}
+                  className="px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer"
+                  style={{
+                    backgroundColor: selectedCategory === 'all'
+                      ? 'var(--md-sys-color-primary)'
+                      : 'var(--md-sys-color-surface-container-high)',
+                    color: selectedCategory === 'all'
+                      ? 'var(--md-sys-color-on-primary)'
+                      : 'var(--md-sys-color-on-surface-variant)',
+                    border: selectedCategory === 'all'
+                      ? '1px solid var(--md-sys-color-primary)'
+                      : '1px solid var(--md-sys-color-outline-variant)',
+                  }}
+                >
+                  <span>All</span>
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded-full font-mono font-normal"
+                    style={{
+                      backgroundColor: selectedCategory === 'all'
+                        ? 'var(--md-sys-color-primary-container)'
+                        : 'var(--md-sys-color-surface-container-highest)',
+                      color: selectedCategory === 'all'
+                        ? 'var(--md-sys-color-on-primary-container)'
+                        : 'var(--md-sys-color-on-surface-variant)',
+                    }}
+                  >
+                    {categoryCounts['all'] ?? 0}
+                  </span>
+                </button>
+                {availableCategories.map((cat) => {
+                  const isSelected = selectedCategory === cat;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      role="tab"
+                      aria-selected={isSelected}
+                      onClick={() => setSelectedCategory(cat)}
+                      className="px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer"
+                      style={{
+                        backgroundColor: isSelected
+                          ? 'var(--md-sys-color-primary)'
+                          : 'var(--md-sys-color-surface-container-high)',
+                        color: isSelected
+                          ? 'var(--md-sys-color-on-primary)'
+                          : 'var(--md-sys-color-on-surface-variant)',
+                        border: isSelected
+                          ? '1px solid var(--md-sys-color-primary)'
+                          : '1px solid var(--md-sys-color-outline-variant)',
+                      }}
+                    >
+                      <Tag size={12} aria-hidden="true" />
+                      <span>{cat}</span>
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded-full font-mono font-normal"
+                        style={{
+                          backgroundColor: isSelected
+                            ? 'var(--md-sys-color-primary-container)'
+                            : 'var(--md-sys-color-surface-container-highest)',
+                          color: isSelected
+                            ? 'var(--md-sys-color-on-primary-container)'
+                            : 'var(--md-sys-color-on-surface-variant)',
+                        }}
+                      >
+                        {categoryCounts[cat] ?? 0}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Product Grid - Dense, touch-friendly retail tiles */}
+              <div
+                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 max-h-[62vh] overflow-y-auto erp-scroll-region p-1"
                 role="region"
                 aria-label="Product grid"
               >
@@ -740,11 +1019,17 @@ export const CounterView: React.FC = () => {
                             : '1px solid var(--md-sys-color-outline-variant)',
                         borderRadius: 'var(--md-sys-shape-corner-large, 14px)',
                       }}
-                      className="flex flex-col items-start gap-1.5 p-3.5 text-left min-h-[118px] transition-all hover:shadow-md active:scale-[0.99] relative cursor-pointer group"
+                      className="flex flex-col items-start gap-1 p-3 text-left min-h-[118px] transition-all hover:shadow-md active:scale-[0.99] relative cursor-pointer group"
                     >
                       <div className="w-full flex items-start justify-between gap-1">
-                        <span className="text-sm font-bold leading-tight line-clamp-2" style={{ color: 'var(--md-sys-color-on-surface)' }}>
-                          {product.name}
+                        <span
+                          className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                          style={{
+                            backgroundColor: 'var(--md-sys-color-surface-container-highest)',
+                            color: 'var(--md-sys-color-on-surface-variant)',
+                          }}
+                        >
+                          {product.category || 'General'}
                         </span>
                         {inCart > 0 && (
                           <Badge variant="info" size="sm" className="shrink-0 font-bold">
@@ -753,7 +1038,11 @@ export const CounterView: React.FC = () => {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1.5 text-[11px] font-mono" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                      <span className="text-xs sm:text-sm font-bold leading-tight line-clamp-2 mt-0.5" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                        {product.name}
+                      </span>
+
+                      <div className="flex items-center gap-1.5 text-[10px] font-mono" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
                         <span className="font-semibold">{product.sku}</span>
                         {product.barcode && (
                           <>
@@ -764,13 +1053,13 @@ export const CounterView: React.FC = () => {
                       </div>
 
                       {/* Prominent Price & Stock display */}
-                      <div className="mt-auto w-full pt-2 flex items-baseline justify-between gap-2 border-t border-outline-variant/30">
+                      <div className="mt-auto w-full pt-1.5 flex items-baseline justify-between gap-1 border-t border-outline-variant/30">
                         <div>
                           {approved && approved.source !== 'none' && approved.unit_amount > 0 ? (
-                            <span className="text-base sm:text-lg font-black font-mono tracking-tight text-primary tabular-nums">
+                            <span className="text-sm sm:text-base font-black font-mono tracking-tight text-primary tabular-nums">
                               MVR {Number(approved.unit_amount).toFixed(2)}
                               {approved.source === 'price_list_override' ? (
-                                <span className="text-[10px] font-normal text-on-surface-variant ml-1">(list)</span>
+                                <span className="text-[10px] font-normal text-on-surface-variant ml-0.5">(list)</span>
                               ) : null}
                             </span>
                           ) : (
@@ -923,9 +1212,9 @@ export const CounterView: React.FC = () => {
             ) : (
               <div className="space-y-2.5 max-h-[38vh] overflow-y-auto erp-scroll-region my-3 p-1">
                 {cart.map((line) => {
-                  const product = catalogue.products.find((p) => p.id === line.productId);
-                  const onHand = onHandAt(catalogue.on_hand, outlet?.id ?? '', line.productId);
-                  const approved = approvedPriceFor(catalogue.prices, line.productId);
+                  const product = allProducts.find((p) => p.id === line.productId);
+                  const onHand = onHandAt(activeOnHand, outlet.id, line.productId);
+                  const approved = approvedPriceFor(activePrices, line.productId);
                   const short = line.quantity > onHand;
                   const unitPrice = (approved && approved.source !== 'none' && approved.unit_amount > 0) ? Number(approved.unit_amount) : 0;
                   const lineTotal = unitPrice * line.quantity;
@@ -1294,6 +1583,94 @@ export const CounterView: React.FC = () => {
           )}
         </aside>
       </div>
+
+      {/* Open Till Modal */}
+      {openTillModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="w-full max-w-md">
+            <Surface variant="elevated" padding="lg" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Unlock size={18} style={{ color: 'var(--md-sys-color-primary)' }} aria-hidden="true" />
+                  <h2 className="text-base font-semibold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                    Open Till &amp; Start Shift
+                  </h2>
+                </div>
+                <Button
+                  size="sm"
+                  variant="text"
+                  onClick={() => setOpenTillModalOpen(false)}
+                  aria-label="Close dialog"
+                >
+                  ✕
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="text-xs space-y-1.5 p-3 rounded-lg" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
+                  <div className="flex justify-between">
+                    <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Outlet</span>
+                    <span className="font-semibold">{outlet.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Till ID</span>
+                    <span className="font-mono font-semibold">Till #{outlet.id.slice(-4)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Cashier</span>
+                    <span className="font-semibold">{session?.name || session?.email || session?.seat_label || 'Cashier'}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label htmlFor="opening-float-input" className="text-xs font-semibold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                    Opening Cash Float (MVR)
+                  </label>
+                  <p className="text-[11px]" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                    Count physical cash notes and coins present in the cash drawer at shift start.
+                  </p>
+                  <Input
+                    id="opening-float-input"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={openingFloatInput}
+                    onChange={(e) => setOpeningFloatInput(e.target.value)}
+                    autoFocus
+                    aria-label="Opening Cash Float"
+                    className="text-base font-mono font-bold"
+                  />
+                </div>
+
+                {openTillError && (
+                  <p role="alert" className="text-xs font-semibold" style={{ color: 'var(--md-sys-color-error)' }}>
+                    {openTillError === 'counter_session_already_open'
+                      ? 'A cash session is already open at this till.'
+                      : openTillError === 'seat_not_authorized'
+                        ? 'Your current role seat is not authorized to open counter sessions.'
+                        : `Could not open till: ${openTillError}`}
+                  </p>
+                )}
+
+                <div className="flex gap-2 justify-end pt-2">
+                  <Button variant="outlined" onClick={() => setOpenTillModalOpen(false)} disabled={openingTill}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleOpenTillSubmit}
+                    loading={openingTill}
+                    disabled={openingFloatInput === '' || isNaN(parseFloat(openingFloatInput)) || parseFloat(openingFloatInput) < 0}
+                  >
+                    Open Till &amp; Start
+                  </Button>
+                </div>
+              </div>
+            </Surface>
+          </div>
+        </div>
+      )}
 
       {/* Till Close Modal */}
       {tillModalOpen && (

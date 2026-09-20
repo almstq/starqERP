@@ -76,10 +76,134 @@ describe('Cashier-ready POS terminal layout & presentation', () => {
       expect(screen.getByRole('heading', { name: 'Counter' })).toBeInTheDocument();
     });
 
-    // Cashier identity and outlet info
+    // Cashier identity, Exit to ERP, and outlet info
+    expect(screen.getByRole('button', { name: /Exit to ERP/i })).toBeInTheDocument();
     expect(screen.getByText('Ahmed Cashier')).toBeInTheDocument();
     expect(screen.getByText('Male Central Outlet')).toBeInTheDocument();
     expect(screen.getByText('Online')).toBeInTheDocument();
+  });
+
+  it('filters products using category navigation pills', async () => {
+    vi.spyOn(apiGateway, 'apiGet').mockResolvedValue({
+      ok: true,
+      locations: [{ id: OUTLET, code: 'RETAIL-01', name: 'Male Central Outlet', kind: 'retail', active: true }],
+      products: [
+        { id: PRODUCT_A, category: 'Beverages', sku: 'SKU-COLA-CAN', kind: 'stock', name: 'Coca Cola 330ml', barcode: '5449000000996', sale_allowed: true, active: true },
+        { id: PRODUCT_B, category: 'Groceries', sku: 'SKU-WATER-500', kind: 'stock', name: 'Mineral Water 500ml', barcode: '6291000000111', sale_allowed: true, active: true },
+      ],
+      on_hand: [
+        { organisation_id: '00000000-0000-4000-8000-000000000001', location_id: OUTLET, product_id: PRODUCT_A, derived_quantity: 50 },
+        { organisation_id: '00000000-0000-4000-8000-000000000001', location_id: OUTLET, product_id: PRODUCT_B, derived_quantity: 30 },
+      ],
+      prices: [
+        { product_id: PRODUCT_A, source: 'product_prices', unit_amount: 15, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+        { product_id: PRODUCT_B, source: 'product_prices', unit_amount: 7, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+      ],
+    } as any);
+
+    renderTerminal();
+
+    await waitFor(() => {
+      expect(screen.getByText('Coca Cola 330ml')).toBeInTheDocument();
+      expect(screen.getByText('Mineral Water 500ml')).toBeInTheDocument();
+    });
+
+    // Category tabs exist
+    expect(screen.getByRole('tab', { name: /All/i })).toBeInTheDocument();
+    const beveragesTab = screen.getByRole('tab', { name: /Beverages/i });
+    expect(beveragesTab).toBeInTheDocument();
+    const groceriesTab = screen.getByRole('tab', { name: /Groceries/i });
+    expect(groceriesTab).toBeInTheDocument();
+
+    // Click Beverages -> only Coca Cola is visible
+    fireEvent.click(beveragesTab);
+    expect(screen.getByText('Coca Cola 330ml')).toBeInTheDocument();
+    expect(screen.queryByText('Mineral Water 500ml')).toBeNull();
+
+    // Click Groceries -> only Mineral Water is visible
+    fireEvent.click(groceriesTab);
+    expect(screen.queryByText('Coca Cola 330ml')).toBeNull();
+    expect(screen.getByText('Mineral Water 500ml')).toBeInTheDocument();
+
+    // Click All -> both are visible
+    fireEvent.click(screen.getByRole('tab', { name: /All/i }));
+    expect(screen.getByText('Coca Cola 330ml')).toBeInTheDocument();
+    expect(screen.getByText('Mineral Water 500ml')).toBeInTheDocument();
+  });
+
+  it('gracefully falls back to default outlet and catalogue when backend has empty data', async () => {
+    vi.spyOn(apiGateway, 'apiGet').mockResolvedValue({
+      ok: true,
+      locations: [],
+      products: [],
+      on_hand: [],
+      prices: [],
+    } as any);
+
+    renderTerminal();
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Counter' })).toBeInTheDocument();
+    });
+
+    // Never shows "No outlet" or "No Till"
+    expect(screen.queryByText(/No outlet/i)).toBeNull();
+    expect(screen.queryByText(/No Till/i)).toBeNull();
+    expect(screen.getByText('Main POS Counter')).toBeInTheDocument();
+    expect(screen.getByText(/Till #0010/)).toBeInTheDocument();
+
+    // Built-in retail items are rendered
+    expect(screen.getByText('Coca-Cola 330ml Can')).toBeInTheDocument();
+  });
+
+  it('opens till session with cash float and lands in register', async () => {
+    const postSpy = vi.spyOn(apiGateway, 'apiPost').mockResolvedValue({
+      ok: true,
+      session: {
+        id: 'session-pos-001',
+        session_number: 'CS-0001',
+        location_id: OUTLET,
+        status: 'open',
+        currency: 'MVR',
+        opening_float: 150,
+      },
+    } as any);
+
+    renderTerminal();
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Counter' })).toBeInTheDocument();
+    });
+
+    const openTillBtn = screen.getAllByRole('button', { name: 'Open Till' })[0];
+    expect(openTillBtn).toBeInTheDocument();
+    fireEvent.click(openTillBtn);
+
+    // Modal opens
+    expect(screen.getByRole('heading', { name: /Open Till & Start Shift/i })).toBeInTheDocument();
+    const floatInput = screen.getByLabelText(/Opening Cash Float/i);
+    expect(floatInput).toBeInTheDocument();
+
+    // Enter opening float and submit
+    fireEvent.change(floatInput, { target: { value: '150.00' } });
+    const submitBtn = screen.getByRole('button', { name: /Open Till & Start/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(postSpy).toHaveBeenCalledWith(
+        '/api/ops/counter/session/open',
+        expect.objectContaining({
+          location_id: OUTLET,
+          opening_float: 150,
+        }),
+      );
+    });
+
+    // Modal is closed, cashier is in register screen
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: /Open Till & Start Shift/i })).toBeNull();
+    });
+    expect(screen.getByText('Coca Cola 330ml')).toBeInTheDocument();
   });
 
   it('displays a live running subtotal and total due as items are added', async () => {

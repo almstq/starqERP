@@ -25,6 +25,7 @@ export interface CounterProduct {
   sku: string;
   kind: 'service' | 'stock' | 'consumable';
   name: string;
+  category?: string | null;
   barcode: string | null;
   reorder_threshold?: number | null;
   sale_allowed: boolean;
