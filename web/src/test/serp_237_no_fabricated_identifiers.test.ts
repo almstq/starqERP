@@ -136,5 +136,13 @@ describe('SERP-237 — fabricated statutory identifiers', () => {
       'Demo identifiers embedded in components grew past the recorded baseline. Files: ' +
         inventory.join(', '),
     ).toBeLessThanOrEqual(BASELINE);
+
+    // Isolation is complete only when the remaining demo identifiers live in
+    // the labelled fixture boundary, never inline in a consumer module.
+    const outOfBoundary = inventory.filter((file) => file !== 'data/demoFixtures.ts');
+    expect(
+      outOfBoundary,
+      'Demo identifiers must be sourced from data/demoFixtures.ts: ' + outOfBoundary.join(', '),
+    ).toEqual([]);
   });
 });

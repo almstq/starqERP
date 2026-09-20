@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { Surface, Button, Badge } from '../ui';
+import { DEMO_BML_PRIMARY_ACCOUNT } from '../../data/demoFixtures';
 
 export const PaymentDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -157,7 +158,7 @@ export const PaymentDetailView: React.FC = () => {
               >
                 <span className="text-[var(--md-sys-color-on-surface-variant)]">Settlement Account:</span>
                 <span className="font-mono text-[var(--md-sys-color-on-surface)]">
-                  Bank of Maldives (7730000189201)
+                  Bank of Maldives ({DEMO_BML_PRIMARY_ACCOUNT})
                 </span>
               </div>
               <div className="flex justify-between py-1.5">

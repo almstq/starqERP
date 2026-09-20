@@ -22,6 +22,11 @@ import {
 } from '../../domain/payroll';
 import { useERP } from '../../context/ERPContext';
 import { Badge, Surface, Button } from '../ui';
+import {
+  DEMO_BML_PAYROLL_ACCOUNT_AHMED,
+  DEMO_BML_PAYROLL_ACCOUNT_RAMESH,
+  DEMO_BML_PAYROLL_ACCOUNT_FATHIMATH,
+} from '../../data/demoFixtures';
 
 export const PayrollManagementView: React.FC = () => {
   const { formatMVR, currentTenant, addJournalEntry } = useERP();
@@ -41,7 +46,7 @@ export const PayrollManagementView: React.FC = () => {
       housingAllowanceMvr: 5000,
       otherAllowanceMvr: 2000,
       bankName: 'BML',
-      bankAccountNumber: '7701192837101',
+      bankAccountNumber: DEMO_BML_PAYROLL_ACCOUNT_AHMED,
       pensionEnrolled: true,
       ramadanAllowanceEligible: true,
       status: 'ACTIVE',
@@ -60,7 +65,7 @@ export const PayrollManagementView: React.FC = () => {
       housingAllowanceMvr: 3000,
       otherAllowanceMvr: 0,
       bankName: 'BML',
-      bankAccountNumber: '7704882710192',
+      bankAccountNumber: DEMO_BML_PAYROLL_ACCOUNT_RAMESH,
       pensionEnrolled: false,
       ramadanAllowanceEligible: false,
       status: 'ACTIVE',
@@ -79,7 +84,7 @@ export const PayrollManagementView: React.FC = () => {
       housingAllowanceMvr: 4000,
       otherAllowanceMvr: 1000,
       bankName: 'BML',
-      bankAccountNumber: '7702819237401',
+      bankAccountNumber: DEMO_BML_PAYROLL_ACCOUNT_FATHIMATH,
       pensionEnrolled: true,
       ramadanAllowanceEligible: true,
       status: 'ACTIVE',

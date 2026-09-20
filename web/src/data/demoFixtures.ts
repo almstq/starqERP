@@ -14,6 +14,18 @@ import {
 } from '../types/erp';
 import type { AiMatchSuggestion } from '../domain/aiReconciliation';
 
+/**
+ * Demo-only banking identifiers. Production tenants must provide their own
+ * configured settlement details; these values are kept behind this labelled
+ * fixture boundary so consumer components cannot silently invent credentials.
+ */
+export const DEMO_BML_PRIMARY_ACCOUNT = '7730000189201';
+export const DEMO_BML_RECONCILIATION_MVR_ACCOUNT = '7730000148201';
+export const DEMO_BML_RECONCILIATION_USD_ACCOUNT = '7730000148202';
+export const DEMO_BML_PAYROLL_ACCOUNT_AHMED = '7701192837101';
+export const DEMO_BML_PAYROLL_ACCOUNT_RAMESH = '7704882710192';
+export const DEMO_BML_PAYROLL_ACCOUNT_FATHIMATH = '7702819237401';
+
 export const INITIAL_STAFF: StaffMember[] = [
   { id: 'st-1', name: 'Ahsan "Acko"', role: 'Lead Painter', hourlyCostRateMvr: 450 },
   { id: 'st-2', name: 'Nabeel Rizvy', role: 'Wrap Specialist', hourlyCostRateMvr: 400 },
