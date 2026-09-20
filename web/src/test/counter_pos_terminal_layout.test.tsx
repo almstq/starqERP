@@ -276,7 +276,7 @@ describe('Cashier-ready POS terminal layout & presentation', () => {
       expect(screen.getByText('Coca Cola 330ml')).toBeInTheDocument();
     });
 
-    fireEvent.doubleClick(screen.getByRole('button', { name: /Coca Cola 330ml/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Coca Cola 330ml/i }));
     const complete = screen.getByRole('button', { name: /Complete sale/i });
     await waitFor(() => expect((complete as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(complete);
@@ -299,5 +299,25 @@ describe('Cashier-ready POS terminal layout & presentation', () => {
     fireEvent.click(newSaleBtn);
     expect(screen.queryByText('Sale complete')).toBeNull();
     expect(screen.getByText(/Cart is empty/i)).toBeInTheDocument();
+  });
+
+  it('adds product to cart directly on single tap / click and increments on subsequent taps', async () => {
+    renderTerminal();
+
+    await waitFor(() => {
+      expect(screen.getByText('Coca Cola 330ml')).toBeInTheDocument();
+    });
+
+    const productBtn = screen.getByRole('button', { name: /Coca Cola 330ml/i });
+    expect(screen.getByText(/Cart is empty/i)).toBeInTheDocument();
+
+    // Single click/tap adds 1 to cart
+    fireEvent.click(productBtn);
+    expect(screen.queryByText(/Cart is empty/i)).toBeNull();
+    expect(screen.getByText('in cart ×1')).toBeInTheDocument();
+
+    // Subsequent click increments quantity to 2
+    fireEvent.click(productBtn);
+    expect(screen.getByText('in cart ×2')).toBeInTheDocument();
   });
 });
