@@ -557,9 +557,9 @@ export const CounterView: React.FC = () => {
           role="alert"
           className="p-3.5 rounded-xl flex items-center justify-between gap-3 text-sm font-semibold"
           style={{
-            backgroundColor: 'var(--md-sys-color-error-container, #fde8e8)',
-            color: 'var(--md-sys-color-on-error-container, #9b1c1c)',
-            border: '1px solid var(--md-sys-color-error, #f05252)',
+            backgroundColor: 'var(--md-sys-color-error-container)',
+            color: 'var(--md-sys-color-on-error-container)',
+            border: '1px solid var(--md-sys-color-error)',
           }}
         >
           <div className="flex items-center gap-2">
@@ -736,7 +736,7 @@ export const CounterView: React.FC = () => {
                         border: selected
                           ? '2px solid var(--md-sys-color-primary)'
                           : isLow
-                            ? '2px solid var(--md-sys-color-warning, #f59e0b)'
+                            ? '2px solid var(--warning)'
                             : '1px solid var(--md-sys-color-outline-variant)',
                         borderRadius: 'var(--md-sys-shape-corner-large, 14px)',
                       }}
@@ -787,12 +787,12 @@ export const CounterView: React.FC = () => {
                       </div>
 
                       {isLow && onHand > 0 && (
-                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                        <span className="text-[10px] text-[var(--warning)] font-medium">
                           Low (≤ {product.reorder_threshold})
                         </span>
                       )}
                       {onHand <= 0 && (
-                        <span className="text-[10px] text-red-600 dark:text-red-400 font-medium">
+                        <span className="text-[10px] text-[var(--md-sys-color-error)] font-medium">
                           Out of stock
                         </span>
                       )}
@@ -961,7 +961,7 @@ export const CounterView: React.FC = () => {
                             </p>
                           )}
                           {!short && product && isLowStock(product, onHand) && (
-                            <p className="text-[11px] font-medium flex items-center gap-1 mt-0.5" style={{ color: 'var(--md-sys-color-warning, #d97706)' }}>
+                            <p className="text-[11px] font-medium flex items-center gap-1 mt-0.5" style={{ color: 'var(--warning)' }}>
                               <AlertTriangle size={11} aria-hidden="true" /> Low stock: {onHand} left
                             </p>
                           )}
@@ -1042,7 +1042,7 @@ export const CounterView: React.FC = () => {
                     MVR {liveTotals.subtotal.toFixed(2)}
                   </span>
                   {liveTotals.hasUnpricedItem && (
-                    <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                    <span className="text-[10px] font-semibold text-[var(--warning)]">
                       Unapproved prices in cart
                     </span>
                   )}
@@ -1190,27 +1190,27 @@ export const CounterView: React.FC = () => {
               </Button>
 
               {/* Requirement 5: Restyled Authentic Receipt Display */}
-              <div className="p-4 rounded-xl font-mono text-xs bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 border-2 border-dashed border-zinc-300 dark:border-zinc-700 shadow-inner space-y-2">
-                <div className="text-center pb-2 border-b border-dashed border-zinc-300 dark:border-zinc-700">
+              <div className="p-4 rounded-xl font-mono text-xs bg-[var(--md-sys-color-surface-container-lowest)] text-[var(--md-sys-color-on-surface)] border-2 border-dashed border-[var(--md-sys-color-outline-variant)] shadow-inner space-y-2">
+                <div className="text-center pb-2 border-b border-dashed border-[var(--md-sys-color-outline-variant)]">
                   <p className="font-black text-sm tracking-wider uppercase">{outlet?.name ?? 'starqPOS'}</p>
-                  <p className="text-[10px] text-zinc-500 font-sans font-medium uppercase mt-0.5">Tax Invoice / Receipt</p>
-                  <p className="text-[10px] text-zinc-400 mt-1 uppercase tracking-wider">
+                  <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-sans font-medium uppercase mt-0.5">Tax Invoice / Receipt</p>
+                  <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] opacity-70 mt-1 uppercase tracking-wider">
                     Official Tax Receipt
                   </p>
                   {saleResult.receipt_number && (
-                    <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200 mt-0.5">
+                    <p className="text-xs font-bold text-[var(--md-sys-color-on-surface)] mt-0.5">
                       Receipt: <span className="font-mono font-bold">{saleResult.receipt_number}</span>
                     </p>
                   )}
                 </div>
 
                 {saleResult.lines && saleResult.lines.length > 0 && (
-                  <div className="py-2 border-b border-dashed border-zinc-300 dark:border-zinc-700 space-y-1">
+                  <div className="py-2 border-b border-dashed border-[var(--md-sys-color-outline-variant)] space-y-1">
                     {saleResult.lines.map((line, idx) => (
                       <div key={idx} className="flex justify-between items-start text-[11px]">
                         <div className="pr-2 truncate">
                           <span>{line.name}</span>
-                          <span className="text-zinc-400 ml-1">×{line.quantity}</span>
+                          <span className="text-[var(--md-sys-color-on-surface-variant)] ml-1">×{line.quantity}</span>
                         </div>
                         <span className="tabular-nums font-semibold shrink-0">
                           MVR {Number(line.net_amount).toFixed(2)}
@@ -1222,24 +1222,24 @@ export const CounterView: React.FC = () => {
 
                 <div className="space-y-1 pt-1 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-zinc-500">Subtotal</span>
+                    <span className="text-[var(--md-sys-color-on-surface-variant)]">Subtotal</span>
                     <span className="font-semibold tabular-nums">MVR {Number(saleResult.subtotal).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-zinc-500">Tax</span>
+                    <span className="text-[var(--md-sys-color-on-surface-variant)]">Tax</span>
                     <span className="font-semibold tabular-nums">MVR {Number(saleResult.tax_total).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between font-bold text-sm pt-1.5 border-t border-dashed border-zinc-300 dark:border-zinc-700">
+                  <div className="flex justify-between font-bold text-sm pt-1.5 border-t border-dashed border-[var(--md-sys-color-outline-variant)]">
                     <span>TOTAL</span>
                     <span className="font-black tabular-nums">MVR {Number(saleResult.total_amount).toFixed(2)}</span>
                   </div>
                   {saleResult.tendered_amount !== undefined && (
                     <>
-                      <div className="flex justify-between text-zinc-600 dark:text-zinc-400 pt-1">
+                      <div className="flex justify-between text-[var(--md-sys-color-on-surface-variant)] pt-1">
                         <span>Tendered</span>
                         <span className="font-semibold tabular-nums">MVR {Number(saleResult.tendered_amount).toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between font-bold text-emerald-600 dark:text-emerald-400">
+                      <div className="flex justify-between font-bold text-[var(--positive)]">
                         <span>Change{Number(saleResult.change_amount ?? 0) > 0 ? '' : ' (none)'}</span>
                         <span className="tabular-nums">MVR {Number(saleResult.change_amount ?? 0).toFixed(2)}</span>
                       </div>
@@ -1247,7 +1247,7 @@ export const CounterView: React.FC = () => {
                   )}
                 </div>
 
-                <div className="text-center pt-2 border-t border-dashed border-zinc-300 dark:border-zinc-700 text-[10px] text-zinc-400 font-sans">
+                <div className="text-center pt-2 border-t border-dashed border-[var(--md-sys-color-outline-variant)] text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-sans">
                   <p>Thank you for your business!</p>
                   <p className="text-[9px]">Duplicate-proof • Server Authoritative</p>
                 </div>
