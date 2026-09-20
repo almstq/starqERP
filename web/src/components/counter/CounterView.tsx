@@ -1344,7 +1344,7 @@ export const CounterView: React.FC = () => {
                   <Package size={28} style={{ color: 'var(--md-sys-color-outline)' }} aria-hidden="true" />
                   <p className="text-xs font-bold mt-2" style={{ color: 'var(--md-sys-color-on-surface)' }}>Cart is empty</p>
                   <p className="text-[11px] mt-0.5 max-w-xs" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                    Tap items from catalog to add. Totals resolved server-side on checkout.
+                    Select a product to start. Totals are resolved server-side when the sale completes.
                   </p>
                 </div>
               ) : (
@@ -1449,7 +1449,7 @@ export const CounterView: React.FC = () => {
               {saleResult ? (
                 /* Compact Post-Sale Action Card (Register & Catalog Stay Stationary) */
                 <div
-                  className="p-3 rounded-xl border space-y-2.5"
+                  className="p-3 rounded-xl border space-y-2"
                   style={{
                     backgroundColor: 'var(--positive-subtle)',
                     borderColor: 'var(--positive)',
@@ -1458,57 +1458,100 @@ export const CounterView: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <CheckCircle2 size={18} style={{ color: 'var(--positive)' }} aria-hidden="true" />
-                      <span className="text-xs font-bold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
-                        Sale Complete
-                      </span>
-                      <span className="text-xs font-mono font-bold truncate" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                        {saleResult.receipt_number || saleResult.invoice_number}
-                      </span>
+                      <div>
+                        <h2 className="text-xs font-bold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                          Sale complete
+                        </h2>
+                        <p className="text-[11px] font-mono" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                          {saleResult.invoice_number && (
+                            <>Invoice <span className="font-bold">{saleResult.invoice_number}</span> settled.</>
+                          )}
+                          {saleResult.receipt_number && (
+                            <span className="ml-1 font-bold">{saleResult.receipt_number}</span>
+                          )}
+                        </p>
+                      </div>
                     </div>
                     <Badge variant="positive" size="sm">Settled</Badge>
                   </div>
 
-                  {/* Prominent Change Due */}
+                  {/* Financial Breakdown */}
                   <div
-                    className="p-2.5 rounded-lg flex items-baseline justify-between"
+                    className="p-2 rounded-lg text-xs space-y-1"
                     style={{ backgroundColor: 'var(--md-sys-color-surface-container-lowest)' }}
                   >
-                    <span className="text-xs font-semibold" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                      Change Due
-                    </span>
-                    <span
-                      className="text-xl font-black font-mono tabular-nums"
+                    {saleResult.total_amount !== undefined && (
+                      <div className="flex justify-between font-bold text-on-surface">
+                        <span>Total</span>
+                        <span className="font-mono tabular-nums">MVR {Number(saleResult.total_amount).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {saleResult.tendered_amount !== undefined && (
+                      <div className="flex justify-between text-on-surface-variant">
+                        <span>Tendered</span>
+                        <span className="font-mono tabular-nums">MVR {Number(saleResult.tendered_amount).toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div
+                      className="flex justify-between font-bold pt-1 border-t border-outline-variant/40"
                       style={{ color: Number(saleResult.change_amount ?? 0) > 0 ? 'var(--positive)' : 'var(--md-sys-color-on-surface)' }}
                     >
-                      MVR {Number(saleResult.change_amount ?? 0).toFixed(2)}
-                    </span>
+                      <span>Change Due</span>
+                      <span className="font-mono text-base tabular-nums">
+                        MVR {Number(saleResult.change_amount ?? 0).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Direct Actions: New Sale & View Receipt Modal */}
-                  <div className="grid grid-cols-2 gap-2 pt-0.5">
+                  {/* Direct Actions: New Sale, View Receipt, Re-print */}
+                  <div className="grid grid-cols-2 gap-1.5 pt-0.5">
                     <Button
                       variant="primary"
-                      size="md"
-                      className="w-full font-bold text-xs h-10"
+                      size="sm"
+                      className="w-full font-bold text-xs h-9"
                       onClick={resetForNewSale}
                       autoFocus
-                      icon={<Plus size={15} aria-hidden="true" />}
+                      icon={<Plus size={14} aria-hidden="true" />}
                     >
                       Start New Sale
                     </Button>
                     <Button
-                      variant="outlined"
-                      size="md"
-                      className="w-full font-bold text-xs h-10"
+                      variant="tonal"
+                      size="sm"
+                      className="w-full font-bold text-xs h-9"
+                      loading={receiptBusy}
                       onClick={() => {
                         loadReceipt();
                         setReceiptModalOpen(true);
                       }}
-                      icon={<Receipt size={15} aria-hidden="true" />}
+                      icon={<Receipt size={14} aria-hidden="true" />}
                     >
-                      View Receipt
+                      View receipt
                     </Button>
                   </div>
+
+                  <Button
+                    variant="outlined"
+                    size="sm"
+                    className="w-full font-bold text-xs h-8"
+                    disabled={!receipt}
+                    onClick={reRenderReceipt}
+                    icon={<Copy size={13} aria-hidden="true" />}
+                  >
+                    Re-print (duplicate)
+                  </Button>
+
+                  {receipt && (
+                    <div
+                      className="p-1.5 rounded-lg text-xs"
+                      style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)' }}
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-bold text-[11px]">Receipt {receipt.receipt.receipt_number}</span>
+                        <Badge variant="neutral">rendered ×{receipt.receipt.renders}</Badge>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 /* Live Running Totals & Checkout Actions */
@@ -1615,7 +1658,7 @@ export const CounterView: React.FC = () => {
                         onClick={hold}
                         icon={<ShoppingCart size={15} aria-hidden="true" />}
                       >
-                        Hold
+                        Hold cart
                       </Button>
                       <Button
                         variant="filled"
@@ -2454,7 +2497,7 @@ export const CounterView: React.FC = () => {
                   onClick={reRenderReceipt}
                   icon={<Copy size={13} aria-hidden="true" />}
                 >
-                  Re-print (dup)
+                  Re-print Copy
                 </Button>
                 <Button
                   size="sm"
