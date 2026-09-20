@@ -196,6 +196,22 @@ describe('SERP-085 counter uses only server-authoritative data', () => {
     expect(onHandAt(catalogue.on_hand, 'other-outlet', PRODUCT)).toBe(0);
   });
 
+  it('supports dynamic server-provided GST rates for registered entities', () => {
+    const registeredCatalogue: CounterCatalogue = {
+      ok: true,
+      locations: [{ id: OUTLET, code: 'MAIN', name: 'Main', kind: 'outlet', active: true }],
+      products: [],
+      on_hand: [],
+      prices: [],
+      gst_registration_status: 'registered',
+      gst_rate: 0.08,
+      gst_rate_percent: 8,
+    };
+    expect(registeredCatalogue.gst_registration_status).toBe('registered');
+    expect(registeredCatalogue.gst_rate).toBe(0.08);
+    expect(registeredCatalogue.gst_rate_percent).toBe(8);
+  });
+
   it('only offers active sale-allowed inventoried products', () => {
     const selectable = selectableProducts([
       { id: 's1', sku: 'S', kind: 'service', name: 'Service', barcode: null, sale_allowed: true, active: true },

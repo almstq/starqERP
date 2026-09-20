@@ -97,6 +97,8 @@ export interface CounterCatalogue {
   on_hand: OnHandRow[];
   prices: ApprovedPriceRow[];
   gst_registration_status: 'registered' | 'not_registered' | 'pending' | 'suspended' | 'cancelled';
+  gst_rate?: number;
+  gst_rate_percent?: number;
 }
 
 export interface CartLine {

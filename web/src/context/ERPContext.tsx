@@ -803,9 +803,6 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (isCurrentLoad() && inventoryRes.status === 'fulfilled' && inventoryRes.value.ok) {
           setInventory(Array.isArray(inventoryRes.value.items) ? inventoryRes.value.items : []);
         }
-        if (isCurrentLoad() && inventoryRes.status === 'fulfilled' && inventoryRes.value.ok) {
-          setInventory(inventoryRes.value.items);
-        }
         if (isCurrentLoad() && suppliersRes.status === 'fulfilled' && suppliersRes.value.ok) {
           setSuppliers(mapBackendSuppliers(suppliersRes.value.suppliers ?? []));
         }

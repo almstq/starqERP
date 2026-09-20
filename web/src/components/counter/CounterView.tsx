@@ -795,7 +795,7 @@ export const CounterView: React.FC = () => {
               </Badge>
               {catalogue && (
                 <Badge
-                  variant={catalogue.gst_registration_status === 'registered' ? 'info' : 'outline'}
+                  variant={catalogue.gst_registration_status === 'registered' ? 'info' : 'neutral'}
                   size="sm"
                   className="font-medium"
                 >

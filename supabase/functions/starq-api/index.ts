@@ -188,11 +188,6 @@ type OperableOrganisation = {
   id: string;
   slug: string;
   name: string;
-  entitlements?: {
-    modules: string[];
-    max_outlets: number;
-    max_users: number;
-  };
   books?: {
     id: string;
     code: string;
@@ -823,12 +818,6 @@ async function establishPerson(claims: { sub: string; email: string; name: strin
         id: orgRes.data.id,
         slug: orgRes.data.slug,
         name: orgRes.data.legal_name,
-        entitlements: await (async () => {
-          const entitlement = await db.schema("platform").from("tenant_module_entitlements")
-            .select("modules, max_outlets, max_users")
-            .eq("organisation_id", oId).maybeSingle();
-          return entitlement.data ?? { modules: [], max_outlets: 0, max_users: 0 };
-        })(),
         books: (booksRes.data ?? []).map((b) => ({
           id: b.id,
           code: b.code,
@@ -925,27 +914,6 @@ function uuid(value: string | null): boolean {
   return !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-function moduleForCommand(command: string): string | null {
-  if (["CALL", "BOOKING", "INTAKE", "ESTIMATE", "AUTHORISATION", "JOB_CARD", "WORK", "QC", "HANDOVER", "CLOSE"].includes(command)) return "jobs";
-  if (command === "PARTS_PROCUREMENT") return "purchasing";
-  if (command === "INVOICE_PAYMENT") return "payments";
-  if (command === "EXPENSE") return "expenses";
-  if (command === "INVOICE") return "invoices";
-  if (["COUNTER_SALE", "PAY_SUPPLIER"].includes(command)) return "payments";
-  if (command === "PURCHASE") return "purchasing";
-  if (command === "CUSTOMER") return "customers";
-  if (["SUPPLIER", "SUPPLIER_UPDATE", "SUPPLIER_DEACTIVATE"].includes(command)) return "suppliers";
-  if (command === "PRICE_LIST") return "inventory";
-  // SERP-M1 Inventory Authority — product authority and the stock ledger commands
-  // live under the same inventory module as PRICE_LIST (dispatch seq 5841).
-  if (command === "PRODUCT") return "inventory";
-  if (["STOCK_OPENING", "RECEIVE", "STOCK_ADJUST", "STOCK_COUNT"].includes(command)) return "inventory";
-  if (command === "WORKFLOW") return "workflows";
-  if (["MEMBER_INVITE", "MEMBER_AUTHORIZE", "MEMBER_SUSPEND", "MEMBER_ROLE_UPDATE"].includes(command)) return "users";
-  if (["ROLE", "ROLE_UPDATE", "ROLE_DELETE"].includes(command)) return "roles";
-  if (["TENANT_ONBOARD", "TENANT_CONFIG"].includes(command)) return "settings";
-  return null;
-}
 
 /**
  * SERP-301 — what the request actually did, for the log line.
@@ -1292,39 +1260,7 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         return json(200, { ok: true, tenants: data ?? [] }, origin);
       }
 
-      const entitlementMatch = path.match(/^\/api\/platform\/tenants\/([^\/]+)\/entitlements$/);
-      if (entitlementMatch && req.method === "GET") {
-        const organisationId = entitlementMatch[1];
-        if (!uuid(organisationId)) return await deny(400, "invalid_organisation_id", session);
-        const { data, error } = await db.schema("platform").from("tenant_module_entitlements")
-          .select("organisation_id, modules, max_outlets, max_users, updated_at")
-          .eq("organisation_id", organisationId).maybeSingle();
-        if (error) throw new Error("tenant_entitlements_query_failed");
-        return json(200, { ok: true, entitlement: data ?? null }, origin);
-      }
 
-      if (entitlementMatch && req.method === "POST") {
-        if (session.platform_entitlement.operator_role !== "platform_admin") {
-          return await deny(403, "platform_admin_required", session);
-        }
-        const body = await readJson(req);
-        if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
-        const requestKey = req.headers.get("x-idempotency-key");
-        if (!uuid(requestKey)) return await deny(400, "valid_idempotency_key_required", session);
-        const modules = Array.isArray(body.modules) ? body.modules.map((value) => String(value)) : [];
-        const maxOutlets = Number(body.max_outlets);
-        const maxUsers = Number(body.max_users);
-        const { data, error } = await db.schema("platform").rpc("set_tenant_entitlements", {
-          p_actor: session.person_uuid,
-          p_target_org: entitlementMatch[1],
-          p_request_key: requestKey,
-          p_modules: modules,
-          p_max_outlets: maxOutlets,
-          p_max_users: maxUsers,
-        });
-        if (error) throw new Error(error.message || "tenant_entitlements_update_failed");
-        return json(200, { ok: true, entitlement: data }, origin);
-      }
 
       if (req.method === "POST" && path === "/api/platform/tenants/provision") {
         if (session.platform_entitlement.operator_role !== "platform_admin") {
@@ -1628,7 +1564,7 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
           supplierId: "",
           supplierName: "Default Supplier", // Placeholder - not in canonical model yet
           locationInShop: "Main Bay", // Placeholder - not in canonical model yet
-          stockStatus: "In Stock" as const,
+          stockStatus: "In Stock" as "In Stock" | "Low Stock" | "Out of Stock",
           lastRestockedDate: new Date().toISOString(),
         };
       });
@@ -1670,7 +1606,8 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
     // through api_garage_command with server-authoritative pricing.
     if (req.method === "GET" && path === "/api/ops/counter/catalogue") {
       const priceListCode = new URL(req.url).searchParams.get("price_list_code") ?? undefined;
-      const [outlets, products, onHand, gstStatus] = await Promise.allSettled([
+      const today = new Date().toISOString().slice(0, 10);
+      const [outlets, products, onHand, gstStatus, gstRate] = await Promise.allSettled([
         db.from("locations").select("id, code, name, kind, active")
           .eq("organisation_id", session.organisation_id)
           .eq("active", true)
@@ -1686,7 +1623,13 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         db.from("tax_registrations").select("registration_status")
           .eq("organisation_id", session.organisation_id)
           .eq("tax_type", "gst_general")
-          .gte("effective_from", new Date().toISOString().slice(0, 10))
+          .lte("effective_from", today)
+          .order("effective_from", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        db.from("tax_rate_schedules").select("rate, description")
+          .eq("tax_type", "gst_general")
+          .lte("effective_from", today)
           .order("effective_from", { ascending: false })
           .limit(1)
           .maybeSingle(),
@@ -1730,6 +1673,11 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       const gstRegistrationStatus = gstStatus.status === "fulfilled" && gstStatus.value.data
         ? (gstStatus.value.data as { registration_status: string }).registration_status
         : "not_registered";
+      const gstRateRow = gstRate.status === "fulfilled" && gstRate.value.data
+        ? (gstRate.value.data as { rate: number | string; description?: string })
+        : null;
+      const gstRateNum = gstRateRow?.rate != null ? Number(gstRateRow.rate) : 0.08;
+      const gstRatePercent = Math.round(gstRateNum * 100);
       return json(200, {
         ok: true,
         locations: locationRows,
@@ -1737,6 +1685,8 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         on_hand: onHand.value.data ?? [],
         prices: priceRows,
         gst_registration_status: gstRegistrationStatus,
+        gst_rate: gstRateNum,
+        gst_rate_percent: gstRatePercent,
       }, origin);
     }
 
@@ -2425,20 +2375,7 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         await securityEvent(req, "garage.command", "rejected", session, { code: "unknown_command" });
         return json(400, { ok: false, error: "unknown_command", request_id: requestId }, origin);
       }
-      const requiredModule = moduleForCommand(intent.command);
-      if (requiredModule) {
-        const entitlement = await db.schema("platform").from("tenant_module_entitlements")
-          .select("modules").eq("organisation_id", session.organisation_id).maybeSingle();
-        if (entitlement.error) {
-          await securityEvent(req, "garage.command", "rejected", session, { code: "entitlement_unavailable", module: requiredModule });
-          return json(503, { ok: false, error: "entitlement_unavailable", request_id: requestId }, origin);
-        }
-        const modules = Array.isArray(entitlement.data?.modules) ? entitlement.data.modules : [];
-        if (!modules.includes(requiredModule)) {
-          await securityEvent(req, "garage.command", "rejected", session, { code: "module_not_entitled", module: requiredModule });
-          return json(403, { ok: false, error: `module_not_entitled: ${requiredModule}`, request_id: requestId }, origin);
-        }
-      }
+
       const principal: Principal = {
         personId: session.person_uuid,
         organisationId: session.organisation_id,
@@ -2541,11 +2478,7 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
             ? await db.rpc("api_supplier_update_command", rpcArgs)
             : intent.command === "SUPPLIER_DEACTIVATE"
               ? await db.rpc("api_supplier_deactivate_command", rpcArgs)
-              : intent.command === "PRODUCT"
-                ? await db.rpc("api_product_command", rpcArgs)
-                : ["STOCK_OPENING", "RECEIVE", "STOCK_ADJUST", "STOCK_COUNT"].includes(intent.command)
-                  ? await db.rpc("api_stock_command", rpcArgs)
-                  : await db.rpc("api_garage_command", rpcArgs);
+              : await db.rpc("api_garage_command", rpcArgs);
       if (error) {
         const rawCode: string =
           typeof error.code === "string" ? error.code
