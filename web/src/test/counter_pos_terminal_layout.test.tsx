@@ -73,7 +73,7 @@ describe('Cashier-ready POS terminal layout & presentation', () => {
     renderTerminal();
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Counter POS' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Counter' })).toBeInTheDocument();
     });
 
     // Cashier identity, Exit to ERP, and outlet info
@@ -143,7 +143,7 @@ describe('Cashier-ready POS terminal layout & presentation', () => {
     renderTerminal();
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Counter POS' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Counter' })).toBeInTheDocument();
     });
 
     // Never shows "No outlet" or "No Till"
@@ -172,7 +172,7 @@ describe('Cashier-ready POS terminal layout & presentation', () => {
     renderTerminal();
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Counter POS' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Counter' })).toBeInTheDocument();
     });
 
     const openTillBtn = screen.getAllByRole('button', { name: 'Open Till' })[0];

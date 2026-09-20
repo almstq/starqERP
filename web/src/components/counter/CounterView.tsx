@@ -88,7 +88,7 @@ const DEFAULT_RETAIL_PRODUCTS: CounterProduct[] = [
   { id: 'prod-redbull', sku: 'REDBULL-250', name: 'Red Bull Energy Drink 250ml', category: 'Beverages', barcode: '9002490100070', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
   { id: 'prod-lays-chips', sku: 'LAYS-CLASSIC', name: 'Lays Classic Potato Chips 50g', category: 'Snacks', barcode: '8901491101837', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
   { id: 'prod-pringles', sku: 'PRINGLES-SC', name: 'Pringles Sour Cream & Onion 107g', category: 'Snacks', barcode: '8886467100017', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 8 },
-  { id: 'prod-oreo', sku: 'OREO-133', name: 'Oreo Original Sandwich Cookies 133g', category: 'Snacks', barcode: '7622210000001', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
+  { id: 'prod-oreo', sku: 'OREO-133', name: 'Oreo Original Sandwich Cookies 133g', category: 'Snacks', barcode: '8901030000001', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
   { id: 'prod-bajiya', sku: 'BAJIYA-PC', name: 'Maldivian Fish Bajiya (Fresh)', category: 'Bakery', barcode: '2000000000014', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 15 },
   { id: 'prod-fishroll', sku: 'FISHROLL-PC', name: 'Spicy Fish Roll (Fresh)', category: 'Bakery', barcode: '2000000000021', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 15 },
   { id: 'prod-almudhish', sku: 'ALMUDHISH-400', name: 'Al Mudhish Milk Powder 400g', category: 'Groceries', barcode: '6084000001018', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5 },
@@ -753,8 +753,9 @@ export const CounterView: React.FC = () => {
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
               <h1 className="text-lg sm:text-xl font-black tracking-tight" style={{ color: 'var(--md-sys-color-on-surface)' }}>
-                Counter POS
+                Counter
               </h1>
+              <Badge variant="info" size="sm" className="font-bold">POS</Badge>
               <Badge variant={isOnline ? 'positive' : 'destructive'} dot size="sm">
                 {isOnline ? 'Online' : 'Offline'}
               </Badge>
