@@ -182,6 +182,7 @@ export const AppShell: React.FC = () => {
   const { pendingApplications } = useERP();
 
   const isPlatformOperator = Boolean(session?.platform_entitlement);
+  const isPosTerminal = location.pathname === '/pos';
 
   // Safeguard: Automatically fallback to tenant plane if active user lacks platform entitlement
   useEffect(() => {
@@ -254,6 +255,7 @@ export const AppShell: React.FC = () => {
       </a>
 
       {/* ── 1. MATERIAL 3 NAVIGATION RAIL & PERSISTENT DRAWER (>= 1024px) ── */}
+      {!isPosTerminal && (
       <aside
         className="hidden lg:flex shrink-0 flex-col w-60 lg:w-64 sticky top-0 h-screen overflow-y-auto"
         style={{
@@ -468,9 +470,10 @@ export const AppShell: React.FC = () => {
           </div>
         </div>
       </aside>
+      )}
 
       {/* ── 2. MOBILE / TABLET SLIDE-OVER DRAWER (< 1024px) ── */}
-      {mobileDrawerOpen && (
+      {!isPosTerminal && mobileDrawerOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden" role="dialog" aria-modal="true">
           <div
             className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
@@ -700,6 +703,7 @@ export const AppShell: React.FC = () => {
       {/* ── Main Column Area ── */}
       <div className="flex min-w-0 flex-1 flex-col w-full">
         {/* TopAppBar */}
+        {!isPosTerminal && (
         <header
           className="sticky top-0 z-40 flex items-center gap-2 sm:gap-3 px-3 sm:px-6 py-2.5 shrink-0 h-14 sm:h-16 w-full shadow-sm"
           style={{
@@ -1023,15 +1027,20 @@ export const AppShell: React.FC = () => {
             </div>
           </div>
         </header>
+        )}
 
         {/* View Content Area */}
         <main
           id="main-content"
           tabIndex={-1}
-          className="min-w-0 flex-1 px-3 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8 pb-24 lg:pb-8 focus:outline-none overflow-y-auto w-full"
+          className={
+            isPosTerminal
+              ? "min-w-0 flex-1 p-0 m-0 focus:outline-none overflow-hidden w-full h-screen flex flex-col"
+              : "min-w-0 flex-1 px-3 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8 pb-24 lg:pb-8 focus:outline-none overflow-y-auto w-full"
+          }
           style={{ backgroundColor: 'var(--md-sys-color-surface)' }}
         >
-          <div className="w-full max-w-7xl mx-auto min-w-0">
+          <div className={isPosTerminal ? "w-full h-full min-w-0 flex flex-col" : "w-full max-w-7xl mx-auto min-w-0"}>
             {activePlane === 'platform' ? (
               <StarqHQShell activeTab={platformTab} onSelectTab={setPlatformTab} />
             ) : (
@@ -1042,6 +1051,7 @@ export const AppShell: React.FC = () => {
       </div>
 
       {/* ── 3. MATERIAL 3 BOTTOM NAVIGATION BAR (< 1024px) ── */}
+      {!isPosTerminal && (
       <nav
         className="fixed bottom-0 left-0 right-0 z-30 lg:hidden flex items-center justify-around h-16 border-t px-2 shadow-lg"
         style={{
@@ -1231,6 +1241,7 @@ export const AppShell: React.FC = () => {
           </>
         )}
       </nav>
+      )}
 
       {/* Global Modals & Operational Drawers */}
       <GlobalSearchModal />

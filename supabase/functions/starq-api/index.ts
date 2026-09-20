@@ -1554,7 +1554,7 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
           .eq("organisation_id", session.organisation_id)
           .eq("active", true)
           .order("name"),
-        db.from("products").select("id, sku, barcode, kind, name, sale_allowed, active, reorder_threshold")
+        db.from("products").select("id, sku, barcode, kind, name, category, sale_allowed, active, reorder_threshold")
           .eq("organisation_id", session.organisation_id)
           .eq("active", true)
           .eq("sale_allowed", true)
@@ -1566,6 +1566,21 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       if (outlets.status === "rejected" || outlets.value.error) throw new Error("counter_outlets_query_failed");
       if (products.status === "rejected" || products.value.error) throw new Error("counter_products_query_failed");
       if (onHand.status === "rejected" || onHand.value.error) throw new Error("counter_onhand_query_failed");
+
+      let locationRows = outlets.value.data ?? [];
+      if (locationRows.length === 0) {
+        const { data: newLoc } = await db.from("locations").insert({
+          organisation_id: session.organisation_id,
+          code: "MAIN",
+          name: "Main POS Counter",
+          kind: "outlet",
+          active: true,
+        }).select("id, code, name, kind, active").maybeSingle();
+        if (newLoc) {
+          locationRows = [newLoc];
+        }
+      }
+
       const { data: approvedData, error: approvedError } = await db.rpc("api_counter_approved_prices", {
         target_org: session.organisation_id,
         target_person: session.person_uuid,
@@ -1586,7 +1601,7 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         : [];
       return json(200, {
         ok: true,
-        locations: outlets.value.data ?? [],
+        locations: locationRows,
         products: products.value.data ?? [],
         on_hand: onHand.value.data ?? [],
         prices: priceRows,
