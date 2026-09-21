@@ -301,6 +301,10 @@ export const CounterView: React.FC = () => {
   );
   const [activeSaleKey, setActiveSaleKey] = useState<string | null>(null);
   const [activeReversalKey, setActiveReversalKey] = useState<string | null>(null);
+  const completingRef = useRef(false);
+  const activeSaleKeyRef = useRef<string | null>(null);
+  const submittingReversalRef = useRef(false);
+  const activeReversalKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -448,7 +452,7 @@ export const CounterView: React.FC = () => {
   }, [lookedUpSale, reversalType, selectedReturnItems]);
 
   const handleReversalSubmit = async () => {
-    if (!outlet?.id || !lookedUpSale) return;
+    if (submittingReversalRef.current || submittingReversal || !outlet?.id || !lookedUpSale) return;
     if (!canTransact(isOnline)) {
       setReversalError('network_offline');
       return;
@@ -457,11 +461,15 @@ export const CounterView: React.FC = () => {
       setReversalError('Reason must be at least 3 characters.');
       return;
     }
+    submittingReversalRef.current = true;
     setSubmittingReversal(true);
     setReversalError(null);
 
-    const idempotencyKey = activeReversalKey || crypto.randomUUID();
-    if (!activeReversalKey) setActiveReversalKey(idempotencyKey);
+    if (!activeReversalKeyRef.current) {
+      activeReversalKeyRef.current = activeReversalKey || crypto.randomUUID();
+      setActiveReversalKey(activeReversalKeyRef.current);
+    }
+    const idempotencyKey = activeReversalKeyRef.current;
 
     try {
       const endpoint = reversalType === 'void' ? '/api/ops/counter/void' : '/api/ops/counter/return';
@@ -484,7 +492,6 @@ export const CounterView: React.FC = () => {
         }
         if (itemsToReturn.length === 0) {
           setReversalError('Please select at least one item to return.');
-          setSubmittingReversal(false);
           return;
         }
         payload.items = itemsToReturn;
@@ -496,11 +503,13 @@ export const CounterView: React.FC = () => {
       const res = await apiPost<{ ok: boolean; return: CounterReturn }>(endpoint, payload, idempotencyKey);
       if (res.ok && res.return) {
         setReversalResult(res.return);
+        activeReversalKeyRef.current = null;
         setActiveReversalKey(null);
       }
     } catch (err) {
       setReversalError(err instanceof ApiError ? err.code : 'reversal_failed');
     } finally {
+      submittingReversalRef.current = false;
       setSubmittingReversal(false);
     }
   };
@@ -705,7 +714,7 @@ export const CounterView: React.FC = () => {
   };
 
   const complete = async () => {
-    if (!outlet || cartIsEmpty(cart)) return;
+    if (completingRef.current || completing || !outlet || cartIsEmpty(cart)) return;
     if (!canTransact(isOnline)) {
       setSaleError('network_offline');
       return;
@@ -714,14 +723,18 @@ export const CounterView: React.FC = () => {
       setSaleError('tax_rate_unavailable');
       return;
     }
+    completingRef.current = true;
     setCompleting(true);
     setSaleError(null);
     setSaleResult(null);
     setReceipt(null);
     setReceiptError(null);
 
-    const idempotencyKey = activeSaleKey || crypto.randomUUID();
-    if (!activeSaleKey) setActiveSaleKey(idempotencyKey);
+    if (!activeSaleKeyRef.current) {
+      activeSaleKeyRef.current = activeSaleKey || crypto.randomUUID();
+      setActiveSaleKey(activeSaleKeyRef.current);
+    }
+    const idempotencyKey = activeSaleKeyRef.current;
 
     const tender = buildTenderLines(paymentMethod, {
       cash: Number(tenderInput.cash || 0),
@@ -744,6 +757,7 @@ export const CounterView: React.FC = () => {
       // settled. Only the accepted response's receipt + change are shown.
       if (response.ok && response.counter_sale) {
         setSaleResult(response.counter_sale);
+        activeSaleKeyRef.current = null;
         setActiveSaleKey(null);
         persistCart([]);
       } else {
@@ -752,6 +766,7 @@ export const CounterView: React.FC = () => {
     } catch (error) {
       setSaleError(error instanceof ApiError ? error.code : 'counter_sale_failed');
     } finally {
+      completingRef.current = false;
       setCompleting(false);
     }
   };
