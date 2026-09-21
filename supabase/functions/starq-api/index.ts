@@ -914,6 +914,7 @@ function uuid(value: string | null): boolean {
   return !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
+
 /**
  * SERP-301 — what the request actually did, for the log line.
  *
@@ -1259,6 +1260,8 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         return json(200, { ok: true, tenants: data ?? [] }, origin);
       }
 
+
+
       if (req.method === "POST" && path === "/api/platform/tenants/provision") {
         if (session.platform_entitlement.operator_role !== "platform_admin") {
           return await deny(403, "platform_admin_required", session);
@@ -1561,7 +1564,7 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
           supplierId: "",
           supplierName: "Default Supplier", // Placeholder - not in canonical model yet
           locationInShop: "Main Bay", // Placeholder - not in canonical model yet
-          stockStatus: "In Stock" as const,
+          stockStatus: "In Stock" as "In Stock" | "Low Stock" | "Out of Stock",
           lastRestockedDate: new Date().toISOString(),
         };
       });
@@ -1603,7 +1606,8 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
     // through api_garage_command with server-authoritative pricing.
     if (req.method === "GET" && path === "/api/ops/counter/catalogue") {
       const priceListCode = new URL(req.url).searchParams.get("price_list_code") ?? undefined;
-      const [outlets, products, onHand] = await Promise.allSettled([
+      const today = new Date().toISOString().slice(0, 10);
+      const [outlets, products, onHand, gstStatus, gstRate] = await Promise.allSettled([
         db.from("locations").select("id, code, name, kind, active")
           .eq("organisation_id", session.organisation_id)
           .eq("active", true)
@@ -1616,6 +1620,19 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         db.rpc("stock_movements_derived_onhand", {
           p_organisation_id: session.organisation_id,
         }),
+        db.from("tax_registrations").select("registration_status")
+          .eq("organisation_id", session.organisation_id)
+          .eq("tax_type", "gst_general")
+          .lte("effective_from", today)
+          .order("effective_from", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        db.from("tax_rate_schedules").select("rate, description")
+          .eq("tax_type", "gst_general")
+          .lte("effective_from", today)
+          .order("effective_from", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
       if (outlets.status === "rejected" || outlets.value.error) throw new Error("counter_outlets_query_failed");
       if (products.status === "rejected" || products.value.error) throw new Error("counter_products_query_failed");
@@ -1653,12 +1670,23 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       const priceRows = Array.isArray((approvedData as { prices?: Array<Record<string, unknown>> } | null)?.prices)
         ? (approvedData as { prices: Array<Record<string, unknown>> }).prices
         : [];
+      const gstRegistrationStatus = gstStatus.status === "fulfilled" && gstStatus.value.data
+        ? (gstStatus.value.data as { registration_status: string }).registration_status
+        : "not_registered";
+      const gstRateRow = gstRate.status === "fulfilled" && gstRate.value.data
+        ? (gstRate.value.data as { rate: number | string; description?: string })
+        : null;
+      const gstRateNum = gstRateRow?.rate != null ? Number(gstRateRow.rate) : null;
+      const gstRatePercent = gstRateNum != null ? Math.round(gstRateNum * 100) : null;
       return json(200, {
         ok: true,
         locations: locationRows,
         products: products.value.data ?? [],
         on_hand: onHand.value.data ?? [],
         prices: priceRows,
+        gst_registration_status: gstRegistrationStatus,
+        gst_rate: gstRateNum,
+        gst_rate_percent: gstRatePercent,
       }, origin);
     }
 
@@ -2105,6 +2133,196 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       return json(200, data as Json, origin);
     }
 
+    // SERP-088: Cashier Sale Lookup by Receipt #, Invoice #, or UUID for Returns/Voids
+    if (req.method === "GET" && path === "/api/ops/counter/sale/lookup") {
+      const q = (new URL(req.url).searchParams.get("query") ?? "").trim();
+      if (!q) {
+        return json(400, { ok: false, error: "query_required" }, origin);
+      }
+
+      let saleId: string | null = null;
+      let matchedReceipt: { receipt_id: string; receipt_number: string; sale_id: string } | null = null;
+
+      // 1. Try finding by receipt number or receipt UUID in counter_receipts
+      if (uuid(q)) {
+        const { data: rById } = await db
+          .from("counter_receipts")
+          .select("receipt_id, receipt_number, sale_id")
+          .eq("organisation_id", session.organisation_id)
+          .eq("receipt_id", q)
+          .maybeSingle();
+        if (rById) {
+          matchedReceipt = rById;
+          saleId = rById.sale_id;
+        }
+      }
+
+      if (!saleId) {
+        const { data: rByNum } = await db
+          .from("counter_receipts")
+          .select("receipt_id, receipt_number, sale_id")
+          .eq("organisation_id", session.organisation_id)
+          .ilike("receipt_number", `%${q}%`)
+          .limit(1);
+        if (rByNum && rByNum.length > 0) {
+          matchedReceipt = rByNum[0];
+          saleId = rByNum[0].sale_id;
+        }
+      }
+
+      // 2. If not found by receipt, try commercial_documents (invoice number or ID)
+      if (!saleId) {
+        if (uuid(q)) {
+          const { data: docById } = await db
+            .from("commercial_documents")
+            .select("id")
+            .eq("organisation_id", session.organisation_id)
+            .eq("id", q)
+            .eq("document_type", "sales_invoice")
+            .maybeSingle();
+          if (docById) {
+            saleId = docById.id;
+          }
+        }
+      }
+
+      if (!saleId) {
+        const { data: docByNum } = await db
+          .from("commercial_documents")
+          .select("id")
+          .eq("organisation_id", session.organisation_id)
+          .eq("document_type", "sales_invoice")
+          .ilike("document_no", `%${q}%`)
+          .limit(1);
+        if (docByNum && docByNum.length > 0) {
+          saleId = docByNum[0].id;
+        }
+      }
+
+      if (!saleId) {
+        return json(404, { ok: false, error: "sale_not_found" }, origin);
+      }
+
+      // 3. Fetch the full sales invoice
+      const { data: saleDoc, error: saleErr } = await db
+        .from("commercial_documents")
+        .select("*")
+        .eq("organisation_id", session.organisation_id)
+        .eq("id", saleId)
+        .single();
+
+      if (saleErr || !saleDoc) {
+        return json(404, { ok: false, error: "sale_not_found" }, origin);
+      }
+
+      // 4. If matchedReceipt was not found earlier, lookup receipt by sale_id
+      if (!matchedReceipt) {
+        const { data: r } = await db
+          .from("counter_receipts")
+          .select("receipt_id, receipt_number, sale_id")
+          .eq("organisation_id", session.organisation_id)
+          .eq("sale_id", saleId)
+          .maybeSingle();
+        if (r) matchedReceipt = r;
+      }
+
+      // 5. Fetch line items
+      const { data: lines } = await db
+        .from("commercial_document_lines")
+        .select("*")
+        .eq("organisation_id", session.organisation_id)
+        .eq("document_id", saleId)
+        .order("line_no", { ascending: true });
+
+      // 6. Fetch any prior returns for this sale to compute remaining returnable quantities
+      const { data: priorReturns } = await db
+        .from("counter_returns")
+        .select("id, return_number, reversal_type, total_refund_amount, items, created_at")
+        .eq("organisation_id", session.organisation_id)
+        .eq("original_sale_id", saleId);
+
+      // Compute returned quantities per product
+      const returnedQtyByProduct: Record<string, number> = {};
+      let isFullyVoided = false;
+      for (const ret of priorReturns ?? []) {
+        if (ret.reversal_type === "void") {
+          isFullyVoided = true;
+        }
+        if (Array.isArray(ret.items)) {
+          for (const item of ret.items) {
+            if (item && item.product_id) {
+              const pId = String(item.product_id);
+              const qty = Number(item.quantity) || 0;
+              returnedQtyByProduct[pId] = (returnedQtyByProduct[pId] || 0) + qty;
+            }
+          }
+        }
+      }
+
+      return json(200, {
+        ok: true,
+        sale: {
+          sale_id: saleDoc.id,
+          invoice_number: saleDoc.document_no,
+          receipt_number: matchedReceipt?.receipt_number ?? null,
+          receipt_id: matchedReceipt?.receipt_id ?? null,
+          created_at: saleDoc.created_at,
+          currency: saleDoc.currency ?? "MVR",
+          gross_total: Number(saleDoc.gross_total),
+          tax_total: Number(saleDoc.tax_total ?? 0),
+          net_total: Number(saleDoc.gross_total) - Number(saleDoc.tax_total ?? 0),
+          is_fully_voided: isFullyVoided,
+          lines: (lines ?? []).map((l: any) => {
+            const purchasedQty = Number(l.quantity) || 0;
+            const alreadyReturned = isFullyVoided ? purchasedQty : (returnedQtyByProduct[l.product_id] || 0);
+            return {
+              line_no: l.line_no,
+              product_id: l.product_id,
+              description: l.description,
+              quantity: purchasedQty,
+              returned_quantity: alreadyReturned,
+              remaining_quantity: Math.max(0, purchasedQty - alreadyReturned),
+              unit_price: Number(l.unit_price),
+              net_amount: Number(l.net_amount),
+              tax_amount: Number(l.tax_amount ?? 0),
+              gross_amount: Number(l.gross_amount ?? l.net_amount),
+            };
+          }),
+          prior_returns: priorReturns ?? [],
+        },
+      }, origin);
+    }
+
+    // SERP-088: List authorized manager/supervisor personnel for return/void approvals
+    if (req.method === "GET" && path === "/api/ops/counter/supervisors") {
+      const { data, error } = await db
+        .from("memberships")
+        .select("person_id, persons(id, display_label, person_key), membership_seats(seat_code)")
+        .eq("organisation_id", session.organisation_id)
+        .eq("status", "active");
+      if (error) throw new Error("supervisors_query_failed");
+
+      const supervisors = (data ?? [])
+        .filter((m: any) =>
+          Array.isArray(m.membership_seats) &&
+          m.membership_seats.some((s: any) =>
+            ["owner", "managing_director", "director"].includes(s.seat_code)
+          )
+        )
+        .map((m: any) => {
+          const seat = m.membership_seats.find((s: any) =>
+            ["owner", "managing_director", "director"].includes(s.seat_code)
+          )?.seat_code;
+          return {
+            person_id: m.person_id,
+            name: m.persons?.display_label || m.persons?.person_key || "Manager",
+            seat: seat ?? "manager",
+          };
+        });
+
+      return json(200, { ok: true, supervisors }, origin);
+    }
+
 
     if (req.method === "GET" && path === "/api/ops/jobs") {
       const { data, error } = await db.from("garage_jobs").select("*")
@@ -2347,6 +2565,7 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         await securityEvent(req, "garage.command", "rejected", session, { code: "unknown_command" });
         return json(400, { ok: false, error: "unknown_command", request_id: requestId }, origin);
       }
+
       const principal: Principal = {
         personId: session.person_uuid,
         organisationId: session.organisation_id,
@@ -2433,6 +2652,59 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         };
       }
 
+      if (intent.command === "COUNTER_SALE") {
+        const rawTaxMode = body.tax_mode;
+        const taxMode = rawTaxMode === "inclusive" || rawTaxMode === "exclusive" ||
+          rawTaxMode === "zero_rated" || rawTaxMode === "exempt"
+          ? rawTaxMode
+          : "exclusive";
+        const taxType = typeof body.tax_type === "string" && body.tax_type.trim()
+          ? body.tax_type.trim()
+          : "gst_general";
+        const supplyDate = typeof body.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date)
+          ? body.date
+          : new Date().toISOString().slice(0, 10);
+
+        // Server-authoritative tax resolution via calculate_line_tax:
+        // Ensures registered tenants have an active rate schedule, or fails closed.
+        // Non-registered tenants resolve is_taxable = false, tax_rate = 0.
+        const { data: taxData, error: taxError } = await db.rpc("calculate_line_tax", {
+          target_org: session.organisation_id,
+          target_tax_type: taxType,
+          supply_date: supplyDate,
+          tax_mode: taxMode,
+          line_amount: 100.00,
+        });
+
+        if (taxError) {
+          await securityEvent(req, "garage.command", "rejected", session, { code: "authoritative_tax_calculation_failed" });
+          return json(500, { ok: false, error: "authoritative_tax_calculation_failed", request_id: requestId }, origin);
+        }
+
+        const taxRow = Array.isArray(taxData) ? taxData[0] : taxData;
+        if (taxRow?.err_msg) {
+          observed.outcome = "blocked";
+          await securityEvent(req, "garage.command", "rejected", session, {
+            code: "tax_rate_unavailable",
+            detail: taxRow.err_msg,
+          }, requestId);
+          return json(422, {
+            ok: false,
+            error: "tax_rate_unavailable",
+            detail: taxRow.err_msg,
+            request_id: requestId,
+          }, origin);
+        }
+
+        commandForRpc = {
+          ...body,
+          tax_mode: taxMode,
+          tax_type: taxType,
+          tax_rate: taxRow?.tax_rate ?? 0,
+          is_taxable: taxRow?.is_taxable ?? false,
+        };
+      }
+
       const rpcArgs = {
         target_org: session.organisation_id,
         target_person: session.person_uuid,
@@ -2467,9 +2739,12 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
             ? "idempotency_key_conflict"
           : intent.command === "COUNTER_SALE" && (rawCode === "stock_insufficient" || rawCode.startsWith("stock_line_quantity_exceeds_onhand"))
             ? "stock_insufficient"
+          : intent.command === "COUNTER_SALE" && (rawCode === "tax_rate_unavailable" || rawCode.includes("no_tax_rate_for_supply_date"))
+            ? "tax_rate_unavailable"
           : "command_rejected";
         await securityEvent(req, "garage.command", "rejected", session, { code: rawCode });
-        const statusCode = rawCode === "idempotency_key_conflict" ? 409 : 400;
+        const statusCode = rawCode === "idempotency_key_conflict" ? 409
+          : (publicCode === "tax_rate_unavailable" ? 422 : 400);
         return json(statusCode, { ok: false, error: publicCode, request_id: requestId }, origin);
       }
       await securityEvent(req, "garage.command", "accepted", session, { idempotency_key: commandKey });
