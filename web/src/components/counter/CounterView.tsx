@@ -1452,7 +1452,7 @@ export const CounterView: React.FC = () => {
                         <div className="flex items-center gap-1 shrink-0">
                           <button
                             type="button"
-                            className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80"
+                            className="relative w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80 touch-manipulation before:absolute before:-inset-2.5 before:content-['']"
                             style={{
                               borderColor: 'var(--md-sys-color-outline-variant)',
                               color: 'var(--md-sys-color-on-surface)',
@@ -1467,7 +1467,7 @@ export const CounterView: React.FC = () => {
                           </span>
                           <button
                             type="button"
-                            className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80"
+                            className="relative w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80 touch-manipulation before:absolute before:-inset-2.5 before:content-['']"
                             style={{
                               borderColor: 'var(--md-sys-color-outline-variant)',
                               color: 'var(--md-sys-color-on-surface)',
@@ -1479,7 +1479,7 @@ export const CounterView: React.FC = () => {
                           </button>
                           <button
                             type="button"
-                            className="w-6 h-6 rounded flex items-center justify-center transition-colors hover:opacity-80 ml-0.5"
+                            className="relative w-6 h-6 rounded flex items-center justify-center transition-colors hover:opacity-80 ml-0.5 touch-manipulation before:absolute before:-inset-2.5 before:content-['']"
                             style={{ color: 'var(--md-sys-color-error)' }}
                             aria-label={`Remove ${product?.name ?? 'item'}`}
                             onClick={() => persistCart(removeFromCart(cart, line.productId))}
@@ -2276,7 +2276,7 @@ export const CounterView: React.FC = () => {
                                         <div className="flex items-center gap-1 shrink-0">
                                           <button
                                             type="button"
-                                            className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80"
+                                            className="relative w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80 touch-manipulation before:absolute before:-inset-2.5 before:content-['']"
                                             style={{
                                               borderColor: 'var(--md-sys-color-outline-variant)',
                                               color: 'var(--md-sys-color-on-surface)',
@@ -2299,7 +2299,7 @@ export const CounterView: React.FC = () => {
                                           </span>
                                           <button
                                             type="button"
-                                            className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80"
+                                            className="relative w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80 touch-manipulation before:absolute before:-inset-2.5 before:content-['']"
                                             style={{
                                               borderColor: 'var(--md-sys-color-outline-variant)',
                                               color: 'var(--md-sys-color-on-surface)',
