@@ -41,6 +41,8 @@ import {
   formatResilienceErrorMessage,
   createRetryContext,
   incrementRetry,
+  calculateEstimatedTax,
+  isTaxRateMissingForSale,
 } from './counter';
 
 describe('SERP-085 counter cart domain', () => {
@@ -210,6 +212,37 @@ describe('SERP-085 counter uses only server-authoritative data', () => {
     expect(registeredCatalogue.gst_registration_status).toBe('registered');
     expect(registeredCatalogue.gst_rate).toBe(0.08);
     expect(registeredCatalogue.gst_rate_percent).toBe(8);
+  });
+
+  it('SERP-144: calculateEstimatedTax fails closed with null when registered tenant has missing rate (no numeric fallback)', () => {
+    const lines: CartLine[] = [{ productId: PRODUCT, quantity: 2 }];
+    const prices: ApprovedPriceRow[] = [
+      {
+        product_id: PRODUCT,
+        unit_amount: 100,
+        discount_percent: 0,
+        source: 'product_prices',
+        price_list_version: null,
+        currency: 'MVR',
+      },
+    ];
+
+    // Missing rate on registered tenant: MUST return null, never invent 0.08 or substitute 0
+    expect(calculateEstimatedTax('registered', null, lines, prices)).toBeNull();
+    expect(calculateEstimatedTax('registered', undefined, lines, prices)).toBeNull();
+    expect(isTaxRateMissingForSale('registered', null)).toBe(true);
+    expect(isTaxRateMissingForSale('registered', undefined)).toBe(true);
+
+    // Valid authoritative rate on registered tenant: computes exact tax
+    expect(calculateEstimatedTax('registered', 0.08, lines, prices)).toBe(16); // 200 * 0.08
+    expect(calculateEstimatedTax('registered', 0.06, lines, prices)).toBe(12); // 200 * 0.06
+    expect(isTaxRateMissingForSale('registered', 0.08)).toBe(false);
+
+    // Non-registered tenant: strictly returns 0 (preserves non-GST behavior)
+    expect(calculateEstimatedTax('not_registered', null, lines, prices)).toBe(0);
+    expect(calculateEstimatedTax('not_registered', undefined, lines, prices)).toBe(0);
+    expect(calculateEstimatedTax('not_registered', 0.08, lines, prices)).toBe(0);
+    expect(isTaxRateMissingForSale('not_registered', null)).toBe(false);
   });
 
   it('only offers active sale-allowed inventoried products', () => {
@@ -555,6 +588,7 @@ describe('SERP-090 counter retry and resilience domain', () => {
     expect(formatResilienceErrorMessage('no_open_session')).toContain('No open session');
     expect(formatResilienceErrorMessage('network_offline')).toContain('Network offline');
     expect(formatResilienceErrorMessage('request_timeout')).toContain('Request timed out');
+    expect(formatResilienceErrorMessage('tax_rate_unavailable')).toContain('Authoritative tax rate unavailable');
     expect(formatResilienceErrorMessage('unknown_error_code')).toBe('Transaction rejected (unknown_error_code).');
   });
 

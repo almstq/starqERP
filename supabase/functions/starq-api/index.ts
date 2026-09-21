@@ -1676,8 +1676,8 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       const gstRateRow = gstRate.status === "fulfilled" && gstRate.value.data
         ? (gstRate.value.data as { rate: number | string; description?: string })
         : null;
-      const gstRateNum = gstRateRow?.rate != null ? Number(gstRateRow.rate) : 0.08;
-      const gstRatePercent = Math.round(gstRateNum * 100);
+      const gstRateNum = gstRateRow?.rate != null ? Number(gstRateRow.rate) : null;
+      const gstRatePercent = gstRateNum != null ? Math.round(gstRateNum * 100) : null;
       return json(200, {
         ok: true,
         locations: locationRows,
