@@ -2652,6 +2652,59 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         };
       }
 
+      if (intent.command === "COUNTER_SALE") {
+        const rawTaxMode = body.tax_mode;
+        const taxMode = rawTaxMode === "inclusive" || rawTaxMode === "exclusive" ||
+          rawTaxMode === "zero_rated" || rawTaxMode === "exempt"
+          ? rawTaxMode
+          : "exclusive";
+        const taxType = typeof body.tax_type === "string" && body.tax_type.trim()
+          ? body.tax_type.trim()
+          : "gst_general";
+        const supplyDate = typeof body.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date)
+          ? body.date
+          : new Date().toISOString().slice(0, 10);
+
+        // Server-authoritative tax resolution via calculate_line_tax:
+        // Ensures registered tenants have an active rate schedule, or fails closed.
+        // Non-registered tenants resolve is_taxable = false, tax_rate = 0.
+        const { data: taxData, error: taxError } = await db.rpc("calculate_line_tax", {
+          target_org: session.organisation_id,
+          target_tax_type: taxType,
+          supply_date: supplyDate,
+          tax_mode: taxMode,
+          line_amount: 100.00,
+        });
+
+        if (taxError) {
+          await securityEvent(req, "garage.command", "rejected", session, { code: "authoritative_tax_calculation_failed" });
+          return json(500, { ok: false, error: "authoritative_tax_calculation_failed", request_id: requestId }, origin);
+        }
+
+        const taxRow = Array.isArray(taxData) ? taxData[0] : taxData;
+        if (taxRow?.err_msg) {
+          observed.outcome = "blocked";
+          await securityEvent(req, "garage.command", "rejected", session, {
+            code: "tax_rate_unavailable",
+            detail: taxRow.err_msg,
+          }, requestId);
+          return json(422, {
+            ok: false,
+            error: "tax_rate_unavailable",
+            detail: taxRow.err_msg,
+            request_id: requestId,
+          }, origin);
+        }
+
+        commandForRpc = {
+          ...body,
+          tax_mode: taxMode,
+          tax_type: taxType,
+          tax_rate: taxRow?.tax_rate ?? 0,
+          is_taxable: taxRow?.is_taxable ?? false,
+        };
+      }
+
       const rpcArgs = {
         target_org: session.organisation_id,
         target_person: session.person_uuid,
@@ -2686,9 +2739,12 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
             ? "idempotency_key_conflict"
           : intent.command === "COUNTER_SALE" && (rawCode === "stock_insufficient" || rawCode.startsWith("stock_line_quantity_exceeds_onhand"))
             ? "stock_insufficient"
+          : intent.command === "COUNTER_SALE" && (rawCode === "tax_rate_unavailable" || rawCode.includes("no_tax_rate_for_supply_date"))
+            ? "tax_rate_unavailable"
           : "command_rejected";
         await securityEvent(req, "garage.command", "rejected", session, { code: rawCode });
-        const statusCode = rawCode === "idempotency_key_conflict" ? 409 : 400;
+        const statusCode = rawCode === "idempotency_key_conflict" ? 409
+          : (publicCode === "tax_rate_unavailable" ? 422 : 400);
         return json(statusCode, { ok: false, error: publicCode, request_id: requestId }, origin);
       }
       await securityEvent(req, "garage.command", "accepted", session, { idempotency_key: commandKey });
