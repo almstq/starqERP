@@ -74,6 +74,8 @@ import {
   canTransact,
   isRetryableError,
   formatResilienceErrorMessage,
+  calculateEstimatedTax,
+  isTaxRateMissingForSale,
 } from '../../domain/counter';
 
 const DEFAULT_OUTLET: CounterLocation = {
@@ -675,6 +677,16 @@ export const CounterView: React.FC = () => {
     setTenderInput({ cash: '', card: '', transfer: '' });
   };
 
+  const isTaxMissing = useMemo(() => {
+    if (!catalogue) return false;
+    return isTaxRateMissingForSale(catalogue.gst_registration_status, catalogue.gst_rate);
+  }, [catalogue]);
+
+  const estimatedTax = useMemo(() => {
+    if (!catalogue || cartIsEmpty(cart)) return 0;
+    return calculateEstimatedTax(catalogue.gst_registration_status, catalogue.gst_rate, cart, activePrices);
+  }, [catalogue, cart, activePrices]);
+
   const hold = () => {
     if (cartIsEmpty(cart)) return;
     const held = createHeldCart(cart, Date.now());
@@ -696,6 +708,10 @@ export const CounterView: React.FC = () => {
     if (!outlet || cartIsEmpty(cart)) return;
     if (!canTransact(isOnline)) {
       setSaleError('network_offline');
+      return;
+    }
+    if (isTaxMissing) {
+      setSaleError('tax_rate_unavailable');
       return;
     }
     setCompleting(true);
@@ -900,6 +916,23 @@ export const CounterView: React.FC = () => {
               <Badge variant={isOnline ? 'positive' : 'destructive'} dot size="sm">
                 {isOnline ? 'Online' : 'Offline'}
               </Badge>
+              {catalogue && (
+                <Badge
+                  variant={
+                    catalogue.gst_registration_status === 'registered'
+                      ? (isTaxMissing ? 'destructive' : 'info')
+                      : 'neutral'
+                  }
+                  size="sm"
+                  className="font-medium"
+                >
+                  {catalogue.gst_registration_status === 'registered'
+                    ? (isTaxMissing
+                        ? 'GST Registered (Rate Unavailable)'
+                        : `GST Registered (${catalogue.gst_rate_percent}%)`)
+                    : 'Not GST Registered'}
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-2 text-xs font-medium mt-0.5" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
               <span className="flex items-center gap-1 font-semibold text-primary">
@@ -907,10 +940,12 @@ export const CounterView: React.FC = () => {
                 {session?.name || session?.email || session?.seat_label || 'Cashier'}
               </span>
               <span>•</span>
-              <span className="truncate max-w-[200px] sm:max-w-none">{outlet.name}</span>
-              <span className="font-mono text-[11px] opacity-75">
-                (Till #{outlet.id.slice(-4)})
-              </span>
+              <span className="truncate max-w-[200px] sm:max-w-none">{outlet?.name ?? 'No outlet'}</span>
+              {outlet && (
+                <span className="font-mono text-[11px] opacity-75">
+                  (Till #{outlet.id.slice(-4)})
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -1569,19 +1604,41 @@ export const CounterView: React.FC = () => {
                         MVR {liveTotals.subtotal.toFixed(2)}
                       </span>
                     </div>
+                    {catalogue?.gst_registration_status === 'registered' && (
+                      <div className="flex justify-between items-baseline text-xs">
+                        <span className={`font-semibold ${isTaxMissing ? 'text-error' : 'text-on-surface-variant'}`}>
+                          Estimated Tax {isTaxMissing ? '' : `(${catalogue.gst_rate_percent}%)`}
+                        </span>
+                        {isTaxMissing ? (
+                          <span className="font-semibold text-error text-xs">Rate unavailable</span>
+                        ) : (
+                          <span className="font-mono font-bold text-on-surface tabular-nums">
+                            MVR {(estimatedTax ?? 0).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <div className="flex justify-between items-baseline pt-1.5 border-t border-outline-variant/60">
                       <div>
                         <span className="text-sm font-black tracking-tight text-on-surface block">
                           TOTAL DUE
                         </span>
                         <span className="text-[10px] text-on-surface-variant">
-                          Exact total resolved server-side
+                          {isTaxMissing
+                            ? 'Sale blocked: missing tax configuration'
+                            : 'Exact total resolved server-side'}
                         </span>
                       </div>
                       <div className="text-right">
-                        <span className="text-xl font-black font-mono tracking-tight text-primary tabular-nums block">
-                          MVR {liveTotals.subtotal.toFixed(2)}
-                        </span>
+                        {isTaxMissing ? (
+                          <span className="text-sm font-bold tracking-tight text-error block">
+                            Rate Unavailable
+                          </span>
+                        ) : (
+                          <span className="text-xl font-black font-mono tracking-tight text-primary tabular-nums block">
+                            MVR {(liveTotals.subtotal + (estimatedTax ?? 0)).toFixed(2)}
+                          </span>
+                        )}
                         {liveTotals.hasUnpricedItem && (
                           <span className="text-[10px] font-semibold text-[var(--warning)]">
                             Unapproved prices in cart
@@ -1590,6 +1647,12 @@ export const CounterView: React.FC = () => {
                       </div>
                     </div>
                   </div>
+
+                  {isTaxMissing && !cartIsEmpty(cart) && (
+                    <div role="alert" className="p-2 rounded-lg bg-error-container/40 border border-error/30 text-xs font-semibold text-error">
+                      Authoritative GST rate is unavailable for this registered organisation. Complete sale is blocked until statutory tax configuration is loaded.
+                    </div>
+                  )}
 
                   {/* Tender & Payment Controls */}
                   <div className="space-y-2">
@@ -1665,11 +1728,11 @@ export const CounterView: React.FC = () => {
                         size="lg"
                         className="col-span-2 h-11 text-sm font-black tracking-wide shadow-md active:scale-[0.99] transition-transform"
                         loading={completing}
-                        disabled={cartIsEmpty(cart) || !outlet || completing || !canTransact(isOnline)}
+                        disabled={cartIsEmpty(cart) || !outlet || completing || !canTransact(isOnline) || isTaxMissing}
                         onClick={complete}
                         icon={<CheckCircle2 size={17} aria-hidden="true" />}
                       >
-                        Complete Sale
+                        {isTaxMissing ? 'Tax rate unavailable' : 'Complete sale'}
                       </Button>
                     </div>
 

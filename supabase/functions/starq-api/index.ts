@@ -914,6 +914,7 @@ function uuid(value: string | null): boolean {
   return !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
+
 /**
  * SERP-301 — what the request actually did, for the log line.
  *
@@ -1259,6 +1260,8 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         return json(200, { ok: true, tenants: data ?? [] }, origin);
       }
 
+
+
       if (req.method === "POST" && path === "/api/platform/tenants/provision") {
         if (session.platform_entitlement.operator_role !== "platform_admin") {
           return await deny(403, "platform_admin_required", session);
@@ -1603,7 +1606,8 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
     // through api_garage_command with server-authoritative pricing.
     if (req.method === "GET" && path === "/api/ops/counter/catalogue") {
       const priceListCode = new URL(req.url).searchParams.get("price_list_code") ?? undefined;
-      const [outlets, products, onHand] = await Promise.allSettled([
+      const today = new Date().toISOString().slice(0, 10);
+      const [outlets, products, onHand, gstStatus, gstRate] = await Promise.allSettled([
         db.from("locations").select("id, code, name, kind, active")
           .eq("organisation_id", session.organisation_id)
           .eq("active", true)
@@ -1616,6 +1620,19 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         db.rpc("stock_movements_derived_onhand", {
           p_organisation_id: session.organisation_id,
         }),
+        db.from("tax_registrations").select("registration_status")
+          .eq("organisation_id", session.organisation_id)
+          .eq("tax_type", "gst_general")
+          .lte("effective_from", today)
+          .order("effective_from", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        db.from("tax_rate_schedules").select("rate, description")
+          .eq("tax_type", "gst_general")
+          .lte("effective_from", today)
+          .order("effective_from", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
       if (outlets.status === "rejected" || outlets.value.error) throw new Error("counter_outlets_query_failed");
       if (products.status === "rejected" || products.value.error) throw new Error("counter_products_query_failed");
@@ -1653,12 +1670,23 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       const priceRows = Array.isArray((approvedData as { prices?: Array<Record<string, unknown>> } | null)?.prices)
         ? (approvedData as { prices: Array<Record<string, unknown>> }).prices
         : [];
+      const gstRegistrationStatus = gstStatus.status === "fulfilled" && gstStatus.value.data
+        ? (gstStatus.value.data as { registration_status: string }).registration_status
+        : "not_registered";
+      const gstRateRow = gstRate.status === "fulfilled" && gstRate.value.data
+        ? (gstRate.value.data as { rate: number | string; description?: string })
+        : null;
+      const gstRateNum = gstRateRow?.rate != null ? Number(gstRateRow.rate) : null;
+      const gstRatePercent = gstRateNum != null ? Math.round(gstRateNum * 100) : null;
       return json(200, {
         ok: true,
         locations: locationRows,
         products: products.value.data ?? [],
         on_hand: onHand.value.data ?? [],
         prices: priceRows,
+        gst_registration_status: gstRegistrationStatus,
+        gst_rate: gstRateNum,
+        gst_rate_percent: gstRatePercent,
       }, origin);
     }
 
@@ -2537,6 +2565,7 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         await securityEvent(req, "garage.command", "rejected", session, { code: "unknown_command" });
         return json(400, { ok: false, error: "unknown_command", request_id: requestId }, origin);
       }
+
       const principal: Principal = {
         personId: session.person_uuid,
         organisationId: session.organisation_id,

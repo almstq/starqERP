@@ -96,6 +96,9 @@ export interface CounterCatalogue {
   products: CounterProduct[];
   on_hand: OnHandRow[];
   prices: ApprovedPriceRow[];
+  gst_registration_status: 'registered' | 'not_registered' | 'pending' | 'suspended' | 'cancelled';
+  gst_rate?: number | null;
+  gst_rate_percent?: number | null;
 }
 
 export interface CartLine {
@@ -369,6 +372,47 @@ export function approvedPriceFor(prices: ApprovedPriceRow[], productId: string):
 }
 
 /**
+ * SERP-085/086/144: Evaluate estimated GST for the counter cart.
+ * If not registered, estimated tax is 0.
+ * If registered and authoritative rate is available, returns numeric tax amount.
+ * If registered and authoritative rate is missing/null, returns null (fail closed: no numeric fallback, do NOT default to 0 or 0.08).
+ */
+export function calculateEstimatedTax(
+  status: CounterCatalogue['gst_registration_status'],
+  rate: number | null | undefined,
+  lines: CartLine[],
+  prices: ApprovedPriceRow[],
+): number | null {
+  if (status !== 'registered') {
+    return 0;
+  }
+  if (rate == null || typeof rate !== 'number' || rate < 0) {
+    return null; // Authoritative rate unavailable — fail closed without numeric fallback!
+  }
+  let totalTax = 0;
+  for (const line of lines) {
+    const approved = approvedPriceFor(prices, line.productId);
+    if (approved && approved.source !== 'none' && approved.unit_amount > 0) {
+      const discountFactor = approved.discount_percent > 0 ? 1 - approved.discount_percent / 100 : 1;
+      const lineAmount = line.quantity * (approved.unit_amount * discountFactor);
+      totalTax += lineAmount * rate;
+    }
+  }
+  return totalTax;
+}
+
+/**
+ * SERP-144: Check whether counter sale completion is blocked by missing authoritative tax rate.
+ * For registered entities, an authoritative GST rate is required to complete sale.
+ */
+export function isTaxRateMissingForSale(
+  status: CounterCatalogue['gst_registration_status'],
+  rate: number | null | undefined,
+): boolean {
+  return status === 'registered' && (rate == null || typeof rate !== 'number' || rate < 0);
+}
+
+/**
  * Pure guard used by the scan surface: indicates whether a normalized scan
  * should be sent to the server at all. A run of printable scanner characters
  * (letters, digits, dot/underscore/hyphen) is worth resolving; anything shorter
@@ -612,6 +656,8 @@ export function formatResilienceErrorMessage(errorCode: string): string {
       return 'Network offline: Counter transactions require an active connection to the server.';
     case 'request_timeout':
       return 'Request timed out: Server did not respond in time. You may retry safely using the same transaction key.';
+    case 'tax_rate_unavailable':
+      return 'Authoritative tax rate unavailable. Cannot complete sale for GST-registered entity without valid tax configuration.';
     default:
       return `Transaction rejected (${errorCode}).`;
   }
