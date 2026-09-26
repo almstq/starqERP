@@ -1206,20 +1206,21 @@ export const CounterView: React.FC = () => {
                             : '1px solid var(--md-sys-color-outline-variant)',
                         borderRadius: 'var(--md-sys-shape-corner-large, 14px)',
                       }}
-                      className="flex flex-col items-start gap-1 p-3 text-left min-h-[118px] transition-all hover:shadow-md active:scale-[0.99] relative cursor-pointer group"
+                      className="flex flex-col items-start gap-1 p-2.5 sm:p-3 text-left min-h-[118px] transition-all hover:shadow-md active:scale-[0.99] relative cursor-pointer group"
                     >
-                      <div className="w-full flex items-start justify-between gap-1">
+                      <div className="w-full flex items-center justify-between gap-1 min-w-0">
                         <span
-                          className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                          className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded whitespace-nowrap truncate min-w-0"
                           style={{
                             backgroundColor: 'var(--md-sys-color-surface-container-highest)',
                             color: 'var(--md-sys-color-on-surface-variant)',
                           }}
+                          title={product.category || 'General'}
                         >
                           {product.category || 'General'}
                         </span>
                         {inCart > 0 && (
-                          <Badge variant="info" size="sm" className="shrink-0 font-bold">
+                          <Badge variant="info" size="sm" className="shrink-0 font-bold whitespace-nowrap text-[10px] px-1.5 py-0.5">
                             in cart ×{inCart}
                           </Badge>
                         )}
@@ -1240,23 +1241,23 @@ export const CounterView: React.FC = () => {
                       </div>
 
                       {/* Prominent Price & Stock display */}
-                      <div className="mt-auto w-full pt-1.5 flex items-baseline justify-between gap-1 border-t border-outline-variant/30">
-                        <div>
+                      <div className="mt-auto w-full pt-1.5 flex items-baseline justify-between gap-1 border-t border-outline-variant/30 min-w-0">
+                        <div className="min-w-0 shrink-0">
                           {approved && approved.source !== 'none' && approved.unit_amount > 0 ? (
-                            <span className="text-sm sm:text-base font-black font-mono tracking-tight text-primary tabular-nums">
-                              MVR {Number(approved.unit_amount).toFixed(2)}
+                            <span className="text-xs sm:text-sm xl:text-base font-black font-mono tracking-tight text-primary tabular-nums whitespace-nowrap inline-flex items-baseline">
+                              <span>MVR&nbsp;{Number(approved.unit_amount).toFixed(2)}</span>
                               {approved.source === 'price_list_override' ? (
                                 <span className="text-[10px] font-normal text-on-surface-variant ml-0.5">(list)</span>
                               ) : null}
                             </span>
                           ) : (
-                            <span className="text-xs font-medium text-on-surface-variant italic">
+                            <span className="text-xs font-medium text-on-surface-variant italic whitespace-nowrap">
                               no approved price
                             </span>
                           )}
                         </div>
                         <div className="shrink-0">
-                          <Badge variant={onHand > 0 ? 'positive' : 'warning'} dot size="sm">
+                          <Badge variant={onHand > 0 ? 'positive' : 'warning'} dot size="sm" className="whitespace-nowrap text-[10px] px-1.5 py-0.5">
                             {onHand} in stock
                           </Badge>
                         </div>
