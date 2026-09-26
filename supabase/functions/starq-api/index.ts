@@ -32,6 +32,9 @@ function safeEnv(key: string, fallback = ""): string {
 const SUPABASE_URL = safeEnv("SUPABASE_URL", "https://placeholder.supabase.co");
 const SERVICE_KEY = safeEnv("SUPABASE_SERVICE_ROLE_KEY", "service-key-placeholder");
 const SESSION_SECRET = safeEnv("STARQBOOKS_SESSION_SECRET", "");
+function getSessionSecret(): string {
+  return SESSION_SECRET || safeEnv("STARQBOOKS_SESSION_SECRET", "");
+}
 // SERP-301 alert relay: an unattended poller has no human session cookie, so
 // it cannot pass the `!session` gate below by design. It authenticates with
 // a distinct shared secret instead, scoped to exactly one read-only route.
@@ -177,7 +180,7 @@ const ALLOWED_SEATS = new Set<string>(DB_SEEDED_SEATS);
  */
 const DB_TIMEOUT_MS = 10_000;
 
-const db = createClient(SUPABASE_URL, SERVICE_KEY, {
+const defaultDb = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
   global: {
     fetch: (input: string | URL | Request, init?: RequestInit) => {
@@ -188,6 +191,15 @@ const db = createClient(SUPABASE_URL, SERVICE_KEY, {
     },
   },
 });
+let db = defaultDb;
+
+export function setDbForTesting(client: unknown) {
+  db = client as typeof defaultDb;
+}
+
+export function resetDbForTesting() {
+  db = defaultDb;
+}
 const encoder = new TextEncoder();
 const anonymousWindows = new Map<string, { count: number; resetAt: number }>();
 
@@ -221,7 +233,7 @@ function fromBase64Url(value: string): Uint8Array<ArrayBuffer> {
 
 async function hmac(value: string): Promise<string> {
   const key = await crypto.subtle.importKey(
-    "raw", encoder.encode(SESSION_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+    "raw", encoder.encode(getSessionSecret()), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
   );
   return base64Url(new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(value))));
 }
@@ -229,7 +241,7 @@ async function hmac(value: string): Promise<string> {
 async function verifyHmac(value: string, signature: string): Promise<boolean> {
   try {
     const key = await crypto.subtle.importKey(
-      "raw", encoder.encode(SESSION_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["verify"],
+      "raw", encoder.encode(getSessionSecret()), { name: "HMAC", hash: "SHA-256" }, false, ["verify"],
     );
     return await crypto.subtle.verify("HMAC", key, fromBase64Url(signature), encoder.encode(value));
   } catch {
@@ -647,7 +659,7 @@ async function verifyGoogleToken(
   }
 }
 
-interface Session {
+export interface Session {
   person_uuid: string;
   person_key: string;
   display_label: string;
@@ -1096,7 +1108,12 @@ export function validateTaxRegistrationInput(
   };
 }
 
-async function handleRequest(req: Request, requestId: string, observed: Observed): Promise<Response> {
+export async function handleRequest(
+  req: Request,
+  requestId: string = crypto.randomUUID(),
+  observed: Observed = { outcome: "ok", personUuid: null, organisationId: null },
+  sessionOverride?: Session | null,
+): Promise<Response> {
   const origin = req.headers.get("origin");
   const path = routePath(req.url);
 
@@ -1135,7 +1152,7 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
   }
 
   try {
-    if (!SUPABASE_URL || !SERVICE_KEY || SESSION_SECRET.length < 32) throw new Error("server_configuration_error");
+    if (!SUPABASE_URL || !SERVICE_KEY || getSessionSecret().length < 32) throw new Error("server_configuration_error");
     if (req.method === "GET" && (path === "/" || path === "/health" || path === "/api/meta")) {
       const readiness = await db.from("organisations").select("id", { count: "exact", head: true })
         .eq("status", "active");
@@ -1207,8 +1224,8 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
     }
 
     const diag: { reason?: string } = {};
-    const signedSession = await readSession(req, diag);
-    const session = signedSession ? await refreshSessionAuthority(signedSession, diag) : null;
+    const signedSession = sessionOverride !== undefined ? sessionOverride : await readSession(req, diag);
+    const session = sessionOverride !== undefined ? sessionOverride : (signedSession ? await refreshSessionAuthority(signedSession, diag) : null);
     // SERP-301 — person_uuid and organisation_id on every subsequent log line.
     // The person UUID, never an email or a name: an operational log is not a
     // place to accumulate a directory of the client's staff.
@@ -1838,9 +1855,11 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       const priceRows = Array.isArray((approvedData as { prices?: Array<Record<string, unknown>> } | null)?.prices)
         ? (approvedData as { prices: Array<Record<string, unknown>> }).prices
         : [];
-      const gstRegistrationStatus = gstStatus.status === "fulfilled" && gstStatus.value.data
-        ? (gstStatus.value.data as { registration_status: string }).registration_status
-        : "not_registered";
+      // SERP-446 / Vision #6953: Gate defect fix.
+      // Must FAIL CLOSED: lookup error or no row returns 'unknown', never 'not_registered'.
+      const gstRegistrationStatus = gstStatus.status === "fulfilled" && !gstStatus.value.error && gstStatus.value.data
+        ? ((gstStatus.value.data as { registration_status?: string }).registration_status || "unknown")
+        : "unknown";
       const gstRateRow = gstRate.status === "fulfilled" && gstRate.value.data
         ? (gstRate.value.data as { rate: number | string; description?: string })
         : null;
@@ -2939,6 +2958,28 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       }
 
       if (intent.command === "COUNTER_SALE") {
+        // SERP-446 / Vision #6953: Complete Sale fails closed if statutory tax registration is unconfigured or unknown
+        const regCheck = await db.from("tax_registrations").select("registration_status")
+          .eq("organisation_id", session.organisation_id)
+          .eq("tax_type", "gst_general")
+          .order("effective_from", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (regCheck.error || !regCheck.data || !regCheck.data.registration_status || regCheck.data.registration_status === "unknown") {
+          observed.outcome = "blocked";
+          await securityEvent(req, "garage.command", "rejected", session, {
+            code: "tax_registration_status_unknown",
+            detail: "Statutory tax registration is unconfigured or unknown. Sales are blocked until tax registration is configured.",
+          }, requestId);
+          return json(422, {
+            ok: false,
+            error: "tax_registration_status_unknown",
+            detail: "Statutory tax registration is unconfigured or unknown. Sales are blocked until tax registration is configured.",
+            request_id: requestId,
+          }, origin);
+        }
+
         // Invariant (SERP-445 / Vision #6920 FAIL 3 & Vision #6928 follow-up):
         // Single source of truth: COUNTER_SALE POS tax is strictly General GST ('gst_general')
         // on 'exclusive' tax_mode and uses current supply date (today). Edge and DB must never diverge.

@@ -96,7 +96,7 @@ export interface CounterCatalogue {
   products: CounterProduct[];
   on_hand: OnHandRow[];
   prices: ApprovedPriceRow[];
-  gst_registration_status: 'registered' | 'not_registered' | 'pending' | 'suspended' | 'cancelled';
+  gst_registration_status: 'registered' | 'not_registered' | 'pending' | 'suspended' | 'cancelled' | 'unknown';
   gst_rate?: number | null;
   gst_rate_percent?: number | null;
 }
@@ -409,6 +409,9 @@ export function isTaxRateMissingForSale(
   status: CounterCatalogue['gst_registration_status'],
   rate: number | null | undefined,
 ): boolean {
+  if (status === 'unknown') {
+    return true; // Statutory status unconfigured or lookup failed - fail closed!
+  }
   return status === 'registered' && (rate == null || typeof rate !== 'number' || rate < 0);
 }
 
@@ -658,6 +661,8 @@ export function formatResilienceErrorMessage(errorCode: string): string {
       return 'Request timed out: Server did not respond in time. You may retry safely using the same transaction key.';
     case 'tax_rate_unavailable':
       return 'Authoritative tax rate unavailable. Cannot complete sale for GST-registered entity without valid tax configuration.';
+    case 'tax_registration_status_unknown':
+      return 'Statutory tax registration unconfigured. Cannot complete sale without authoritative tax status.';
     default:
       return `Transaction rejected (${errorCode}).`;
   }
