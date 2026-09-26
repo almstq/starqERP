@@ -76,6 +76,9 @@ import {
   formatResilienceErrorMessage,
   calculateEstimatedTax,
   isTaxRateMissingForSale,
+  formatTaxLineLabel,
+  formatTaxLineValue,
+  formatReceiptGstDetails,
 } from '../../domain/counter';
 
 const DEFAULT_OUTLET: CounterLocation = {
@@ -135,14 +138,27 @@ interface CounterSaleResult {
   receipt_number?: string;
   payment_id: string;
   location_id: string;
+  currency?: string;
   subtotal: number;
   tax_total: number;
   total_amount: number;
+  gst_rate?: number | null;
+  gst_rate_percent?: number | null;
+  gst_registration_status?: 'registered' | 'not_registered' | null;
+  is_taxable?: boolean;
   payment_method?: PaymentMethod;
   tendered_amount?: number;
   change_amount?: number;
   tender?: TenderLine[];
-  lines: Array<{ product_id: string; name: string; quantity: number; unit_price: number; net_amount: number }>;
+  lines: Array<{
+    product_id: string;
+    name: string;
+    quantity: number;
+    unit_price: number;
+    net_amount: number;
+    tax_rate?: number;
+    tax_amount?: number;
+  }>;
   on_hand: Record<string, number>;
 }
 
@@ -1619,7 +1635,7 @@ export const CounterView: React.FC = () => {
                         MVR {liveTotals.subtotal.toFixed(2)}
                       </span>
                     </div>
-                    {catalogue?.gst_registration_status === 'registered' && (
+                    {catalogue?.gst_registration_status === 'registered' ? (
                       <div className="flex justify-between items-baseline text-xs">
                         <span className={`font-semibold ${isTaxMissing ? 'text-error' : 'text-on-surface-variant'}`}>
                           Estimated Tax {isTaxMissing ? '' : `(${catalogue.gst_rate_percent}%)`}
@@ -1631,6 +1647,13 @@ export const CounterView: React.FC = () => {
                             MVR {(estimatedTax ?? 0).toFixed(2)}
                           </span>
                         )}
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-baseline text-xs">
+                        <span className="font-semibold text-on-surface-variant">Tax</span>
+                        <span className="font-mono font-semibold text-on-surface-variant text-xs">
+                          Not GST registered — no GST
+                        </span>
                       </div>
                     )}
                     <div className="flex justify-between items-baseline pt-1.5 border-t border-outline-variant/60">
@@ -2505,7 +2528,9 @@ export const CounterView: React.FC = () => {
               <div className="p-4 rounded-xl font-mono text-xs bg-[var(--md-sys-color-surface-container-lowest)] text-[var(--md-sys-color-on-surface)] border-2 border-dashed border-[var(--md-sys-color-outline-variant)] shadow-inner space-y-2">
                 <div className="text-center pb-2 border-b border-dashed border-[var(--md-sys-color-outline-variant)]">
                   <p className="font-black text-sm tracking-wider uppercase">{outlet?.name ?? 'starqPOS'}</p>
-                  <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-sans font-medium uppercase mt-0.5">Tax Invoice / Receipt</p>
+                  <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-sans font-medium uppercase mt-0.5">
+                    {formatReceiptGstDetails(saleResult).receiptSubtitle}
+                  </p>
                   {saleResult.receipt_number && (
                     <p className="text-xs font-bold text-[var(--md-sys-color-on-surface)] mt-1">
                       Receipt: <span className="font-mono font-bold">{saleResult.receipt_number}</span>
@@ -2513,6 +2538,9 @@ export const CounterView: React.FC = () => {
                   )}
                   <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)]">
                     Invoice: {saleResult.invoice_number}
+                  </p>
+                  <p className="text-[9px] text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
+                    GST Status: {formatReceiptGstDetails(saleResult).statusBadge}
                   </p>
                 </div>
 
@@ -2537,10 +2565,17 @@ export const CounterView: React.FC = () => {
                     <span className="text-[var(--md-sys-color-on-surface-variant)]">Subtotal</span>
                     <span className="font-semibold tabular-nums">MVR {Number(saleResult.subtotal).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-[var(--md-sys-color-on-surface-variant)]">Tax</span>
-                    <span className="font-semibold tabular-nums">MVR {Number(saleResult.tax_total).toFixed(2)}</span>
-                  </div>
+                  {(() => {
+                    const gst = formatReceiptGstDetails(saleResult);
+                    return (
+                      <div className="flex justify-between">
+                        <span className="text-[var(--md-sys-color-on-surface-variant)]">{gst.label}</span>
+                        <span className={`tabular-nums ${gst.isRegistered ? 'font-semibold' : 'text-[11px] font-medium'}`}>
+                          {gst.value}
+                        </span>
+                      </div>
+                    );
+                  })()}
                   <div className="flex justify-between font-bold text-sm pt-1.5 border-t border-dashed border-[var(--md-sys-color-outline-variant)]">
                     <span>TOTAL</span>
                     <span className="font-black tabular-nums">MVR {Number(saleResult.total_amount).toFixed(2)}</span>
