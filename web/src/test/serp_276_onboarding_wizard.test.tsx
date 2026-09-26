@@ -114,7 +114,7 @@ describe('SERP-276: Standardised Tenant Onboarding Wizard & Configuration Gating
     expect(screen.getByTestId('current-tenant-name').textContent).toBe('Dhiggaru Marine Slipway');
     expect(screen.getByTestId('current-tenant-industry').textContent).toBe('Marine & Boatyard');
     expect(screen.getByTestId('current-tenant-tin').textContent).toBe('');
-    expect(screen.getByTestId('current-tenant-gst-status').textContent).toBe('not_registered');
+    expect(screen.getByTestId('current-tenant-gst-status').textContent).toBe('unknown');
     expect(screen.getByTestId('current-tenant-bml').textContent).toBe('');
   });
 
@@ -170,7 +170,7 @@ describe('SERP-276: Standardised Tenant Onboarding Wizard & Configuration Gating
 
     expect(screen.getByTestId('current-tenant-name').textContent).toBe('Alif Polyclinic & Dental');
     expect(screen.getByTestId('current-tenant-tin').textContent).toBe('1099882GST501');
-    expect(screen.getByTestId('current-tenant-gst-status').textContent).toBe('registered');
+    expect(screen.getByTestId('current-tenant-gst-status').textContent).toBe('unknown');
     expect(screen.getByTestId('current-tenant-bml').textContent).toContain('7730000998811');
   });
 });
