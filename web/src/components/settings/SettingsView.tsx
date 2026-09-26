@@ -251,13 +251,13 @@ export const SettingsView: React.FC = () => {
         {activeSubTab === 'profile' && (
           <form onSubmit={handleSaveProfile} className="space-y-6 animate-in fade-in">
             {savedSuccess && (
-              <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center gap-2">
+              <div className="p-4 rounded-xl bg-[var(--positive-subtle)] border border-[var(--positive)] text-[var(--positive)] text-xs font-bold flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>Organisation Settings Saved & Audited Successfully!</span>
               </div>
             )}
             {saveError && (
-              <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 text-xs font-bold flex items-center gap-2">
+              <div className="p-4 rounded-xl bg-[var(--md-sys-color-error-container)] border border-[var(--md-sys-color-error)] text-[var(--md-sys-color-on-error-container)] text-xs font-bold flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{saveError}</span>
               </div>
@@ -279,7 +279,7 @@ export const SettingsView: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
-                    Tenant Display Name <span className="text-red-500">*</span>
+                    Tenant Display Name <span className="text-[var(--md-sys-color-error)]">*</span>
                   </label>
                   <input
                     type="text"
@@ -425,8 +425,8 @@ export const SettingsView: React.FC = () => {
               </div>
 
               {gstStatus === 'unknown' && (
-                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-center gap-2.5">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <div className="p-3.5 rounded-xl bg-[var(--warning-subtle)] border border-[var(--warning)] text-[var(--warning)] text-xs flex items-center gap-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
                   <div>
                     <span className="font-semibold">Statutory GST Status Unconfigured:</span> No statutory registration record exists for this organisation. Select your MIRA registration status and save to configure.
                   </div>
@@ -496,7 +496,7 @@ export const SettingsView: React.FC = () => {
                     disabled={taxLoading || saveLoading}
                     onChange={(e) => setTinNumber(e.target.value)}
                     placeholder="Enter registered TIN, if configured"
-                    className="w-full px-3.5 py-2 text-xs font-mono font-bold text-blue-600 border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)] disabled:opacity-75"
+                    className="w-full px-3.5 py-2 text-xs font-mono font-bold text-[var(--md-sys-color-primary)] border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)] disabled:opacity-75"
                     style={{
                       backgroundColor: 'var(--md-sys-color-surface-container-high)',
                       borderColor: 'var(--md-sys-color-outline-variant)',
