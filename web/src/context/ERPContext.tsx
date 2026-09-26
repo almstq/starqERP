@@ -23,7 +23,8 @@ import {
   AuditLogEntry,
   PermissionModule,
   PermissionAction,
-  PaymentMethod
+  PaymentMethod,
+  GstRegistrationStatus,
 } from '../types/erp';
 // SERP-288 — FOURTEEN demo datasets used to be imported here and NONE of them
 // was referenced. Every transactional state below already initialises to [], so
@@ -50,7 +51,7 @@ import {
   roundToTwoDecimals,
   validatePriceList,
 } from '../domain/priceLists';
-import { dispatchCommand, apiGet, ApiError } from '../services/apiGateway';
+import { dispatchCommand, apiGet, apiPost, ApiError } from '../services/apiGateway';
 import { useAuth } from './AuthContext';
 import { getArchetype, ArchetypeDefinition, ArchetypeTerminology, ArchetypeId, ARCHETYPES } from '../domain/archetypes';
 import { switchContext as apiSwitchContext, fetchCurrentUser } from '../services/auth';
@@ -100,7 +101,7 @@ export interface ERPContextType {
   switchBook?: (bookId: string) => void;
   switchActiveContext: (context: { plane: 'platform' | 'tenant'; tenantId?: string; bookId?: string }) => void;
   createTenant: (tenantData: Omit<OrganisationTenant, 'id' | 'createdAt'>) => OrganisationTenant;
-  updateTenant: (tenantData: Partial<OrganisationTenant>) => void;
+  updateTenant: (tenantData: Partial<OrganisationTenant>) => Promise<void>;
   updateTenantLogo: (logoUrl: string | null) => void;
   isSetupModalOpen: boolean;
   setIsSetupModalOpen: (open: boolean) => void;
@@ -480,10 +481,16 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Demo / unsigned fixtures only. A live session never reads INITIAL_TENANTS or localStorage.
   const [demoTenants, setDemoTenants] = useState<OrganisationTenant[]>(INITIAL_TENANTS);
-  const tenants = useMemo(
-    () => (session ? mapSessionOrganisationsToTenants(session.organisations) : demoTenants),
-    [session, demoTenants]
-  );
+  const [tenantOverrides, setTenantOverrides] = useState<Record<string, Partial<OrganisationTenant>>>({});
+
+  const tenants = useMemo(() => {
+    const base = session ? mapSessionOrganisationsToTenants(session.organisations) : demoTenants;
+    return base.map((t) => ({
+      ...t,
+      ...(tenantOverrides[t.id] ?? {}),
+    }));
+  }, [session, demoTenants, tenantOverrides]);
+
   const setTenants = useCallback(
     (updater: React.SetStateAction<OrganisationTenant[]>) => {
       if (session) return;
@@ -772,7 +779,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const loadDomainData = async () => {
       try {
         const [customersRes, jobsRes, invoicesRes, expensesRes, paymentsRes,
-                inventoryRes, suppliersRes, poRes, auditRes, priceListsRes] = await Promise.allSettled([
+                inventoryRes, suppliersRes, poRes, auditRes, priceListsRes, taxRegRes] = await Promise.allSettled([
           apiGet<{ ok: boolean; customers: unknown[] }>('/api/ops/customers'),
           apiGet<{ ok: boolean; jobs: unknown[] }>('/api/ops/jobs'),
           apiGet<{ ok: boolean; invoices: unknown[] }>('/api/ops/invoices'),
@@ -783,6 +790,18 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           apiGet<{ ok: boolean; purchaseOrders: unknown[] }>('/api/ops/purchase-orders'),
           apiGet<{ ok: boolean; events: unknown[] }>('/api/ops/audit?limit=100'),
           apiGet<{ ok: boolean; price_lists: unknown[] }>('/api/ops/price-lists'),
+          apiGet<{
+            ok: boolean;
+            registration: {
+              id: string;
+              organisation_id: string;
+              tax_type: string;
+              registration_status: string;
+              tin: string | null;
+              effective_from: string | null;
+              effective_to: string | null;
+            } | null;
+          }>('/api/tenant/tax-registration'),
         ]);
 
         if (isCurrentLoad() && customersRes.status === 'fulfilled' && customersRes.value.ok) {
@@ -814,6 +833,21 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
         if (isCurrentLoad() && priceListsRes.status === 'fulfilled' && priceListsRes.value.ok) {
           setPriceLists(mapBackendPriceLists(priceListsRes.value.price_lists ?? []));
+        }
+        if (isCurrentLoad() && taxRegRes.status === 'fulfilled' && taxRegRes.value.ok) {
+          const reg = taxRegRes.value.registration;
+          const currentOrgId = session.current_organisation_id || (session.organisations && session.organisations[0]?.id);
+          if (currentOrgId) {
+            setTenantOverrides((prev) => ({
+              ...prev,
+              [currentOrgId]: {
+                ...prev[currentOrgId],
+                gstStatus: reg ? (reg.registration_status as GstRegistrationStatus) : 'unknown',
+                tinNumber: reg?.tin || '',
+                gstRate: reg ? (reg.registration_status === 'registered' || reg.registration_status === 'pending' ? 8 : 0) : 0,
+              },
+            }));
+          }
         }
       } catch (err) {
         console.error('[ERP] Failed to load domain data from backend:', err);
@@ -1227,10 +1261,26 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return newTenant;
   };
 
-  const updateTenant = (tenantData: Partial<OrganisationTenant>) => {
+  const updateTenant = async (tenantData: Partial<OrganisationTenant>) => {
+    const orgId = currentTenant.id;
+    if (orgId) {
+      setTenantOverrides((prev) => ({
+        ...prev,
+        [orgId]: {
+          ...prev[orgId],
+          ...tenantData,
+        },
+      }));
+    }
     setTenants((prev) =>
       prev.map((t) => (t.id === currentTenant.id ? { ...t, ...tenantData } : t))
     );
+    if (session && tenantData.gstStatus && tenantData.gstStatus !== 'unknown') {
+      await apiPost('/api/tenant/tax-registration', {
+        registration_status: tenantData.gstStatus,
+        tin: tenantData.tinNumber !== undefined ? tenantData.tinNumber : currentTenant.tinNumber,
+      });
+    }
     logAuditEvent({
       action: 'ORG_CONFIG_SAVED',
       module: 'settings',

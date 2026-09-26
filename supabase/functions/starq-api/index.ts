@@ -998,6 +998,104 @@ export function validateCounterSaleTaxParameters(
   };
 }
 
+export const ALLOWED_TAX_REGISTRATION_STATUSES = [
+  "registered",
+  "not_registered",
+  "pending",
+  "suspended",
+  "cancelled",
+] as const;
+
+export type TaxRegistrationStatus = (typeof ALLOWED_TAX_REGISTRATION_STATUSES)[number];
+
+export interface TaxRegistrationValidationResult {
+  ok: boolean;
+  error?: string;
+  detail?: string;
+  status?: number;
+  registrationStatus?: TaxRegistrationStatus;
+  taxType?: string;
+  tin?: string | null;
+  effectiveFrom?: string;
+}
+
+/**
+ * SERP-446: Validates tenant statutory tax registration parameters.
+ * Allowed statuses align with public.tax_registrations constraint:
+ * ('registered', 'not_registered', 'pending', 'suspended', 'cancelled').
+ */
+export function validateTaxRegistrationInput(
+  rawBody: unknown,
+): TaxRegistrationValidationResult {
+  if (!rawBody || typeof rawBody !== "object" || Array.isArray(rawBody)) {
+    return {
+      ok: false,
+      error: "invalid_request_body",
+      detail: "Request body must be a JSON object",
+      status: 400,
+    };
+  }
+  const body = rawBody as Record<string, unknown>;
+  const rawStatus = typeof body.registration_status === "string"
+    ? body.registration_status.trim().toLowerCase()
+    : typeof body.gst_status === "string"
+    ? body.gst_status.trim().toLowerCase()
+    : "";
+
+  if (!rawStatus) {
+    return {
+      ok: false,
+      error: "registration_status_required",
+      detail: "registration_status is required",
+      status: 422,
+    };
+  }
+
+  if (!ALLOWED_TAX_REGISTRATION_STATUSES.includes(rawStatus as TaxRegistrationStatus)) {
+    return {
+      ok: false,
+      error: "invalid_registration_status",
+      detail: `registration_status must be one of: ${ALLOWED_TAX_REGISTRATION_STATUSES.join(", ")}`,
+      status: 422,
+    };
+  }
+
+  const rawTaxType = typeof body.tax_type === "string" && body.tax_type.trim()
+    ? body.tax_type.trim().toLowerCase()
+    : "gst_general";
+
+  const ALLOWED_TAX_TYPES = ["gst_general", "gst_tourism", "income_tax", "withholding_tax"];
+  if (!ALLOWED_TAX_TYPES.includes(rawTaxType)) {
+    return {
+      ok: false,
+      error: "invalid_tax_type",
+      detail: `tax_type must be one of: ${ALLOWED_TAX_TYPES.join(", ")}`,
+      status: 422,
+    };
+  }
+
+  const tin = typeof body.tin === "string"
+    ? (body.tin.trim() || null)
+    : typeof body.tin_number === "string"
+    ? (body.tin_number.trim() || null)
+    : body.tin === null
+    ? null
+    : undefined;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const effectiveFrom = typeof body.effective_from === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.effective_from.trim())
+    ? body.effective_from.trim()
+    : today;
+
+  return {
+    ok: true,
+    registrationStatus: rawStatus as TaxRegistrationStatus,
+    taxType: rawTaxType,
+    tin,
+    effectiveFrom,
+  };
+}
+
 async function handleRequest(req: Request, requestId: string, observed: Observed): Promise<Response> {
   const origin = req.headers.get("origin");
   const path = routePath(req.url);
@@ -2607,6 +2705,119 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         throw new Error(error.message || "revoke_failed");
       }
       return json(200, { ok: true, result: data }, origin);
+    }
+
+    // =========================================================================
+    // SERP-446: Tenant Statutory Tax Registration Routes (Profile & Tax)
+    // Server-authoritative, tenant-scoped, RLS-safe persistence to public.tax_registrations
+    // =========================================================================
+    if (req.method === "GET" && (path === "/api/tenant/tax-registration" || path === "/api/ops/tax-registration")) {
+      if (!session.organisation_id) {
+        return json(403, { ok: false, error: "organisation_context_required" }, origin);
+      }
+
+      const urlObj = new URL(req.url);
+      const taxType = (urlObj.searchParams.get("tax_type") || "gst_general").trim().toLowerCase();
+
+      const { data, error } = await db.from("tax_registrations")
+        .select("id, organisation_id, tax_type, registration_status, tin, effective_from, effective_to, created_at")
+        .eq("organisation_id", session.organisation_id)
+        .eq("tax_type", taxType)
+        .order("effective_from", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        throw new Error("tax_registration_query_failed");
+      }
+
+      return json(200, {
+        ok: true,
+        registration: data ?? null,
+      }, origin);
+    }
+
+    if (req.method === "POST" && (path === "/api/tenant/tax-registration" || path === "/api/ops/tax-registration")) {
+      if (!session.organisation_id) {
+        return json(403, { ok: false, error: "organisation_context_required" }, origin);
+      }
+
+      const body = await readJson(req);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
+
+      const validation = validateTaxRegistrationInput(body);
+      if (!validation.ok) {
+        observed.outcome = "blocked";
+        await securityEvent(req, "tax_registration.update", "rejected", session, { code: validation.error }, requestId);
+        return json(validation.status ?? 422, {
+          ok: false,
+          error: validation.error,
+          detail: validation.detail,
+          request_id: requestId,
+        }, origin);
+      }
+
+      const targetTaxType = validation.taxType!;
+      const targetStatus = validation.registrationStatus!;
+      const targetTin = validation.tin;
+      const targetEffectiveFrom = validation.effectiveFrom!;
+
+      // Find latest registration row for this tenant and tax_type
+      const existing = await db.from("tax_registrations")
+        .select("id, tin, effective_from")
+        .eq("organisation_id", session.organisation_id)
+        .eq("tax_type", targetTaxType)
+        .order("effective_from", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let persisted;
+      if (existing.data) {
+        const updateFields: Record<string, unknown> = {
+          registration_status: targetStatus,
+        };
+        if (targetTin !== undefined) {
+          updateFields.tin = targetTin;
+        }
+        const { data, error } = await db.from("tax_registrations")
+          .update(updateFields)
+          .eq("id", existing.data.id)
+          .eq("organisation_id", session.organisation_id)
+          .select("id, organisation_id, tax_type, registration_status, tin, effective_from, effective_to, created_at")
+          .single();
+
+        if (error || !data) {
+          throw new Error("tax_registration_update_failed");
+        }
+        persisted = data;
+      } else {
+        const { data, error } = await db.from("tax_registrations")
+          .insert({
+            organisation_id: session.organisation_id,
+            tax_type: targetTaxType,
+            registration_status: targetStatus,
+            tin: targetTin ?? null,
+            effective_from: targetEffectiveFrom,
+          })
+          .select("id, organisation_id, tax_type, registration_status, tin, effective_from, effective_to, created_at")
+          .single();
+
+        if (error || !data) {
+          throw new Error("tax_registration_insert_failed");
+        }
+        persisted = data;
+      }
+
+      await securityEvent(req, "tax_registration.updated", "accepted", session, {
+        tax_type: targetTaxType,
+        registration_status: targetStatus,
+        tin: persisted.tin,
+      }, requestId);
+
+      return json(200, {
+        ok: true,
+        registration: persisted,
+      }, origin);
     }
 
     if (req.method === "POST" && path === "/api/ops/event") {
