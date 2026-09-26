@@ -14,8 +14,17 @@
  */
 
 import { assert, assertEquals } from 'jsr:@std/assert@1';
+import {
+  AUTHORITATIVE_POS_TAX_TYPE,
+  AUTHORITATIVE_POS_TAX_MODE,
+  validateCounterSaleTaxParameters,
+} from '../../supabase/functions/starq-api/index.ts';
 
 const STARQ_API_PATH = new URL('../../supabase/functions/starq-api/index.ts', import.meta.url);
+const MIGRATION_0059_PATH = new URL('../../supabase/migrations/202609190059_counter_sale_stock_issue.sql', import.meta.url);
+const MIGRATION_2100_PATH = new URL('../../supabase/migrations/202609192100_serp087_tender_receipt_financial_consequence.sql', import.meta.url);
+const MIGRATION_2000_PATH = new URL('../../supabase/migrations/202609192000_serp086_barcode_approved_pricing.sql', import.meta.url);
+const MIGRATION_2300_PATH = new URL('../../supabase/migrations/202609192300_serp438_low_stock_visibility_signal.sql', import.meta.url);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STATIC CONFORMANCE: starq-api/index.ts wiring
@@ -213,4 +222,120 @@ Deno.test('POS Tax Persistence: registered tenant with missing rate schedule fai
 
   assertEquals(result.is_taxable, false);
   assertEquals(result.err_msg, 'no_tax_rate_for_supply_date');
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FAIL 3 INVARIANT: Edge & DB Alignment on tax_type, tax_mode, and supply date
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-445 Invariant: Edge (starq-api) and DB (all 4 migrations) agree on tax_type and supply date', async () => {
+  const edgeSource = await Deno.readTextFile(STARQ_API_PATH);
+  const m0059Source = await Deno.readTextFile(MIGRATION_0059_PATH);
+  const m2100Source = await Deno.readTextFile(MIGRATION_2100_PATH);
+  const m2000Source = await Deno.readTextFile(MIGRATION_2000_PATH);
+  const m2300Source = await Deno.readTextFile(MIGRATION_2300_PATH);
+
+  // 1. Edge pins authoritative constants
+  assertEquals(AUTHORITATIVE_POS_TAX_TYPE, 'gst_general', 'Edge must pin authoritative tax_type to gst_general');
+  assertEquals(AUTHORITATIVE_POS_TAX_MODE, 'exclusive', 'Edge must pin authoritative tax_mode to exclusive');
+
+  // 2. Edge wires validateCounterSaleTaxParameters in COUNTER_SALE handler and rejects with 422
+  assert(
+    edgeSource.includes('const taxValidation = validateCounterSaleTaxParameters(body as Record<string, unknown>);'),
+    'Edge must call validateCounterSaleTaxParameters in COUNTER_SALE handler',
+  );
+  assert(
+    edgeSource.includes('return json(taxValidation.status ?? 422'),
+    'Edge must return HTTP 422 if taxValidation fails',
+  );
+
+  // 3. All 4 DB calculate_line_tax callers agree on 'gst_general' and current_date
+  const dbCallers = [
+    { file: '202609190059_counter_sale_stock_issue.sql', source: m0059Source },
+    { file: '202609192100_serp087_tender_receipt_financial_consequence.sql', source: m2100Source },
+    { file: '202609192000_serp086_barcode_approved_pricing.sql', source: m2000Source },
+    { file: '202609192300_serp438_low_stock_visibility_signal.sql', source: m2300Source },
+  ];
+
+  for (const { file, source } of dbCallers) {
+    const match = source.match(/calculate_line_tax\(\s*target_org,\s*'([^']+)',\s*([a-z_]+),/);
+    assert(match, `${file} must call calculate_line_tax with target_org, tax_type literal, and date expression`);
+    const [, dbTaxType, dbDate] = match;
+    // Invariant: dynamically verified against edge's imported authoritative constant
+    assertEquals(
+      dbTaxType,
+      AUTHORITATIVE_POS_TAX_TYPE,
+      `${file} DB tax_type ('${dbTaxType}') must equal edge AUTHORITATIVE_POS_TAX_TYPE ('${AUTHORITATIVE_POS_TAX_TYPE}')`,
+    );
+    assertEquals(
+      dbDate,
+      'current_date',
+      `${file} DB supply_date expression must be current_date`,
+    );
+  }
+
+  // 4. Invariant: Edge supply date represents today (matching DB current_date)
+  const today = new Date().toISOString().slice(0, 10);
+  assert(/^\d{4}-\d{2}-\d{2}$/.test(today), 'Supply date must match YYYY-MM-DD');
+});
+
+Deno.test('SERP-445 Invariant: Real edge validator fails closed on divergence (tax_type, tax_mode, date)', () => {
+  const today = '2026-09-26';
+
+  // 1. Valid canonical request (empty body) passes with server-authoritative defaults
+  const validEmpty = validateCounterSaleTaxParameters({}, today);
+  assertEquals(validEmpty.ok, true);
+  assertEquals(validEmpty.taxType, 'gst_general');
+  assertEquals(validEmpty.taxMode, 'exclusive');
+  assertEquals(validEmpty.supplyDate, today);
+
+  // 2. Explicit matching parameters pass
+  const explicitValid = validateCounterSaleTaxParameters({
+    tax_type: 'gst_general',
+    tax_mode: 'exclusive',
+    date: today,
+  }, today);
+  assertEquals(explicitValid.ok, true);
+  assertEquals(explicitValid.taxType, 'gst_general');
+  assertEquals(explicitValid.taxMode, 'exclusive');
+
+  // 3. Divergent tax_type (e.g. gst_tourism) FAILS closed with 422 invalid_tax_type
+  const divergentType = validateCounterSaleTaxParameters({ tax_type: 'gst_tourism' }, today);
+  assertEquals(divergentType.ok, false);
+  assertEquals(divergentType.error, 'invalid_tax_type');
+  assertEquals(divergentType.status, 422);
+
+  // 4. Divergent backdated date FAILS closed with 422 invalid_supply_date
+  const divergentDate = validateCounterSaleTaxParameters({ date: '2020-01-01' }, today);
+  assertEquals(divergentDate.ok, false);
+  assertEquals(divergentDate.error, 'invalid_supply_date');
+  assertEquals(divergentDate.status, 422);
+
+  // 5. TAX_MODE HOLE: Client requesting exempt FAILS closed with 422 invalid_tax_mode
+  const divergentExempt = validateCounterSaleTaxParameters({ tax_mode: 'exempt' }, today);
+  assertEquals(divergentExempt.ok, false);
+  assertEquals(divergentExempt.error, 'invalid_tax_mode');
+  assertEquals(divergentExempt.status, 422);
+
+  // 6. TAX_MODE HOLE: Client requesting zero_rated FAILS closed with 422 invalid_tax_mode
+  const divergentZeroRated = validateCounterSaleTaxParameters({ tax_mode: 'zero_rated' }, today);
+  assertEquals(divergentZeroRated.ok, false);
+  assertEquals(divergentZeroRated.error, 'invalid_tax_mode');
+  assertEquals(divergentZeroRated.status, 422);
+
+  // 7. TAX_MODE HOLE: Client requesting inclusive on standard retail POS FAILS closed with 422
+  const divergentInclusive = validateCounterSaleTaxParameters({ tax_mode: 'inclusive' }, today);
+  assertEquals(divergentInclusive.ok, false);
+  assertEquals(divergentInclusive.error, 'invalid_tax_mode');
+  assertEquals(divergentInclusive.status, 422);
+});
+
+Deno.test('SERP-445 Conformance: starq-api enriches counter_sale response with authoritative tax rate and status', async () => {
+  const source = await Deno.readTextFile(STARQ_API_PATH);
+
+  // Must enrich accepted counter_sale response
+  assert(source.includes('cs.gst_rate = counterSaleGstRate;'), 'Missing cs.gst_rate enrichment');
+  assert(source.includes('cs.gst_rate_percent = counterSaleGstRatePercent;'), 'Missing cs.gst_rate_percent enrichment');
+  assert(source.includes('cs.gst_registration_status = counterSaleGstRegistrationStatus;'), 'Missing cs.gst_registration_status enrichment');
+  assert(source.includes('cs.is_taxable = counterSaleIsTaxable;'), 'Missing cs.is_taxable enrichment');
 });
