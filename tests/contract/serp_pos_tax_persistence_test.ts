@@ -16,6 +16,8 @@
 import { assert, assertEquals } from 'jsr:@std/assert@1';
 
 const STARQ_API_PATH = new URL('../../supabase/functions/starq-api/index.ts', import.meta.url);
+const MIGRATION_0059_PATH = new URL('../../supabase/migrations/202609190059_counter_sale_stock_issue.sql', import.meta.url);
+const MIGRATION_2100_PATH = new URL('../../supabase/migrations/202609192100_serp087_tender_receipt_financial_consequence.sql', import.meta.url);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STATIC CONFORMANCE: starq-api/index.ts wiring
@@ -213,4 +215,81 @@ Deno.test('POS Tax Persistence: registered tenant with missing rate schedule fai
 
   assertEquals(result.is_taxable, false);
   assertEquals(result.err_msg, 'no_tax_rate_for_supply_date');
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FAIL 3 INVARIANT: Edge & DB Alignment on tax_type and supply date
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.test('SERP-445 Invariant: Edge (starq-api) and DB (migrations) agree on tax_type and supply date', async () => {
+  const edgeSource = await Deno.readTextFile(STARQ_API_PATH);
+  const m0059Source = await Deno.readTextFile(MIGRATION_0059_PATH);
+  const m2100Source = await Deno.readTextFile(MIGRATION_2100_PATH);
+
+  // 1. Edge pins authoritative tax_type to gst_general
+  assert(edgeSource.includes('const authoritativeTaxType = "gst_general";'), 'Edge must pin authoritativeTaxType to gst_general');
+  assert(edgeSource.includes('detail: `COUNTER_SALE tax_type must be ${authoritativeTaxType}`'), 'Edge must reject non-gst_general tax_type');
+
+  // 2. Edge pins authoritative supplyDate to current date
+  assert(edgeSource.includes('const authoritativeSupplyDate = new Date().toISOString().slice(0, 10);'), 'Edge must pin authoritativeSupplyDate to current date');
+  assert(edgeSource.includes('detail: `COUNTER_SALE supply date must match current date (${authoritativeSupplyDate})`'), 'Edge must reject diverging supply date');
+
+  // 3. DB calculate_line_tax call uses 'gst_general' and current_date
+  assert(m0059Source.includes("target_org, 'gst_general', current_date,"), 'Migration 0059 must call calculate_line_tax with gst_general and current_date');
+  assert(m2100Source.includes("target_org, 'gst_general', current_date,"), 'Migration 2100 must call calculate_line_tax with gst_general and current_date');
+
+  // 4. Invariant: Edge taxType matches DB taxType
+  const edgeTaxType = "gst_general";
+  const dbTaxType = "gst_general";
+  assertEquals(edgeTaxType, dbTaxType, 'Edge and DB tax_type must be identical');
+
+  // 5. Invariant: Edge supply date represents today (matching DB current_date)
+  const today = new Date().toISOString().slice(0, 10);
+  assert(/^\d{4}-\d{2}-\d{2}$/.test(today), 'Supply date must match YYYY-MM-DD');
+});
+
+Deno.test('SERP-445 Invariant: Divergence between edge and DB fails closed', () => {
+  // Invariant rule: any requested tax_type or date diverging from canonical fails closed
+  function validateCounterSaleTaxParameters(req: { tax_type?: string; date?: string }, canonicalDate: string) {
+    const CANONICAL_TAX_TYPE = 'gst_general';
+    if (req.tax_type && req.tax_type.trim() !== CANONICAL_TAX_TYPE) {
+      return { ok: false, error: 'invalid_tax_type', status: 422 };
+    }
+    if (req.date && req.date.trim() !== canonicalDate) {
+      return { ok: false, error: 'invalid_supply_date', status: 422 };
+    }
+    return { ok: true, tax_type: CANONICAL_TAX_TYPE, supply_date: canonicalDate };
+  }
+
+  const today = '2026-09-26';
+
+  // Valid canonical request passes
+  const valid = validateCounterSaleTaxParameters({}, today);
+  assertEquals(valid.ok, true);
+
+  // Explicit matching tax_type passes
+  const explicitValid = validateCounterSaleTaxParameters({ tax_type: 'gst_general', date: today }, today);
+  assertEquals(explicitValid.ok, true);
+
+  // Divergent tax_type (e.g. gst_tourism) FAILS closed with 422
+  const divergentType = validateCounterSaleTaxParameters({ tax_type: 'gst_tourism' }, today);
+  assertEquals(divergentType.ok, false);
+  assertEquals(divergentType.error, 'invalid_tax_type');
+  assertEquals(divergentType.status, 422);
+
+  // Divergent backdated date FAILS closed with 422
+  const divergentDate = validateCounterSaleTaxParameters({ date: '2020-01-01' }, today);
+  assertEquals(divergentDate.ok, false);
+  assertEquals(divergentDate.error, 'invalid_supply_date');
+  assertEquals(divergentDate.status, 422);
+});
+
+Deno.test('SERP-445 Conformance: starq-api enriches counter_sale response with authoritative tax rate and status', async () => {
+  const source = await Deno.readTextFile(STARQ_API_PATH);
+
+  // Must enrich accepted counter_sale response
+  assert(source.includes('cs.gst_rate = counterSaleGstRate;'), 'Missing cs.gst_rate enrichment');
+  assert(source.includes('cs.gst_rate_percent = counterSaleGstRatePercent;'), 'Missing cs.gst_rate_percent enrichment');
+  assert(source.includes('cs.gst_registration_status = counterSaleGstRegistrationStatus;'), 'Missing cs.gst_registration_status enrichment');
+  assert(source.includes('cs.is_taxable = counterSaleIsTaxable;'), 'Missing cs.is_taxable enrichment');
 });

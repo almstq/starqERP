@@ -43,6 +43,9 @@ import {
   incrementRetry,
   calculateEstimatedTax,
   isTaxRateMissingForSale,
+  formatTaxLineLabel,
+  formatTaxLineValue,
+  formatReceiptGstDetails,
 } from './counter';
 
 describe('SERP-085 counter cart domain', () => {
@@ -611,5 +614,55 @@ describe('SERP-090 counter retry and resilience domain', () => {
     expect(ctx.idempotencyKey).toBeTruthy();
     expect(typeof ctx.idempotencyKey).toBe('string');
     expect(ctx.attemptCount).toBe(1);
+  });
+
+  describe('SERP-445 GST visibility and receipt formatting', () => {
+    it('formats checkout tax line for registered vs not_registered', () => {
+      // Registered with known rate
+      expect(formatTaxLineLabel('registered', 8)).toBe('Estimated Tax (8%)');
+      expect(formatTaxLineValue('registered', 8.5)).toBe('MVR 8.50');
+
+      // Registered without rate
+      expect(formatTaxLineLabel('registered', null)).toBe('Estimated Tax');
+
+      // Not registered — explicit label and row
+      expect(formatTaxLineLabel('not_registered', null)).toBe('Tax');
+      expect(formatTaxLineValue('not_registered', 0)).toBe('Not GST registered — no GST');
+    });
+
+    it('formats receipt GST details strictly from authoritative server response', () => {
+      // 1. Registered entity with rate and tax
+      const regSale = formatReceiptGstDetails({
+        gst_rate_percent: 8,
+        gst_registration_status: 'registered',
+        tax_total: 12.00,
+      });
+      expect(regSale.label).toBe('GST (8%)');
+      expect(regSale.value).toBe('MVR 12.00');
+      expect(regSale.isRegistered).toBe(true);
+      expect(regSale.statusBadge).toBe('GST Registered');
+      expect(regSale.receiptSubtitle).toBe('Tax Invoice / Receipt');
+
+      // 2. Fractional decimal gst_rate fallback (0.08 -> 8%)
+      const decimalRateSale = formatReceiptGstDetails({
+        gst_rate: 0.08,
+        gst_registration_status: 'registered',
+        tax_total: 4.80,
+      });
+      expect(decimalRateSale.label).toBe('GST (8%)');
+      expect(decimalRateSale.value).toBe('MVR 4.80');
+      expect(decimalRateSale.isRegistered).toBe(true);
+
+      // 3. Not registered entity — explicit non-empty row distinguishes from hidden tax
+      const unregSale = formatReceiptGstDetails({
+        gst_registration_status: 'not_registered',
+        tax_total: 0,
+      });
+      expect(unregSale.label).toBe('GST');
+      expect(unregSale.value).toBe('Not GST registered — no GST');
+      expect(unregSale.isRegistered).toBe(false);
+      expect(unregSale.statusBadge).toBe('Not GST Registered');
+      expect(unregSale.receiptSubtitle).toBe('Receipt (Not GST registered)');
+    });
   });
 });
