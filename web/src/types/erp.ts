@@ -476,6 +476,9 @@ export interface OrganisationBook {
   isDefault?: boolean;
 }
 
+export type ProductTaxClassification = 'standard_rated' | 'zero_rated' | 'exempt';
+export type OutletTaxRegime = 'gst_general' | 'gst_tourism';
+
 export interface Outlet {
   id: string;
   tenantId: string;
@@ -486,6 +489,7 @@ export interface Outlet {
   address?: string;
   phone?: string;
   isPrimary?: boolean;
+  taxRegime?: OutletTaxRegime;
 }
 
 export interface ModuleEntitlement {
