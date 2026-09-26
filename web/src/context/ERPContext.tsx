@@ -925,7 +925,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     session &&
       (session.application?.status === 'pending' ||
         session.application?.status === 'info_requested' ||
-        pendingApplications.some((a) => a.status === 'pending_approval'))
+        session.application?.status === 'rejected' ||
+        pendingApplications.some((a) => a.status === 'pending_approval' || a.status === 'rejected'))
   );
   const isPendingApproval = currentUser.status === 'Pending Approval' || applicantPending;
 
