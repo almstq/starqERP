@@ -132,6 +132,7 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
       // It is unknown until authoritatively configured and persisted.
       gstStatus: 'unknown',
       gstRate: 0,
+      currencySymbol: symbol,
       financialYearStart,
       financialYearEnd,
       phone: phone.trim() !== '+960' ? phone.trim() : '',
