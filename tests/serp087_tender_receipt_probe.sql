@@ -465,7 +465,7 @@ begin
   end;
   begin
     ignored := pg_temp.expect_sale_error(
-      org_two, usd_admin, 'owner',
+      org_one, usd_admin, 'owner',
       jsonb_build_object('type', 'COUNTER_SALE', 'tax_mode', 'zero_rated', 'location_id', loc_one,
         'items', jsonb_build_array(jsonb_build_object('product_id', prod_a, 'quantity', 1)),
         'payment_method', 'cash',

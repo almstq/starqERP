@@ -681,3 +681,77 @@ export function incrementRetry(context: RetryContext): RetryContext {
     attemptCount: context.attemptCount + 1,
   };
 }
+
+/**
+ * SERP-445 / Founder #6860: Format the tax label for checkout totals or receipt.
+ * Distinguishes registered (with rate) from not_registered.
+ */
+export function formatTaxLineLabel(
+  status: 'registered' | 'not_registered' | null | undefined,
+  ratePercent: number | null | undefined,
+): string {
+  if (status === 'registered') {
+    return ratePercent != null ? `Estimated Tax (${ratePercent}%)` : 'Estimated Tax';
+  }
+  return 'Tax';
+}
+
+/**
+ * SERP-445 / Founder #6860: Format the tax value for checkout totals or receipt.
+ * Ensures not_registered renders an explicit row ('Not GST registered — no GST')
+ * so that exempt/unregistered is clearly distinguishable from hidden tax.
+ */
+export function formatTaxLineValue(
+  status: 'registered' | 'not_registered' | null | undefined,
+  taxTotal: number,
+  currency = 'MVR',
+): string {
+  if (status === 'registered' || taxTotal > 0) {
+    return `${currency} ${taxTotal.toFixed(2)}`;
+  }
+  return 'Not GST registered — no GST';
+}
+
+/**
+ * SERP-445 / Founder #6860: Format receipt GST details strictly from authoritative server response.
+ * Server values (gst_rate_percent, gst_registration_status, tax_total) are preserved verbatim,
+ * never client-recomputed.
+ */
+export function formatReceiptGstDetails(sale: {
+  gst_rate_percent?: number | null;
+  gst_rate?: number | null;
+  gst_registration_status?: 'registered' | 'not_registered' | null;
+  tax_total?: number | null;
+}): {
+  label: string;
+  value: string;
+  isRegistered: boolean;
+  statusBadge: string;
+  receiptSubtitle: string;
+} {
+  const isRegistered = sale.gst_registration_status === 'registered'
+    || (sale.gst_registration_status !== 'not_registered' && Number(sale.tax_total ?? 0) > 0);
+  const ratePct = sale.gst_rate_percent != null
+    ? sale.gst_rate_percent
+    : sale.gst_rate != null
+      ? Math.round(Number(sale.gst_rate) * 100)
+      : null;
+
+  if (isRegistered) {
+    return {
+      label: ratePct != null ? `GST (${ratePct}%)` : 'GST',
+      value: `MVR ${Number(sale.tax_total ?? 0).toFixed(2)}`,
+      isRegistered: true,
+      statusBadge: 'GST Registered',
+      receiptSubtitle: 'Tax Invoice / Receipt',
+    };
+  }
+
+  return {
+    label: 'GST',
+    value: 'Not GST registered — no GST',
+    isRegistered: false,
+    statusBadge: 'Not GST Registered',
+    receiptSubtitle: 'Receipt (Not GST registered)',
+  };
+}
