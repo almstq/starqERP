@@ -6,7 +6,14 @@ import {
 } from 'lucide-react';
 import { useSidebarState } from '../hooks/useSidebarState';
 
-const NAV = [
+type NavItem = {
+  to: string;
+  label: string;
+  Icon: typeof LayoutDashboard;
+  end?: boolean;
+};
+
+const NAV: NavItem[] = [
   { to: '/',            label: 'Dashboard',        Icon: LayoutDashboard, end: true },
   { to: '/customers',   label: 'Customers',        Icon: Users },
   { to: '/jobs',        label: 'Jobs / Work Orders', Icon: Wrench },
@@ -20,7 +27,7 @@ const NAV = [
   { to: '/reports',     label: 'Reports',          Icon: BarChart3 },
   { to: '/audit',       label: 'Audit Trail',      Icon: ShieldCheck },
   { to: '/settings',    label: 'Settings',         Icon: SettingsIcon },
-] as const;
+];
 
 export const SidebarRail: React.FC = () => {
   const { expanded, toggle } = useSidebarState();
