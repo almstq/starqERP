@@ -1793,11 +1793,11 @@ export async function handleRequest(
       const priceListCode = new URL(req.url).searchParams.get("price_list_code") ?? undefined;
       const today = new Date().toISOString().slice(0, 10);
       const [outlets, products, onHand, gstStatus, gstRate] = await Promise.allSettled([
-        db.from("locations").select("id, code, name, kind, active")
+        db.from("locations").select("id, code, name, kind, tax_regime, active")
           .eq("organisation_id", session.organisation_id)
           .eq("active", true)
           .order("name"),
-        db.from("products").select("id, sku, barcode, kind, name, category, sale_allowed, active, reorder_threshold")
+        db.from("products").select("id, sku, barcode, kind, name, category, tax_classification, sale_allowed, active, reorder_threshold")
           .eq("organisation_id", session.organisation_id)
           .eq("active", true)
           .eq("sale_allowed", true)
@@ -1831,7 +1831,7 @@ export async function handleRequest(
           name: "Main POS Counter",
           kind: "outlet",
           active: true,
-        }).select("id, code, name, kind, active").maybeSingle();
+        }).select("id, code, name, kind, tax_regime, active").maybeSingle();
         if (newLoc) {
           locationRows = [newLoc];
         }
@@ -2980,6 +2980,23 @@ export async function handleRequest(
           }, origin);
         }
 
+        const rawTaxMode = body.tax_mode;
+        // SERP-447 / Founder #6930-#6932: Cashier/client may not choose tax_mode to evade tax.
+        // The edge accepts only the current default pricing mode (exclusive) and rejects exempt/zero_rated/any other value with 422.
+        if (rawTaxMode !== undefined && rawTaxMode !== null && rawTaxMode !== "exclusive") {
+          observed.outcome = "blocked";
+          await securityEvent(req, "garage.command", "rejected", session, {
+            code: "counter_sale_tax_mode_client_override_forbidden",
+            detail: `Client may not override tax_mode to '${rawTaxMode}'; tax determination is server-authoritative`,
+          }, requestId);
+          return json(422, {
+            ok: false,
+            error: "counter_sale_tax_mode_client_override_forbidden",
+            detail: `Client may not override tax_mode to '${rawTaxMode}'; tax determination is server-authoritative`,
+            request_id: requestId,
+          }, origin);
+        }
+
         // Invariant (SERP-445 / Vision #6920 FAIL 3 & Vision #6928 follow-up):
         // Single source of truth: COUNTER_SALE POS tax is strictly General GST ('gst_general')
         // on 'exclusive' tax_mode and uses current supply date (today). Edge and DB must never diverge.
@@ -2996,7 +3013,19 @@ export async function handleRequest(
           }, origin);
         }
 
-        const taxType = taxValidation.taxType!;
+        // SERP-447: Tax regime is resolved from outlet (location), never client-chosen.
+        let taxType = taxValidation.taxType!;
+        if (typeof body.location_id === "string" && body.location_id.trim()) {
+          const { data: locData } = await db.from("locations")
+            .select("tax_regime")
+            .eq("organisation_id", session.organisation_id)
+            .eq("id", body.location_id.trim())
+            .maybeSingle();
+          if (locData?.tax_regime) {
+            taxType = locData.tax_regime;
+          }
+        }
+
         const taxMode = taxValidation.taxMode!;
         const supplyDate = taxValidation.supplyDate!;
 

@@ -12,11 +12,15 @@
  * operator, or another outlet is ever reachable from a given scope.
  */
 
+export type ProductTaxClassification = 'standard_rated' | 'zero_rated' | 'exempt';
+export type OutletTaxRegime = 'gst_general' | 'gst_tourism';
+
 export interface CounterLocation {
   id: string;
   code: string;
   name: string;
   kind: string;
+  tax_regime?: OutletTaxRegime;
   active: boolean;
 }
 
@@ -28,6 +32,7 @@ export interface CounterProduct {
   category?: string | null;
   barcode: string | null;
   reorder_threshold?: number | null;
+  tax_classification?: ProductTaxClassification;
   sale_allowed: boolean;
   active: boolean;
 }
@@ -60,6 +65,7 @@ export interface PriceResolution {
     kind: string;
     name: string;
     barcode: string | null;
+    tax_classification?: ProductTaxClassification;
     active: boolean;
     sale_allowed: boolean;
   } | null;
@@ -76,6 +82,8 @@ export interface PriceResolution {
   tax?: {
     mode: string;
     rate: number;
+    tax_classification?: ProductTaxClassification;
+    rule_version?: string;
     tax_amount: number;
     net_amount: number;
     gross_amount: number;
