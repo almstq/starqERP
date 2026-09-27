@@ -144,6 +144,27 @@ export async function apiPost<T>(
   return data as T;
 }
 
+export interface TenantConfigPayload {
+  name?: string;
+  legal_name?: string;
+  tin_number: string;
+  gst_status: string;
+  gst_rate: number;
+  bml_account: string;
+  address: string;
+  phone: string;
+  email: string;
+  island: string;
+}
+
+export function getTenantConfig() {
+  return apiGet<{ ok: boolean; config: TenantConfigPayload }>('/api/tenant/config');
+}
+
+export function saveTenantConfig(payload: TenantConfigPayload) {
+  return apiPost<{ ok: boolean; config: TenantConfigPayload }>('/api/tenant/config', payload as unknown as Record<string, unknown>);
+}
+
 export interface PlatformTenantRecord {
   organisation_id: string;
   slug: string;
