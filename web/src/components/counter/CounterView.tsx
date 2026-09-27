@@ -789,8 +789,8 @@ export const CounterView: React.FC = () => {
         persistCart([]);
         setPrintStatus('idle');
         setPrintError(null);
-        // Eagerly pre-load receipt after commit for immediate printing/reprinting
-        loadReceipt(response.counter_sale.payment_id);
+        // Await/sequence receipt load after commit for immediate printing/reprinting
+        await loadReceipt(response.counter_sale.payment_id);
       } else {
         setSaleError('counter_sale_no_response');
       }
@@ -815,8 +815,10 @@ export const CounterView: React.FC = () => {
         setReceipt(data);
         return data;
       }
+      setReceipt(null);
       return null;
     } catch (error) {
+      setReceipt(null);
       setReceiptError(error instanceof ApiError ? error.code : 'receipt_load_failed');
       return null;
     } finally {
@@ -842,9 +844,9 @@ export const CounterView: React.FC = () => {
         });
       }
 
-      // Ensure receipt data is loaded
+      // Ensure receipt data is loaded and valid before opening physical print dialog
       const receiptData = await loadReceipt(saleResult.payment_id);
-      if (!receiptData) {
+      if (!receiptData || (!receiptData.receipt && !(receiptData as any).receipt_number)) {
         const outcome = evaluatePrinterOutcome('receipt_data_unavailable', true);
         setPrintStatus(outcome.status);
         setPrintError(outcome.error);
@@ -1702,10 +1704,10 @@ export const CounterView: React.FC = () => {
                     </Button>
                   </div>
 
-                  {printStatus === 'printed' && (
-                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--positive)]">
-                      <CheckCircle2 size={13} aria-hidden="true" />
-                      <span>Receipt printed • Duplicate reprint available</span>
+                  {(printStatus === 'print_requested' || printStatus === 'printed') && (
+                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--md-sys-color-primary)]">
+                      <Printer size={13} aria-hidden="true" />
+                      <span>Print requested • Re-print duplicate available</span>
                     </div>
                   )}
 

@@ -106,10 +106,10 @@ describe('SPOS-008: Atomic Checkout, Inventory Movement, Receipt After Commit & 
       }).toThrow(/Invariant Violation/i);
     });
 
-    it('records clean "printed" status when physical printing succeeds after commit', () => {
+    it('records honest "print_requested" status when physical printing is dispatched after commit', () => {
       const outcome = evaluatePrinterOutcome(null, true);
       expect(outcome.ok).toBe(true);
-      expect(outcome.status).toBe('printed');
+      expect(outcome.status).toBe('print_requested');
       expect(outcome.error).toBeNull();
     });
 
@@ -182,9 +182,9 @@ describe('SPOS-008: Atomic Checkout, Inventory Movement, Receipt After Commit & 
         expect(window.print).toHaveBeenCalledTimes(1);
       });
 
-      // Shows printed indicator
+      // Shows print requested indicator (honest representation, avoids false success on cancel)
       await waitFor(() => {
-        expect(screen.getByText(/Receipt printed • Duplicate reprint available/i)).toBeInTheDocument();
+        expect(screen.getByText(/Print requested • Re-print duplicate available/i)).toBeInTheDocument();
       });
     });
 

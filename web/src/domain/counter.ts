@@ -774,7 +774,7 @@ export function formatReceiptGstDetails(sale: {
  * Destination law: Receipt emission occurs strictly after database commit.
  * Printer failure never reverses a committed sale.
  */
-export type CounterPrintStatus = 'idle' | 'printing' | 'printed' | 'print_failed';
+export type CounterPrintStatus = 'idle' | 'printing' | 'print_requested' | 'printed' | 'print_failed';
 
 export interface PrinterExecutionOutcome {
   ok: boolean;
@@ -790,9 +790,11 @@ export function evaluatePrinterOutcome(
     throw new Error('SPOS-008 Invariant Violation: Attempted to print before database commit');
   }
   if (!printError) {
+    // Window.print() returns undefined regardless of whether cashier clicked Print or Cancel.
+    // We report 'print_requested' rather than claiming physical completion.
     return {
       ok: true,
-      status: 'printed',
+      status: 'print_requested',
       error: null,
     };
   }
