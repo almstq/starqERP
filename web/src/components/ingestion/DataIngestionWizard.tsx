@@ -22,6 +22,7 @@ import {
   ValidationSummary,
   IngestionExecutionResult,
   IngestionMode,
+  IngestionValidationContext,
   parseCsv,
   parseXlsx,
   SCHEMAS,
@@ -36,12 +37,14 @@ interface DataIngestionWizardProps {
   initialTarget?: IngestionTarget;
   onComplete?: (result: IngestionExecutionResult) => void;
   committer?: BatchInsertFn;
+  validationContext?: IngestionValidationContext;
 }
 
 export const DataIngestionWizard: React.FC<DataIngestionWizardProps> = ({
   initialTarget = 'contacts',
   onComplete,
   committer,
+  validationContext,
 }) => {
   const [target, setTarget] = useState<IngestionTarget>(initialTarget);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -151,8 +154,14 @@ export const DataIngestionWizard: React.FC<DataIngestionWizardProps> = ({
     );
   };
 
+  const defaultValidationContext: IngestionValidationContext = validationContext || {
+    foreignReferences: {
+      'chart_of_accounts.code': new Set(['1010', '1020', '1200', '1500', '2010', '2020', '3010', '4010', '5010']),
+    },
+  };
+
   const handleValidate = () => {
-    const summary = validateDataset(rawHeaders, rawRows, mappings, currentSchema);
+    const summary = validateDataset(rawHeaders, rawRows, mappings, currentSchema, defaultValidationContext);
     setValidationSummary(summary);
     setStep(3);
   };

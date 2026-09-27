@@ -230,8 +230,14 @@ describe('SERP-302: Universal Dataset Validator & Duplicate Key Detection', () =
       { sourceHeader: 'Debit', targetField: 'debit', confidence: 100, sampleValues: [] },
       { sourceHeader: 'Credit', targetField: 'credit', confidence: 100, sampleValues: [] },
     ];
+    // Provide a context with the chart_of_accounts lookup so fail-closed FK validation passes
+    const context = {
+      foreignReferences: {
+        'chart_of_accounts.code': new Set(['1010', '2010']),
+      },
+    };
 
-    const balancedRes = validateDataset(headers, balancedRows, mappings, OPENING_BALANCES_SCHEMA);
+    const balancedRes = validateDataset(headers, balancedRows, mappings, OPENING_BALANCES_SCHEMA, context);
     expect(balancedRes.isValid).toBe(true);
 
     // Unbalanced set (Debits 1000 vs Credits 800)
@@ -239,7 +245,7 @@ describe('SERP-302: Universal Dataset Validator & Duplicate Key Detection', () =
       ['1010', '1000.00', '0.00'],
       ['2010', '0.00', '800.00'],
     ];
-    const unbalancedRes = validateDataset(headers, unbalancedRows, mappings, OPENING_BALANCES_SCHEMA);
+    const unbalancedRes = validateDataset(headers, unbalancedRows, mappings, OPENING_BALANCES_SCHEMA, context);
     expect(unbalancedRes.isValid).toBe(false);
     expect(unbalancedRes.errors.some((e) => e.error.includes('Out of balance'))).toBe(true);
   });
