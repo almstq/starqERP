@@ -47,7 +47,9 @@ insert into expected_public_tables (table_name) values
   -- supabase/migrations/202609191720*, 202609191725*, 202609192100*,
   -- 202609192200*, 202609192359* for each of these 6 tables - nothing invented.
   ('counter_tenders'), ('counter_receipts'), ('counter_cash_sessions'),
-  ('counter_returns'), ('counter_refund_tenders'), ('owner_summary_consents');
+  ('counter_returns'), ('counter_refund_tenders'), ('owner_summary_consents'),
+  -- SERP-361: Starq Account durable human identity schema (ADR 010)
+  ('starq_accounts'), ('account_identities'), ('account_profiles'), ('account_consents');
 
 create temporary table expected_policies (
   table_name text not null,
@@ -146,7 +148,12 @@ insert into expected_policies (table_name, policy_name) values
   -- migrations, same pattern as payment_provider_config/provider_events above)
   -- and correctly have no row here.
   ('owner_summary_consents', 'owner_summary_consents_current'),   -- 202609191725_serp_437_erp_owner_summary_api.sql
-  ('owner_summary_consents', 'owner_summary_consents_public');    -- 202609191725_serp_437_erp_owner_summary_api.sql
+  ('owner_summary_consents', 'owner_summary_consents_public'),    -- 202609191725_serp_437_erp_owner_summary_api.sql
+  -- SERP-361: Starq Account deny-by-default policies (ADR 010)
+  ('starq_accounts', 'starq_accounts_deny_by_default'),
+  ('account_identities', 'account_identities_deny_by_default'),
+  ('account_profiles', 'account_profiles_deny_by_default'),
+  ('account_consents', 'account_consents_deny_by_default');
 
 do $$
 begin
@@ -235,11 +242,11 @@ select e.table_name,
 -- in protected-by-revoked-grant (6+5=11). Total 59+6=65.
 do $$
 begin
-  if (select count(*) from protection_report) <> 65 then
-    raise exception 'SERP-124/337 expected 65 classified public tables';
+  if (select count(*) from protection_report) <> 69 then
+    raise exception 'SERP-124/337 expected 69 classified public tables';
   end if;
-  if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 53 then
-    raise exception 'SERP-124/337 expected 53 RLS-protected tables';
+  if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 57 then
+    raise exception 'SERP-124/337 expected 57 RLS-protected tables';
   end if;
   if (select count(*) from protection_report where protection = 'protected-by-revoked-grant') <> 11 then
     raise exception 'SERP-124/337 expected 11 revoked-grant-protected tables';
@@ -397,7 +404,14 @@ begin
      -- tests/owner_summary_consent_boundary_probe.sql, which uses positive
      -- controls in both directions so "nothing visible" can never pass as
      -- "nothing leaked".
-     where table_name not in ('product_publications', 'payment_providers', 'tax_rate_schedules', 'owner_summary_consents')
+     -- starq_accounts, account_identities, account_profiles, account_consents
+     -- (SERP-361/ADR 010) are skipped here for the same reason as payment_providers
+     -- and tax_rate_schedules: this loop's tenant_column := 'organisation_id'
+     -- assumption does not hold for them at all. Starq Account is the durable
+     -- human identity boundary beneath the ERP, not a tenant-scoped table.
+     -- Their deny-by-default boundary is proved by the no-claim loop above (line 340)
+     -- and by the dedicated tests/serp361_starq_account_probe.sql suite.
+     where table_name not in ('product_publications', 'payment_providers', 'tax_rate_schedules', 'owner_summary_consents', 'starq_accounts', 'account_identities', 'account_profiles', 'account_consents')
      order by table_name
   loop
     tenant_column := case when policy_table.table_name = 'organisations' then 'id' else 'organisation_id' end;
