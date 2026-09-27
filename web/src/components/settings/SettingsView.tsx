@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Building2,
@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { GstRegistrationStatus } from '../../types/erp';
-import { apiGet } from '../../services/apiGateway';
 import { Badge } from '../common/Badge';
 import { RolesPermissionsTab } from './RolesPermissionsTab';
 import { UsersManagementTab } from './UsersManagementTab';
@@ -29,6 +28,7 @@ import { SupportTab } from './SupportTab';
 import { LogoUpload } from './LogoUpload';
 import { AboutTab } from './AboutTab';
 import { PriceListsTab } from './PriceListsTab';
+import { getTenantConfig, saveTenantConfig } from '../../services/apiGateway';
 
 type SettingsSubTab = 'profile' | 'branding' | 'roles' | 'price_lists' | 'users' | 'workflows' | 'support' | 'about';
 
@@ -100,10 +100,11 @@ const SETTINGS_TABS: TabConfig[] = [
 ];
 
 export const SettingsView: React.FC = () => {
-  const { currentTenant, updateTenant, updateTenantLogo, currentBook, currentArchetype } = useERP();
+  const { currentTenant, updateTenant, updateTenantLogo, currentBook, currentArchetype, tenantHydrated, tenantIsLive } = useERP();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeSubTab = (searchParams.get('tab') as SettingsSubTab) || 'profile';
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Local state for current tenant editing
   const [name, setName] = useState(currentTenant.name);
@@ -117,7 +118,6 @@ export const SettingsView: React.FC = () => {
   const [email, setEmail] = useState(currentTenant.email);
   const [island, setIsland] = useState(currentTenant.island);
 
-  const [taxLoading, setTaxLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -134,58 +134,37 @@ export const SettingsView: React.FC = () => {
     setIsland(currentTenant.island);
   }, [currentTenant]);
 
-  useEffect(() => {
+  const [configLoaded, setConfigLoaded] = useState(!tenantIsLive);
+  const [configError, setConfigError] = useState<string | null>(null);
+  const loadConfig = useCallback(() => {
+    if (!tenantIsLive || !tenantHydrated) { setConfigLoaded(!tenantIsLive); return; }
     let cancelled = false;
-    if (!currentTenant.id) return;
-    setTaxLoading(true);
-    apiGet<{
-      ok: boolean;
-      registration: {
-        id: string;
-        organisation_id: string;
-        tax_type: string;
-        registration_status: string;
-        tin: string | null;
-        effective_from: string | null;
-        effective_to: string | null;
-      } | null;
-    }>('/api/tenant/tax-registration')
-      .then((res) => {
-        if (cancelled) return;
-        if (res.ok) {
-          if (res.registration) {
-            const status = res.registration.registration_status as GstRegistrationStatus;
-            setGstStatus(status);
-            if (res.registration.tin !== null && res.registration.tin !== undefined) {
-              setTinNumber(res.registration.tin);
-            }
-            if (status === 'registered' || status === 'pending') {
-              setGstRate(8);
-            } else if (status === 'not_registered') {
-              setGstRate(0);
-            }
-          } else {
-            setGstStatus('unknown');
-          }
-        }
-      })
-      .catch(() => {
-        // Fallback: preserve state
-      })
-      .finally(() => {
-        if (!cancelled) setTaxLoading(false);
-      });
+    setConfigLoaded(false);
+    setConfigError(null);
+    getTenantConfig().then(({ config }) => {
+      if (cancelled) return;
+      setTinNumber(config.tin_number || '');
+      setGstStatus((config.gst_status || 'not_registered') as GstRegistrationStatus);
+      setGstRate(config.gst_rate || 8);
+      setBmlAccount(config.bml_account || '');
+      setAddress(config.address || ''); setPhone(config.phone || '');
+      setEmail(config.email || ''); setIsland(config.island || '');
+      setConfigLoaded(true);
+    }).catch((err: unknown) => {
+      if (!cancelled) setConfigError(err instanceof Error ? err.message : 'Failed to load tenant configuration');
+    });
+    return () => { cancelled = true; };
+  }, [tenantHydrated, tenantIsLive, currentTenant.id]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [currentTenant.id]);
+  useEffect(() => loadConfig(), [loadConfig]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaveLoading(true);
+    if (!tenantHydrated || !configLoaded || saving) return;
+    setSaveLoading(true); setSaving(true);
     setSaveError(null);
     try {
+      if (tenantIsLive) await saveTenantConfig({ tin_number: tinNumber, gst_status: gstStatus, gst_rate: gstRate, bml_account: bmlAccount, address, phone, email, island });
       await updateTenant({
         name,
         legalName,
@@ -205,7 +184,7 @@ export const SettingsView: React.FC = () => {
       const msg = err instanceof Error ? err.message : 'Failed to save settings';
       setSaveError(msg);
     } finally {
-      setSaveLoading(false);
+      setSaveLoading(false); setSaving(false);
     }
   };
 
@@ -249,7 +228,17 @@ export const SettingsView: React.FC = () => {
       {/* Main Content Area: 100% Full Width */}
       <div className="w-full min-w-0">
         {activeSubTab === 'profile' && (
-          <form onSubmit={handleSaveProfile} className="space-y-6 animate-in fade-in">
+          <form onSubmit={handleSaveProfile} className="space-y-6 animate-in fade-in" aria-busy={!tenantHydrated || saving}>
+            {(!tenantHydrated || !configLoaded) && (
+              <div className="p-4 rounded-xl border text-xs font-bold">Loading authoritative tenant profile and GST configuration…</div>
+            )}
+            {configError && (
+              <div className="p-4 rounded-xl border text-xs font-bold text-red-600 flex items-center justify-between gap-3">
+                <span>{configError}</span>
+                <button type="button" onClick={() => void loadConfig()} className="px-3 py-1 rounded-lg border text-xs font-bold">Retry</button>
+              </div>
+            )}
+            <fieldset disabled={!tenantHydrated || !configLoaded || saving} className="contents">
             {savedSuccess && (
               <div className="p-4 rounded-xl bg-[var(--positive-subtle)] border border-[var(--positive)] text-[var(--positive)] text-xs font-bold flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
@@ -285,6 +274,7 @@ export const SettingsView: React.FC = () => {
                     type="text"
                     required
                     value={name}
+                    disabled={!tenantHydrated || saving}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full px-3.5 py-2 text-xs border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)]"
                     style={{
@@ -302,6 +292,7 @@ export const SettingsView: React.FC = () => {
                   <input
                     type="text"
                     value={legalName}
+                    disabled={!tenantHydrated || saving}
                     onChange={(e) => setLegalName(e.target.value)}
                     className="w-full px-3.5 py-2 text-xs border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)]"
                     style={{
@@ -439,7 +430,7 @@ export const SettingsView: React.FC = () => {
                     <label className="block text-xs font-semibold text-[var(--md-sys-color-on-surface)]">
                       MIRA GST Statutory Registration Status
                     </label>
-                    {taxLoading && (
+                    {!configLoaded && (
                       <span className="text-[10px] text-[var(--md-sys-color-primary)] font-medium animate-pulse">
                         Hydrating registration...
                       </span>
@@ -447,7 +438,7 @@ export const SettingsView: React.FC = () => {
                   </div>
                   <select
                     value={gstStatus}
-                    disabled={taxLoading || saveLoading}
+                    disabled={!configLoaded || saveLoading}
                     onChange={(e) => {
                       const newStatus = e.target.value as GstRegistrationStatus | 'unknown';
                       setGstStatus(newStatus);
@@ -493,7 +484,7 @@ export const SettingsView: React.FC = () => {
                   <input
                     type="text"
                     value={tinNumber}
-                    disabled={taxLoading || saveLoading}
+                    disabled={!configLoaded || saveLoading}
                     onChange={(e) => setTinNumber(e.target.value)}
                     placeholder="Enter registered TIN, if configured"
                     className="w-full px-3.5 py-2 text-xs font-mono font-bold text-[var(--md-sys-color-primary)] border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)] disabled:opacity-75"
@@ -510,7 +501,7 @@ export const SettingsView: React.FC = () => {
                   </label>
                   <select
                     value={gstStatus === 'not_registered' ? 0 : gstRate}
-                    disabled={gstStatus === 'not_registered' || taxLoading || saveLoading}
+                    disabled={gstStatus === 'not_registered' || !configLoaded || saveLoading}
                     onChange={(e) => setGstRate(Number(e.target.value))}
                     className="w-full px-3.5 py-2 text-xs border rounded-xl outline-none focus:border-[var(--md-sys-color-primary)] disabled:opacity-75 disabled:cursor-not-allowed"
                     style={{
@@ -555,7 +546,7 @@ export const SettingsView: React.FC = () => {
             <div className="flex justify-end pt-2">
               <button
                 type="submit"
-                disabled={saveLoading || taxLoading}
+                disabled={!configLoaded || saveLoading}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   backgroundColor: 'var(--md-sys-color-primary)',
@@ -566,6 +557,7 @@ export const SettingsView: React.FC = () => {
                 <span>{saveLoading ? 'Saving Settings...' : 'Save Tenant Profile'}</span>
               </button>
             </div>
+            </fieldset>
           </form>
         )}
 
