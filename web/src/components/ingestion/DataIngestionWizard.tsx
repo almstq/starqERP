@@ -461,8 +461,8 @@ export const DataIngestionWizard: React.FC<DataIngestionWizardProps> = ({
               </div>
             </Surface>
             <Surface variant="elevated" level={1} className="p-3.5 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
-              <div className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">Duplicate Keys</div>
-              <div className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-0.5">
+              <div className="text-[11px] text-[var(--md-sys-color-tertiary)] font-medium">Duplicate Keys</div>
+              <div className="text-xl font-bold text-[var(--md-sys-color-tertiary)] mt-0.5">
                 {validationSummary.duplicateKeyErrors.length}
               </div>
             </Surface>

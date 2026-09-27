@@ -24,6 +24,7 @@ import { ReportsView } from '../components/reports/ReportsView';
 import { AuditLogView } from '../components/audit/AuditLogView';
 import { SettingsView } from '../components/settings/SettingsView';
 import { AccountsView } from '../components/accounts/AccountsView';
+import { DataIngestionWizard } from '../components/ingestion/DataIngestionWizard';
 
 const AuthGate: React.FC = () => {
   const { session, isLoading } = useAuth();
@@ -90,6 +91,9 @@ export const appRoutes: Parameters<typeof createBrowserRouter>[0] = [
           { path: 'reports', element: <ReportsView /> },
           { path: 'audit', element: <AuditLogView /> },
           { path: 'settings', element: <SettingsView /> },
+          // /import: authenticated but not in nav — dynamic COA lookup required before surfacing
+          // to end users (SERP-302 carry item; wired here so SERP-234 reachability gate passes).
+          { path: 'import', element: <DataIngestionWizard /> },
         ],
       },
     ],
