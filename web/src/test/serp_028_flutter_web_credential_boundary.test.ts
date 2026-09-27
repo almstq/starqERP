@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   formatSessionCookie,
   parseSessionCookie,
@@ -11,6 +11,10 @@ import {
   validateReplayProtection,
   SessionTokenRecord,
 } from './serp_026_session_boundary.test';
+import {
+  CredentialBoundaryGuard,
+  installStorageBoundaryGuard,
+} from '../services/credentialBoundaryGuard';
 
 /**
  * SERP-028: Flutter Web Credential-Boundary Verification
@@ -46,51 +50,12 @@ class MockWebStorage {
     return this.store.size;
   }
 
+  key(index: number): string | null {
+    return Array.from(this.store.keys())[index] ?? null;
+  }
+
   keys(): string[] {
     return Array.from(this.store.keys());
-  }
-}
-
-// Canonical Flutter Web Secure Storage Guard
-// Prohibits storing raw auth tokens, refresh tokens, or bearer secrets in client-side storage
-export class FlutterWebCredentialBoundaryGuard {
-  private static readonly DISALLOWED_CREDENTIAL_PATTERNS = [
-    /access_token/i,
-    /refresh_token/i,
-    /sb_ops/i,
-    /stq_sec_/i,
-    /bearer/i,
-    /session_token/i,
-    /secret/i,
-  ];
-
-  static auditStorageKey(key: string): { allowed: boolean; violation?: string } {
-    for (const pattern of this.DISALLOWED_CREDENTIAL_PATTERNS) {
-      if (pattern.test(key)) {
-        return {
-          allowed: false,
-          violation: `Prohibited credential persistence: key "${key}" matches forbidden pattern ${pattern}`,
-        };
-      }
-    }
-    return { allowed: true };
-  }
-
-  static assertNoPersistedCredentials(storage: MockWebStorage): {
-    clean: boolean;
-    violations: string[];
-  } {
-    const violations: string[] = [];
-    for (const key of storage.keys()) {
-      const check = this.auditStorageKey(key);
-      if (!check.allowed && check.violation) {
-        violations.push(check.violation);
-      }
-    }
-    return {
-      clean: violations.length === 0,
-      violations,
-    };
   }
 }
 
@@ -208,23 +173,82 @@ describe('SERP-028: Flutter Web Credential-Boundary Verification', () => {
       localStorage.setItem('hoadha_lang', 'dv');
       localStorage.setItem('active_view', 'counter_pos');
 
-      // Verify no credential tokens leaked into storage
-      const audit = FlutterWebCredentialBoundaryGuard.assertNoPersistedCredentials(localStorage);
+      // Verify no credential tokens leaked into storage using shipped production guard
+      const audit = CredentialBoundaryGuard.auditStorage(localStorage as any);
       expect(audit.clean).toBe(true);
       expect(audit.violations).toHaveLength(0);
     });
 
-    it('flags any attempt by Flutter Web to persist session tokens into localStorage as a boundary violation', () => {
+    it('flags any attempt by Flutter Web to persist session tokens into localStorage by key name', () => {
       const dirtyStorage = new MockWebStorage();
       dirtyStorage.setItem('hoadha_theme', 'dark');
-      // Simulated rogue or default supabase_flutter token leak
-      dirtyStorage.setItem('sb_ops_access_token', 'eyJhbGciOi...');
-      dirtyStorage.setItem('supabase.auth.refresh_token', 'token_refresh_123');
+      dirtyStorage.setItem('sb_ops_access_token', 'token_raw_123');
+      dirtyStorage.setItem('supabase.auth.refresh_token', 'refresh_456');
 
-      const audit = FlutterWebCredentialBoundaryGuard.assertNoPersistedCredentials(dirtyStorage);
+      const audit = CredentialBoundaryGuard.auditStorage(dirtyStorage as any);
       expect(audit.clean).toBe(false);
       expect(audit.violations.length).toBe(2);
-      expect(audit.violations[0]).toContain('forbidden pattern');
+      expect(audit.violations[0].matchType).toBe('prohibited_key');
+    });
+
+    it('detects and flags raw JWT values stored under an innocuous key name (Finding 2 value-scan)', () => {
+      const storage = new MockWebStorage();
+      // Vision test probe case: benign key name holding raw JWT string
+      storage.setItem('hoadha_prefs', 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4ifQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c');
+
+      const audit = CredentialBoundaryGuard.auditStorage(storage as any);
+      expect(audit.clean).toBe(false);
+      expect(audit.violations.length).toBe(1);
+      expect(audit.violations[0].key).toBe('hoadha_prefs');
+      expect(audit.violations[0].matchType).toBe('prohibited_value_jwt');
+      expect(audit.violations[0].reason).toContain('contains raw JWT token');
+    });
+
+    it('detects and flags nested JWT tokens inside serialized JSON objects under an innocuous key name', () => {
+      const storage = new MockWebStorage();
+      // Vision reproduction: JSON object serialized under innocent key name
+      const payload = JSON.stringify({
+        theme: 'light',
+        nestedState: {
+          token: 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.sig123',
+        },
+      });
+      storage.setItem('app_configuration', payload);
+
+      const audit = CredentialBoundaryGuard.auditStorage(storage as any);
+      expect(audit.clean).toBe(false);
+      expect(audit.violations.length).toBe(1);
+      expect(audit.violations[0].key).toBe('app_configuration');
+      expect(audit.violations[0].matchType).toBe('prohibited_value_jwt');
+    });
+
+    it('detects and flags stq_sec_ session tokens in value under an innocuous key name', () => {
+      const storage = new MockWebStorage();
+      storage.setItem('user_cache', 'stq_sec_sess_89ab12cd_abc1234');
+
+      const audit = CredentialBoundaryGuard.auditStorage(storage as any);
+      expect(audit.clean).toBe(false);
+      expect(audit.violations[0].matchType).toBe('prohibited_value_token');
+    });
+
+    it('enforces runtime boundary interception on Storage.prototype.setItem', () => {
+      // Install guard on global storage prototype
+      installStorageBoundaryGuard();
+
+      // Normal benign write succeeds
+      expect(() => {
+        window.localStorage.setItem('test_theme', 'light');
+      }).not.toThrow();
+
+      // Attempt to store prohibited key throws security violation
+      expect(() => {
+        window.localStorage.setItem('sb_ops_session', 'some_token');
+      }).toThrowError(/SERP-028 Security Violation/);
+
+      // Attempt to store JWT in value throws security violation
+      expect(() => {
+        window.localStorage.setItem('innocuous_key', 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.sig123');
+      }).toThrowError(/SERP-028 Security Violation/);
     });
 
     it('successfully processes requests when browser attaches HttpOnly cookie with credentials: include', () => {
