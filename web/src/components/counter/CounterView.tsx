@@ -894,7 +894,13 @@ export const CounterView: React.FC = () => {
     .filter((entry) => !filterLowStockOnly || entry.isLow || entry.onHand <= 0);
 
   return (
-    <div className="w-full max-w-[1700px] mx-auto px-3 sm:px-6 py-4 space-y-4 font-sans">
+    // SERP-090/Founder seq 6860: fixed cashier terminal viewport. The POS root
+    // is constrained to the screen height (100dvh with 100vh fallback); the
+    // header, till controls, barcode/search/category bar, cart header, totals,
+    // tender controls and Complete Sale stay permanently visible. Only the
+    // product grid and the cart item list scroll internally — long lists can
+    // never push checkout controls off-screen.
+    <div className="counter-root w-full max-w-[1700px] mx-auto px-3 sm:px-6 py-4 flex flex-col h-[100vh] overflow-hidden gap-4 font-sans supports-[height:100dvh]:h-[100dvh]">
       {!isOnline && (
         <div
           role="alert"
@@ -1046,12 +1052,14 @@ export const CounterView: React.FC = () => {
         </div>
       )}
 
-      {/* 2. Two-Pane Terminal Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      {/* 2. Two-Pane Terminal Layout — flex-1 min-h-0 so the grid (left) and
+          cart (right) fill the remaining viewport height and scroll INTERNALLY
+          instead of growing the page (Founder seq 6860). */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         {/* LEFT / Majority Width (Catalogue & Holds) */}
-        <main className="lg:col-span-7 xl:col-span-7 2xl:col-span-8 space-y-4">
-          <Surface variant="elevated" padding="md" className="rounded-2xl border border-outline-variant/60 shadow-sm">
-            <div className="flex flex-col gap-3.5">
+        <main className="lg:col-span-7 xl:col-span-7 2xl:col-span-8 space-y-4 flex flex-col min-h-0">
+          <Surface variant="elevated" padding="md" className="rounded-2xl border border-outline-variant/60 shadow-sm flex-1 min-h-0 flex flex-col">
+            <div className="flex flex-col gap-3.5 min-h-0 flex-1">
               {/* Barcode scanner bar pinned at top */}
               <form
                 className="flex items-center gap-2"
@@ -1197,7 +1205,7 @@ export const CounterView: React.FC = () => {
 
               {/* Product Grid - Dense, touch-friendly retail tiles */}
               <div
-                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 max-h-[62vh] overflow-y-auto erp-scroll-region p-1"
+                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 flex-1 min-h-0 overflow-y-auto erp-scroll-region p-1"
                 role="region"
                 aria-label="Product grid"
               >
@@ -1365,7 +1373,7 @@ export const CounterView: React.FC = () => {
         </main>
 
         {/* RIGHT / Dominant Sticky Cart Panel */}
-        <aside className="lg:col-span-5 xl:col-span-5 2xl:col-span-4 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] flex flex-col min-h-0">
+        <aside className="lg:col-span-5 xl:col-span-5 2xl:col-span-4 flex flex-col min-h-0">
           <Surface variant="elevated" padding="none" className="rounded-2xl border border-outline-variant/70 shadow-md flex flex-col h-full min-h-0 overflow-hidden">
             {/* Cart Header */}
             <div className="shrink-0 flex items-center justify-between p-3.5 pb-2.5 border-b border-outline-variant/60">
