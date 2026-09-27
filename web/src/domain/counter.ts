@@ -768,3 +768,52 @@ export function formatReceiptGstDetails(sale: {
     receiptSubtitle: 'Receipt (Not GST registered)',
   };
 }
+
+/**
+ * SPOS-008: Terminal printer failure resilience & print status lifecycle.
+ * Destination law: Receipt emission occurs strictly after database commit.
+ * Printer failure never reverses a committed sale.
+ */
+export type CounterPrintStatus = 'idle' | 'printing' | 'print_requested' | 'printed' | 'print_failed';
+
+export interface PrinterExecutionOutcome {
+  ok: boolean;
+  status: CounterPrintStatus;
+  error: string | null;
+}
+
+export function evaluatePrinterOutcome(
+  printError: unknown | null,
+  isCommitted: boolean,
+): PrinterExecutionOutcome {
+  if (!isCommitted) {
+    throw new Error('SPOS-008 Invariant Violation: Attempted to print before database commit');
+  }
+  if (!printError) {
+    // Window.print() returns undefined regardless of whether cashier clicked Print or Cancel.
+    // We report 'print_requested' rather than claiming physical completion.
+    return {
+      ok: true,
+      status: 'print_requested',
+      error: null,
+    };
+  }
+  const errorMsg = printError instanceof Error ? printError.message : String(printError || 'printer_unavailable');
+  return {
+    ok: false,
+    status: 'print_failed',
+    error: errorMsg,
+  };
+}
+
+export function formatPrinterFailureNotice(invoiceNumber: string, error?: string | null): {
+  title: string;
+  description: string;
+  isCommitted: boolean;
+} {
+  return {
+    title: `Printer Failure — Sale #${invoiceNumber} Safely Committed`,
+    description: `The transaction is durable in the database. ${error ? `(${error}) ` : ''}Reprint is available and will not create a duplicate charge.`,
+    isCommitted: true,
+  };
+}
