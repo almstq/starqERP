@@ -12,11 +12,15 @@
  * operator, or another outlet is ever reachable from a given scope.
  */
 
+export type ProductTaxClassification = 'standard_rated' | 'zero_rated' | 'exempt';
+export type OutletTaxRegime = 'gst_general' | 'gst_tourism';
+
 export interface CounterLocation {
   id: string;
   code: string;
   name: string;
   kind: string;
+  tax_regime?: OutletTaxRegime;
   active: boolean;
 }
 
@@ -28,6 +32,7 @@ export interface CounterProduct {
   category?: string | null;
   barcode: string | null;
   reorder_threshold?: number | null;
+  tax_classification?: ProductTaxClassification;
   sale_allowed: boolean;
   active: boolean;
 }
@@ -60,6 +65,7 @@ export interface PriceResolution {
     kind: string;
     name: string;
     barcode: string | null;
+    tax_classification?: ProductTaxClassification;
     active: boolean;
     sale_allowed: boolean;
   } | null;
@@ -76,6 +82,8 @@ export interface PriceResolution {
   tax?: {
     mode: string;
     rate: number;
+    tax_classification?: ProductTaxClassification;
+    rule_version?: string;
     tax_amount: number;
     net_amount: number;
     gross_amount: number;
@@ -96,7 +104,7 @@ export interface CounterCatalogue {
   products: CounterProduct[];
   on_hand: OnHandRow[];
   prices: ApprovedPriceRow[];
-  gst_registration_status: 'registered' | 'not_registered' | 'pending' | 'suspended' | 'cancelled';
+  gst_registration_status: 'registered' | 'not_registered' | 'pending' | 'suspended' | 'cancelled' | 'unknown';
   gst_rate?: number | null;
   gst_rate_percent?: number | null;
 }
@@ -409,6 +417,9 @@ export function isTaxRateMissingForSale(
   status: CounterCatalogue['gst_registration_status'],
   rate: number | null | undefined,
 ): boolean {
+  if (status === 'unknown') {
+    return true; // Statutory status unconfigured or lookup failed - fail closed!
+  }
   return status === 'registered' && (rate == null || typeof rate !== 'number' || rate < 0);
 }
 
@@ -658,6 +669,8 @@ export function formatResilienceErrorMessage(errorCode: string): string {
       return 'Request timed out: Server did not respond in time. You may retry safely using the same transaction key.';
     case 'tax_rate_unavailable':
       return 'Authoritative tax rate unavailable. Cannot complete sale for GST-registered entity without valid tax configuration.';
+    case 'tax_registration_status_unknown':
+      return 'Statutory tax registration unconfigured. Cannot complete sale without authoritative tax status.';
     default:
       return `Transaction rejected (${errorCode}).`;
   }
@@ -679,5 +692,79 @@ export function incrementRetry(context: RetryContext): RetryContext {
   return {
     idempotencyKey: context.idempotencyKey,
     attemptCount: context.attemptCount + 1,
+  };
+}
+
+/**
+ * SERP-445 / Founder #6860: Format the tax label for checkout totals or receipt.
+ * Distinguishes registered (with rate) from not_registered.
+ */
+export function formatTaxLineLabel(
+  status: 'registered' | 'not_registered' | null | undefined,
+  ratePercent: number | null | undefined,
+): string {
+  if (status === 'registered') {
+    return ratePercent != null ? `Estimated Tax (${ratePercent}%)` : 'Estimated Tax';
+  }
+  return 'Tax';
+}
+
+/**
+ * SERP-445 / Founder #6860: Format the tax value for checkout totals or receipt.
+ * Ensures not_registered renders an explicit row ('Not GST registered — no GST')
+ * so that exempt/unregistered is clearly distinguishable from hidden tax.
+ */
+export function formatTaxLineValue(
+  status: 'registered' | 'not_registered' | null | undefined,
+  taxTotal: number,
+  currency = 'MVR',
+): string {
+  if (status === 'registered' || taxTotal > 0) {
+    return `${currency} ${taxTotal.toFixed(2)}`;
+  }
+  return 'Not GST registered — no GST';
+}
+
+/**
+ * SERP-445 / Founder #6860: Format receipt GST details strictly from authoritative server response.
+ * Server values (gst_rate_percent, gst_registration_status, tax_total) are preserved verbatim,
+ * never client-recomputed.
+ */
+export function formatReceiptGstDetails(sale: {
+  gst_rate_percent?: number | null;
+  gst_rate?: number | null;
+  gst_registration_status?: 'registered' | 'not_registered' | null;
+  tax_total?: number | null;
+}): {
+  label: string;
+  value: string;
+  isRegistered: boolean;
+  statusBadge: string;
+  receiptSubtitle: string;
+} {
+  const isRegistered = sale.gst_registration_status === 'registered'
+    || (sale.gst_registration_status !== 'not_registered' && Number(sale.tax_total ?? 0) > 0);
+  const ratePct = sale.gst_rate_percent != null
+    ? sale.gst_rate_percent
+    : sale.gst_rate != null
+      ? Math.round(Number(sale.gst_rate) * 100)
+      : null;
+
+  if (isRegistered) {
+    return {
+      label: ratePct != null ? `GST (${ratePct}%)` : 'GST',
+      value: `MVR ${Number(sale.tax_total ?? 0).toFixed(2)}`,
+      isRegistered: true,
+      statusBadge: 'GST Registered',
+      receiptSubtitle: 'Tax Invoice / Receipt',
+    };
+  }
+
+  return {
+    label: 'GST',
+    value: 'Not GST registered — no GST',
+    isRegistered: false,
+    statusBadge: 'Not GST Registered',
+    receiptSubtitle: 'Receipt (Not GST registered)',
   };
 }

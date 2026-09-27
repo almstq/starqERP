@@ -52,6 +52,7 @@ import {
   Tag,
 } from 'lucide-react';
 import { StarqHQShell, PlatformTabId } from '../components/platform/StarqHQShell';
+import { SidebarRail } from '../components/SidebarRail';
 
 export type MaterialWindowClass = 'compact' | 'medium' | 'expanded' | 'large' | 'extra-large';
 
@@ -205,7 +206,8 @@ export const AppShell: React.FC = () => {
   const applicantPending =
     session?.application?.status === 'pending' ||
     session?.application?.status === 'info_requested' ||
-    pendingApplications.some((a) => a.status === 'pending_approval');
+    session?.application?.status === 'rejected' ||
+    pendingApplications.some((a) => a.status === 'pending_approval' || a.status === 'rejected');
 
   // Safeguard: Operator without tenant orgs defaults directly to platform plane (Starq HQ)
   const effectivePlane = isPlatformOperator && !hasSessionOrgs ? 'platform' : activePlane;

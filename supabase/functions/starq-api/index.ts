@@ -21,14 +21,25 @@ import {
 import { logRequest, severityFor } from "../_shared/observability.ts";
 import { resolveInvoiceFinanceDecision, type InvoiceTaxLineResult } from "../_shared/invoiceFinance.ts";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const SESSION_SECRET = Deno.env.get("STARQBOOKS_SESSION_SECRET") ?? "";
+function safeEnv(key: string, fallback = ""): string {
+  try {
+    return Deno.env.get(key) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+const SUPABASE_URL = safeEnv("SUPABASE_URL", "https://placeholder.supabase.co");
+const SERVICE_KEY = safeEnv("SUPABASE_SERVICE_ROLE_KEY", "service-key-placeholder");
+const SESSION_SECRET = safeEnv("STARQBOOKS_SESSION_SECRET", "");
+function getSessionSecret(): string {
+  return SESSION_SECRET || safeEnv("STARQBOOKS_SESSION_SECRET", "");
+}
 // SERP-301 alert relay: an unattended poller has no human session cookie, so
 // it cannot pass the `!session` gate below by design. It authenticates with
 // a distinct shared secret instead, scoped to exactly one read-only route.
-const ALERT_RELAY_SECRET = Deno.env.get("STARQBOOKS_ALERT_RELAY_SECRET") ?? "";
-const HOADHA_BRIDGE_SECRET = Deno.env.get("STARQBOOKS_HOADHA_BRIDGE_SECRET") ?? Deno.env.get("HOADHA_BRIDGE_SECRET") ?? ALERT_RELAY_SECRET;
+const ALERT_RELAY_SECRET = safeEnv("STARQBOOKS_ALERT_RELAY_SECRET", "");
+const HOADHA_BRIDGE_SECRET = safeEnv("STARQBOOKS_HOADHA_BRIDGE_SECRET", safeEnv("HOADHA_BRIDGE_SECRET", ALERT_RELAY_SECRET));
 // GOOGLE_CLIENT_IDS (a combined allowlist across both platforms) was audit
 // critical #5 and has been replaced by AUDIENCE_POLICIES, which maps exactly one
 // audience to each client kind. Do not reintroduce a flat list of client ids.
@@ -46,16 +57,16 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "https://starq.mv",
 ];
 
-const envOrigins = (Deno.env.get("STARQBOOKS_ALLOWED_ORIGINS") ?? "")
+const envOrigins = (safeEnv("STARQBOOKS_ALLOWED_ORIGINS", ""))
   .split(",").map((value) => value.trim()).filter(Boolean);
 
 const ALLOWED_ORIGINS = new Set([...DEFAULT_ALLOWED_ORIGINS, ...envOrigins]);
 
 // SERP-299: Fail-closed production check.
 // Unless explicitly running in 'development', 'test', or 'local', we treat the environment as production.
-const rawEnv = ((Deno.env.get("STARQ_ENV") || Deno.env.get("ENVIRONMENT")) ?? "").trim().toLowerCase();
+const rawEnv = ((safeEnv("STARQ_ENV") || safeEnv("ENVIRONMENT")) || "").trim().toLowerCase();
 const IS_PROD = rawEnv !== "development" && rawEnv !== "test" && rawEnv !== "local";
-const ALLOW_PREVIEW_ORIGINS = Deno.env.get("STARQBOOKS_ALLOW_PREVIEW_ORIGINS") === "true";
+const ALLOW_PREVIEW_ORIGINS = safeEnv("STARQBOOKS_ALLOW_PREVIEW_ORIGINS") === "true";
 
 function isOriginAllowed(origin: string | null): boolean {
   if (!origin) return true;
@@ -169,7 +180,7 @@ const ALLOWED_SEATS = new Set<string>(DB_SEEDED_SEATS);
  */
 const DB_TIMEOUT_MS = 10_000;
 
-const db = createClient(SUPABASE_URL, SERVICE_KEY, {
+const defaultDb = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
   global: {
     fetch: (input: string | URL | Request, init?: RequestInit) => {
@@ -180,6 +191,15 @@ const db = createClient(SUPABASE_URL, SERVICE_KEY, {
     },
   },
 });
+let db = defaultDb;
+
+export function setDbForTesting(client: unknown) {
+  db = client as typeof defaultDb;
+}
+
+export function resetDbForTesting() {
+  db = defaultDb;
+}
 const encoder = new TextEncoder();
 const anonymousWindows = new Map<string, { count: number; resetAt: number }>();
 
@@ -213,7 +233,7 @@ function fromBase64Url(value: string): Uint8Array<ArrayBuffer> {
 
 async function hmac(value: string): Promise<string> {
   const key = await crypto.subtle.importKey(
-    "raw", encoder.encode(SESSION_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+    "raw", encoder.encode(getSessionSecret()), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
   );
   return base64Url(new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(value))));
 }
@@ -221,7 +241,7 @@ async function hmac(value: string): Promise<string> {
 async function verifyHmac(value: string, signature: string): Promise<boolean> {
   try {
     const key = await crypto.subtle.importKey(
-      "raw", encoder.encode(SESSION_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["verify"],
+      "raw", encoder.encode(getSessionSecret()), { name: "HMAC", hash: "SHA-256" }, false, ["verify"],
     );
     return await crypto.subtle.verify("HMAC", key, fromBase64Url(signature), encoder.encode(value));
   } catch {
@@ -606,8 +626,8 @@ async function readJson(req: Request): Promise<Json> {
  * defaulting is how the hole existed in the first place.
  */
 const AUDIENCE_POLICIES: readonly AudiencePolicy[] = [
-  { clientKind: "web", audience: Deno.env.get("STARQBOOKS_GOOGLE_CLIENT_ID") ?? "" },
-  { clientKind: "android", audience: Deno.env.get("STARQBOOKS_GOOGLE_ANDROID_CLIENT_ID") ?? "" },
+  { clientKind: "web", audience: safeEnv("STARQBOOKS_GOOGLE_CLIENT_ID") },
+  { clientKind: "android", audience: safeEnv("STARQBOOKS_GOOGLE_ANDROID_CLIENT_ID") },
 ].filter((p) => p.audience) as readonly AudiencePolicy[];
 
 async function verifyGoogleToken(
@@ -639,7 +659,7 @@ async function verifyGoogleToken(
   }
 }
 
-interface Session {
+export interface Session {
   person_uuid: string;
   person_key: string;
   display_label: string;
@@ -928,7 +948,172 @@ interface Observed {
   organisationId: string | null;
 }
 
-async function handleRequest(req: Request, requestId: string, observed: Observed): Promise<Response> {
+export const AUTHORITATIVE_POS_TAX_TYPE = "gst_general";
+export const AUTHORITATIVE_POS_TAX_MODE = "exclusive";
+
+export interface CounterSaleTaxValidationResult {
+  ok: boolean;
+  error?: string;
+  detail?: string;
+  status?: number;
+  taxType?: string;
+  taxMode?: string;
+  supplyDate?: string;
+}
+
+/**
+ * Validates POS counter sale statutory tax parameters.
+ * Single source of truth: COUNTER_SALE POS tax is strictly General GST ('gst_general')
+ * on 'exclusive' tax_mode and uses the current supply date (today).
+ * Client override of tax_type, tax_mode, or date is rejected (422) to prevent latent fail-open seams.
+ */
+export function validateCounterSaleTaxParameters(
+  body: Record<string, unknown>,
+  canonicalDate?: string,
+): CounterSaleTaxValidationResult {
+  const authoritativeTaxType = AUTHORITATIVE_POS_TAX_TYPE;
+  const authoritativeTaxMode = AUTHORITATIVE_POS_TAX_MODE;
+  const authoritativeSupplyDate = canonicalDate ?? new Date().toISOString().slice(0, 10);
+
+  if (typeof body.tax_type === "string" && body.tax_type.trim() && body.tax_type.trim() !== authoritativeTaxType) {
+    return {
+      ok: false,
+      error: "invalid_tax_type",
+      detail: `COUNTER_SALE tax_type must be ${authoritativeTaxType}`,
+      status: 422,
+    };
+  }
+
+  if (typeof body.tax_mode === "string" && body.tax_mode.trim() && body.tax_mode.trim() !== authoritativeTaxMode) {
+    return {
+      ok: false,
+      error: "invalid_tax_mode",
+      detail: `COUNTER_SALE tax_mode must be ${authoritativeTaxMode}; client cannot select tax mode`,
+      status: 422,
+    };
+  }
+
+  if (typeof body.date === "string" && body.date.trim() && body.date.trim() !== authoritativeSupplyDate) {
+    return {
+      ok: false,
+      error: "invalid_supply_date",
+      detail: `COUNTER_SALE supply date must match current date (${authoritativeSupplyDate})`,
+      status: 422,
+    };
+  }
+
+  return {
+    ok: true,
+    taxType: authoritativeTaxType,
+    taxMode: authoritativeTaxMode,
+    supplyDate: authoritativeSupplyDate,
+  };
+}
+
+export const ALLOWED_TAX_REGISTRATION_STATUSES = [
+  "registered",
+  "not_registered",
+  "pending",
+  "suspended",
+  "cancelled",
+] as const;
+
+export type TaxRegistrationStatus = (typeof ALLOWED_TAX_REGISTRATION_STATUSES)[number];
+
+export interface TaxRegistrationValidationResult {
+  ok: boolean;
+  error?: string;
+  detail?: string;
+  status?: number;
+  registrationStatus?: TaxRegistrationStatus;
+  taxType?: string;
+  tin?: string | null;
+  effectiveFrom?: string;
+}
+
+/**
+ * SERP-446: Validates tenant statutory tax registration parameters.
+ * Allowed statuses align with public.tax_registrations constraint:
+ * ('registered', 'not_registered', 'pending', 'suspended', 'cancelled').
+ */
+export function validateTaxRegistrationInput(
+  rawBody: unknown,
+): TaxRegistrationValidationResult {
+  if (!rawBody || typeof rawBody !== "object" || Array.isArray(rawBody)) {
+    return {
+      ok: false,
+      error: "invalid_request_body",
+      detail: "Request body must be a JSON object",
+      status: 400,
+    };
+  }
+  const body = rawBody as Record<string, unknown>;
+  const rawStatus = typeof body.registration_status === "string"
+    ? body.registration_status.trim().toLowerCase()
+    : typeof body.gst_status === "string"
+    ? body.gst_status.trim().toLowerCase()
+    : "";
+
+  if (!rawStatus) {
+    return {
+      ok: false,
+      error: "registration_status_required",
+      detail: "registration_status is required",
+      status: 422,
+    };
+  }
+
+  if (!ALLOWED_TAX_REGISTRATION_STATUSES.includes(rawStatus as TaxRegistrationStatus)) {
+    return {
+      ok: false,
+      error: "invalid_registration_status",
+      detail: `registration_status must be one of: ${ALLOWED_TAX_REGISTRATION_STATUSES.join(", ")}`,
+      status: 422,
+    };
+  }
+
+  const rawTaxType = typeof body.tax_type === "string" && body.tax_type.trim()
+    ? body.tax_type.trim().toLowerCase()
+    : "gst_general";
+
+  const ALLOWED_TAX_TYPES = ["gst_general", "gst_tourism", "income_tax", "withholding_tax"];
+  if (!ALLOWED_TAX_TYPES.includes(rawTaxType)) {
+    return {
+      ok: false,
+      error: "invalid_tax_type",
+      detail: `tax_type must be one of: ${ALLOWED_TAX_TYPES.join(", ")}`,
+      status: 422,
+    };
+  }
+
+  const tin = typeof body.tin === "string"
+    ? (body.tin.trim() || null)
+    : typeof body.tin_number === "string"
+    ? (body.tin_number.trim() || null)
+    : body.tin === null
+    ? null
+    : undefined;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const effectiveFrom = typeof body.effective_from === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.effective_from.trim())
+    ? body.effective_from.trim()
+    : today;
+
+  return {
+    ok: true,
+    registrationStatus: rawStatus as TaxRegistrationStatus,
+    taxType: rawTaxType,
+    tin,
+    effectiveFrom,
+  };
+}
+
+export async function handleRequest(
+  req: Request,
+  requestId: string = crypto.randomUUID(),
+  observed: Observed = { outcome: "ok", personUuid: null, organisationId: null },
+  sessionOverride?: Session | null,
+): Promise<Response> {
   const origin = req.headers.get("origin");
   const path = routePath(req.url);
 
@@ -967,7 +1152,7 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
   }
 
   try {
-    if (!SUPABASE_URL || !SERVICE_KEY || SESSION_SECRET.length < 32) throw new Error("server_configuration_error");
+    if (!SUPABASE_URL || !SERVICE_KEY || getSessionSecret().length < 32) throw new Error("server_configuration_error");
     if (req.method === "GET" && (path === "/" || path === "/health" || path === "/api/meta")) {
       const readiness = await db.from("organisations").select("id", { count: "exact", head: true })
         .eq("status", "active");
@@ -1039,8 +1224,8 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
     }
 
     const diag: { reason?: string } = {};
-    const signedSession = await readSession(req, diag);
-    const session = signedSession ? await refreshSessionAuthority(signedSession, diag) : null;
+    const signedSession = sessionOverride !== undefined ? sessionOverride : await readSession(req, diag);
+    const session = sessionOverride !== undefined ? sessionOverride : (signedSession ? await refreshSessionAuthority(signedSession, diag) : null);
     // SERP-301 — person_uuid and organisation_id on every subsequent log line.
     // The person UUID, never an email or a name: an operational log is not a
     // place to accumulate a directory of the client's staff.
@@ -1608,11 +1793,11 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       const priceListCode = new URL(req.url).searchParams.get("price_list_code") ?? undefined;
       const today = new Date().toISOString().slice(0, 10);
       const [outlets, products, onHand, gstStatus, gstRate] = await Promise.allSettled([
-        db.from("locations").select("id, code, name, kind, active")
+        db.from("locations").select("id, code, name, kind, tax_regime, active")
           .eq("organisation_id", session.organisation_id)
           .eq("active", true)
           .order("name"),
-        db.from("products").select("id, sku, barcode, kind, name, category, sale_allowed, active, reorder_threshold")
+        db.from("products").select("id, sku, barcode, kind, name, category, tax_classification, sale_allowed, active, reorder_threshold")
           .eq("organisation_id", session.organisation_id)
           .eq("active", true)
           .eq("sale_allowed", true)
@@ -1646,7 +1831,7 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
           name: "Main POS Counter",
           kind: "outlet",
           active: true,
-        }).select("id, code, name, kind, active").maybeSingle();
+        }).select("id, code, name, kind, tax_regime, active").maybeSingle();
         if (newLoc) {
           locationRows = [newLoc];
         }
@@ -1670,9 +1855,11 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       const priceRows = Array.isArray((approvedData as { prices?: Array<Record<string, unknown>> } | null)?.prices)
         ? (approvedData as { prices: Array<Record<string, unknown>> }).prices
         : [];
-      const gstRegistrationStatus = gstStatus.status === "fulfilled" && gstStatus.value.data
-        ? (gstStatus.value.data as { registration_status: string }).registration_status
-        : "not_registered";
+      // SERP-446 / Vision #6953: Gate defect fix.
+      // Must FAIL CLOSED: lookup error or no row returns 'unknown', never 'not_registered'.
+      const gstRegistrationStatus = gstStatus.status === "fulfilled" && !gstStatus.value.error && gstStatus.value.data
+        ? ((gstStatus.value.data as { registration_status?: string }).registration_status || "unknown")
+        : "unknown";
       const gstRateRow = gstRate.status === "fulfilled" && gstRate.value.data
         ? (gstRate.value.data as { rate: number | string; description?: string })
         : null;
@@ -2539,6 +2726,119 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       return json(200, { ok: true, result: data }, origin);
     }
 
+    // =========================================================================
+    // SERP-446: Tenant Statutory Tax Registration Routes (Profile & Tax)
+    // Server-authoritative, tenant-scoped, RLS-safe persistence to public.tax_registrations
+    // =========================================================================
+    if (req.method === "GET" && (path === "/api/tenant/tax-registration" || path === "/api/ops/tax-registration")) {
+      if (!session.organisation_id) {
+        return json(403, { ok: false, error: "organisation_context_required" }, origin);
+      }
+
+      const urlObj = new URL(req.url);
+      const taxType = (urlObj.searchParams.get("tax_type") || "gst_general").trim().toLowerCase();
+
+      const { data, error } = await db.from("tax_registrations")
+        .select("id, organisation_id, tax_type, registration_status, tin, effective_from, effective_to, created_at")
+        .eq("organisation_id", session.organisation_id)
+        .eq("tax_type", taxType)
+        .order("effective_from", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        throw new Error("tax_registration_query_failed");
+      }
+
+      return json(200, {
+        ok: true,
+        registration: data ?? null,
+      }, origin);
+    }
+
+    if (req.method === "POST" && (path === "/api/tenant/tax-registration" || path === "/api/ops/tax-registration")) {
+      if (!session.organisation_id) {
+        return json(403, { ok: false, error: "organisation_context_required" }, origin);
+      }
+
+      const body = await readJson(req);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
+
+      const validation = validateTaxRegistrationInput(body);
+      if (!validation.ok) {
+        observed.outcome = "blocked";
+        await securityEvent(req, "tax_registration.update", "rejected", session, { code: validation.error }, requestId);
+        return json(validation.status ?? 422, {
+          ok: false,
+          error: validation.error,
+          detail: validation.detail,
+          request_id: requestId,
+        }, origin);
+      }
+
+      const targetTaxType = validation.taxType!;
+      const targetStatus = validation.registrationStatus!;
+      const targetTin = validation.tin;
+      const targetEffectiveFrom = validation.effectiveFrom!;
+
+      // Find latest registration row for this tenant and tax_type
+      const existing = await db.from("tax_registrations")
+        .select("id, tin, effective_from")
+        .eq("organisation_id", session.organisation_id)
+        .eq("tax_type", targetTaxType)
+        .order("effective_from", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let persisted;
+      if (existing.data) {
+        const updateFields: Record<string, unknown> = {
+          registration_status: targetStatus,
+        };
+        if (targetTin !== undefined) {
+          updateFields.tin = targetTin;
+        }
+        const { data, error } = await db.from("tax_registrations")
+          .update(updateFields)
+          .eq("id", existing.data.id)
+          .eq("organisation_id", session.organisation_id)
+          .select("id, organisation_id, tax_type, registration_status, tin, effective_from, effective_to, created_at")
+          .single();
+
+        if (error || !data) {
+          throw new Error("tax_registration_update_failed");
+        }
+        persisted = data;
+      } else {
+        const { data, error } = await db.from("tax_registrations")
+          .insert({
+            organisation_id: session.organisation_id,
+            tax_type: targetTaxType,
+            registration_status: targetStatus,
+            tin: targetTin ?? null,
+            effective_from: targetEffectiveFrom,
+          })
+          .select("id, organisation_id, tax_type, registration_status, tin, effective_from, effective_to, created_at")
+          .single();
+
+        if (error || !data) {
+          throw new Error("tax_registration_insert_failed");
+        }
+        persisted = data;
+      }
+
+      await securityEvent(req, "tax_registration.updated", "accepted", session, {
+        tax_type: targetTaxType,
+        registration_status: targetStatus,
+        tin: persisted.tin,
+      }, requestId);
+
+      return json(200, {
+        ok: true,
+        registration: persisted,
+      }, origin);
+    }
+
     if (req.method === "POST" && path === "/api/ops/event") {
       const body = await readJson(req);
       if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
@@ -2589,6 +2889,11 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       }
 
       let commandForRpc = body;
+      let counterSaleGstRegistrationStatus = "not_registered";
+      let counterSaleGstRate = 0;
+      let counterSaleGstRatePercent = 0;
+      let counterSaleIsTaxable = false;
+
       if (intent.command === "INVOICE") {
         const rawTaxMode = body.tax_mode;
         const taxMode = rawTaxMode === "inclusive" || rawTaxMode === "exclusive" ||
@@ -2652,6 +2957,137 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
         };
       }
 
+      if (intent.command === "COUNTER_SALE") {
+        // SERP-446 / Vision #6953: Complete Sale fails closed if statutory tax registration is unconfigured or unknown
+        const regCheck = await db.from("tax_registrations").select("registration_status")
+          .eq("organisation_id", session.organisation_id)
+          .eq("tax_type", "gst_general")
+          .order("effective_from", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (regCheck.error || !regCheck.data || !regCheck.data.registration_status || regCheck.data.registration_status === "unknown") {
+          observed.outcome = "blocked";
+          await securityEvent(req, "garage.command", "rejected", session, {
+            code: "tax_registration_status_unknown",
+            detail: "Statutory tax registration is unconfigured or unknown. Sales are blocked until tax registration is configured.",
+          }, requestId);
+          return json(422, {
+            ok: false,
+            error: "tax_registration_status_unknown",
+            detail: "Statutory tax registration is unconfigured or unknown. Sales are blocked until tax registration is configured.",
+            request_id: requestId,
+          }, origin);
+        }
+
+        const rawTaxMode = body.tax_mode;
+        // SERP-447 / Founder #6930-#6932: Cashier/client may not choose tax_mode to evade tax.
+        // The edge accepts only the current default pricing mode (exclusive) and rejects exempt/zero_rated/any other value with 422.
+        if (rawTaxMode !== undefined && rawTaxMode !== null && rawTaxMode !== "exclusive") {
+          observed.outcome = "blocked";
+          await securityEvent(req, "garage.command", "rejected", session, {
+            code: "counter_sale_tax_mode_client_override_forbidden",
+            detail: `Client may not override tax_mode to '${rawTaxMode}'; tax determination is server-authoritative`,
+          }, requestId);
+          return json(422, {
+            ok: false,
+            error: "counter_sale_tax_mode_client_override_forbidden",
+            detail: `Client may not override tax_mode to '${rawTaxMode}'; tax determination is server-authoritative`,
+            request_id: requestId,
+          }, origin);
+        }
+
+        // Invariant (SERP-445 / Vision #6920 FAIL 3 & Vision #6928 follow-up):
+        // Single source of truth: COUNTER_SALE POS tax is strictly General GST ('gst_general')
+        // on 'exclusive' tax_mode and uses current supply date (today). Edge and DB must never diverge.
+        // Disallow client override of tax_type, tax_mode, or date to prevent latent fail-open seams.
+        const taxValidation = validateCounterSaleTaxParameters(body as Record<string, unknown>);
+        if (!taxValidation.ok) {
+          observed.outcome = "blocked";
+          await securityEvent(req, "garage.command", "rejected", session, { code: taxValidation.error! }, requestId);
+          return json(taxValidation.status ?? 422, {
+            ok: false,
+            error: taxValidation.error,
+            detail: taxValidation.detail,
+            request_id: requestId,
+          }, origin);
+        }
+
+        // SERP-447: Tax regime is resolved from outlet (location), never client-chosen.
+        let taxType = taxValidation.taxType!;
+        if (typeof body.location_id === "string" && body.location_id.trim()) {
+          const { data: locData } = await db.from("locations")
+            .select("tax_regime")
+            .eq("organisation_id", session.organisation_id)
+            .eq("id", body.location_id.trim())
+            .maybeSingle();
+          if (locData?.tax_regime) {
+            taxType = locData.tax_regime;
+          }
+        }
+
+        const taxMode = taxValidation.taxMode!;
+        const supplyDate = taxValidation.supplyDate!;
+
+        // Server-authoritative tax resolution via calculate_line_tax:
+        // Ensures registered tenants have an active rate schedule, or fails closed.
+        // Non-registered tenants resolve is_taxable = false, tax_rate = 0.
+        const { data: taxData, error: taxError } = await db.rpc("calculate_line_tax", {
+          target_org: session.organisation_id,
+          target_tax_type: taxType,
+          supply_date: supplyDate,
+          tax_mode: taxMode,
+          line_amount: 100.00,
+        });
+
+        if (taxError) {
+          await securityEvent(req, "garage.command", "rejected", session, { code: "authoritative_tax_calculation_failed" });
+          return json(500, { ok: false, error: "authoritative_tax_calculation_failed", request_id: requestId }, origin);
+        }
+
+        const taxRow = Array.isArray(taxData) ? taxData[0] : taxData;
+        if (taxRow?.err_msg) {
+          observed.outcome = "blocked";
+          await securityEvent(req, "garage.command", "rejected", session, {
+            code: "tax_rate_unavailable",
+            detail: taxRow.err_msg,
+          }, requestId);
+          return json(422, {
+            ok: false,
+            error: "tax_rate_unavailable",
+            detail: taxRow.err_msg,
+            request_id: requestId,
+          }, origin);
+        }
+
+        // Determine authoritative registration status for org & taxType on supplyDate
+        const { data: regData } = await db.from("tax_registrations")
+          .select("registration_status")
+          .eq("organisation_id", session.organisation_id)
+          .eq("tax_type", taxType)
+          .lte("effective_from", supplyDate)
+          .or(`effective_to.is.null,effective_to.gte.${supplyDate}`)
+          .order("effective_from", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        counterSaleGstRegistrationStatus = regData?.registration_status === "registered"
+          ? "registered"
+          : "not_registered";
+        counterSaleGstRate = taxRow?.tax_rate ?? 0;
+        counterSaleGstRatePercent = Math.round(Number(counterSaleGstRate) * 100);
+        counterSaleIsTaxable = Boolean(taxRow?.is_taxable);
+
+        commandForRpc = {
+          ...body,
+          tax_mode: taxMode,
+          tax_type: taxType,
+          tax_rate: taxRow?.tax_rate ?? 0,
+          is_taxable: taxRow?.is_taxable ?? false,
+          gst_registration_status: counterSaleGstRegistrationStatus,
+        };
+      }
+
       const rpcArgs = {
         target_org: session.organisation_id,
         target_person: session.person_uuid,
@@ -2686,12 +3122,24 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
             ? "idempotency_key_conflict"
           : intent.command === "COUNTER_SALE" && (rawCode === "stock_insufficient" || rawCode.startsWith("stock_line_quantity_exceeds_onhand"))
             ? "stock_insufficient"
+          : intent.command === "COUNTER_SALE" && (rawCode === "tax_rate_unavailable" || rawCode.includes("no_tax_rate_for_supply_date"))
+            ? "tax_rate_unavailable"
           : "command_rejected";
         await securityEvent(req, "garage.command", "rejected", session, { code: rawCode });
-        const statusCode = rawCode === "idempotency_key_conflict" ? 409 : 400;
+        const statusCode = rawCode === "idempotency_key_conflict" ? 409
+          : (publicCode === "tax_rate_unavailable" ? 422 : 400);
         return json(statusCode, { ok: false, error: publicCode, request_id: requestId }, origin);
       }
       await securityEvent(req, "garage.command", "accepted", session, { idempotency_key: commandKey });
+      if (intent.command === "COUNTER_SALE" && data && typeof data === "object" && "counter_sale" in (data as Record<string, unknown>)) {
+        const cs = (data as Record<string, unknown>).counter_sale as Record<string, unknown>;
+        if (cs && typeof cs === "object") {
+          cs.gst_rate = counterSaleGstRate;
+          cs.gst_rate_percent = counterSaleGstRatePercent;
+          cs.gst_registration_status = counterSaleGstRegistrationStatus;
+          cs.is_taxable = counterSaleIsTaxable;
+        }
+      }
       return json(200, data as Json, origin);
     }
 
@@ -2743,44 +3191,46 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
  * handler's own try, which previously would have produced a bare 500 with no
  * record anywhere.
  */
-Deno.serve(async (req: Request) => {
-  const requestId = crypto.randomUUID();
-  const startedAt = Date.now();
-  const observed: Observed = { outcome: "ok", personUuid: null, organisationId: null };
-  const path = routePath(req.url);
+if (import.meta.main) {
+  Deno.serve(async (req: Request) => {
+    const requestId = crypto.randomUUID();
+    const startedAt = Date.now();
+    const observed: Observed = { outcome: "ok", personUuid: null, organisationId: null };
+    const path = routePath(req.url);
 
-  let response: Response;
-  try {
-    response = await handleRequest(req, requestId, observed);
-  } catch (error) {
-    // The handler has its own try/catch; this is the net under it. A logging
-    // wrapper that can itself 500 unobserved would be worse than no wrapper.
-    observed.outcome = "unhandled_exception";
+    let response: Response;
+    try {
+      response = await handleRequest(req, requestId, observed);
+    } catch (error) {
+      // The handler has its own try/catch; this is the net under it. A logging
+      // wrapper that can itself 500 unobserved would be worse than no wrapper.
+      observed.outcome = "unhandled_exception";
+      logRequest({
+        request_id: requestId,
+        person_uuid: observed.personUuid,
+        organisation_id: observed.organisationId,
+        method: req.method,
+        path,
+        status: 500,
+        outcome: "unhandled_exception",
+        latency_ms: Date.now() - startedAt,
+        severity: "error",
+        detail: { kind: error instanceof Error ? error.name : "unknown" },
+      });
+      return json(500, { ok: false, error: "request_failed", request_id: requestId }, req.headers.get("origin"));
+    }
+
     logRequest({
       request_id: requestId,
       person_uuid: observed.personUuid,
       organisation_id: observed.organisationId,
       method: req.method,
       path,
-      status: 500,
-      outcome: "unhandled_exception",
+      status: response.status,
+      outcome: observed.outcome,
       latency_ms: Date.now() - startedAt,
-      severity: "error",
-      detail: { kind: error instanceof Error ? error.name : "unknown" },
+      severity: severityFor(observed.outcome, response.status),
     });
-    return json(500, { ok: false, error: "request_failed", request_id: requestId }, req.headers.get("origin"));
-  }
-
-  logRequest({
-    request_id: requestId,
-    person_uuid: observed.personUuid,
-    organisation_id: observed.organisationId,
-    method: req.method,
-    path,
-    status: response.status,
-    outcome: observed.outcome,
-    latency_ms: Date.now() - startedAt,
-    severity: severityFor(observed.outcome, response.status),
+    return response;
   });
-  return response;
-});
+}

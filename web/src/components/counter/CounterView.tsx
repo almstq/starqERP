@@ -76,6 +76,9 @@ import {
   formatResilienceErrorMessage,
   calculateEstimatedTax,
   isTaxRateMissingForSale,
+  formatTaxLineLabel,
+  formatTaxLineValue,
+  formatReceiptGstDetails,
 } from '../../domain/counter';
 
 const DEFAULT_OUTLET: CounterLocation = {
@@ -135,14 +138,27 @@ interface CounterSaleResult {
   receipt_number?: string;
   payment_id: string;
   location_id: string;
+  currency?: string;
   subtotal: number;
   tax_total: number;
   total_amount: number;
+  gst_rate?: number | null;
+  gst_rate_percent?: number | null;
+  gst_registration_status?: 'registered' | 'not_registered' | null;
+  is_taxable?: boolean;
   payment_method?: PaymentMethod;
   tendered_amount?: number;
   change_amount?: number;
   tender?: TenderLine[];
-  lines: Array<{ product_id: string; name: string; quantity: number; unit_price: number; net_amount: number }>;
+  lines: Array<{
+    product_id: string;
+    name: string;
+    quantity: number;
+    unit_price: number;
+    net_amount: number;
+    tax_rate?: number;
+    tax_amount?: number;
+  }>;
   on_hand: Record<string, number>;
 }
 
@@ -301,6 +317,10 @@ export const CounterView: React.FC = () => {
   );
   const [activeSaleKey, setActiveSaleKey] = useState<string | null>(null);
   const [activeReversalKey, setActiveReversalKey] = useState<string | null>(null);
+  const completingRef = useRef(false);
+  const activeSaleKeyRef = useRef<string | null>(null);
+  const submittingReversalRef = useRef(false);
+  const activeReversalKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -448,7 +468,7 @@ export const CounterView: React.FC = () => {
   }, [lookedUpSale, reversalType, selectedReturnItems]);
 
   const handleReversalSubmit = async () => {
-    if (!outlet?.id || !lookedUpSale) return;
+    if (submittingReversalRef.current || submittingReversal || !outlet?.id || !lookedUpSale) return;
     if (!canTransact(isOnline)) {
       setReversalError('network_offline');
       return;
@@ -457,11 +477,15 @@ export const CounterView: React.FC = () => {
       setReversalError('Reason must be at least 3 characters.');
       return;
     }
+    submittingReversalRef.current = true;
     setSubmittingReversal(true);
     setReversalError(null);
 
-    const idempotencyKey = activeReversalKey || crypto.randomUUID();
-    if (!activeReversalKey) setActiveReversalKey(idempotencyKey);
+    if (!activeReversalKeyRef.current) {
+      activeReversalKeyRef.current = activeReversalKey || crypto.randomUUID();
+      setActiveReversalKey(activeReversalKeyRef.current);
+    }
+    const idempotencyKey = activeReversalKeyRef.current;
 
     try {
       const endpoint = reversalType === 'void' ? '/api/ops/counter/void' : '/api/ops/counter/return';
@@ -484,7 +508,6 @@ export const CounterView: React.FC = () => {
         }
         if (itemsToReturn.length === 0) {
           setReversalError('Please select at least one item to return.');
-          setSubmittingReversal(false);
           return;
         }
         payload.items = itemsToReturn;
@@ -496,11 +519,13 @@ export const CounterView: React.FC = () => {
       const res = await apiPost<{ ok: boolean; return: CounterReturn }>(endpoint, payload, idempotencyKey);
       if (res.ok && res.return) {
         setReversalResult(res.return);
+        activeReversalKeyRef.current = null;
         setActiveReversalKey(null);
       }
     } catch (err) {
       setReversalError(err instanceof ApiError ? err.code : 'reversal_failed');
     } finally {
+      submittingReversalRef.current = false;
       setSubmittingReversal(false);
     }
   };
@@ -705,23 +730,31 @@ export const CounterView: React.FC = () => {
   };
 
   const complete = async () => {
-    if (!outlet || cartIsEmpty(cart)) return;
+    if (completingRef.current || completing || !outlet || cartIsEmpty(cart)) return;
     if (!canTransact(isOnline)) {
       setSaleError('network_offline');
+      return;
+    }
+    if (catalogue?.gst_registration_status === 'unknown') {
+      setSaleError('tax_registration_status_unknown');
       return;
     }
     if (isTaxMissing) {
       setSaleError('tax_rate_unavailable');
       return;
     }
+    completingRef.current = true;
     setCompleting(true);
     setSaleError(null);
     setSaleResult(null);
     setReceipt(null);
     setReceiptError(null);
 
-    const idempotencyKey = activeSaleKey || crypto.randomUUID();
-    if (!activeSaleKey) setActiveSaleKey(idempotencyKey);
+    if (!activeSaleKeyRef.current) {
+      activeSaleKeyRef.current = activeSaleKey || crypto.randomUUID();
+      setActiveSaleKey(activeSaleKeyRef.current);
+    }
+    const idempotencyKey = activeSaleKeyRef.current;
 
     const tender = buildTenderLines(paymentMethod, {
       cash: Number(tenderInput.cash || 0),
@@ -744,6 +777,7 @@ export const CounterView: React.FC = () => {
       // settled. Only the accepted response's receipt + change are shown.
       if (response.ok && response.counter_sale) {
         setSaleResult(response.counter_sale);
+        activeSaleKeyRef.current = null;
         setActiveSaleKey(null);
         persistCart([]);
       } else {
@@ -752,6 +786,7 @@ export const CounterView: React.FC = () => {
     } catch (error) {
       setSaleError(error instanceof ApiError ? error.code : 'counter_sale_failed');
     } finally {
+      completingRef.current = false;
       setCompleting(false);
     }
   };
@@ -863,7 +898,13 @@ export const CounterView: React.FC = () => {
     .filter((entry) => !filterLowStockOnly || entry.isLow || entry.onHand <= 0);
 
   return (
-    <div className="w-full max-w-[1700px] mx-auto px-3 sm:px-6 py-4 space-y-4 font-sans">
+    // SERP-090/Founder seq 6860: fixed cashier terminal viewport. The POS root
+    // is constrained to the screen height (100dvh with 100vh fallback); the
+    // header, till controls, barcode/search/category bar, cart header, totals,
+    // tender controls and Complete Sale stay permanently visible. Only the
+    // product grid and the cart item list scroll internally — long lists can
+    // never push checkout controls off-screen.
+    <div className="counter-root w-full max-w-[1700px] mx-auto px-3 sm:px-6 py-4 flex flex-col h-[100vh] overflow-hidden gap-4 font-sans supports-[height:100dvh]:h-[100dvh]">
       {!isOnline && (
         <div
           role="alert"
@@ -1015,12 +1056,14 @@ export const CounterView: React.FC = () => {
         </div>
       )}
 
-      {/* 2. Two-Pane Terminal Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      {/* 2. Two-Pane Terminal Layout — flex-1 min-h-0 so the grid (left) and
+          cart (right) fill the remaining viewport height and scroll INTERNALLY
+          instead of growing the page (Founder seq 6860). */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         {/* LEFT / Majority Width (Catalogue & Holds) */}
-        <main className="lg:col-span-7 xl:col-span-7 2xl:col-span-8 space-y-4">
-          <Surface variant="elevated" padding="md" className="rounded-2xl border border-outline-variant/60 shadow-sm">
-            <div className="flex flex-col gap-3.5">
+        <main className="lg:col-span-7 xl:col-span-7 2xl:col-span-8 space-y-4 flex flex-col min-h-0">
+          <Surface variant="elevated" padding="md" className="rounded-2xl border border-outline-variant/60 shadow-sm flex-1 min-h-0 flex flex-col">
+            <div className="flex flex-col gap-3.5 min-h-0 flex-1">
               {/* Barcode scanner bar pinned at top */}
               <form
                 className="flex items-center gap-2"
@@ -1166,7 +1209,7 @@ export const CounterView: React.FC = () => {
 
               {/* Product Grid - Dense, touch-friendly retail tiles */}
               <div
-                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 max-h-[62vh] overflow-y-auto erp-scroll-region p-1"
+                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 flex-1 min-h-0 overflow-y-auto erp-scroll-region p-1"
                 role="region"
                 aria-label="Product grid"
               >
@@ -1191,20 +1234,21 @@ export const CounterView: React.FC = () => {
                             : '1px solid var(--md-sys-color-outline-variant)',
                         borderRadius: 'var(--md-sys-shape-corner-large, 14px)',
                       }}
-                      className="flex flex-col items-start gap-1 p-3 text-left min-h-[118px] transition-all hover:shadow-md active:scale-[0.99] relative cursor-pointer group"
+                      className="flex flex-col items-start gap-1 p-2.5 sm:p-3 text-left min-h-[118px] transition-all hover:shadow-md active:scale-[0.99] relative cursor-pointer group"
                     >
-                      <div className="w-full flex items-start justify-between gap-1">
+                      <div className="w-full flex items-center justify-between gap-1 min-w-0">
                         <span
-                          className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                          className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded whitespace-nowrap truncate min-w-0"
                           style={{
                             backgroundColor: 'var(--md-sys-color-surface-container-highest)',
                             color: 'var(--md-sys-color-on-surface-variant)',
                           }}
+                          title={product.category || 'General'}
                         >
                           {product.category || 'General'}
                         </span>
                         {inCart > 0 && (
-                          <Badge variant="info" size="sm" className="shrink-0 font-bold">
+                          <Badge variant="info" size="sm" className="shrink-0 font-bold whitespace-nowrap text-[10px] px-1.5 py-0.5">
                             in cart ×{inCart}
                           </Badge>
                         )}
@@ -1225,23 +1269,23 @@ export const CounterView: React.FC = () => {
                       </div>
 
                       {/* Prominent Price & Stock display */}
-                      <div className="mt-auto w-full pt-1.5 flex items-baseline justify-between gap-1 border-t border-outline-variant/30">
-                        <div>
+                      <div className="mt-auto w-full pt-1.5 flex items-baseline justify-between gap-1 border-t border-outline-variant/30 min-w-0">
+                        <div className="min-w-0 shrink-0">
                           {approved && approved.source !== 'none' && approved.unit_amount > 0 ? (
-                            <span className="text-sm sm:text-base font-black font-mono tracking-tight text-primary tabular-nums">
-                              MVR {Number(approved.unit_amount).toFixed(2)}
+                            <span className="text-xs sm:text-sm xl:text-base font-black font-mono tracking-tight text-primary tabular-nums whitespace-nowrap inline-flex items-baseline">
+                              <span>MVR&nbsp;{Number(approved.unit_amount).toFixed(2)}</span>
                               {approved.source === 'price_list_override' ? (
                                 <span className="text-[10px] font-normal text-on-surface-variant ml-0.5">(list)</span>
                               ) : null}
                             </span>
                           ) : (
-                            <span className="text-xs font-medium text-on-surface-variant italic">
+                            <span className="text-xs font-medium text-on-surface-variant italic whitespace-nowrap">
                               no approved price
                             </span>
                           )}
                         </div>
                         <div className="shrink-0">
-                          <Badge variant={onHand > 0 ? 'positive' : 'warning'} dot size="sm">
+                          <Badge variant={onHand > 0 ? 'positive' : 'warning'} dot size="sm" className="whitespace-nowrap text-[10px] px-1.5 py-0.5">
                             {onHand} in stock
                           </Badge>
                         </div>
@@ -1333,7 +1377,7 @@ export const CounterView: React.FC = () => {
         </main>
 
         {/* RIGHT / Dominant Sticky Cart Panel */}
-        <aside className="lg:col-span-5 xl:col-span-5 2xl:col-span-4 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] flex flex-col min-h-0">
+        <aside className="lg:col-span-5 xl:col-span-5 2xl:col-span-4 flex flex-col min-h-0">
           <Surface variant="elevated" padding="none" className="rounded-2xl border border-outline-variant/70 shadow-md flex flex-col h-full min-h-0 overflow-hidden">
             {/* Cart Header */}
             <div className="shrink-0 flex items-center justify-between p-3.5 pb-2.5 border-b border-outline-variant/60">
@@ -1437,7 +1481,7 @@ export const CounterView: React.FC = () => {
                         <div className="flex items-center gap-1 shrink-0">
                           <button
                             type="button"
-                            className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80"
+                            className="relative w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80 touch-manipulation before:absolute before:-inset-2.5 before:content-['']"
                             style={{
                               borderColor: 'var(--md-sys-color-outline-variant)',
                               color: 'var(--md-sys-color-on-surface)',
@@ -1452,7 +1496,7 @@ export const CounterView: React.FC = () => {
                           </span>
                           <button
                             type="button"
-                            className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80"
+                            className="relative w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80 touch-manipulation before:absolute before:-inset-2.5 before:content-['']"
                             style={{
                               borderColor: 'var(--md-sys-color-outline-variant)',
                               color: 'var(--md-sys-color-on-surface)',
@@ -1464,7 +1508,7 @@ export const CounterView: React.FC = () => {
                           </button>
                           <button
                             type="button"
-                            className="w-6 h-6 rounded flex items-center justify-center transition-colors hover:opacity-80 ml-0.5"
+                            className="relative w-6 h-6 rounded flex items-center justify-center transition-colors hover:opacity-80 ml-0.5 touch-manipulation before:absolute before:-inset-2.5 before:content-['']"
                             style={{ color: 'var(--md-sys-color-error)' }}
                             aria-label={`Remove ${product?.name ?? 'item'}`}
                             onClick={() => persistCart(removeFromCart(cart, line.productId))}
@@ -1604,7 +1648,7 @@ export const CounterView: React.FC = () => {
                         MVR {liveTotals.subtotal.toFixed(2)}
                       </span>
                     </div>
-                    {catalogue?.gst_registration_status === 'registered' && (
+                    {catalogue?.gst_registration_status === 'registered' ? (
                       <div className="flex justify-between items-baseline text-xs">
                         <span className={`font-semibold ${isTaxMissing ? 'text-error' : 'text-on-surface-variant'}`}>
                           Estimated Tax {isTaxMissing ? '' : `(${catalogue.gst_rate_percent}%)`}
@@ -1616,6 +1660,13 @@ export const CounterView: React.FC = () => {
                             MVR {(estimatedTax ?? 0).toFixed(2)}
                           </span>
                         )}
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-baseline text-xs">
+                        <span className="font-semibold text-on-surface-variant">Tax</span>
+                        <span className="font-mono font-semibold text-on-surface-variant text-xs">
+                          Not GST registered — no GST
+                        </span>
                       </div>
                     )}
                     <div className="flex justify-between items-baseline pt-1.5 border-t border-outline-variant/60">
@@ -2261,7 +2312,7 @@ export const CounterView: React.FC = () => {
                                         <div className="flex items-center gap-1 shrink-0">
                                           <button
                                             type="button"
-                                            className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80"
+                                            className="relative w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80 touch-manipulation before:absolute before:-inset-2.5 before:content-['']"
                                             style={{
                                               borderColor: 'var(--md-sys-color-outline-variant)',
                                               color: 'var(--md-sys-color-on-surface)',
@@ -2284,7 +2335,7 @@ export const CounterView: React.FC = () => {
                                           </span>
                                           <button
                                             type="button"
-                                            className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80"
+                                            className="relative w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80 touch-manipulation before:absolute before:-inset-2.5 before:content-['']"
                                             style={{
                                               borderColor: 'var(--md-sys-color-outline-variant)',
                                               color: 'var(--md-sys-color-on-surface)',
@@ -2490,7 +2541,9 @@ export const CounterView: React.FC = () => {
               <div className="p-4 rounded-xl font-mono text-xs bg-[var(--md-sys-color-surface-container-lowest)] text-[var(--md-sys-color-on-surface)] border-2 border-dashed border-[var(--md-sys-color-outline-variant)] shadow-inner space-y-2">
                 <div className="text-center pb-2 border-b border-dashed border-[var(--md-sys-color-outline-variant)]">
                   <p className="font-black text-sm tracking-wider uppercase">{outlet?.name ?? 'starqPOS'}</p>
-                  <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-sans font-medium uppercase mt-0.5">Tax Invoice / Receipt</p>
+                  <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-sans font-medium uppercase mt-0.5">
+                    {formatReceiptGstDetails(saleResult).receiptSubtitle}
+                  </p>
                   {saleResult.receipt_number && (
                     <p className="text-xs font-bold text-[var(--md-sys-color-on-surface)] mt-1">
                       Receipt: <span className="font-mono font-bold">{saleResult.receipt_number}</span>
@@ -2498,6 +2551,9 @@ export const CounterView: React.FC = () => {
                   )}
                   <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)]">
                     Invoice: {saleResult.invoice_number}
+                  </p>
+                  <p className="text-[9px] text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
+                    GST Status: {formatReceiptGstDetails(saleResult).statusBadge}
                   </p>
                 </div>
 
@@ -2522,10 +2578,17 @@ export const CounterView: React.FC = () => {
                     <span className="text-[var(--md-sys-color-on-surface-variant)]">Subtotal</span>
                     <span className="font-semibold tabular-nums">MVR {Number(saleResult.subtotal).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-[var(--md-sys-color-on-surface-variant)]">Tax</span>
-                    <span className="font-semibold tabular-nums">MVR {Number(saleResult.tax_total).toFixed(2)}</span>
-                  </div>
+                  {(() => {
+                    const gst = formatReceiptGstDetails(saleResult);
+                    return (
+                      <div className="flex justify-between">
+                        <span className="text-[var(--md-sys-color-on-surface-variant)]">{gst.label}</span>
+                        <span className={`tabular-nums ${gst.isRegistered ? 'font-semibold' : 'text-[11px] font-medium'}`}>
+                          {gst.value}
+                        </span>
+                      </div>
+                    );
+                  })()}
                   <div className="flex justify-between font-bold text-sm pt-1.5 border-t border-dashed border-[var(--md-sys-color-outline-variant)]">
                     <span>TOTAL</span>
                     <span className="font-black tabular-nums">MVR {Number(saleResult.total_amount).toFixed(2)}</span>
