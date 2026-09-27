@@ -233,7 +233,7 @@ export const SettingsView: React.FC = () => {
               <div className="p-4 rounded-xl border text-xs font-bold">Loading authoritative tenant profile and GST configuration…</div>
             )}
             {configError && (
-              <div className="p-4 rounded-xl border text-xs font-bold text-red-600 flex items-center justify-between gap-3">
+              <div className="p-4 rounded-xl border text-xs font-bold text-[var(--md-sys-color-error)] flex items-center justify-between gap-3">
                 <span>{configError}</span>
                 <button type="button" onClick={() => void loadConfig()} className="px-3 py-1 rounded-lg border text-xs font-bold">Retry</button>
               </div>
