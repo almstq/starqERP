@@ -52,8 +52,15 @@ try {
   Invoke-DockerChecked info --format '{{.ServerVersion}}' | Out-Null
   Invoke-DockerChecked image inspect $image | Out-Null
 
-  $existing = & docker container inspect $containerName 2>$null
-  if ($LASTEXITCODE -ne 0) {
+  $existing = $null
+  try {
+    $existing = @(docker container inspect $containerName 2>&1)
+  }
+  catch {
+    # A missing disposable container is the expected first-run path.
+    $existing = $null
+  }
+  if (-not $existing -or ($existing -join "`n") -match 'No such object|No such container') {
     Invoke-DockerChecked create `
       --name $containerName `
       --mount "type=bind,source=$repoRoot,target=/workspace,readonly" `
@@ -91,10 +98,13 @@ try {
   $migrations = Get-ChildItem -Path $migrationDir -Filter '*.sql' | Sort-Object Name
   Write-Host "   $($migrations.Count) migration(s)"
 
-  $copyCmd = 'cp -v /workspace/supabase/migrations/*.sql /tmp/mig/ && ' +
-             'for f in /tmp/mig/*.sql; do echo "applying $f"; ' +
-             'psql -v ON_ERROR_STOP=1 -U postgres -d postgres -f "$f" >/dev/null || exit 1; done'
-  Invoke-DockerChecked exec $containerName bash -c $copyCmd
+  foreach ($migration in $migrations) {
+    Write-Host "   applying $($migration.Name)"
+    & docker cp $migration.FullName "$containerName`:/tmp/$($migration.Name)"
+    if ($LASTEXITCODE -ne 0) { throw "docker cp failed for $($migration.Name)" }
+    & docker exec $containerName psql -v ON_ERROR_STOP=1 -U postgres -d postgres -f "/tmp/$($migration.Name)"
+    if ($LASTEXITCODE -ne 0) { throw "migration failed: $($migration.Name)" }
+  }
 
   Write-Host '-- running SERP-443 probe --'
   Invoke-DockerChecked exec $containerName bash -c `
