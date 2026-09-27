@@ -94,7 +94,7 @@ try {
 
   # Apply migrations in filename order so the probe sees the real schema.
   Write-Host '-- applying migrations --'
-  $migrationDir = Join-Path $repoRoot 'supabase\migrations'
+  $migrationDir = Join-Path $repoRoot (Join-Path 'supabase' 'migrations')
   $migrations = Get-ChildItem -Path $migrationDir -Filter '*.sql' | Sort-Object Name
   Write-Host "   $($migrations.Count) migration(s)"
 

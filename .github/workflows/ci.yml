@@ -147,6 +147,9 @@ jobs:
       - name: SERP-314 Gap 2 Price List registry probe
         run: psql --set ON_ERROR_STOP=1 --file tests/serp314_price_list_registry_probe.sql
 
+      - name: SERP-443 isolation matrix probe
+        run: psql --set ON_ERROR_STOP=1 --file tests/serp443_isolation_matrix_probe.sql
+
   frontend:
     name: Web Frontend Build & Test Suite
     runs-on: ubuntu-latest

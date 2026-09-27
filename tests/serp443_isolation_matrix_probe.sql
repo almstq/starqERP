@@ -149,7 +149,7 @@ declare
   v_n integer := 0;
 begin
   begin
-    v_res := execute p_call;
+    execute p_call into v_res;
   exception when others then
     v_err := SQLERRM;
   end;
