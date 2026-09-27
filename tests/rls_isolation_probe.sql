@@ -49,7 +49,8 @@ insert into expected_public_tables (table_name) values
   ('counter_tenders'), ('counter_receipts'), ('counter_cash_sessions'),
   ('counter_returns'), ('counter_refund_tenders'), ('owner_summary_consents'),
   -- SERP-361: Starq Account durable human identity schema (ADR 010)
-  ('starq_accounts'), ('account_identities'), ('account_profiles'), ('account_consents');
+  ('starq_accounts'), ('account_identities'), ('account_profiles'), ('account_consents'),
+  ('organisation_configs');
 
 create temporary table expected_policies (
   table_name text not null,
@@ -131,6 +132,7 @@ insert into expected_policies (table_name, policy_name) values
   ('sod_exceptions', 'sod_exceptions_tenant'),                -- 202608250016_sod_exceptions.sql
   ('sod_exception_dispositions', 'sod_dispositions_tenant'),  -- 202608250016_sod_exceptions.sql
   ('tax_registrations', 'tax_registrations_tenant'),          -- 202608250017_tax_regimes_and_periods.sql
+  ('organisation_configs', 'organisation_configs_tenant'),    -- 202609271200_tenant_config_persistence.sql
   -- tax_rate_schedules_read is likewise GLOBAL (`using (true)`, no
   -- organisation_id column): a single statutory GST rate table shared by every
   -- tenant, not tenant data. Same behavioural-loop exclusion as payment_providers.
@@ -239,14 +241,14 @@ select e.table_name,
 -- counter_refund_tenders) have no policy and no authenticated grant -
 -- verified live (has_table_privilege('authenticated', ..., 'SELECT') = false
 -- for all 5, same as payment_provider_config/provider_events above), landing
--- in protected-by-revoked-grant (6+5=11). Total 59+6=65.
+  -- in protected-by-revoked-grant (6+5=11). Total 63+6=69.
 do $$
-begin
-  if (select count(*) from protection_report) <> 69 then
-    raise exception 'SERP-124/337 expected 69 classified public tables';
+  begin
+    if (select count(*) from protection_report) <> 70 then
+      raise exception 'SERP-124/337 expected 70 classified public tables';
   end if;
-  if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 57 then
-    raise exception 'SERP-124/337 expected 57 RLS-protected tables';
+    if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 58 then
+      raise exception 'SERP-124/337 expected 58 RLS-protected tables';
   end if;
   if (select count(*) from protection_report where protection = 'protected-by-revoked-grant') <> 11 then
     raise exception 'SERP-124/337 expected 11 revoked-grant-protected tables';
