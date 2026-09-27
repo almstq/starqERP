@@ -52,6 +52,7 @@ import {
   Tag,
 } from 'lucide-react';
 import { StarqHQShell, PlatformTabId } from '../components/platform/StarqHQShell';
+import { SidebarRail } from '../components/SidebarRail';
 
 export type MaterialWindowClass = 'compact' | 'medium' | 'expanded' | 'large' | 'extra-large';
 

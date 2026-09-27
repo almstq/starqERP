@@ -320,4 +320,36 @@ describe('Cashier-ready POS terminal layout & presentation', () => {
     fireEvent.click(productBtn);
     expect(screen.getByText('in cart ×2')).toBeInTheDocument();
   });
+
+  it('SERP-449: renders product-card category badge and price with whitespace-nowrap and truncate', async () => {
+    vi.spyOn(apiGateway, 'apiGet').mockResolvedValue({
+      ok: true,
+      locations: [{ id: OUTLET, code: 'RETAIL-01', name: 'Male Central Outlet', kind: 'retail', active: true }],
+      products: [
+        { id: PRODUCT_A, category: 'HOUSEHOLD', sku: 'SKU-COLA-CAN', kind: 'stock', name: 'Household Cleaner 500ml', barcode: '5449000000996', sale_allowed: true, active: true },
+      ],
+      on_hand: [
+        { organisation_id: '00000000-0000-4000-8000-000000000001', location_id: OUTLET, product_id: PRODUCT_A, derived_quantity: 50 },
+      ],
+      prices: [
+        { product_id: PRODUCT_A, source: 'product_prices', unit_amount: 21.5, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+      ],
+    } as any);
+
+    renderTerminal();
+
+    await waitFor(() => {
+      expect(screen.getByText('Household Cleaner 500ml')).toBeInTheDocument();
+    });
+
+    const categoryBadge = screen.getByTitle('HOUSEHOLD');
+    expect(categoryBadge).toBeInTheDocument();
+    expect(categoryBadge.className).toContain('whitespace-nowrap');
+    expect(categoryBadge.className).toContain('truncate');
+
+    const priceText = screen.getByText(/MVR[\s\u00A0]*21\.50/);
+    expect(priceText).toBeInTheDocument();
+    const priceContainer = priceText.closest('.whitespace-nowrap');
+    expect(priceContainer).not.toBeNull();
+  });
 });
