@@ -79,6 +79,9 @@ import {
   formatTaxLineLabel,
   formatTaxLineValue,
   formatReceiptGstDetails,
+  CounterPrintStatus,
+  evaluatePrinterOutcome,
+  formatPrinterFailureNotice,
 } from '../../domain/counter';
 
 const DEFAULT_OUTLET: CounterLocation = {
@@ -200,6 +203,8 @@ export const CounterView: React.FC = () => {
   const [receipt, setReceipt] = useState<CounterReceipt | null>(null);
   const [receiptBusy, setReceiptBusy] = useState(false);
   const [receiptError, setReceiptError] = useState<string | null>(null);
+  const [printStatus, setPrintStatus] = useState<CounterPrintStatus>('idle');
+  const [printError, setPrintError] = useState<string | null>(null);
 
   // SERP-089: Till session lifecycle (Open & Close)
   const [openTillModalOpen, setOpenTillModalOpen] = useState(false);
@@ -699,6 +704,8 @@ export const CounterView: React.FC = () => {
     setReceipt(null);
     setSaleError(null);
     setReceiptError(null);
+    setPrintStatus('idle');
+    setPrintError(null);
     setTenderInput({ cash: '', card: '', transfer: '' });
   };
 
@@ -780,6 +787,10 @@ export const CounterView: React.FC = () => {
         activeSaleKeyRef.current = null;
         setActiveSaleKey(null);
         persistCart([]);
+        setPrintStatus('idle');
+        setPrintError(null);
+        // Eagerly pre-load receipt after commit for immediate printing/reprinting
+        loadReceipt(response.counter_sale.payment_id);
       } else {
         setSaleError('counter_sale_no_response');
       }
@@ -791,41 +802,75 @@ export const CounterView: React.FC = () => {
     }
   };
 
-  const loadReceipt = async () => {
-    if (!saleResult?.payment_id) return;
+  const loadReceipt = async (explicitPaymentId?: string) => {
+    const paymentId = explicitPaymentId || saleResult?.payment_id;
+    if (!paymentId) return null;
     setReceiptBusy(true);
     setReceiptError(null);
     try {
       const data = await apiGet<CounterReceipt>(
-        `/api/ops/counter/receipt?receipt_id=${encodeURIComponent(saleResult.payment_id)}`,
+        `/api/ops/counter/receipt?receipt_id=${encodeURIComponent(paymentId)}`,
       );
-      setReceipt(data);
+      if (data && (data.receipt || (data as any).receipt_number)) {
+        setReceipt(data);
+        return data;
+      }
+      return null;
     } catch (error) {
       setReceiptError(error instanceof ApiError ? error.code : 'receipt_load_failed');
+      return null;
     } finally {
       setReceiptBusy(false);
     }
   };
 
-  const reRenderReceipt = async () => {
+  /**
+   * SPOS-008: Terminal printer failure resilience.
+   * Receipt emission occurs strictly AFTER database commit has completed.
+   * Printer failure or cancellation NEVER reverses or affects the committed sale.
+   */
+  const handlePrintReceipt = async (isReprint = false) => {
     if (!saleResult?.payment_id) return;
-    setReceiptBusy(true);
-    setReceiptError(null);
+    setPrintStatus('printing');
+    setPrintError(null);
+
     try {
-      // Duplicate-proof: the server increments renders on the SAME financial
-      // record (same receipt_number — never a second document), then we re-fetch.
-      await apiPost<{ ok: boolean; renders: number }>('/api/ops/counter/receipt/render', {
-        receipt_id: saleResult.payment_id,
-      });
-      const data = await apiGet<CounterReceipt>(
-        `/api/ops/counter/receipt?receipt_id=${encodeURIComponent(saleResult.payment_id)}`,
-      );
-      setReceipt(data);
-    } catch (error) {
-      setReceiptError(error instanceof ApiError ? error.code : 'receipt_render_failed');
-    } finally {
-      setReceiptBusy(false);
+      if (isReprint) {
+        // Duplicate-proof: server increments renders on the existing receipt
+        await apiPost<{ ok: boolean; renders: number }>('/api/ops/counter/receipt/render', {
+          receipt_id: saleResult.payment_id,
+        });
+      }
+
+      // Ensure receipt data is loaded
+      const receiptData = await loadReceipt(saleResult.payment_id);
+      if (!receiptData) {
+        const outcome = evaluatePrinterOutcome('receipt_data_unavailable', true);
+        setPrintStatus(outcome.status);
+        setPrintError(outcome.error);
+        return;
+      }
+
+      // Physical printer invocation (window.print() or hardware device)
+      try {
+        window.print();
+        const outcome = evaluatePrinterOutcome(null, true);
+        setPrintStatus(outcome.status);
+        setPrintError(null);
+      } catch (printErr) {
+        const outcome = evaluatePrinterOutcome(printErr, true);
+        setPrintStatus(outcome.status);
+        setPrintError(outcome.error);
+      }
+    } catch (err) {
+      const outcome = evaluatePrinterOutcome(err, true);
+      setPrintStatus(outcome.status);
+      setPrintError(outcome.error);
     }
+  };
+
+  const reRenderReceipt = async () => {
+    await handlePrintReceipt(true);
   };
 
   /**
@@ -1582,7 +1627,30 @@ export const CounterView: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Direct Actions: New Sale, View Receipt, Re-print */}
+                  {/* SPOS-008: Explicit Printer Failure Notice */}
+                  {printStatus === 'print_failed' && (
+                    <div
+                      role="alert"
+                      aria-live="assertive"
+                      className="p-2.5 rounded-lg border text-xs space-y-1"
+                      style={{
+                        borderColor: 'var(--md-sys-color-error, #f87171)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        color: 'var(--md-sys-color-error, #f87171)',
+                      }}
+                    >
+                      <div className="font-bold flex items-center gap-1.5">
+                        <AlertTriangle size={14} aria-hidden="true" />
+                        <span>Printer Error — Sale #{saleResult.invoice_number} Safely Committed</span>
+                      </div>
+                      <p className="text-[11px] opacity-90">
+                        The transaction is durable in the database. The physical printer did not respond.
+                        Reprint is available and will not create a duplicate charge.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Direct Actions: New Sale, View Receipt */}
                   <div className="grid grid-cols-2 gap-1.5 pt-0.5">
                     <Button
                       variant="primary"
@@ -1598,7 +1666,7 @@ export const CounterView: React.FC = () => {
                       variant="tonal"
                       size="sm"
                       className="w-full font-bold text-xs h-9"
-                      loading={receiptBusy}
+                      loading={receiptBusy || printStatus === 'printing'}
                       onClick={() => {
                         loadReceipt();
                         setReceiptModalOpen(true);
@@ -1609,25 +1677,50 @@ export const CounterView: React.FC = () => {
                     </Button>
                   </div>
 
-                  <Button
-                    variant="outlined"
-                    size="sm"
-                    className="w-full font-bold text-xs h-8"
-                    disabled={!receipt}
-                    onClick={reRenderReceipt}
-                    icon={<Copy size={13} aria-hidden="true" />}
-                  >
-                    Re-print (duplicate)
-                  </Button>
+                  {/* SPOS-008: Print & Re-print actions */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Button
+                      variant={printStatus === 'print_failed' ? 'primary' : 'outlined'}
+                      size="sm"
+                      className="w-full font-bold text-xs h-8"
+                      loading={printStatus === 'printing'}
+                      onClick={() => handlePrintReceipt(false)}
+                      icon={<Printer size={13} aria-hidden="true" />}
+                    >
+                      {printStatus === 'print_failed' ? 'Retry Print' : 'Print Receipt'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="sm"
+                      className="w-full font-bold text-xs h-8"
+                      disabled={!receipt && !saleResult}
+                      loading={printStatus === 'printing'}
+                      onClick={() => handlePrintReceipt(true)}
+                      icon={<Copy size={13} aria-hidden="true" />}
+                    >
+                      Re-print (duplicate)
+                    </Button>
+                  </div>
 
-                  {receipt && (
+                  {printStatus === 'printed' && (
+                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--positive)]">
+                      <CheckCircle2 size={13} aria-hidden="true" />
+                      <span>Receipt printed • Duplicate reprint available</span>
+                    </div>
+                  )}
+
+                  {receipt && (receipt.receipt || (receipt as any).receipt_number) && (
                     <div
                       className="p-1.5 rounded-lg text-xs"
                       style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)' }}
                     >
                       <div className="flex items-center justify-between gap-1">
-                        <span className="font-bold text-[11px]">Receipt {receipt.receipt.receipt_number}</span>
-                        <Badge variant="neutral">rendered ×{receipt.receipt.renders}</Badge>
+                        <span className="font-bold text-[11px]">
+                          Receipt {receipt.receipt?.receipt_number ?? (receipt as any).receipt_number ?? saleResult.receipt_number}
+                        </span>
+                        <Badge variant="neutral">
+                          rendered ×{receipt.receipt?.renders ?? (receipt as any).renders ?? 0}
+                        </Badge>
                       </div>
                     </div>
                   )}
@@ -2613,14 +2706,35 @@ export const CounterView: React.FC = () => {
                 </div>
               </div>
 
+              {printStatus === 'print_failed' && (
+                <div
+                  role="alert"
+                  className="p-2 rounded-lg border text-xs space-y-1"
+                  style={{
+                    borderColor: 'var(--md-sys-color-error, #f87171)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    color: 'var(--md-sys-color-error, #f87171)',
+                  }}
+                >
+                  <div className="font-bold flex items-center gap-1.5">
+                    <AlertTriangle size={13} aria-hidden="true" />
+                    <span>Printer Failure</span>
+                  </div>
+                  <p className="text-[10px] opacity-90">
+                    Printer is unavailable. Sale is committed and reprint is safe.
+                  </p>
+                </div>
+              )}
+
               {/* Receipt Modal Actions */}
               <div className="flex gap-2 pt-1">
                 <Button
                   size="sm"
                   variant="outlined"
                   className="flex-1"
-                  disabled={!receipt}
-                  onClick={reRenderReceipt}
+                  disabled={!receipt && !saleResult}
+                  loading={printStatus === 'printing'}
+                  onClick={() => handlePrintReceipt(true)}
                   icon={<Copy size={13} aria-hidden="true" />}
                 >
                   Re-print Copy
@@ -2629,10 +2743,11 @@ export const CounterView: React.FC = () => {
                   size="sm"
                   variant="primary"
                   className="flex-1"
-                  onClick={() => window.print()}
+                  loading={printStatus === 'printing'}
+                  onClick={() => handlePrintReceipt(false)}
                   icon={<Printer size={13} aria-hidden="true" />}
                 >
-                  Print
+                  {printStatus === 'print_failed' ? 'Retry Print' : 'Print'}
                 </Button>
               </div>
             </Surface>
