@@ -243,12 +243,12 @@ select e.table_name,
 -- for all 5, same as payment_provider_config/provider_events above), landing
   -- in protected-by-revoked-grant (6+5=11). Total 63+6=69.
 do $$
-begin
-  if (select count(*) from protection_report) <> 69 then
-    raise exception 'SERP-124/337 expected 69 classified public tables';
+  begin
+    if (select count(*) from protection_report) <> 70 then
+      raise exception 'SERP-124/337 expected 70 classified public tables';
   end if;
-  if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 57 then
-    raise exception 'SERP-124/337 expected 57 RLS-protected tables';
+    if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 58 then
+      raise exception 'SERP-124/337 expected 58 RLS-protected tables';
   end if;
   if (select count(*) from protection_report where protection = 'protected-by-revoked-grant') <> 11 then
     raise exception 'SERP-124/337 expected 11 revoked-grant-protected tables';
