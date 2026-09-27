@@ -92,6 +92,8 @@ export interface ERPContextType {
   // Multi-Tenant & Multi-Book Context State
   activePlane: 'platform' | 'tenant';
   currentTenant: OrganisationTenant;
+  tenantHydrated: boolean;
+  tenantIsLive: boolean;
   currentBookId?: string;
   currentBook?: import('../types/erp').OrganisationBook;
   currentArchetype: ArchetypeDefinition;
@@ -476,7 +478,7 @@ const ERPContext = createContext<ERPContextType | undefined>(undefined);
 export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [activeTab, setActiveTab] = useState<NavigationTab>('dashboard');
   const { resolvedTheme, setThemeMode } = useTheme();
-  const { session, login, refreshSession } = useAuth();
+  const { session, isLoading: authLoading, login, refreshSession } = useAuth();
   const theme = resolvedTheme;
 
   // Demo / unsigned fixtures only. A live session never reads INITIAL_TENANTS or localStorage.
@@ -887,6 +889,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     () => resolveCurrentTenant(tenants, currentTenantId),
     [tenants, currentTenantId]
   );
+  const tenantHydrated = !authLoading && (!session || Boolean(session.current_organisation_id && currentTenantId === session.current_organisation_id));
 
   // Current Book computation
   const currentBook = useMemo(() => {
@@ -3297,6 +3300,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         // Multi-tenant & Multi-Book Context
         activePlane,
         currentTenant,
+        tenantHydrated,
+        tenantIsLive: Boolean(session),
         currentBookId,
         currentBook,
         currentArchetype,

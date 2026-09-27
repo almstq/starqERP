@@ -79,6 +79,12 @@ import {
   formatTaxLineLabel,
   formatTaxLineValue,
   formatReceiptGstDetails,
+  CounterPrintStatus,
+  evaluatePrinterOutcome,
+  formatPrinterFailureNotice,
+  calculateCartLineTax,
+  calculateCartTotals,
+  CartTotals,
 } from '../../domain/counter';
 
 const DEFAULT_OUTLET: CounterLocation = {
@@ -90,21 +96,21 @@ const DEFAULT_OUTLET: CounterLocation = {
 };
 
 const DEFAULT_RETAIL_PRODUCTS: CounterProduct[] = [
-  { id: 'prod-coca-cola', sku: 'COLA-330', name: 'Coca-Cola 330ml Can', category: 'Beverages', barcode: '5449000000996', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-sprite', sku: 'SPRITE-330', name: 'Sprite 330ml Can', category: 'Beverages', barcode: '5449000014528', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-taza-water', sku: 'TAZA-500', name: 'Taza Mineral Water 500ml', category: 'Beverages', barcode: '6291000000111', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 20 },
-  { id: 'prod-redbull', sku: 'REDBULL-250', name: 'Red Bull Energy Drink 250ml', category: 'Beverages', barcode: '9002490100070', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-lays-chips', sku: 'LAYS-CLASSIC', name: 'Lays Classic Potato Chips 50g', category: 'Snacks', barcode: '8901491101837', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-pringles', sku: 'PRINGLES-SC', name: 'Pringles Sour Cream & Onion 107g', category: 'Snacks', barcode: '8886467100017', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 8 },
-  { id: 'prod-oreo', sku: 'OREO-133', name: 'Oreo Original Sandwich Cookies 133g', category: 'Snacks', barcode: '8901030000001', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-bajiya', sku: 'BAJIYA-PC', name: 'Maldivian Fish Bajiya (Fresh)', category: 'Bakery', barcode: '2000000000014', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 15 },
-  { id: 'prod-fishroll', sku: 'FISHROLL-PC', name: 'Spicy Fish Roll (Fresh)', category: 'Bakery', barcode: '2000000000021', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 15 },
-  { id: 'prod-almudhish', sku: 'ALMUDHISH-400', name: 'Al Mudhish Milk Powder 400g', category: 'Groceries', barcode: '6084000001018', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5 },
-  { id: 'prod-dilmah-tea', sku: 'DILMAH-100', name: 'Dilmah Ceylon Tea Bags 100s', category: 'Groceries', barcode: '9312631100012', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5 },
-  { id: 'prod-basmati-rice', sku: 'RICE-1KG', name: 'Premium Basmati Rice 1kg', category: 'Groceries', barcode: '8901234567890', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-panadol', sku: 'PANADOL-10', name: 'Panadol Extra 500mg 10s', category: 'Essentials', barcode: '5000000000019', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-dettol-soap', sku: 'DETTOL-100', name: 'Dettol Original Soap 100g', category: 'Essentials', barcode: '5000000000026', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-usbc-cable', sku: 'USBC-CABLE', name: 'Fast USB-C Braided Cable 1m', category: 'Electronics', barcode: '6934177700019', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5 },
+  { id: 'prod-coca-cola', sku: 'COLA-330', name: 'Coca-Cola 330ml Can', category: 'Beverages', barcode: '5449000000996', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-sprite', sku: 'SPRITE-330', name: 'Sprite 330ml Can', category: 'Beverages', barcode: '5449000014528', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-taza-water', sku: 'TAZA-500', name: 'Taza Mineral Water 500ml', category: 'Beverages', barcode: '6291000000111', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 20, tax_classification: 'standard_rated' },
+  { id: 'prod-redbull', sku: 'REDBULL-250', name: 'Red Bull Energy Drink 250ml', category: 'Beverages', barcode: '9002490100070', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-lays-chips', sku: 'LAYS-CLASSIC', name: 'Lays Classic Potato Chips 50g', category: 'Snacks', barcode: '8901491101837', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-pringles', sku: 'PRINGLES-SC', name: 'Pringles Sour Cream & Onion 107g', category: 'Snacks', barcode: '8886467100017', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 8, tax_classification: 'standard_rated' },
+  { id: 'prod-oreo', sku: 'OREO-133', name: 'Oreo Original Sandwich Cookies 133g', category: 'Snacks', barcode: '8901030000001', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-bajiya', sku: 'BAJIYA-PC', name: 'Maldivian Fish Bajiya (Fresh)', category: 'Bakery', barcode: '2000000000014', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 15, tax_classification: 'standard_rated' },
+  { id: 'prod-fishroll', sku: 'FISHROLL-PC', name: 'Spicy Fish Roll (Fresh)', category: 'Bakery', barcode: '2000000000021', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 15, tax_classification: 'standard_rated' },
+  { id: 'prod-almudhish', sku: 'ALMUDHISH-400', name: 'Al Mudhish Milk Powder 400g', category: 'Groceries', barcode: '6084000001018', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5, tax_classification: 'standard_rated' },
+  { id: 'prod-dilmah-tea', sku: 'DILMAH-100', name: 'Dilmah Ceylon Tea Bags 100s', category: 'Groceries', barcode: '9312631100012', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5, tax_classification: 'standard_rated' },
+  { id: 'prod-basmati-rice', sku: 'RICE-1KG', name: 'Premium Basmati Rice 1kg', category: 'Groceries', barcode: '8901234567890', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'zero_rated' },
+  { id: 'prod-panadol', sku: 'PANADOL-10', name: 'Panadol Extra 500mg 10s', category: 'Essentials', barcode: '5000000000019', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'exempt' },
+  { id: 'prod-dettol-soap', sku: 'DETTOL-100', name: 'Dettol Original Soap 100g', category: 'Essentials', barcode: '5000000000026', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-usbc-cable', sku: 'USBC-CABLE', name: 'Fast USB-C Braided Cable 1m', category: 'Electronics', barcode: '6934177700019', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5, tax_classification: 'standard_rated' },
 ];
 
 const DEFAULT_PRICES: ApprovedPriceRow[] = [
@@ -200,6 +206,8 @@ export const CounterView: React.FC = () => {
   const [receipt, setReceipt] = useState<CounterReceipt | null>(null);
   const [receiptBusy, setReceiptBusy] = useState(false);
   const [receiptError, setReceiptError] = useState<string | null>(null);
+  const [printStatus, setPrintStatus] = useState<CounterPrintStatus>('idle');
+  const [printError, setPrintError] = useState<string | null>(null);
 
   // SERP-089: Till session lifecycle (Open & Close)
   const [openTillModalOpen, setOpenTillModalOpen] = useState(false);
@@ -677,40 +685,43 @@ export const CounterView: React.FC = () => {
     );
   }, [products, query, selectedCategory]);
 
-  // LIVE running subtotal/total shown in large type purely for cashier glanceability.
-  // The authoritative financial calculation and taxes remain strictly server-resolved on complete().
+  // SERP-448: Authoritative cart totals structure (Subtotal, GST as sum of line GST, Total Due)
+  // Reconciles exactly with server result. Evaluates line-level GST per item classification.
+  const cartTotals: CartTotals = useMemo(() => {
+    return calculateCartTotals(
+      catalogue?.gst_registration_status,
+      catalogue?.gst_rate,
+      cart,
+      activePrices,
+      allProducts,
+    );
+  }, [catalogue, cart, activePrices, allProducts]);
+
   const liveTotals = useMemo(() => {
-    let subtotal = 0;
-    let hasUnpricedItem = false;
-    for (const line of cart) {
-      const approved = approvedPriceFor(activePrices, line.productId);
-      if (approved && approved.source !== 'none' && approved.unit_amount > 0) {
-        const discountFactor = approved.discount_percent > 0 ? 1 - approved.discount_percent / 100 : 1;
-        subtotal += line.quantity * (approved.unit_amount * discountFactor);
-      } else {
-        hasUnpricedItem = true;
-      }
-    }
-    return { subtotal, hasUnpricedItem };
-  }, [cart, activePrices]);
+    return {
+      subtotal: cartTotals.subtotal,
+      hasUnpricedItem: cartTotals.hasUnpricedItem,
+    };
+  }, [cartTotals]);
 
   const resetForNewSale = () => {
     setSaleResult(null);
     setReceipt(null);
     setSaleError(null);
     setReceiptError(null);
+    setPrintStatus('idle');
+    setPrintError(null);
     setTenderInput({ cash: '', card: '', transfer: '' });
   };
 
   const isTaxMissing = useMemo(() => {
     if (!catalogue) return false;
-    return isTaxRateMissingForSale(catalogue.gst_registration_status, catalogue.gst_rate);
-  }, [catalogue]);
+    return isTaxRateMissingForSale(catalogue.gst_registration_status, catalogue.gst_rate) || cartTotals.isTaxMissing;
+  }, [catalogue, cartTotals.isTaxMissing]);
 
   const estimatedTax = useMemo(() => {
-    if (!catalogue || cartIsEmpty(cart)) return 0;
-    return calculateEstimatedTax(catalogue.gst_registration_status, catalogue.gst_rate, cart, activePrices);
-  }, [catalogue, cart, activePrices]);
+    return cartTotals.taxTotal;
+  }, [cartTotals]);
 
   const hold = () => {
     if (cartIsEmpty(cart)) return;
@@ -780,6 +791,10 @@ export const CounterView: React.FC = () => {
         activeSaleKeyRef.current = null;
         setActiveSaleKey(null);
         persistCart([]);
+        setPrintStatus('idle');
+        setPrintError(null);
+        // Await/sequence receipt load after commit for immediate printing/reprinting
+        await loadReceipt(response.counter_sale.payment_id);
       } else {
         setSaleError('counter_sale_no_response');
       }
@@ -791,41 +806,77 @@ export const CounterView: React.FC = () => {
     }
   };
 
-  const loadReceipt = async () => {
-    if (!saleResult?.payment_id) return;
+  const loadReceipt = async (explicitPaymentId?: string) => {
+    const paymentId = explicitPaymentId || saleResult?.payment_id;
+    if (!paymentId) return null;
     setReceiptBusy(true);
     setReceiptError(null);
     try {
       const data = await apiGet<CounterReceipt>(
-        `/api/ops/counter/receipt?receipt_id=${encodeURIComponent(saleResult.payment_id)}`,
+        `/api/ops/counter/receipt?receipt_id=${encodeURIComponent(paymentId)}`,
       );
-      setReceipt(data);
+      if (data && (data.receipt || (data as any).receipt_number)) {
+        setReceipt(data);
+        return data;
+      }
+      setReceipt(null);
+      return null;
     } catch (error) {
+      setReceipt(null);
       setReceiptError(error instanceof ApiError ? error.code : 'receipt_load_failed');
+      return null;
     } finally {
       setReceiptBusy(false);
     }
   };
 
-  const reRenderReceipt = async () => {
+  /**
+   * SPOS-008: Terminal printer failure resilience.
+   * Receipt emission occurs strictly AFTER database commit has completed.
+   * Printer failure or cancellation NEVER reverses or affects the committed sale.
+   */
+  const handlePrintReceipt = async (isReprint = false) => {
     if (!saleResult?.payment_id) return;
-    setReceiptBusy(true);
-    setReceiptError(null);
+    setPrintStatus('printing');
+    setPrintError(null);
+
     try {
-      // Duplicate-proof: the server increments renders on the SAME financial
-      // record (same receipt_number — never a second document), then we re-fetch.
-      await apiPost<{ ok: boolean; renders: number }>('/api/ops/counter/receipt/render', {
-        receipt_id: saleResult.payment_id,
-      });
-      const data = await apiGet<CounterReceipt>(
-        `/api/ops/counter/receipt?receipt_id=${encodeURIComponent(saleResult.payment_id)}`,
-      );
-      setReceipt(data);
-    } catch (error) {
-      setReceiptError(error instanceof ApiError ? error.code : 'receipt_render_failed');
-    } finally {
-      setReceiptBusy(false);
+      if (isReprint) {
+        // Duplicate-proof: server increments renders on the existing receipt
+        await apiPost<{ ok: boolean; renders: number }>('/api/ops/counter/receipt/render', {
+          receipt_id: saleResult.payment_id,
+        });
+      }
+
+      // Ensure receipt data is loaded and valid before opening physical print dialog
+      const receiptData = await loadReceipt(saleResult.payment_id);
+      if (!receiptData || (!receiptData.receipt && !(receiptData as any).receipt_number)) {
+        const outcome = evaluatePrinterOutcome('receipt_data_unavailable', true);
+        setPrintStatus(outcome.status);
+        setPrintError(outcome.error);
+        return;
+      }
+
+      // Physical printer invocation (window.print() or hardware device)
+      try {
+        window.print();
+        const outcome = evaluatePrinterOutcome(null, true);
+        setPrintStatus(outcome.status);
+        setPrintError(null);
+      } catch (printErr) {
+        const outcome = evaluatePrinterOutcome(printErr, true);
+        setPrintStatus(outcome.status);
+        setPrintError(outcome.error);
+      }
+    } catch (err) {
+      const outcome = evaluatePrinterOutcome(err, true);
+      setPrintStatus(outcome.status);
+      setPrintError(outcome.error);
     }
+  };
+
+  const reRenderReceipt = async () => {
+    await handlePrintReceipt(true);
   };
 
   /**
@@ -1432,8 +1483,14 @@ export const CounterView: React.FC = () => {
                   const onHand = onHandAt(activeOnHand, outlet.id, line.productId);
                   const approved = approvedPriceFor(activePrices, line.productId);
                   const short = line.quantity > onHand;
-                  const unitPrice = (approved && approved.source !== 'none' && approved.unit_amount > 0) ? Number(approved.unit_amount) : 0;
-                  const lineTotal = unitPrice * line.quantity;
+                  const lineTax = cartTotals.lineTaxes[line.productId] || calculateCartLineTax(
+                    catalogue?.gst_registration_status,
+                    catalogue?.gst_rate,
+                    product,
+                    line.quantity,
+                    approved,
+                  );
+                  const lineTotal = lineTax.lineSubtotal;
 
                   return (
                     <div
@@ -1454,9 +1511,9 @@ export const CounterView: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Bottom Row: Unit Price / Warnings & Compact Stepper */}
+                      {/* Bottom Row: Unit Price, Line GST Treatment, Warnings & Compact Stepper */}
                       <div className="flex items-center justify-between gap-2 mt-1">
-                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1 flex-wrap">
                           {approved && approved.source !== 'none' && approved.unit_amount > 0 ? (
                             <span className="text-[11px] font-mono font-medium" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
                               MVR {Number(approved.unit_amount).toFixed(2)}
@@ -1466,6 +1523,18 @@ export const CounterView: React.FC = () => {
                           ) : (
                             <span className="text-[11px] italic" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>no price</span>
                           )}
+                          {/* SERP-448 Line GST treatment badge */}
+                          <span
+                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-medium tracking-tight"
+                            style={{
+                              backgroundColor: 'var(--md-sys-color-surface-container-highest)',
+                              color: lineTax.isTaxable ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-on-surface-variant)',
+                            }}
+                            data-testid={`cart-line-gst-${line.productId}`}
+                            title={`Tax classification: ${lineTax.taxClassification}`}
+                          >
+                            {lineTax.treatmentLabel}
+                          </span>
                           {short ? (
                             <span className="text-[10px] font-semibold flex items-center gap-0.5" style={{ color: 'var(--md-sys-color-error)' }}>
                               <AlertTriangle size={10} aria-hidden="true" /> {onHand} left
@@ -1582,7 +1651,30 @@ export const CounterView: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Direct Actions: New Sale, View Receipt, Re-print */}
+                  {/* SPOS-008: Explicit Printer Failure Notice */}
+                  {printStatus === 'print_failed' && (
+                    <div
+                      role="alert"
+                      aria-live="assertive"
+                      className="p-2.5 rounded-lg border text-xs space-y-1"
+                      style={{
+                        borderColor: 'var(--md-sys-color-error, #f87171)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        color: 'var(--md-sys-color-error, #f87171)',
+                      }}
+                    >
+                      <div className="font-bold flex items-center gap-1.5">
+                        <AlertTriangle size={14} aria-hidden="true" />
+                        <span>Printer Error — Sale #{saleResult.invoice_number} Safely Committed</span>
+                      </div>
+                      <p className="text-[11px] opacity-90">
+                        The transaction is durable in the database. The physical printer did not respond.
+                        Reprint is available and will not create a duplicate charge.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Direct Actions: New Sale, View Receipt */}
                   <div className="grid grid-cols-2 gap-1.5 pt-0.5">
                     <Button
                       variant="primary"
@@ -1598,7 +1690,7 @@ export const CounterView: React.FC = () => {
                       variant="tonal"
                       size="sm"
                       className="w-full font-bold text-xs h-9"
-                      loading={receiptBusy}
+                      loading={receiptBusy || printStatus === 'printing'}
                       onClick={() => {
                         loadReceipt();
                         setReceiptModalOpen(true);
@@ -1609,25 +1701,50 @@ export const CounterView: React.FC = () => {
                     </Button>
                   </div>
 
-                  <Button
-                    variant="outlined"
-                    size="sm"
-                    className="w-full font-bold text-xs h-8"
-                    disabled={!receipt}
-                    onClick={reRenderReceipt}
-                    icon={<Copy size={13} aria-hidden="true" />}
-                  >
-                    Re-print (duplicate)
-                  </Button>
+                  {/* SPOS-008: Print & Re-print actions */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Button
+                      variant={printStatus === 'print_failed' ? 'primary' : 'outlined'}
+                      size="sm"
+                      className="w-full font-bold text-xs h-8"
+                      loading={printStatus === 'printing'}
+                      onClick={() => handlePrintReceipt(false)}
+                      icon={<Printer size={13} aria-hidden="true" />}
+                    >
+                      {printStatus === 'print_failed' ? 'Retry Print' : 'Print Receipt'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="sm"
+                      className="w-full font-bold text-xs h-8"
+                      disabled={!receipt && !saleResult}
+                      loading={printStatus === 'printing'}
+                      onClick={() => handlePrintReceipt(true)}
+                      icon={<Copy size={13} aria-hidden="true" />}
+                    >
+                      Re-print (duplicate)
+                    </Button>
+                  </div>
 
-                  {receipt && (
+                  {(printStatus === 'print_requested' || printStatus === 'printed') && (
+                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--md-sys-color-primary)]">
+                      <Printer size={13} aria-hidden="true" />
+                      <span>Print requested • Re-print duplicate available</span>
+                    </div>
+                  )}
+
+                  {receipt && (receipt.receipt || (receipt as any).receipt_number) && (
                     <div
                       className="p-1.5 rounded-lg text-xs"
                       style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)' }}
                     >
                       <div className="flex items-center justify-between gap-1">
-                        <span className="font-bold text-[11px]">Receipt {receipt.receipt.receipt_number}</span>
-                        <Badge variant="neutral">rendered ×{receipt.receipt.renders}</Badge>
+                        <span className="font-bold text-[11px]">
+                          Receipt {receipt.receipt?.receipt_number ?? (receipt as any).receipt_number ?? saleResult.receipt_number}
+                        </span>
+                        <Badge variant="neutral">
+                          rendered ×{receipt.receipt?.renders ?? (receipt as any).renders ?? 0}
+                        </Badge>
                       </div>
                     </div>
                   )}
@@ -1643,28 +1760,28 @@ export const CounterView: React.FC = () => {
                     }}
                   >
                     <div className="flex justify-between items-baseline text-xs">
-                      <span className="font-semibold text-on-surface-variant">Estimated Subtotal</span>
-                      <span className="font-mono font-bold text-on-surface tabular-nums">
-                        MVR {liveTotals.subtotal.toFixed(2)}
+                      <span className="font-semibold text-on-surface-variant">Subtotal</span>
+                      <span className="font-mono font-bold text-on-surface tabular-nums" data-testid="checkout-subtotal">
+                        MVR {cartTotals.subtotal.toFixed(2)}
                       </span>
                     </div>
                     {catalogue?.gst_registration_status === 'registered' ? (
                       <div className="flex justify-between items-baseline text-xs">
                         <span className={`font-semibold ${isTaxMissing ? 'text-error' : 'text-on-surface-variant'}`}>
-                          Estimated Tax {isTaxMissing ? '' : `(${catalogue.gst_rate_percent}%)`}
+                          GST
                         </span>
                         {isTaxMissing ? (
-                          <span className="font-semibold text-error text-xs">Rate unavailable</span>
+                          <span className="font-semibold text-error text-xs" data-testid="checkout-gst-error">Rate unavailable</span>
                         ) : (
-                          <span className="font-mono font-bold text-on-surface tabular-nums">
-                            MVR {(estimatedTax ?? 0).toFixed(2)}
+                          <span className="font-mono font-bold text-on-surface tabular-nums" data-testid="checkout-gst">
+                            MVR {(cartTotals.taxTotal ?? 0).toFixed(2)}
                           </span>
                         )}
                       </div>
                     ) : (
                       <div className="flex justify-between items-baseline text-xs">
-                        <span className="font-semibold text-on-surface-variant">Tax</span>
-                        <span className="font-mono font-semibold text-on-surface-variant text-xs">
+                        <span className="font-semibold text-on-surface-variant">GST</span>
+                        <span className="font-mono font-semibold text-on-surface-variant text-xs" data-testid="checkout-gst-unregistered">
                           Not GST registered — no GST
                         </span>
                       </div>
@@ -1686,11 +1803,11 @@ export const CounterView: React.FC = () => {
                             Rate Unavailable
                           </span>
                         ) : (
-                          <span className="text-xl font-black font-mono tracking-tight text-primary tabular-nums block">
-                            MVR {(liveTotals.subtotal + (estimatedTax ?? 0)).toFixed(2)}
+                          <span className="text-xl font-black font-mono tracking-tight text-primary tabular-nums block" data-testid="checkout-total-due">
+                            MVR {(cartTotals.totalDue ?? cartTotals.subtotal).toFixed(2)}
                           </span>
                         )}
-                        {liveTotals.hasUnpricedItem && (
+                        {cartTotals.hasUnpricedItem && (
                           <span className="text-[10px] font-semibold text-[var(--warning)]">
                             Unapproved prices in cart
                           </span>
@@ -2613,14 +2730,35 @@ export const CounterView: React.FC = () => {
                 </div>
               </div>
 
+              {printStatus === 'print_failed' && (
+                <div
+                  role="alert"
+                  className="p-2 rounded-lg border text-xs space-y-1"
+                  style={{
+                    borderColor: 'var(--md-sys-color-error, #f87171)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    color: 'var(--md-sys-color-error, #f87171)',
+                  }}
+                >
+                  <div className="font-bold flex items-center gap-1.5">
+                    <AlertTriangle size={13} aria-hidden="true" />
+                    <span>Printer Failure</span>
+                  </div>
+                  <p className="text-[10px] opacity-90">
+                    Printer is unavailable. Sale is committed and reprint is safe.
+                  </p>
+                </div>
+              )}
+
               {/* Receipt Modal Actions */}
               <div className="flex gap-2 pt-1">
                 <Button
                   size="sm"
                   variant="outlined"
                   className="flex-1"
-                  disabled={!receipt}
-                  onClick={reRenderReceipt}
+                  disabled={!receipt && !saleResult}
+                  loading={printStatus === 'printing'}
+                  onClick={() => handlePrintReceipt(true)}
                   icon={<Copy size={13} aria-hidden="true" />}
                 >
                   Re-print Copy
@@ -2629,10 +2767,11 @@ export const CounterView: React.FC = () => {
                   size="sm"
                   variant="primary"
                   className="flex-1"
-                  onClick={() => window.print()}
+                  loading={printStatus === 'printing'}
+                  onClick={() => handlePrintReceipt(false)}
                   icon={<Printer size={13} aria-hidden="true" />}
                 >
-                  Print
+                  {printStatus === 'print_failed' ? 'Retry Print' : 'Print'}
                 </Button>
               </div>
             </Surface>

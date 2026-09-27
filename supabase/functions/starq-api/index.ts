@@ -1597,6 +1597,48 @@ export async function handleRequest(
       }
     }
 
+    // SERP-452: authoritative Profile & Tax configuration read/write surface.
+    // The UI must not persist tenant settings in demo/local React state.
+    if (path === "/api/tenant/config") {
+      if (!session.organisation_id) return json(403, { ok: false, error: "organisation_context_required" }, origin);
+      if (req.method === "GET") {
+        const [config, registration, bank] = await Promise.all([
+          db.from("organisation_configs").select("*").eq("organisation_id", session.organisation_id).maybeSingle(),
+          db.from("tax_registrations").select("registration_status, tin").eq("organisation_id", session.organisation_id)
+            .eq("tax_type", "gst_general").order("effective_from", { ascending: false }).limit(1).maybeSingle(),
+          db.from("bank_accounts").select("account_identifier_mask").eq("organisation_id", session.organisation_id)
+            .eq("account_type", "operating").eq("is_default", true).eq("active", true).limit(1).maybeSingle(),
+        ]);
+        if (config.error) throw new Error("tenant_config_query_failed");
+        const row = config.data ?? {};
+        return json(200, { ok: true, config: {
+          ...row,
+          gst_status: registration.data?.registration_status ?? row.gst_status ?? "not_registered",
+          tin_number: registration.data?.tin ?? row.tin_number ?? "",
+          bml_account: bank.data?.account_identifier_mask ?? row.bml_account ?? "",
+        } }, origin);
+      }
+      if (req.method === "POST") {
+        const body = await readJson(req);
+        if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
+        if (!["owner", "director", "managing_director"].includes(session.acting_as)) return await deny(403, "seat_not_authorized", session);
+        const gstStatus = String(body.gst_status ?? "not_registered");
+        if (!["registered", "not_registered", "pending", "suspended", "cancelled"].includes(gstStatus)) return json(400, { ok: false, error: "invalid_gst_status" }, origin);
+        const existingConfig = await db.from("organisation_configs").select("tin_number").eq("organisation_id", session.organisation_id).maybeSingle();
+        const submittedTin = String(body.tin_number ?? "").trim();
+        const preservedTin = submittedTin || existingConfig.data?.tin_number || "";
+        const config = { organisation_id: session.organisation_id, tin_number: preservedTin, gst_status: gstStatus,
+          gst_rate: Number(body.gst_rate ?? 8), bml_account: String(body.bml_account ?? ""), address: String(body.address ?? ""),
+          phone: String(body.phone ?? ""), email: String(body.email ?? ""), island: String(body.island ?? ""), updated_at: new Date().toISOString(), updated_by: session.person_uuid };
+        const { data, error } = await db.from("organisation_configs").upsert(config, { onConflict: "organisation_id" }).select("*").single();
+        if (error || !data) throw new Error("tenant_config_persist_failed");
+        const effectiveFrom = new Date().toISOString().slice(0, 10);
+        const { error: taxError } = await db.from("tax_registrations").upsert({ organisation_id: session.organisation_id, tax_type: "gst_general", registration_status: gstStatus, tin: config.tin_number || null, effective_from: effectiveFrom }, { onConflict: "organisation_id,tax_type,effective_from" });
+        if (taxError) throw new Error("tenant_tax_config_persist_failed");
+        return json(200, { ok: true, config: data }, origin);
+      }
+    }
+
     // Every /api/ops/* route is tenant-scoped and queries by session.organisation_id.
     // A zero-org applicant session reaching any of them previously fell straight
     // into a raw Postgres "invalid input syntax for type uuid: null" (22P02) --
@@ -2795,7 +2837,9 @@ export async function handleRequest(
         const updateFields: Record<string, unknown> = {
           registration_status: targetStatus,
         };
-        if (targetTin !== undefined) {
+        // Empty UI input preserves the authoritative TIN by default. A caller
+        // must explicitly send clear_tin=true to erase a registration number.
+        if (targetTin !== undefined && (targetTin !== null ? true : body.clear_tin === true)) {
           updateFields.tin = targetTin;
         }
         const { data, error } = await db.from("tax_registrations")

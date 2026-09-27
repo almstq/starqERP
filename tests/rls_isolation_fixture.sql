@@ -353,6 +353,12 @@ values
   ('00000000-0000-4000-8000-000000003161', '00000000-0000-4000-8000-000000000001', 'gst_general', 'registered', '2026-01-01'),
   ('00000000-0000-4000-8000-000000003162', '00000000-0000-4000-8000-000000000002', 'gst_general', 'registered', '2026-01-01');
 
+insert into public.organisation_configs
+  (organisation_id, tin_number, gst_status, gst_rate, island)
+values
+  ('00000000-0000-4000-8000-000000000001', 'SYNTH-A-TIN', 'registered', 8, 'Synthetic A Island'),
+  ('00000000-0000-4000-8000-000000000002', 'SYNTH-B-TIN', 'registered', 8, 'Synthetic B Island');
+
 insert into public.roles (id, organisation_id, code, name)
 values
   ('00000000-0000-4000-8000-000000003171', '00000000-0000-4000-8000-000000000001', 'synthetic_role', 'Synthetic Role A'),
