@@ -735,6 +735,10 @@ export const CounterView: React.FC = () => {
       setSaleError('network_offline');
       return;
     }
+    if (catalogue?.gst_registration_status === 'unknown') {
+      setSaleError('tax_registration_status_unknown');
+      return;
+    }
     if (isTaxMissing) {
       setSaleError('tax_rate_unavailable');
       return;

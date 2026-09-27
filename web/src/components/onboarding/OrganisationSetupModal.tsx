@@ -127,10 +127,12 @@ export const OrganisationSetupModal: React.FC<OrganisationSetupModalProps> = ({
       legalName: legalName.trim() || `${name.trim()} Pvt Ltd`,
       industry,
       currency,
-      currencySymbol: symbol,
       tinNumber: cleanTin,
-      gstStatus: cleanTin ? 'registered' : 'not_registered',
-      gstRate,
+      // SERP-446: Statutory GST status must never be inferred from typing a TIN.
+      // It is unknown until authoritatively configured and persisted.
+      gstStatus: 'unknown',
+      gstRate: 0,
+      currencySymbol: symbol,
       financialYearStart,
       financialYearEnd,
       phone: phone.trim() !== '+960' ? phone.trim() : '',

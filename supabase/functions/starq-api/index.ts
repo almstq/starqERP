@@ -32,6 +32,9 @@ function safeEnv(key: string, fallback = ""): string {
 const SUPABASE_URL = safeEnv("SUPABASE_URL", "https://placeholder.supabase.co");
 const SERVICE_KEY = safeEnv("SUPABASE_SERVICE_ROLE_KEY", "service-key-placeholder");
 const SESSION_SECRET = safeEnv("STARQBOOKS_SESSION_SECRET", "");
+function getSessionSecret(): string {
+  return SESSION_SECRET || safeEnv("STARQBOOKS_SESSION_SECRET", "");
+}
 // SERP-301 alert relay: an unattended poller has no human session cookie, so
 // it cannot pass the `!session` gate below by design. It authenticates with
 // a distinct shared secret instead, scoped to exactly one read-only route.
@@ -177,7 +180,7 @@ const ALLOWED_SEATS = new Set<string>(DB_SEEDED_SEATS);
  */
 const DB_TIMEOUT_MS = 10_000;
 
-const db = createClient(SUPABASE_URL, SERVICE_KEY, {
+const defaultDb = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
   global: {
     fetch: (input: string | URL | Request, init?: RequestInit) => {
@@ -188,6 +191,15 @@ const db = createClient(SUPABASE_URL, SERVICE_KEY, {
     },
   },
 });
+let db = defaultDb;
+
+export function setDbForTesting(client: unknown) {
+  db = client as typeof defaultDb;
+}
+
+export function resetDbForTesting() {
+  db = defaultDb;
+}
 const encoder = new TextEncoder();
 const anonymousWindows = new Map<string, { count: number; resetAt: number }>();
 
@@ -221,7 +233,7 @@ function fromBase64Url(value: string): Uint8Array<ArrayBuffer> {
 
 async function hmac(value: string): Promise<string> {
   const key = await crypto.subtle.importKey(
-    "raw", encoder.encode(SESSION_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+    "raw", encoder.encode(getSessionSecret()), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
   );
   return base64Url(new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(value))));
 }
@@ -229,7 +241,7 @@ async function hmac(value: string): Promise<string> {
 async function verifyHmac(value: string, signature: string): Promise<boolean> {
   try {
     const key = await crypto.subtle.importKey(
-      "raw", encoder.encode(SESSION_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["verify"],
+      "raw", encoder.encode(getSessionSecret()), { name: "HMAC", hash: "SHA-256" }, false, ["verify"],
     );
     return await crypto.subtle.verify("HMAC", key, fromBase64Url(signature), encoder.encode(value));
   } catch {
@@ -647,7 +659,7 @@ async function verifyGoogleToken(
   }
 }
 
-interface Session {
+export interface Session {
   person_uuid: string;
   person_key: string;
   display_label: string;
@@ -998,7 +1010,110 @@ export function validateCounterSaleTaxParameters(
   };
 }
 
-async function handleRequest(req: Request, requestId: string, observed: Observed): Promise<Response> {
+export const ALLOWED_TAX_REGISTRATION_STATUSES = [
+  "registered",
+  "not_registered",
+  "pending",
+  "suspended",
+  "cancelled",
+] as const;
+
+export type TaxRegistrationStatus = (typeof ALLOWED_TAX_REGISTRATION_STATUSES)[number];
+
+export interface TaxRegistrationValidationResult {
+  ok: boolean;
+  error?: string;
+  detail?: string;
+  status?: number;
+  registrationStatus?: TaxRegistrationStatus;
+  taxType?: string;
+  tin?: string | null;
+  effectiveFrom?: string;
+}
+
+/**
+ * SERP-446: Validates tenant statutory tax registration parameters.
+ * Allowed statuses align with public.tax_registrations constraint:
+ * ('registered', 'not_registered', 'pending', 'suspended', 'cancelled').
+ */
+export function validateTaxRegistrationInput(
+  rawBody: unknown,
+): TaxRegistrationValidationResult {
+  if (!rawBody || typeof rawBody !== "object" || Array.isArray(rawBody)) {
+    return {
+      ok: false,
+      error: "invalid_request_body",
+      detail: "Request body must be a JSON object",
+      status: 400,
+    };
+  }
+  const body = rawBody as Record<string, unknown>;
+  const rawStatus = typeof body.registration_status === "string"
+    ? body.registration_status.trim().toLowerCase()
+    : typeof body.gst_status === "string"
+    ? body.gst_status.trim().toLowerCase()
+    : "";
+
+  if (!rawStatus) {
+    return {
+      ok: false,
+      error: "registration_status_required",
+      detail: "registration_status is required",
+      status: 422,
+    };
+  }
+
+  if (!ALLOWED_TAX_REGISTRATION_STATUSES.includes(rawStatus as TaxRegistrationStatus)) {
+    return {
+      ok: false,
+      error: "invalid_registration_status",
+      detail: `registration_status must be one of: ${ALLOWED_TAX_REGISTRATION_STATUSES.join(", ")}`,
+      status: 422,
+    };
+  }
+
+  const rawTaxType = typeof body.tax_type === "string" && body.tax_type.trim()
+    ? body.tax_type.trim().toLowerCase()
+    : "gst_general";
+
+  const ALLOWED_TAX_TYPES = ["gst_general", "gst_tourism", "income_tax", "withholding_tax"];
+  if (!ALLOWED_TAX_TYPES.includes(rawTaxType)) {
+    return {
+      ok: false,
+      error: "invalid_tax_type",
+      detail: `tax_type must be one of: ${ALLOWED_TAX_TYPES.join(", ")}`,
+      status: 422,
+    };
+  }
+
+  const tin = typeof body.tin === "string"
+    ? (body.tin.trim() || null)
+    : typeof body.tin_number === "string"
+    ? (body.tin_number.trim() || null)
+    : body.tin === null
+    ? null
+    : undefined;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const effectiveFrom = typeof body.effective_from === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.effective_from.trim())
+    ? body.effective_from.trim()
+    : today;
+
+  return {
+    ok: true,
+    registrationStatus: rawStatus as TaxRegistrationStatus,
+    taxType: rawTaxType,
+    tin,
+    effectiveFrom,
+  };
+}
+
+export async function handleRequest(
+  req: Request,
+  requestId: string = crypto.randomUUID(),
+  observed: Observed = { outcome: "ok", personUuid: null, organisationId: null },
+  sessionOverride?: Session | null,
+): Promise<Response> {
   const origin = req.headers.get("origin");
   const path = routePath(req.url);
 
@@ -1037,7 +1152,7 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
   }
 
   try {
-    if (!SUPABASE_URL || !SERVICE_KEY || SESSION_SECRET.length < 32) throw new Error("server_configuration_error");
+    if (!SUPABASE_URL || !SERVICE_KEY || getSessionSecret().length < 32) throw new Error("server_configuration_error");
     if (req.method === "GET" && (path === "/" || path === "/health" || path === "/api/meta")) {
       const readiness = await db.from("organisations").select("id", { count: "exact", head: true })
         .eq("status", "active");
@@ -1109,8 +1224,8 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
     }
 
     const diag: { reason?: string } = {};
-    const signedSession = await readSession(req, diag);
-    const session = signedSession ? await refreshSessionAuthority(signedSession, diag) : null;
+    const signedSession = sessionOverride !== undefined ? sessionOverride : await readSession(req, diag);
+    const session = sessionOverride !== undefined ? sessionOverride : (signedSession ? await refreshSessionAuthority(signedSession, diag) : null);
     // SERP-301 — person_uuid and organisation_id on every subsequent log line.
     // The person UUID, never an email or a name: an operational log is not a
     // place to accumulate a directory of the client's staff.
@@ -1740,9 +1855,11 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       const priceRows = Array.isArray((approvedData as { prices?: Array<Record<string, unknown>> } | null)?.prices)
         ? (approvedData as { prices: Array<Record<string, unknown>> }).prices
         : [];
-      const gstRegistrationStatus = gstStatus.status === "fulfilled" && gstStatus.value.data
-        ? (gstStatus.value.data as { registration_status: string }).registration_status
-        : "not_registered";
+      // SERP-446 / Vision #6953: Gate defect fix.
+      // Must FAIL CLOSED: lookup error or no row returns 'unknown', never 'not_registered'.
+      const gstRegistrationStatus = gstStatus.status === "fulfilled" && !gstStatus.value.error && gstStatus.value.data
+        ? ((gstStatus.value.data as { registration_status?: string }).registration_status || "unknown")
+        : "unknown";
       const gstRateRow = gstRate.status === "fulfilled" && gstRate.value.data
         ? (gstRate.value.data as { rate: number | string; description?: string })
         : null;
@@ -2609,6 +2726,119 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       return json(200, { ok: true, result: data }, origin);
     }
 
+    // =========================================================================
+    // SERP-446: Tenant Statutory Tax Registration Routes (Profile & Tax)
+    // Server-authoritative, tenant-scoped, RLS-safe persistence to public.tax_registrations
+    // =========================================================================
+    if (req.method === "GET" && (path === "/api/tenant/tax-registration" || path === "/api/ops/tax-registration")) {
+      if (!session.organisation_id) {
+        return json(403, { ok: false, error: "organisation_context_required" }, origin);
+      }
+
+      const urlObj = new URL(req.url);
+      const taxType = (urlObj.searchParams.get("tax_type") || "gst_general").trim().toLowerCase();
+
+      const { data, error } = await db.from("tax_registrations")
+        .select("id, organisation_id, tax_type, registration_status, tin, effective_from, effective_to, created_at")
+        .eq("organisation_id", session.organisation_id)
+        .eq("tax_type", taxType)
+        .order("effective_from", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        throw new Error("tax_registration_query_failed");
+      }
+
+      return json(200, {
+        ok: true,
+        registration: data ?? null,
+      }, origin);
+    }
+
+    if (req.method === "POST" && (path === "/api/tenant/tax-registration" || path === "/api/ops/tax-registration")) {
+      if (!session.organisation_id) {
+        return json(403, { ok: false, error: "organisation_context_required" }, origin);
+      }
+
+      const body = await readJson(req);
+      if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
+
+      const validation = validateTaxRegistrationInput(body);
+      if (!validation.ok) {
+        observed.outcome = "blocked";
+        await securityEvent(req, "tax_registration.update", "rejected", session, { code: validation.error }, requestId);
+        return json(validation.status ?? 422, {
+          ok: false,
+          error: validation.error,
+          detail: validation.detail,
+          request_id: requestId,
+        }, origin);
+      }
+
+      const targetTaxType = validation.taxType!;
+      const targetStatus = validation.registrationStatus!;
+      const targetTin = validation.tin;
+      const targetEffectiveFrom = validation.effectiveFrom!;
+
+      // Find latest registration row for this tenant and tax_type
+      const existing = await db.from("tax_registrations")
+        .select("id, tin, effective_from")
+        .eq("organisation_id", session.organisation_id)
+        .eq("tax_type", targetTaxType)
+        .order("effective_from", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let persisted;
+      if (existing.data) {
+        const updateFields: Record<string, unknown> = {
+          registration_status: targetStatus,
+        };
+        if (targetTin !== undefined) {
+          updateFields.tin = targetTin;
+        }
+        const { data, error } = await db.from("tax_registrations")
+          .update(updateFields)
+          .eq("id", existing.data.id)
+          .eq("organisation_id", session.organisation_id)
+          .select("id, organisation_id, tax_type, registration_status, tin, effective_from, effective_to, created_at")
+          .single();
+
+        if (error || !data) {
+          throw new Error("tax_registration_update_failed");
+        }
+        persisted = data;
+      } else {
+        const { data, error } = await db.from("tax_registrations")
+          .insert({
+            organisation_id: session.organisation_id,
+            tax_type: targetTaxType,
+            registration_status: targetStatus,
+            tin: targetTin ?? null,
+            effective_from: targetEffectiveFrom,
+          })
+          .select("id, organisation_id, tax_type, registration_status, tin, effective_from, effective_to, created_at")
+          .single();
+
+        if (error || !data) {
+          throw new Error("tax_registration_insert_failed");
+        }
+        persisted = data;
+      }
+
+      await securityEvent(req, "tax_registration.updated", "accepted", session, {
+        tax_type: targetTaxType,
+        registration_status: targetStatus,
+        tin: persisted.tin,
+      }, requestId);
+
+      return json(200, {
+        ok: true,
+        registration: persisted,
+      }, origin);
+    }
+
     if (req.method === "POST" && path === "/api/ops/event") {
       const body = await readJson(req);
       if (!csrfValid(req, body, session)) return await deny(400, "csrf_mismatch", session);
@@ -2728,6 +2958,28 @@ async function handleRequest(req: Request, requestId: string, observed: Observed
       }
 
       if (intent.command === "COUNTER_SALE") {
+        // SERP-446 / Vision #6953: Complete Sale fails closed if statutory tax registration is unconfigured or unknown
+        const regCheck = await db.from("tax_registrations").select("registration_status")
+          .eq("organisation_id", session.organisation_id)
+          .eq("tax_type", "gst_general")
+          .order("effective_from", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (regCheck.error || !regCheck.data || !regCheck.data.registration_status || regCheck.data.registration_status === "unknown") {
+          observed.outcome = "blocked";
+          await securityEvent(req, "garage.command", "rejected", session, {
+            code: "tax_registration_status_unknown",
+            detail: "Statutory tax registration is unconfigured or unknown. Sales are blocked until tax registration is configured.",
+          }, requestId);
+          return json(422, {
+            ok: false,
+            error: "tax_registration_status_unknown",
+            detail: "Statutory tax registration is unconfigured or unknown. Sales are blocked until tax registration is configured.",
+            request_id: requestId,
+          }, origin);
+        }
+
         // Invariant (SERP-445 / Vision #6920 FAIL 3 & Vision #6928 follow-up):
         // Single source of truth: COUNTER_SALE POS tax is strictly General GST ('gst_general')
         // on 'exclusive' tax_mode and uses current supply date (today). Edge and DB must never diverge.
