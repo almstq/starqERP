@@ -49,7 +49,8 @@ insert into expected_public_tables (table_name) values
   ('counter_tenders'), ('counter_receipts'), ('counter_cash_sessions'),
   ('counter_returns'), ('counter_refund_tenders'), ('owner_summary_consents'),
   -- SERP-361: Starq Account durable human identity schema (ADR 010)
-  ('starq_accounts'), ('account_identities'), ('account_profiles'), ('account_consents');
+  ('starq_accounts'), ('account_identities'), ('account_profiles'), ('account_consents'),
+  ('organisation_configs');
 
 create temporary table expected_policies (
   table_name text not null,
