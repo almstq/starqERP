@@ -241,7 +241,7 @@ select e.table_name,
 -- counter_refund_tenders) have no policy and no authenticated grant -
 -- verified live (has_table_privilege('authenticated', ..., 'SELECT') = false
 -- for all 5, same as payment_provider_config/provider_events above), landing
--- in protected-by-revoked-grant (6+5=11). Total 59+6=65.
+  -- in protected-by-revoked-grant (6+5=11). Total 63+6=69.
 do $$
 begin
   if (select count(*) from protection_report) <> 69 then
