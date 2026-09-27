@@ -251,6 +251,11 @@ export const OPENING_BALANCES_SCHEMA: TargetSchema = {
       description: 'Standard General Ledger Account Code',
       example: '1010',
       aliases: ['code', 'account no', 'gl code', 'account_number', 'gl_account'],
+      foreignReference: {
+        targetTable: 'chart_of_accounts',
+        targetField: 'code',
+        description: 'Account code must exist in the active chart of accounts',
+      },
     },
     {
       key: 'account_name',

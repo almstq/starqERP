@@ -50,18 +50,19 @@ try {
   Invoke-DockerChecked start $containerName | Out-Null
   $started = $true
 
+  # The Supabase image accepts connections briefly during first-time init and
+  # then restarts PostgreSQL. Wait on the healthcheck's settled state.
   $ready = $false
-  for ($i = 0; $i -lt 30; $i++) {
-    cmd /c "docker exec $containerName pg_isready --username=postgres --quiet 1>nul 2>nul"
-    if ($LASTEXITCODE -eq 0) {
-      $ready = $true
-      break
+  foreach ($attempt in 1..120) {
+    $state = (& docker inspect --format '{{.State.Status}} {{.State.Health.Status}}' $containerName).Trim()
+    if ($state -eq 'running healthy') { $ready = $true; break }
+    if ($state.StartsWith('exited ')) {
+      throw "Synthetic PostgreSQL runtime exited during initialization: $state"
     }
-    Start-Sleep -Milliseconds 500
+    Start-Sleep -Seconds 1
   }
-
   if (-not $ready) {
-    throw "Postgres in $containerName failed to become ready within 15 seconds"
+    throw 'Synthetic PostgreSQL runtime did not become healthy within 120 seconds.'
   }
 
   Write-Host "Applying baseline migrations..." -ForegroundColor Cyan
@@ -77,7 +78,6 @@ try {
 }
 finally {
   if ($started) {
-    Invoke-DockerChecked stop --time 2 $containerName | Out-Null
-    Invoke-DockerChecked rm --force $containerName | Out-Null
+    & docker rm --force $containerName *> $null
   }
 }

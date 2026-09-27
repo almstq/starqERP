@@ -195,6 +195,29 @@ export function validateDataset(
         }
       }
 
+      // 3b. Foreign Reference Validation (SSOT AC2)
+      if (fieldDef.foreignReference && !rowHasError && parsedValue !== null && parsedValue !== '') {
+        const refKey = `${fieldDef.foreignReference.targetTable}.${fieldDef.foreignReference.targetField}`;
+        const allowedRefs =
+          context.foreignReferences?.[refKey] ||
+          context.foreignReferences?.[fieldDef.foreignReference.targetTable];
+
+        if (allowedRefs && allowedRefs.size > 0) {
+          const valStr = String(parsedValue).trim();
+          if (!allowedRefs.has(valStr)) {
+            errors.push({
+              rowIndex: displayRowIndex,
+              column: colHeader,
+              fieldKey: fieldDef.key,
+              value: rawValue,
+              error: `Foreign reference violation: Value "${rawValue}" does not exist in ${fieldDef.foreignReference.targetTable} (${fieldDef.foreignReference.targetField}).`,
+              severity: 'error',
+            });
+            rowHasError = true;
+          }
+        }
+      }
+
       record[fieldDef.key] = parsedValue;
     });
 

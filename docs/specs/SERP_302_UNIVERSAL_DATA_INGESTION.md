@@ -81,8 +81,16 @@ web/src/
    - `debit` (required, non-negative decimal)
    - `credit` (required, non-negative decimal)
    - **Double-Entry Constraint**: Total sum of debits MUST exactly equal total sum of credits across the entire dataset.
+   - **Foreign Reference Constraint**: `account_code` must exist in active Chart of Accounts (`chart_of_accounts.code`).
 
-### 3.3 Smart Column Auto-Mapping
+### 3.3 Foreign Reference Validation (SSOT AC2)
+
+- Supports referential integrity lookups before batch commit.
+- Target schema fields can declare `foreignReference: { targetTable, targetField }`.
+- `IngestionValidationContext.foreignReferences` supplies in-memory Sets of valid foreign entities (e.g. `chart_of_accounts.code`, `categories.name`, `currencies.code`).
+- Rows referencing non-existent foreign keys are flagged with descriptive validation errors and blocked from committing.
+
+### 3.4 Smart Column Auto-Mapping
 
 - Computes fuzzy confidence scores using normalized exact match, substring containment, and alias dictionary.
 - Automatically pairs common legacy headers:
@@ -91,19 +99,29 @@ web/src/
   - `"Retail Price"`, `"Rate"`, `"MVR"` → `selling_price`
   - `"Tax Identification"`, `"MIRA TIN"` → `tin`
 
-### 3.4 Atomic Batch Execution Engine (`batchExecutor.ts`)
+### 3.5 Atomic Batch Execution Engine (`batchExecutor.ts`)
 
 - **All-Or-Nothing Mode**: If any row fails validation or DB insertion, the entire transaction is rolled back. No partial corruption.
 - **Skip-Invalid Mode**: Commits all valid rows within a single atomic batch and outputs an error manifest of rejected rows with precise row numbers and failure reasons.
+
+### 3.6 Browser Safety & Ingestion Guards
+
+- **File Size Guard**: Hard 50MB ceiling enforced on file upload before reading or decompressing into memory.
+- **Row Bound & RFC-4180 Parsing**: Hard 50,000-row cap enforced (`maxRows: 50000`). Quotes mid-field in unquoted fields (e.g. `5" pipe`) treated as literal characters per RFC-4180 rather than opening quote mode.
+- **Component Reachability**: `DataIngestionWizard` is a modular, self-contained component exported from `@components/ingestion/DataIngestionWizard`, designed for embedding in Settings / Bulk Data Import flows.
 
 ---
 
 ## 4. Test Verification Summary
 
+- **Adversarial Review Suite** (`web/src/test/serp302_adversarial_review.test.ts`):
+  - 11/11 PASS covering mid-field quotes, unterminated quotes, ragged rows, delimiter auto-detection, semicolon CSVs with commas, maxRows hard cap, BOM stripping, formula injection neutralization, embedded newlines, and whitespace lines.
 - **Domain Test Suite** (`web/src/test/serp_302_data_ingestion.test.ts`):
-  - 17/17 PASS covering CSV parsing, multiline escapes, auto-delimiter detection, XLSX extraction, Maldivian phone/TIN validation, duplicate keys, double-entry debit/credit balance verification, and batch rollback.
+  - 19/19 PASS covering CSV parsing, multiline escapes, auto-delimiter detection, XLSX extraction, Maldivian phone/TIN validation, duplicate keys, double-entry debit/credit balance verification, SSOT AC2 foreign reference validation, and atomic batch rollback.
 - **UI Wizard Suite** (`web/src/test/serp_302_data_ingestion_wizard.test.tsx`):
   - 4/4 PASS covering target selection, drag-and-drop file upload, column mapping adjustments, validation review, and atomic commit execution.
-- **Production Build**:
+- **Database Test Probe** (`tests/run_serp302_data_ingestion_probe.ps1`):
+  - PASS (exit code 0): Tested against disposable Supabase PostgreSQL container (`public.ecr.aws/supabase/postgres:17.6.1.155`) with all 36 baseline migrations applied. Verified atomic batch rollback, tenant isolation, and double-entry debit/credit equality on real `journal_lines` database rows.
+- **Production Gates**:
   - `tsc --noEmit` exit 0 (0 errors).
   - `vite build` exit 0 (clean bundle generation with code-splitting).

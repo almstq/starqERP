@@ -27,6 +27,11 @@ export interface FieldDefinition {
   aliases?: string[];
   defaultValue?: any;
   validator?: (value: any, row: Record<string, any>, context: IngestionValidationContext) => string | null;
+  foreignReference?: {
+    targetTable: string;
+    targetField: string;
+    description?: string;
+  };
 }
 
 export interface TargetSchema {
@@ -43,6 +48,7 @@ export interface IngestionValidationContext {
   organisationId?: string;
   currency?: string;
   existingKeys?: Set<string>;
+  foreignReferences?: Record<string, Set<string>>; // keyed by "table.field" or "table"
 }
 
 export interface ColumnMapping {

@@ -374,3 +374,56 @@ describe('SERP-302: Atomic Batch Execution & Rollback Engine', () => {
     );
   });
 });
+
+describe('SERP-302: SSOT AC2 Foreign Reference Validation', () => {
+  it('validates foreign references against context lookups and rejects unknown keys', () => {
+    const rawHeaders = ['Account Code', 'Debit', 'Credit'];
+    const rawRows = [
+      ['1010', '500.00', '0'], // 1010 exists
+      ['9999', '0', '500.00'], // 9999 does NOT exist
+    ];
+    const mappings = [
+      { sourceHeader: 'Account Code', targetField: 'account_code', confidence: 100, sampleValues: ['1010'] },
+      { sourceHeader: 'Debit', targetField: 'debit', confidence: 100, sampleValues: ['500'] },
+      { sourceHeader: 'Credit', targetField: 'credit', confidence: 100, sampleValues: ['0'] },
+    ];
+
+    const context = {
+      foreignReferences: {
+        'chart_of_accounts.code': new Set(['1010', '1020', '2010', '3010']),
+      },
+    };
+
+    const summary = validateDataset(rawHeaders, rawRows, mappings, OPENING_BALANCES_SCHEMA, context);
+
+    expect(summary.isValid).toBe(false);
+    expect(summary.errors.length).toBe(1);
+    expect(summary.errors[0].fieldKey).toBe('account_code');
+    expect(summary.errors[0].value).toBe('9999');
+    expect(summary.errors[0].error).toContain('Foreign reference violation');
+  });
+
+  it('passes when all foreign references exist in context lookups', () => {
+    const rawHeaders = ['Account Code', 'Debit', 'Credit'];
+    const rawRows = [
+      ['1010', '500.00', '0'],
+      ['2010', '0', '500.00'],
+    ];
+    const mappings = [
+      { sourceHeader: 'Account Code', targetField: 'account_code', confidence: 100, sampleValues: ['1010'] },
+      { sourceHeader: 'Debit', targetField: 'debit', confidence: 100, sampleValues: ['500'] },
+      { sourceHeader: 'Credit', targetField: 'credit', confidence: 100, sampleValues: ['0'] },
+    ];
+
+    const context = {
+      foreignReferences: {
+        'chart_of_accounts.code': new Set(['1010', '2010']),
+      },
+    };
+
+    const summary = validateDataset(rawHeaders, rawRows, mappings, OPENING_BALANCES_SCHEMA, context);
+
+    expect(summary.isValid).toBe(true);
+    expect(summary.errors.length).toBe(0);
+  });
+});

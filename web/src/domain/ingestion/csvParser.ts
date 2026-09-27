@@ -69,7 +69,7 @@ export function parseCsv(text: string, options: CsvParseOptions = {}): ParsedCsv
   }
 
   const delimiter = options.delimiter || detectDelimiter(cleanText);
-  const maxRows = options.maxRows ?? Infinity;
+  const maxRows = options.maxRows ?? 50000;
   const trim = options.trimValues ?? true;
 
   const rows: string[][] = [];
@@ -97,7 +97,13 @@ export function parseCsv(text: string, options: CsvParseOptions = {}): ParsedCsv
       }
     } else {
       if (char === '"') {
-        inQuotes = true;
+        if (currentField.length === 0) {
+          // Opening quote must be at start of field per RFC-4180
+          inQuotes = true;
+        } else {
+          // Mid-field quote is literal data (e.g. 5" pipe)
+          currentField += '"';
+        }
       } else if (char === delimiter) {
         currentRow.push(trim ? currentField.trim() : currentField);
         currentField = '';
@@ -113,7 +119,7 @@ export function parseCsv(text: string, options: CsvParseOptions = {}): ParsedCsv
         const hasContent = currentRow.some((val) => val.length > 0);
         if (hasContent) {
           rows.push(currentRow);
-          if (rows.length > maxRows) break;
+          if (rows.length > 1 && rows.length - 1 >= maxRows) break;
         }
         currentRow = [];
       } else {
@@ -127,7 +133,9 @@ export function parseCsv(text: string, options: CsvParseOptions = {}): ParsedCsv
     currentRow.push(trim ? currentField.trim() : currentField);
     const hasContent = currentRow.some((val) => val.length > 0);
     if (hasContent) {
-      rows.push(currentRow);
+      if (rows.length === 0 || rows.length - 1 < maxRows) {
+        rows.push(currentRow);
+      }
     }
   }
 
@@ -136,7 +144,10 @@ export function parseCsv(text: string, options: CsvParseOptions = {}): ParsedCsv
   }
 
   const headers = rows[0];
-  const dataRows = rows.slice(1);
+  let dataRows = rows.slice(1);
+  if (dataRows.length > maxRows) {
+    dataRows = dataRows.slice(0, maxRows);
+  }
 
   return {
     headers,

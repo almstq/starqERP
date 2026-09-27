@@ -67,7 +67,14 @@ export const DataIngestionWizard: React.FC<DataIngestionWizardProps> = ({
   const fileInputId = useId();
 
   // Handle file selection (drag & drop or click)
+  const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB maximum upload guard
+
   const handleFile = async (selectedFile: File) => {
+    if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
+      alert(`File size exceeds 50MB limit (${(selectedFile.size / (1024 * 1024)).toFixed(1)}MB). Please upload a smaller batch file.`);
+      return;
+    }
+
     setFile(selectedFile);
     setIsProcessingFile(true);
 
