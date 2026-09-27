@@ -131,6 +131,7 @@ insert into expected_policies (table_name, policy_name) values
   ('sod_exceptions', 'sod_exceptions_tenant'),                -- 202608250016_sod_exceptions.sql
   ('sod_exception_dispositions', 'sod_dispositions_tenant'),  -- 202608250016_sod_exceptions.sql
   ('tax_registrations', 'tax_registrations_tenant'),          -- 202608250017_tax_regimes_and_periods.sql
+  ('organisation_configs', 'organisation_configs_tenant'),    -- 202609271200_tenant_config_persistence.sql
   -- tax_rate_schedules_read is likewise GLOBAL (`using (true)`, no
   -- organisation_id column): a single statutory GST rate table shared by every
   -- tenant, not tenant data. Same behavioural-loop exclusion as payment_providers.
