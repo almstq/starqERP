@@ -82,6 +82,9 @@ import {
   CounterPrintStatus,
   evaluatePrinterOutcome,
   formatPrinterFailureNotice,
+  calculateCartLineTax,
+  calculateCartTotals,
+  CartTotals,
 } from '../../domain/counter';
 
 const DEFAULT_OUTLET: CounterLocation = {
@@ -93,21 +96,21 @@ const DEFAULT_OUTLET: CounterLocation = {
 };
 
 const DEFAULT_RETAIL_PRODUCTS: CounterProduct[] = [
-  { id: 'prod-coca-cola', sku: 'COLA-330', name: 'Coca-Cola 330ml Can', category: 'Beverages', barcode: '5449000000996', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-sprite', sku: 'SPRITE-330', name: 'Sprite 330ml Can', category: 'Beverages', barcode: '5449000014528', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-taza-water', sku: 'TAZA-500', name: 'Taza Mineral Water 500ml', category: 'Beverages', barcode: '6291000000111', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 20 },
-  { id: 'prod-redbull', sku: 'REDBULL-250', name: 'Red Bull Energy Drink 250ml', category: 'Beverages', barcode: '9002490100070', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-lays-chips', sku: 'LAYS-CLASSIC', name: 'Lays Classic Potato Chips 50g', category: 'Snacks', barcode: '8901491101837', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-pringles', sku: 'PRINGLES-SC', name: 'Pringles Sour Cream & Onion 107g', category: 'Snacks', barcode: '8886467100017', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 8 },
-  { id: 'prod-oreo', sku: 'OREO-133', name: 'Oreo Original Sandwich Cookies 133g', category: 'Snacks', barcode: '8901030000001', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-bajiya', sku: 'BAJIYA-PC', name: 'Maldivian Fish Bajiya (Fresh)', category: 'Bakery', barcode: '2000000000014', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 15 },
-  { id: 'prod-fishroll', sku: 'FISHROLL-PC', name: 'Spicy Fish Roll (Fresh)', category: 'Bakery', barcode: '2000000000021', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 15 },
-  { id: 'prod-almudhish', sku: 'ALMUDHISH-400', name: 'Al Mudhish Milk Powder 400g', category: 'Groceries', barcode: '6084000001018', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5 },
-  { id: 'prod-dilmah-tea', sku: 'DILMAH-100', name: 'Dilmah Ceylon Tea Bags 100s', category: 'Groceries', barcode: '9312631100012', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5 },
-  { id: 'prod-basmati-rice', sku: 'RICE-1KG', name: 'Premium Basmati Rice 1kg', category: 'Groceries', barcode: '8901234567890', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-panadol', sku: 'PANADOL-10', name: 'Panadol Extra 500mg 10s', category: 'Essentials', barcode: '5000000000019', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-dettol-soap', sku: 'DETTOL-100', name: 'Dettol Original Soap 100g', category: 'Essentials', barcode: '5000000000026', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-usbc-cable', sku: 'USBC-CABLE', name: 'Fast USB-C Braided Cable 1m', category: 'Electronics', barcode: '6934177700019', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5 },
+  { id: 'prod-coca-cola', sku: 'COLA-330', name: 'Coca-Cola 330ml Can', category: 'Beverages', barcode: '5449000000996', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-sprite', sku: 'SPRITE-330', name: 'Sprite 330ml Can', category: 'Beverages', barcode: '5449000014528', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-taza-water', sku: 'TAZA-500', name: 'Taza Mineral Water 500ml', category: 'Beverages', barcode: '6291000000111', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 20, tax_classification: 'standard_rated' },
+  { id: 'prod-redbull', sku: 'REDBULL-250', name: 'Red Bull Energy Drink 250ml', category: 'Beverages', barcode: '9002490100070', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-lays-chips', sku: 'LAYS-CLASSIC', name: 'Lays Classic Potato Chips 50g', category: 'Snacks', barcode: '8901491101837', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-pringles', sku: 'PRINGLES-SC', name: 'Pringles Sour Cream & Onion 107g', category: 'Snacks', barcode: '8886467100017', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 8, tax_classification: 'standard_rated' },
+  { id: 'prod-oreo', sku: 'OREO-133', name: 'Oreo Original Sandwich Cookies 133g', category: 'Snacks', barcode: '8901030000001', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-bajiya', sku: 'BAJIYA-PC', name: 'Maldivian Fish Bajiya (Fresh)', category: 'Bakery', barcode: '2000000000014', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 15, tax_classification: 'standard_rated' },
+  { id: 'prod-fishroll', sku: 'FISHROLL-PC', name: 'Spicy Fish Roll (Fresh)', category: 'Bakery', barcode: '2000000000021', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 15, tax_classification: 'standard_rated' },
+  { id: 'prod-almudhish', sku: 'ALMUDHISH-400', name: 'Al Mudhish Milk Powder 400g', category: 'Groceries', barcode: '6084000001018', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5, tax_classification: 'standard_rated' },
+  { id: 'prod-dilmah-tea', sku: 'DILMAH-100', name: 'Dilmah Ceylon Tea Bags 100s', category: 'Groceries', barcode: '9312631100012', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5, tax_classification: 'standard_rated' },
+  { id: 'prod-basmati-rice', sku: 'RICE-1KG', name: 'Premium Basmati Rice 1kg', category: 'Groceries', barcode: '8901234567890', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'zero_rated' },
+  { id: 'prod-panadol', sku: 'PANADOL-10', name: 'Panadol Extra 500mg 10s', category: 'Essentials', barcode: '5000000000019', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'exempt' },
+  { id: 'prod-dettol-soap', sku: 'DETTOL-100', name: 'Dettol Original Soap 100g', category: 'Essentials', barcode: '5000000000026', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-usbc-cable', sku: 'USBC-CABLE', name: 'Fast USB-C Braided Cable 1m', category: 'Electronics', barcode: '6934177700019', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5, tax_classification: 'standard_rated' },
 ];
 
 const DEFAULT_PRICES: ApprovedPriceRow[] = [
@@ -682,22 +685,24 @@ export const CounterView: React.FC = () => {
     );
   }, [products, query, selectedCategory]);
 
-  // LIVE running subtotal/total shown in large type purely for cashier glanceability.
-  // The authoritative financial calculation and taxes remain strictly server-resolved on complete().
+  // SERP-448: Authoritative cart totals structure (Subtotal, GST as sum of line GST, Total Due)
+  // Reconciles exactly with server result. Evaluates line-level GST per item classification.
+  const cartTotals: CartTotals = useMemo(() => {
+    return calculateCartTotals(
+      catalogue?.gst_registration_status,
+      catalogue?.gst_rate,
+      cart,
+      activePrices,
+      allProducts,
+    );
+  }, [catalogue, cart, activePrices, allProducts]);
+
   const liveTotals = useMemo(() => {
-    let subtotal = 0;
-    let hasUnpricedItem = false;
-    for (const line of cart) {
-      const approved = approvedPriceFor(activePrices, line.productId);
-      if (approved && approved.source !== 'none' && approved.unit_amount > 0) {
-        const discountFactor = approved.discount_percent > 0 ? 1 - approved.discount_percent / 100 : 1;
-        subtotal += line.quantity * (approved.unit_amount * discountFactor);
-      } else {
-        hasUnpricedItem = true;
-      }
-    }
-    return { subtotal, hasUnpricedItem };
-  }, [cart, activePrices]);
+    return {
+      subtotal: cartTotals.subtotal,
+      hasUnpricedItem: cartTotals.hasUnpricedItem,
+    };
+  }, [cartTotals]);
 
   const resetForNewSale = () => {
     setSaleResult(null);
@@ -711,13 +716,12 @@ export const CounterView: React.FC = () => {
 
   const isTaxMissing = useMemo(() => {
     if (!catalogue) return false;
-    return isTaxRateMissingForSale(catalogue.gst_registration_status, catalogue.gst_rate);
-  }, [catalogue]);
+    return isTaxRateMissingForSale(catalogue.gst_registration_status, catalogue.gst_rate) || cartTotals.isTaxMissing;
+  }, [catalogue, cartTotals.isTaxMissing]);
 
   const estimatedTax = useMemo(() => {
-    if (!catalogue || cartIsEmpty(cart)) return 0;
-    return calculateEstimatedTax(catalogue.gst_registration_status, catalogue.gst_rate, cart, activePrices);
-  }, [catalogue, cart, activePrices]);
+    return cartTotals.taxTotal;
+  }, [cartTotals]);
 
   const hold = () => {
     if (cartIsEmpty(cart)) return;
@@ -1479,8 +1483,14 @@ export const CounterView: React.FC = () => {
                   const onHand = onHandAt(activeOnHand, outlet.id, line.productId);
                   const approved = approvedPriceFor(activePrices, line.productId);
                   const short = line.quantity > onHand;
-                  const unitPrice = (approved && approved.source !== 'none' && approved.unit_amount > 0) ? Number(approved.unit_amount) : 0;
-                  const lineTotal = unitPrice * line.quantity;
+                  const lineTax = cartTotals.lineTaxes[line.productId] || calculateCartLineTax(
+                    catalogue?.gst_registration_status,
+                    catalogue?.gst_rate,
+                    product,
+                    line.quantity,
+                    approved,
+                  );
+                  const lineTotal = lineTax.lineSubtotal;
 
                   return (
                     <div
@@ -1501,9 +1511,9 @@ export const CounterView: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Bottom Row: Unit Price / Warnings & Compact Stepper */}
+                      {/* Bottom Row: Unit Price, Line GST Treatment, Warnings & Compact Stepper */}
                       <div className="flex items-center justify-between gap-2 mt-1">
-                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1 flex-wrap">
                           {approved && approved.source !== 'none' && approved.unit_amount > 0 ? (
                             <span className="text-[11px] font-mono font-medium" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
                               MVR {Number(approved.unit_amount).toFixed(2)}
@@ -1513,6 +1523,18 @@ export const CounterView: React.FC = () => {
                           ) : (
                             <span className="text-[11px] italic" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>no price</span>
                           )}
+                          {/* SERP-448 Line GST treatment badge */}
+                          <span
+                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-medium tracking-tight"
+                            style={{
+                              backgroundColor: 'var(--md-sys-color-surface-container-highest)',
+                              color: lineTax.isTaxable ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-on-surface-variant)',
+                            }}
+                            data-testid={`cart-line-gst-${line.productId}`}
+                            title={`Tax classification: ${lineTax.taxClassification}`}
+                          >
+                            {lineTax.treatmentLabel}
+                          </span>
                           {short ? (
                             <span className="text-[10px] font-semibold flex items-center gap-0.5" style={{ color: 'var(--md-sys-color-error)' }}>
                               <AlertTriangle size={10} aria-hidden="true" /> {onHand} left
@@ -1738,28 +1760,28 @@ export const CounterView: React.FC = () => {
                     }}
                   >
                     <div className="flex justify-between items-baseline text-xs">
-                      <span className="font-semibold text-on-surface-variant">Estimated Subtotal</span>
-                      <span className="font-mono font-bold text-on-surface tabular-nums">
-                        MVR {liveTotals.subtotal.toFixed(2)}
+                      <span className="font-semibold text-on-surface-variant">Subtotal</span>
+                      <span className="font-mono font-bold text-on-surface tabular-nums" data-testid="checkout-subtotal">
+                        MVR {cartTotals.subtotal.toFixed(2)}
                       </span>
                     </div>
                     {catalogue?.gst_registration_status === 'registered' ? (
                       <div className="flex justify-between items-baseline text-xs">
                         <span className={`font-semibold ${isTaxMissing ? 'text-error' : 'text-on-surface-variant'}`}>
-                          Estimated Tax {isTaxMissing ? '' : `(${catalogue.gst_rate_percent}%)`}
+                          GST
                         </span>
                         {isTaxMissing ? (
-                          <span className="font-semibold text-error text-xs">Rate unavailable</span>
+                          <span className="font-semibold text-error text-xs" data-testid="checkout-gst-error">Rate unavailable</span>
                         ) : (
-                          <span className="font-mono font-bold text-on-surface tabular-nums">
-                            MVR {(estimatedTax ?? 0).toFixed(2)}
+                          <span className="font-mono font-bold text-on-surface tabular-nums" data-testid="checkout-gst">
+                            MVR {(cartTotals.taxTotal ?? 0).toFixed(2)}
                           </span>
                         )}
                       </div>
                     ) : (
                       <div className="flex justify-between items-baseline text-xs">
-                        <span className="font-semibold text-on-surface-variant">Tax</span>
-                        <span className="font-mono font-semibold text-on-surface-variant text-xs">
+                        <span className="font-semibold text-on-surface-variant">GST</span>
+                        <span className="font-mono font-semibold text-on-surface-variant text-xs" data-testid="checkout-gst-unregistered">
                           Not GST registered — no GST
                         </span>
                       </div>
@@ -1781,11 +1803,11 @@ export const CounterView: React.FC = () => {
                             Rate Unavailable
                           </span>
                         ) : (
-                          <span className="text-xl font-black font-mono tracking-tight text-primary tabular-nums block">
-                            MVR {(liveTotals.subtotal + (estimatedTax ?? 0)).toFixed(2)}
+                          <span className="text-xl font-black font-mono tracking-tight text-primary tabular-nums block" data-testid="checkout-total-due">
+                            MVR {(cartTotals.totalDue ?? cartTotals.subtotal).toFixed(2)}
                           </span>
                         )}
-                        {liveTotals.hasUnpricedItem && (
+                        {cartTotals.hasUnpricedItem && (
                           <span className="text-[10px] font-semibold text-[var(--warning)]">
                             Unapproved prices in cart
                           </span>
