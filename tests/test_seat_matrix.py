@@ -225,13 +225,32 @@ class TestPythonAgreesWithTheContract(unittest.TestCase):
             )
 
     def test_payment_commands_registered_in_contract_matrix(self):
-        """SERP-348: PAYMENT_CAPTURE, PAYMENT_REFUND, PAYMENT_SETTLEMENT_RECORD present in COMMAND_SEATS."""
+        """SERP-348: PAYMENT_CAPTURE, PAYMENT_REFUND, PAYMENT_SETTLEMENT_RECORD seats match canonical lists."""
         path = os.path.join(REPO_ROOT, "contracts", "commands.ts")
         with open(path, encoding="utf-8") as f:
             src = f.read()
+
         for cmd in ("PAYMENT_CAPTURE", "PAYMENT_REFUND", "PAYMENT_SETTLEMENT_RECORD"):
             self.assertIn(f"'{cmd}'", src, f"{cmd} not in COMMANDS")
-            self.assertRegex(src, rf"{cmd}:\s*\[", f"{cmd} not in COMMAND_SEATS")
+
+        block = re.search(r"export const COMMAND_SEATS[^=]*=\s*\{(.*?)\n\} as const;", src, re.S)
+        self.assertIsNotNone(block, "COMMAND_SEATS block not found in the contract")
+
+        contract = {}
+        for name, body in re.findall(r"(\w+):\s*\[([^\]]*)\]", block.group(1)):
+            contract[name] = sorted(re.findall(r"'([a-z_]+)'", body))
+
+        expected = {
+            "PAYMENT_CAPTURE": sorted(["counter", "financial_controller", "director", "managing_director", "owner"]),
+            "PAYMENT_REFUND": sorted(["counter", "financial_controller", "director", "managing_director", "owner"]),
+            "PAYMENT_SETTLEMENT_RECORD": sorted(["financial_controller", "director", "managing_director", "owner"]),
+        }
+        for cmd, seats in expected.items():
+            self.assertEqual(
+                contract.get(cmd),
+                seats,
+                f"{cmd}: parsed contract seats {contract.get(cmd)} do not match expected {seats}",
+            )
 
 
 
