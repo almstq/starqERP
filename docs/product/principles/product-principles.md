@@ -1,3 +1,25 @@
+<!-- SUPERSEDED-2026-09-28-ERP-COURSE-CORRECTION -->
+> ## ⚠️ STARQERP COURSE CORRECTION — 28 SEPTEMBER 2026
+>
+> **This document is CONFIRMED as governing by the 28 Sep 2026 course correction.**
+>
+> CONFIRMED as governing, not superseded. Principle 1 ('Accountant-Grade from Day One' - accounting as the central consequence layer) is the founding statement of the 28 Sep doctrine. Its principles are now the founding statement of the current doctrine.
+>
+> **Current development SSOT:** [`STARQERP_CONVERGENCE_DOCTRINE_2026-09-28.md`](../../governance/STARQERP_CONVERGENCE_DOCTRINE_2026-09-28.md)
+> **Current roadmap:** [`ERP_PROCESS_CLOSURE_ROADMAP_2026-09-28.md`](../../roadmap/ERP_PROCESS_CLOSURE_ROADMAP_2026-09-28.md)
+> **Supersession index:** [`SUPERSESSION_2026-09-28_ERP_COURSE_CORRECTION.md`](../../governance/SUPERSESSION_2026-09-28_ERP_COURSE_CORRECTION.md)
+>
+> **What changed on 28 Sep 2026:** StarqERP development was stopped and the completion model
+> was corrected from *complete the remaining modules* to *close the remaining business
+> processes*. The five canonical ERP process chains are Order-to-Cash, Procure-to-Pay,
+> Inventory-to-GL, Cash-to-Bank and Record-to-Report. This is **convergence, not rewrite** —
+> all existing architecture, migrations, tests, evidence and completed tasks remain valid.
+> **StarqERP implementation is ON HOLD** pending explicit Founder restart authorization.
+>
+> **Original content is preserved verbatim below.** Nothing was removed or rewritten.
+>
+---
+
 # StarqERP Product Principles
 
 These principles guide all product decisions, architecture, and development for StarqERP. They are derived from the competitive research, market needs, and the founder's vision.
