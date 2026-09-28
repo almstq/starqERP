@@ -172,6 +172,8 @@ export const COMMANDS = [
   'INVOICE', 'EXPENSE', 'CUSTOMER', 'SUPPLIER', 'SUPPLIER_UPDATE', 'SUPPLIER_DEACTIVATE', 'TENANT_CONFIG', 'TENANT_ONBOARD',
   'WORKFLOW', 'MEMBER_INVITE', 'MEMBER_AUTHORIZE', 'MEMBER_SUSPEND',
   'MEMBER_ROLE_UPDATE', 'ROLE', 'PRICE_LIST', 'COUNTER_SALE',
+  // Payment commands (SERP-348 / SERP-339)
+  'PAYMENT_CAPTURE', 'PAYMENT_REFUND', 'PAYMENT_SETTLEMENT_RECORD',
 ] as const;
 export type CommandName = (typeof COMMANDS)[number];
 
@@ -215,6 +217,10 @@ export const COMMAND_SEATS: Readonly<Record<CommandName, readonly SeatCode[]>> =
   ROLE:              ['owner', 'director', 'managing_director'],
   PRICE_LIST:        ['owner', 'director', 'managing_director'],
   COUNTER_SALE:      ['counter', 'financial_controller', 'director', 'managing_director', 'owner'],
+  // Payment commands (SERP-348 / SERP-339)
+  PAYMENT_CAPTURE:   ['counter', 'financial_controller', 'director', 'managing_director', 'owner'],
+  PAYMENT_REFUND:    ['counter', 'financial_controller', 'director', 'managing_director', 'owner'],
+  PAYMENT_SETTLEMENT_RECORD: ['financial_controller', 'director', 'managing_director', 'owner'],
 } as const;
 
 /**
@@ -251,6 +257,9 @@ export const SQL_REQUIRED_SEAT: Readonly<Record<CommandName, SeatCode | null>> =
   ROLE: null,
   PRICE_LIST: null,
   COUNTER_SALE: null,
+  PAYMENT_CAPTURE: null,
+  PAYMENT_REFUND: null,
+  PAYMENT_SETTLEMENT_RECORD: null,
 } as const;
 
 export const SQL_PERMITTED_SEATS: Readonly<Record<CommandName, readonly SeatCode[]>> = {
@@ -283,6 +292,9 @@ export const SQL_PERMITTED_SEATS: Readonly<Record<CommandName, readonly SeatCode
   ROLE:              ['owner', 'director', 'managing_director'],
   PRICE_LIST:        ['owner', 'director', 'managing_director'],
   COUNTER_SALE:      ['counter', 'financial_controller', 'director', 'managing_director', 'owner'],
+  PAYMENT_CAPTURE:   ['counter', 'financial_controller', 'director', 'managing_director', 'owner'],
+  PAYMENT_REFUND:    ['counter', 'financial_controller', 'director', 'managing_director', 'owner'],
+  PAYMENT_SETTLEMENT_RECORD: ['financial_controller', 'director', 'managing_director', 'owner'],
 } as const;
 
 /**
@@ -4487,6 +4499,11 @@ export function validateCiGateRegistry(gates: readonly CiGateDefinition[]): {
     missingMandatoryGates: missing,
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-348 / SERP-339: Payment Command Boundary Exports
+// ─────────────────────────────────────────────────────────────────────────────
+export * from './payment_commands.ts';
 
 
 
