@@ -86,7 +86,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: public.ecr.aws/supabase/postgres:17.6.1.155
+        image: ghcr.io/supabase/postgres:17.6.1.155@sha256:3866d94d8426927e8db3f1c5d790752292bfbe27b5f1f46e199ae1b7d3c1710b
         env:
           POSTGRES_PASSWORD: synthetic-serp124-only
           POSTGRES_DB: postgres
@@ -149,6 +149,85 @@ jobs:
 
       - name: SERP-443 isolation matrix probe
         run: psql --set ON_ERROR_STOP=1 --file tests/serp443_isolation_matrix_probe.sql
+
+  serp-356-payment-concurrency:
+    name: SERP-356 Payment Concurrency (refund ceiling / settlement batch)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: ghcr.io/supabase/postgres:17.6.1.155@sha256:3866d94d8426927e8db3f1c5d790752292bfbe27b5f1f46e199ae1b7d3c1710b
+        env:
+          POSTGRES_PASSWORD: synthetic-serp356-only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGPASSWORD: synthetic-serp356-only
+      PGHOST: localhost
+      PGUSER: postgres
+      PGDATABASE: postgres
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      # Same bootstrap-restart window as the RLS job: the Supabase image accepts
+      # connections once during first-time init, then restarts to apply its
+      # bootstrap SQL. A single pg_isready can land inside that window, so
+      # confirm the connection is stable before trusting it.
+      - name: Wait for PostgreSQL to settle after bootstrap restart
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if psql --set ON_ERROR_STOP=1 --command 'select 1' >/dev/null 2>&1; then
+              echo "Connected on attempt $attempt; confirming stability..."
+              sleep 5
+              if psql --set ON_ERROR_STOP=1 --command 'select 1' >/dev/null 2>&1; then
+                echo "PostgreSQL is stable."
+                exit 0
+              fi
+            fi
+            sleep 2
+          done
+          echo "PostgreSQL did not become stable within the wait window." >&2
+          exit 1
+
+      - name: Apply migrations
+        run: |
+          set -euo pipefail
+          for migration in supabase/migrations/*.sql; do
+            echo "Applying $migration"
+            psql --set ON_ERROR_STOP=1 --file "$migration"
+          done
+
+      # The test seeds its own persons / payment_providers / payment_intents /
+      # payment_attempts fixtures, so no fixture file is loaded here.
+      - name: Set up Python and psycopg
+        run: |
+          set -euo pipefail
+          python3 --version
+          python3 -m pip install --upgrade pip
+          python3 -m pip install "psycopg[binary]"
+
+      # Two transactions are released simultaneously against the same intent and
+      # the same settlement batch. Exactly one may commit, and the test asserts
+      # the STORED TOTAL afterwards, not merely the absence of an error, because
+      # an over-refund is silent until someone reconciles.
+      - name: Run SERP-356 payment concurrency test
+        run: |
+          set -euo pipefail
+          python3 tests/test_serp356_payment_concurrency.py \
+            --host "$PGHOST" \
+            --port 5432 \
+            --db "$PGDATABASE" \
+            --user "$PGUSER"
 
   frontend:
     name: Web Frontend Build & Test Suite

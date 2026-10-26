@@ -43,6 +43,7 @@ except ImportError:  # pragma: no cover
 
 ORG = "10000000-0000-4000-8000-000000000001"
 WHO = "35600000-0000-4000-8000-0000000000ff"
+CONFIG = "35600000-0000-4000-8000-00000000c0f1"
 
 
 def connect(args):
@@ -52,8 +53,22 @@ def connect(args):
 
 
 def setup(conn, intent_id):
-    """A person, a provider, an intent captured at 100000, one attempt."""
+    """A person, a provider, a provider config, an intent captured at 100000, one attempt.
+
+    Migration 202609031047 (SERP-351 / DEC-105) made payment_intents.config_id
+    and payment_attempts.config_id NOT NULL, each carrying a foreign key to the
+    exact tenant-scoped provider-config row via
+    (organisation_id, config_id, provider_id). The organisation itself is
+    referenced by FK from both tables, so it is seeded here too rather than
+    assumed to exist.
+    """
     cur = conn.cursor()
+    cur.execute(
+        "insert into public.organisations (id, slug, legal_name) "
+        "values (%s,'serp356-conc','SERP-356 Concurrency Org') "
+        "on conflict (id) do nothing",
+        (ORG,),
+    )
     cur.execute(
         "insert into public.persons (id, person_key, display_label) values (%s,%s,%s) "
         "on conflict (id) do nothing",
@@ -63,17 +78,38 @@ def setup(conn, intent_id):
         "insert into public.payment_providers (id, display_name, spec_status) "
         "values ('MOCK','Mock Provider','IMPLEMENTED') on conflict (id) do nothing"
     )
+    # Inactive sandbox config for the synthetic org. The unique key is
+    # (organisation_id, provider_id, environment), so this is deterministic
+    # and re-runnable. No secret values are stored here, only names.
+    cur.execute(
+        "insert into public.payment_provider_config "
+        "(id, organisation_id, provider_id, environment, credential_secret_name, "
+        " webhook_secret_name, is_active) "
+        "values (%s,%s,'MOCK','sandbox','serp356/provider_credential',"
+        "        'serp356/provider_webhook',false) "
+        "on conflict (organisation_id, provider_id, environment) do nothing",
+        (CONFIG, ORG),
+    )
+    # Resolve the actual config id from the unique natural key, so this stays
+    # correct if the insert above was a no-op against a pre-existing row.
+    cur.execute(
+        "select id from public.payment_provider_config "
+        "where organisation_id = %s and provider_id = 'MOCK' and environment = 'sandbox'",
+        (ORG,),
+    )
+    config_id = cur.fetchone()[0]
+
     cur.execute(
         "insert into public.payment_intents "
-        "(id, organisation_id, provider_id, status, amount, currency, created_by) "
-        "values (%s,%s,'MOCK','succeeded',100000,'MVR',%s)",
-        (intent_id, ORG, WHO),
+        "(id, organisation_id, provider_id, config_id, status, amount, currency, created_by) "
+        "values (%s,%s,'MOCK',%s,'succeeded',100000,'MVR',%s)",
+        (intent_id, ORG, config_id, WHO),
     )
     cur.execute(
         "insert into public.payment_attempts "
-        "(id, organisation_id, intent_id, provider_id, status, amount, currency, provider_reference) "
-        "values (%s,%s,%s,'MOCK','succeeded',100000,'MVR',%s)",
-        (str(uuid.uuid4()), ORG, intent_id, "CONC-CAPTURE-1"),
+        "(id, organisation_id, intent_id, provider_id, config_id, status, amount, currency, provider_reference) "
+        "values (%s,%s,%s,'MOCK',%s,'succeeded',100000,'MVR',%s)",
+        (str(uuid.uuid4()), ORG, intent_id, config_id, "CONC-CAPTURE-1"),
     )
     conn.commit()
 
