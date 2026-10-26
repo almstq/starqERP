@@ -86,7 +86,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: public.ecr.aws/supabase/postgres:17.6.1.155
+        image: ghcr.io/supabase/postgres:17.6.1.155@sha256:3866d94d8426927e8db3f1c5d790752292bfbe27b5f1f46e199ae1b7d3c1710b
         env:
           POSTGRES_PASSWORD: synthetic-serp124-only
           POSTGRES_DB: postgres
@@ -155,7 +155,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: public.ecr.aws/supabase/postgres:17.6.1.155
+        image: ghcr.io/supabase/postgres:17.6.1.155@sha256:3866d94d8426927e8db3f1c5d790752292bfbe27b5f1f46e199ae1b7d3c1710b
         env:
           POSTGRES_PASSWORD: synthetic-serp356-only
           POSTGRES_DB: postgres
