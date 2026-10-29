@@ -117,7 +117,7 @@ Reference: `D:\StarqTech\starqERP Final Audit.md`, reconciled against `main` at 
 | R2 row 21 | Partially corrected; remainder deferred | CI now runs the additional Python concurrency, idempotency, numbering, and seat-matrix checks. The remaining standalone SQL probes are retained because their fixture and database prerequisites differ; wiring them needs a probe-specific disposable-database contract. |
 | R2 row 29 | No change required | The linter orders full 12-digit migration versions; repeated four-digit suffixes are not duplicate full versions. Existing migration names and history remain unchanged. |
 
-No held warehouse capability, applied migration, product-architecture decision, active branch, or worktree was changed as part of this correction pass.
+No held warehouse capability, existing applied migration, product-architecture decision, active branch, or worktree was changed as part of this correction pass. One new forward-only migration, `202610300500_call_idempotency_response_repair.sql`, was added after database CI exposed a legacy `CALL` response defect: successful calls returned SQL `NULL`, and replays could return only the generic accepted fallback. The migration patches one uniquely checked marker in the existing function definition so successful calls return and persist the canonical response; the mutation handler and existing migration history remain intact. SERP-176 now exercises the initial response and replay.
 
 ### Verification for the third audit branch
 
@@ -131,4 +131,7 @@ No held warehouse capability, applied migration, product-architecture decision, 
 - Python local suites: PASS — document numbering 6/6; seat matrix 11/11. Database-backed Python concurrency tests are assigned to the PostgreSQL CI job.
 - Deno contracts: PASS locally for 19 non-database files — 420 passed; the optional SERP-447 live PostgreSQL check skipped because no local database was available. SERP-446's database-backed persistence file was not run locally; the PR CI job applies migrations and runs all 20 files against PostgreSQL.
 - Token generator: PASS; generated output did not modify tracked files.
-- Workflow YAML parse and `git diff --check`: PASS. GitHub PR CI and merge status are pending.
+- Focused browser regression: PASS — Chromium SERP-328 commercial journey; related customer price-list and invoice Vitest tests PASS — 11/11.
+- Exact-head GitHub CI on code head `90100d9023f727c801d64c16565806aaac288313` (run `40968017050`): PASS. Backend/governance gates; all 20 Deno contract files (425 passed); PostgreSQL RLS/tenant, SERP-314, SERP-460, SERP-443 probes; payment/settlement/idempotency/document-numbering concurrency; frontend TypeScript/design gates/full Vitest (151 files, 991 passed, 1 skipped)/production build; and Playwright acceptance (15 passed, 1 intentionally skipped). The E2E fixture now returns a persisted customer UUID; the job and invoice modals reconcile selection when the optimistic ID is replaced.
+- Migration linter: PASS — 64 migration files, including the new forward-only CALL response repair; no existing applied migration was modified.
+- Workflow YAML parse and `git diff --check`: PASS. PR #178 remains unmerged; a final complete CI rerun is required after the disposition update commit before GitHub integration.
