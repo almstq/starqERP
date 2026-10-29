@@ -20,6 +20,7 @@ import {
 } from "../_shared/commands.ts";
 import { logRequest, severityFor } from "../_shared/observability.ts";
 import { resolveInvoiceFinanceDecision, type InvoiceTaxLineResult } from "../_shared/invoiceFinance.ts";
+import { buildInvoicePaymentAccountingEvent, isUniqueViolation } from "../_shared/accountingEventFromPayment.ts";
 
 function safeEnv(key: string, fallback = ""): string {
   try {
@@ -3175,6 +3176,53 @@ export async function handleRequest(
         return json(statusCode, { ok: false, error: publicCode, request_id: requestId }, origin);
       }
       await securityEvent(req, "garage.command", "accepted", session, { idempotency_key: commandKey });
+
+      // SERP-460: translate this already-committed payment into a durable
+      // accounting-event + draft journal proposal. This runs AFTER the
+      // payment RPC above has already succeeded and never affects its
+      // result -- a failure here is logged and the payment response below
+      // is returned unchanged either way (per the task's explicit
+      // instruction: persistence failure must not roll back or block the
+      // completed payment). No new migration, auth system or browser
+      // client: same service-role `db` this whole file already uses, same
+      // server-derived session.organisation_id/person_uuid.
+      if (intent.command === "INVOICE_PAYMENT") {
+        try {
+          const accountingEventId = crypto.randomUUID();
+          const { event, lines } = buildInvoicePaymentAccountingEvent({
+            organisationId: session.organisation_id!,
+            invoiceId: String(body.invoice_id ?? ""),
+            amount: Number(body.amount ?? 0),
+            paymentDate: typeof body.payment_date === "string" ? body.payment_date : undefined,
+            method: body.method,
+            idempotencyKeyHeader: commandKey!,
+            eventId: accountingEventId,
+          });
+
+          const { error: eventInsertError } = await db.from("accounting_events").insert(event);
+          if (eventInsertError) {
+            if (!isUniqueViolation(eventInsertError)) throw eventInsertError;
+            // Replayed/retried INVOICE_PAYMENT command with the same
+            // idempotency key -- already recorded, nothing more to do.
+          } else {
+            const { error: lineInsertError } = await db.from("accounting_event_lines").insert(lines);
+            if (lineInsertError) throw lineInsertError;
+
+            const { error: proposeError } = await db.rpc("propose_journal_from_accounting_event", {
+              p_organisation_id: session.organisation_id,
+              p_event_id: accountingEventId,
+              p_created_by: session.person_uuid,
+            });
+            if (proposeError) throw proposeError;
+          }
+        } catch (err) {
+          await securityEvent(req, "garage.command", "error", session, {
+            code: "serp460_proposal_failed",
+            detail: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+
       if (intent.command === "COUNTER_SALE" && data && typeof data === "object" && "counter_sale" in (data as Record<string, unknown>)) {
         const cs = (data as Record<string, unknown>).counter_sale as Record<string, unknown>;
         if (cs && typeof cs === "object") {

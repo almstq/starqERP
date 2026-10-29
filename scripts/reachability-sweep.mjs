@@ -68,6 +68,7 @@ const INTENTIONALLY_UNMOUNTED = {
   'domain/landedCost.ts': 'HOLD under DEC-103 / SERP-393: Landed cost allocation logic pending purchasing UI.',
   'domain/manufacturing.ts': 'HOLD under DEC-103 / SERP-393: BOM calculations for held ProductionOrderView.',
   'domain/payroll.ts': 'HOLD under DEC-103 / SERP-393: Pension & salary calculations for held PayrollManagementView.',
+  'domain/accountingEvents.ts': 'HOLD under SERP-460: domain translation engine for first-class accounting events; unit-tested, unmounted pending caller integration.',
   'domain/threeWayMatch.ts': 'HOLD under DEC-103 / SERP-393: 3-way matching logic pending AP workflow UI.',
   'domain/warehouse.ts': 'HOLD under DEC-103 / SERP-393: Warehouse transfer domain logic for held MultiWarehouseView.',
   'domain/ewt.ts': 'HOLD under SERP-339 / DEC-117: Maldives Employee Withholding Tax (EWT) beta finance calculation module.',

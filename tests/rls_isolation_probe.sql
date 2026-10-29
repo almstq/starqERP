@@ -50,7 +50,9 @@ insert into expected_public_tables (table_name) values
   ('counter_returns'), ('counter_refund_tenders'), ('owner_summary_consents'),
   -- SERP-361: Starq Account durable human identity schema (ADR 010)
   ('starq_accounts'), ('account_identities'), ('account_profiles'), ('account_consents'),
-  ('organisation_configs');
+  ('organisation_configs'),
+  -- SERP-460: first-class accounting-event and subledger line items
+  ('accounting_events'), ('accounting_event_lines');
 
 create temporary table expected_policies (
   table_name text not null,
@@ -155,7 +157,12 @@ insert into expected_policies (table_name, policy_name) values
   ('starq_accounts', 'starq_accounts_deny_by_default'),
   ('account_identities', 'account_identities_deny_by_default'),
   ('account_profiles', 'account_profiles_deny_by_default'),
-  ('account_consents', 'account_consents_deny_by_default');
+  ('account_consents', 'account_consents_deny_by_default'),
+  -- SERP-460: accounting event subledger RLS command policies
+  ('accounting_events', 'accounting_events_select'),
+  ('accounting_events', 'accounting_events_insert'),
+  ('accounting_event_lines', 'accounting_event_lines_select'),
+  ('accounting_event_lines', 'accounting_event_lines_insert');
 
 do $$
 begin
@@ -242,13 +249,18 @@ select e.table_name,
 -- verified live (has_table_privilege('authenticated', ..., 'SELECT') = false
 -- for all 5, same as payment_provider_config/provider_events above), landing
   -- in protected-by-revoked-grant (6+5=11). Total 63+6=69.
+--
+-- Counts updated 2026-10-26 for SERP-460: 2 new accounting event tables
+-- (accounting_events, accounting_event_lines) join expected_public_tables;
+-- both have RLS enabled and tenant command policies (protected-by-RLS, 58+2=60).
+-- Total classified public tables: 70+2=72.
 do $$
   begin
-    if (select count(*) from protection_report) <> 70 then
-      raise exception 'SERP-124/337 expected 70 classified public tables';
+    if (select count(*) from protection_report) <> 72 then
+      raise exception 'SERP-124/337 expected 72 classified public tables';
   end if;
-    if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 58 then
-      raise exception 'SERP-124/337 expected 58 RLS-protected tables';
+    if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 60 then
+      raise exception 'SERP-124/337 expected 60 RLS-protected tables';
   end if;
   if (select count(*) from protection_report where protection = 'protected-by-revoked-grant') <> 11 then
     raise exception 'SERP-124/337 expected 11 revoked-grant-protected tables';

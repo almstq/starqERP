@@ -398,3 +398,28 @@ values
    '00000000-0000-4000-8000-000000003301', '00000000-0000-4000-8000-000000000801', 1),
   ('00000000-0000-4000-8000-000000003312', '00000000-0000-4000-8000-000000000002',
    '00000000-0000-4000-8000-000000003302', '00000000-0000-4000-8000-000000000802', 1);
+
+-- SERP-460: tenant-scoped accounting-event and subledger line rows.
+-- Both tables need positive controls so the isolation loop proves visibility
+-- for Tenant A and rejection for Tenant B.
+insert into public.accounting_events
+  (id, organisation_id, family, event_type, source_type, source_id, idempotency_key, gross_amount, narration)
+values
+  ('00000000-0000-4000-8000-000000003401', '00000000-0000-4000-8000-000000000001',
+   'CASH_PAYMENT', 'PAYMENT_RECEIVED', 'pos_counter', '00000000-0000-4000-8000-000000003491',
+   'serp460_fixture_idem_a', 100.0, 'Synthetic A Accounting Event'),
+  ('00000000-0000-4000-8000-000000003402', '00000000-0000-4000-8000-000000000002',
+   'CASH_PAYMENT', 'PAYMENT_RECEIVED', 'pos_counter', '00000000-0000-4000-8000-000000003492',
+   'serp460_fixture_idem_b', 100.0, 'Synthetic B Accounting Event');
+
+insert into public.accounting_event_lines
+  (id, organisation_id, event_id, line_no, account_code, debit, credit)
+values
+  ('00000000-0000-4000-8000-000000003411', '00000000-0000-4000-8000-000000000001',
+   '00000000-0000-4000-8000-000000003401', 1, '1111', 100.0, 0),
+  ('00000000-0000-4000-8000-000000003412', '00000000-0000-4000-8000-000000000001',
+   '00000000-0000-4000-8000-000000003401', 2, '4110', 0, 100.0),
+  ('00000000-0000-4000-8000-000000003421', '00000000-0000-4000-8000-000000000002',
+   '00000000-0000-4000-8000-000000003402', 1, '1111', 100.0, 0),
+  ('00000000-0000-4000-8000-000000003422', '00000000-0000-4000-8000-000000000002',
+   '00000000-0000-4000-8000-000000003402', 2, '4110', 0, 100.0);
