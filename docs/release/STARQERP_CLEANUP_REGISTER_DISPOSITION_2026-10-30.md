@@ -88,3 +88,50 @@ The correction branch was based on `main` `7c29272decab9330e6d6c2a304b684790f190
 - `club-ignition-logo.png` remains because Settings UI and demo fixtures reference it; brand neutralization remains a product decision.
 
 PR #177 is the integration path for these corrections. Its exact-head CI result and the resulting canonical `main` SHA are recorded in the Room closeout; the base SHA above identifies the `main` tree against which this correction pass was reconciled.
+
+## Third independent audit disposition — 2026-10-30
+
+Reference: `D:\StarqTech\starqERP Final Audit.md`, reconciled against `main` at `2085014634481d7ac38e71d643cdd6e3bafba39b`. This section records this audit's findings without replacing the earlier cleanup history.
+
+| Finding | Disposition | Correction or reason |
+|---|---|---|
+| N-01 | Corrected | Contact bulk import awaits each customer/supplier command and counts a row only after a positive backend response. Rejected commands remove their optimistic row and appear as errors. |
+| N-02 | Corrected | Replaced timestamp-derived local entity IDs with `crypto.randomUUID()`. After persistence, customer and supplier state adopts the canonical ID returned by the database, so later rollback and local identity do not depend on colliding millisecond timestamps. |
+| N-03 | Corrected | Import refuses to start without a selected organisation, checks that the selected organisation is unchanged before each row, and preserves blank email values instead of synthesizing contact data. |
+| N-04 | Deferred | Warehouse capability/reachability requires a separate roadmap and held-module decision; no warehouse behavior or route was invented in this defect pass. |
+| N-05 | Corrected | Loaded Noto Sans Thaana and applied an explicit Thaana font class and language metadata to invoice script content. |
+| N-06 | Deferred | Unifying the competing typography systems is a design-system decision beyond loading the missing script font. |
+| N-07 | Corrected | Replaced the frontend AI Studio scaffold README with current StarqERP setup and verification instructions. |
+| N-08 | Corrected | Removed the two temporary Vercel preview origins from the default CORS allowlist; preview access remains explicit opt-in. |
+| N-09 | Corrected | Updated command contract copies and Supabase function documentation to describe the retired Flutter client as historical. |
+| N-10 | Deferred | Renaming the `STARQBOOKS_` deployment secrets requires a coordinated secret/configuration rollout; no live secret was rotated in a repository PR. |
+| N-11 | Corrected | Removed unused direct packages and repaired the cross-platform clean script. Retained `tsx` because the now-runnable token generator uses it. Applied compatible dependency updates; npm audit reports zero vulnerabilities. |
+| N-12 | Corrected | Fixed the Material Color Utilities import and API use; exposed the generator as `npm run generate:m3-tokens`. |
+| N-13 | Deferred | Backend/frontend capability balance is a product and roadmap decision, not a mechanical audit correction. |
+| N-14 | Deferred | Splitting the large ERP context is a broader architecture refactor and remains separate from the bounded import fix. |
+| N-15 | Partially corrected; broader helper deferred | The affected customer/supplier mutations now await persistence and consistently roll back failed optimistic rows. A shared cross-entity mutation framework is a larger refactor and was not introduced here. Abort-on-error is explicitly reported as a partial import when earlier rows have committed; those independent commands cannot be rolled back atomically by the current API. |
+| N-16 | Corrected | Added a tracked-document content guard to CI for stale AI Studio/Gemini and retired-client claims, with documented historical/evidence exclusions. |
+| R2 row 2 / `web/vercel.json` | Deferred | The public Supabase route remains hardcoded because the static Vercel rewrite has no verified deployment-aware target in this checkout. Replacing it requires deployment configuration and production `/api` route verification. |
+| R2 row 19 | Deferred | Machine-local script paths need a portable runner/configuration contract; changing the seven runners without that contract risks local audit behavior. |
+| R2 row 20 | Corrected in CI | CI now runs all 20 Deno contract files, including the PostgreSQL-backed persistence contract after migrations. |
+| R2 row 21 | Partially corrected; remainder deferred | CI now runs the additional Python concurrency, idempotency, numbering, and seat-matrix checks. The remaining standalone SQL probes are retained because their fixture and database prerequisites differ; wiring them needs a probe-specific disposable-database contract. |
+| R2 row 29 | No change required | The linter orders full 12-digit migration versions; repeated four-digit suffixes are not duplicate full versions. Existing migration names and history remain unchanged. |
+
+No held warehouse capability, existing applied migration, product-architecture decision, active branch, or worktree was changed as part of this correction pass. One new forward-only migration, `202610300500_call_idempotency_response_repair.sql`, was added after database CI exposed a legacy `CALL` response defect: successful calls returned SQL `NULL`, and replays could return only the generic accepted fallback. The migration patches one uniquely checked marker in the existing function definition so successful calls return and persist the canonical response; the mutation handler and existing migration history remain intact. SERP-176 now exercises the initial response and replay.
+
+### Verification for the third audit branch
+
+- Full frontend Vitest: PASS — 151 files, 991 passed, 1 skipped.
+- TypeScript (`npm run lint`): PASS.
+- Vite production build: PASS; existing large-chunk advisory remains.
+- `npm audit`: PASS — zero known vulnerabilities after compatible lockfile updates.
+- Migration linter: PASS — 63 migration files; documentation guard: PASS — 252 tracked documents/contracts.
+- OAuth/origin checks: PASS. Pre-push secret scan: PASS — zero violations across 963 tracked files.
+- Migration rehearsal, tenant hardcoding, security, support, legal, UI consistency/responsive, component reachability, strict reachability, reachability ratchet, and design-token gates: PASS.
+- Python local suites: PASS — document numbering 6/6; seat matrix 11/11. Database-backed Python concurrency tests are assigned to the PostgreSQL CI job.
+- Deno contracts: PASS locally for 19 non-database files — 420 passed; the optional SERP-447 live PostgreSQL check skipped because no local database was available. SERP-446's database-backed persistence file was not run locally; the PR CI job applies migrations and runs all 20 files against PostgreSQL.
+- Token generator: PASS; generated output did not modify tracked files.
+- Focused browser regression: PASS — Chromium SERP-328 commercial journey; related customer price-list and invoice Vitest tests PASS — 11/11.
+- Exact-head GitHub CI on code head `90100d9023f727c801d64c16565806aaac288313` (run `40968017050`): PASS. Backend/governance gates; all 20 Deno contract files (425 passed); PostgreSQL RLS/tenant, SERP-314, SERP-460, SERP-443 probes; payment/settlement/idempotency/document-numbering concurrency; frontend TypeScript/design gates/full Vitest (151 files, 991 passed, 1 skipped)/production build; and Playwright acceptance (15 passed, 1 intentionally skipped). The E2E fixture now returns a persisted customer UUID; the job and invoice modals reconcile selection when the optimistic ID is replaced.
+- Migration linter: PASS — 64 migration files, including the new forward-only CALL response repair; no existing applied migration was modified.
+- Workflow YAML parse and `git diff --check`: PASS. PR #178 remains unmerged; a final complete CI rerun is required after the disposition update commit before GitHub integration.

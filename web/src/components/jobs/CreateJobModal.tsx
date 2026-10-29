@@ -56,7 +56,7 @@ export const CreateJobModal: React.FC = () => {
   useEffect(() => {
     if (prefilledCustomerId) {
       setCustomerId(prefilledCustomerId);
-    } else if (customers.length > 0 && !customerId) {
+    } else if (customers.length > 0 && !customers.some((customer) => customer.id === customerId)) {
       setCustomerId(customers[0].id);
     }
   }, [prefilledCustomerId, customers]);

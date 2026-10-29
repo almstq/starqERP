@@ -166,10 +166,21 @@ export async function installGateway(
       return json(route, 200, { ok: true, [OPS_READS[path]]: [] });
     }
 
-    // ── Command / mutation surface (fire-and-forget echo) ─────────────────
+    // ── Command / mutation surface ────────────────────────────────────────
     if (method === 'POST' && path === '/api/ops/event') {
       const p = body as Record<string, unknown>;
       state.opsEvents.push(p);
+      if (p.type === 'CUSTOMER') {
+        // Match the persisted-contact response contract. CUSTOMER creation now
+        // remains optimistic only until the server returns its canonical ID;
+        // a generic accepted-event echo must not stand in for persistence.
+        return json(route, 200, {
+          ok: true,
+          state: 'persisted',
+          request_id: `e2e-req-${state.captured.length}`,
+          customer: { customer_id: `00000000-0000-4000-8000-${String(state.captured.length).padStart(12, '0')}` },
+        });
+      }
       return json(route, 200, {
         ok: true,
         state: 'accepted',
