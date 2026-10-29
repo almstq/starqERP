@@ -1,3 +1,5 @@
+> Historical reference — this dated session artifact is retained for provenance and is not current operating guidance.
+
 # Morning brief — 30 August 2026
 
 **For:** the founder, on waking · **From:** Elder
