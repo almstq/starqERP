@@ -13,10 +13,12 @@ import {
   DollarSign,
   Receipt,
   Wrench,
-  Sparkles
+  Sparkles,
+  Upload
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { NewCustomerModal } from './NewCustomerModal';
+import { ContactBulkImportModal } from '../migration/ContactBulkImportModal';
 import { Customer } from '../../types/erp';
 import {
   Button,
@@ -44,6 +46,7 @@ export const CustomersView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('All');
   const [filterIsland, setFilterIsland] = useState<string>('All');
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
   const filtered = customers.filter((c) => {
     const matchesSearch =
@@ -215,6 +218,14 @@ export const CustomersView: React.FC = () => {
 
         <ActionGroup align="right" className="shrink-0">
           <Button
+            variant="outlined"
+            size="sm"
+            onClick={() => setIsBulkImportOpen(true)}
+            icon={<Upload size={14} />}
+          >
+            <span>Bulk Import</span>
+          </Button>
+          <Button
             variant="filled"
             size="sm"
             onClick={() => setIsNewCustomerOpen(true)}
@@ -294,6 +305,11 @@ export const CustomersView: React.FC = () => {
       />
 
       <NewCustomerModal />
+      <ContactBulkImportModal
+        isOpen={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+        defaultKind="customer"
+      />
     </div>
   );
 };
