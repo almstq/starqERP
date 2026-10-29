@@ -105,12 +105,7 @@ def prepare(args):
 
 def concurrency_probe(args):
     raw_command = json.dumps(
-        {
-            "type": "CALL",
-            "customer_name": "Synthetic Concurrent Customer",
-            "vehicle_reg": "SYN-182",
-            "consent": True,
-        },
+        {"type": "CUSTOMER", "name": "Synthetic Concurrent Customer", "phone": "SYN-182"},
         separators=(",", ":"),
     )
     barrier = threading.Barrier(2)
@@ -155,10 +150,11 @@ def concurrency_probe(args):
         )
         key_rows, distinct_responses = cur.fetchone()
         cur.execute(
-            "select count(*) from public.job_events where organisation_id=%s and idempotency_key=%s",
-            (ORG_ID, CONCURRENT_KEY),
+            "select count(*) from public.contacts "
+            "where organisation_id=%s and kind='customer' and display_name=%s",
+            (ORG_ID, "Synthetic Concurrent Customer"),
         )
-        event_rows = cur.fetchone()[0]
+        contact_rows = cur.fetchone()[0]
         cur.execute(
             "select count(*) from public.audit_events "
             "where organisation_id=%s and metadata->>'idempotency_key'=%s",
@@ -172,14 +168,14 @@ def concurrency_probe(args):
         print(f"{name} error: {error}")
     print(
         f"Database state: idempotency_rows={key_rows}, distinct_responses={distinct_responses}, "
-        f"job_events={event_rows}, audit_events={audit_rows}"
+        f"customer_contacts={contact_rows}, audit_events={audit_rows}"
     )
 
     if errors:
         raise AssertionError("a concurrent retry surfaced an exception")
     if len(responses) != 2 or responses["worker_1"] != responses["worker_2"]:
         raise AssertionError("concurrent callers did not receive the same response")
-    if (key_rows, distinct_responses, event_rows, audit_rows) != (1, 1, 1, 1):
+    if (key_rows, distinct_responses, contact_rows, audit_rows) != (1, 1, 1, 1):
         raise AssertionError("concurrent retry produced more than one durable mutation")
 
 
