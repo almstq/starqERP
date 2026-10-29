@@ -237,9 +237,13 @@ def canonical_order_probe(args):
 
     print(
         f"Canonical JSONB order: same_text={same_jsonb_text}, "
-        f"same_digest={same_digest}, same_response={first == second}"
+        f"same_digest={same_digest}, "
+        f"same_response={json.dumps(first, sort_keys=True, default=str) == json.dumps(second, sort_keys=True, default=str)}"
     )
-    if not (same_jsonb_text and same_digest and first == second):
+    same_response = json.dumps(first, sort_keys=True, default=str) == json.dumps(second, sort_keys=True, default=str)
+    if not (same_jsonb_text and same_digest and same_response):
+        print(f"First response: {json.dumps(first, sort_keys=True, default=str)}")
+        print(f"Replay response: {json.dumps(second, sort_keys=True, default=str)}")
         raise AssertionError("semantic JSON object key ordering changed the replay digest")
     if "idempotency_key_conflict" not in conflict_error:
         raise AssertionError("different payload under the same key was not rejected as a conflict")
