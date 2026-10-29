@@ -1,13 +1,15 @@
+> Historical reference — this dated session artifact is retained for provenance and is not current operating guidance.
+
 # starqERP — Elder Command Return Brief (28 August 2026)
 
-**Audience**: Elder (Senior Engineering Reviewer / Command)  
-**Author**: Lead Engineering Agent  
-**Baseline Date**: 2026-08-27 / 2026-08-28  
-**System State**: Pre-Hosting Friend Onboarding Vertical Slice Complete | Ready for Staging Acceptance  
-**Private Canonical Repository**: `almstq/starqERP` (`main` @ `7c05723`)  
-**Public Technical Preview**: `almstq/starqERP-public` (`v0.2.0-beta`)  
-**Session Changelog**: [`docs/CHANGELOG_2026-08-27.md`](./CHANGELOG_2026-08-27.md)  
-**ISO 27001 Readiness Audit**: [`docs/qa/current/ISO_27001_READINESS_GAP_AUDIT_2026-08-27.md`](./qa/current/ISO_27001_READINESS_GAP_AUDIT_2026-08-27.md)  
+**Audience**: Elder (Senior Engineering Reviewer / Command)
+**Author**: Lead Engineering Agent
+**Baseline Date**: 2026-08-27 / 2026-08-28
+**System State**: Pre-Hosting Friend Onboarding Vertical Slice Complete | Ready for Staging Acceptance
+**Private Canonical Repository**: `almstq/starqERP` (`main` @ `7c05723`)
+**Public Technical Preview**: `almstq/starqERP-public` (`v0.2.0-beta`)
+**Session Changelog**: [`docs/history/CHANGELOG_2026-08-27.md`](./CHANGELOG_2026-08-27.md)
+**ISO 27001 Readiness Audit**: [`docs/qa/current/ISO_27001_READINESS_GAP_AUDIT_2026-08-27.md`](../qa/current/ISO_27001_READINESS_GAP_AUDIT_2026-08-27.md)
 
 ---
 
@@ -43,7 +45,7 @@ Elder should review this section first to understand the full transformation exe
 
 ## 1. Executive Situation
 
-starqERP has completed its architectural realignment from an exploratory single-tenant garage tool into a true **two-plane multi-tenant SaaS ERP platform** designed for the Maldives. 
+starqERP has completed its architectural realignment from an exploratory single-tenant garage tool into a true **two-plane multi-tenant SaaS ERP platform** designed for the Maldives.
 
 The system now features:
 - **Logical & physical two-plane separation**: Starq HQ Platform Control Plane (`platform` schema) vs Tenant ERP Execution Plane (`public` schema).

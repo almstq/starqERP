@@ -12,8 +12,8 @@
 > **CURRENT REPO SAFE TO MAKE PUBLIC**: **NO (DO NOT CHANGE VISIBILITY TO PUBLIC YET)**
 
 ### Critical Reasons for Non-Publication at Present:
-1. **Sensitive Git History**: Git history contains developer personal email addresses (`a.musthaq@gmail.com`, `starq.sys@gmail.com`, `nashidh3566@gmail.com`, `naleeeez@gmail.com`), early staging tenant references, and internal infrastructure references across commit patches.
-2. **Internal Docs & Agent Logs**: The `docs/` tree currently contains internal agent completion reports, Elder return briefs (`ELDER_RETURN_BRIEF_2026-08-28.md`), competitor gap analysis (`ODOO_SAP_REPLACEMENT_GAP_ANALYSIS.md`), raw pre-sales strategy, and internal ticket reconciliation files.
+1. **Sensitive Git History**: Git history contains developer personal email addresses (`founder@example.com`, `engineering@example.com`, `reviewer@example.com`, `ops@example.com`), early staging tenant references, and internal infrastructure references across commit patches.
+2. **Internal Docs & Agent Logs**: The `docs/` tree currently contains internal agent completion reports, Elder return briefs (`docs/history/ELDER_RETURN_BRIEF_2026-08-28.md`), competitor gap analysis (`ODOO_SAP_REPLACEMENT_GAP_ANALYSIS.md`), raw pre-sales strategy, and internal ticket reconciliation files.
 3. **Obsolete Root README**: The current `README.md` carries outdated claims ("117 / 264 = 44.3%", "37 / 40 CI pilot", "3 remaining CI pilot tasks", old 4-phase Club Ignition-centric roadmap).
 4. **License Undefined**: The repository currently lacks a formal `LICENSE` file; making it public without an explicit commercial or source-available license creates legal ambiguity.
 
@@ -46,17 +46,17 @@ If single-repo history continuity is mandated:
 | **Developer / Personal Emails** | ⚠️ Contains developer personal emails | 🔴 212 occurrences of personal emails | Sanitize to `noreply` / `@example.com` |
 | **Maldives PII / Real Phone / TIN** | ✅ Synthetic test numbers only | ✅ Synthetic test fixtures | Keep strictly fictionalized |
 | **Internal Governance / Agent Briefs** | ⚠️ 116 docs files with internal briefs | ⚠️ Historical commit docs | Move internal docs to private manifest |
-| **Root README Accuracy** | 🔴 Obsolete statistics & roadmap | ⚠️ Old milestone claims | Replace with `README_PUBLIC_DRAFT.md` |
+| **Root README Accuracy** | 🔴 Obsolete statistics & roadmap | ⚠️ Old milestone claims | Replace with `docs/release/README_PUBLIC_DRAFT.md` |
 | **License & Legal Terms** | ⚠️ Missing root `LICENSE` file | ⚠️ None | Add explicit Source-Available / Commercial license |
 
 ---
 
 ## 4. Audit Deliverables Index
 
-1. [`PUBLIC_FILE_MANIFEST.md`](./PUBLIC_FILE_MANIFEST.md) — Exhaustive classification of all files to keep public.
-2. [`PRIVATE_EXCLUSION_MANIFEST.md`](./PRIVATE_EXCLUSION_MANIFEST.md) — Manifest of proprietary and internal documents to exclude/retain privately.
-3. [`REDUNDANT_FILE_CLEANUP.md`](./REDUNDANT_FILE_CLEANUP.md) — Obsolete and temporary artifacts earmarked for deletion.
-4. [`GIT_HISTORY_SECURITY_AUDIT.md`](./GIT_HISTORY_SECURITY_AUDIT.md) — Detailed historical commit scan findings and sanitization plan.
-5. [`README_PUBLIC_DRAFT.md`](./README_PUBLIC_DRAFT.md) — Developer-facing, accurate, non-volatile public README.
-6. [`PUBLIC_ROADMAP.md`](./PUBLIC_ROADMAP.md) — Canonical 4-Gate (G1–G4) capability roadmap for external stakeholders.
-7. [`PUBLIC_RELEASE_CHECKLIST.md`](./PUBLIC_RELEASE_CHECKLIST.md) — Step-by-step pre-publication sign-off checklist.
+1. [`docs/release/PUBLIC_FILE_MANIFEST.md`](./PUBLIC_FILE_MANIFEST.md) — Exhaustive classification of all files to keep public.
+2. [`docs/release/PRIVATE_EXCLUSION_MANIFEST.md`](./PRIVATE_EXCLUSION_MANIFEST.md) — Manifest of proprietary and internal documents to exclude/retain privately.
+3. [`STARQERP_CLEANUP_REGISTER_DISPOSITION_2026-10-30.md`](./STARQERP_CLEANUP_REGISTER_DISPOSITION_2026-10-30.md) — 42-row cleanup disposition, including preserved and deferred items.
+4. [`docs/release/GIT_HISTORY_SECURITY_AUDIT.md`](./GIT_HISTORY_SECURITY_AUDIT.md) — Detailed historical commit scan findings and sanitization plan.
+5. [`docs/release/README_PUBLIC_DRAFT.md`](./README_PUBLIC_DRAFT.md) — Developer-facing, accurate, non-volatile public README.
+6. [`docs/release/PUBLIC_ROADMAP.md`](./PUBLIC_ROADMAP.md) — Canonical 4-Gate (G1–G4) capability roadmap for external stakeholders.
+7. [`docs/release/PUBLIC_RELEASE_CHECKLIST.md`](./PUBLIC_RELEASE_CHECKLIST.md) — Step-by-step pre-publication sign-off checklist.

@@ -1,3 +1,5 @@
+> Historical reference — this dated session artifact is retained for provenance and is not current operating guidance.
+
 # starqERP Engineering Session Ledger — 27 August 2026
 
 **Date**: 2026-08-27  

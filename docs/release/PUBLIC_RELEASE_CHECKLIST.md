@@ -7,7 +7,7 @@
 ## 1. Documentation & Representation Gates
 
 - [ ] **Root README Cleanliness**:
-  - [ ] Root `README.md` replaced with sanitized `README_PUBLIC_DRAFT.md`.
+  - [ ] Root `README.md` replaced with sanitized `docs/release/README_PUBLIC_DRAFT.md`.
   - [ ] All obsolete progress claims ("117/264", "37/40 pilot", "3 remaining tasks") purged.
   - [ ] Volatile metrics unified into single clearly labeled canonical snapshot (318 canonical tasks, 117 Done, 36.79%).
   - [ ] Two-plane architecture and 5-tier organizational model clearly diagrammed.
@@ -28,7 +28,7 @@
   - [ ] All `.env` files ignored via `.gitignore` and only `.env.example` placeholder committed.
   - [ ] `audit_repo_secrets.mjs` runs with zero high-severity findings.
 - [ ] **Contact & Developer Data Sanitization**:
-  - [ ] All developer personal emails (`a.musthaq@gmail.com`, `starq.sys@gmail.com`, etc.) replaced with generic project addresses (`dev@starq.mv`, `security@starq.mv`).
+  - [ ] All developer personal emails (`founder@example.com`, `engineering@example.com`, etc.) replaced with generic project addresses (`dev@starq.mv`, `security@starq.mv`).
   - [ ] All client contacts in contracts replaced with standard synthetic fixtures (`demo@example.com`).
 - [ ] **Demo Data Fictionalization**:
   - [ ] All public seed fixtures use explicitly synthetic names (*Demo Workshop Ltd*, *Demo Trading Pvt Ltd*).

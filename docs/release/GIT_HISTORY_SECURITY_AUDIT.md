@@ -14,7 +14,7 @@
 | **Google OAuth Client Secrets** | 0 | ✅ CLEAN | No `GOCSPX-...` client secrets were committed. |
 | **Google OAuth Client IDs** | 6 | ⚠️ LOW | Staging/Web client IDs (`901212915429-*.apps.googleusercontent.com`) in past commits. |
 | **Supabase Staging Endpoints** | 11 | ⚠️ LOW | Staging URL `wthabguvueewgtabjsdo.supabase.co` referenced in past documentation and Vite proxy. |
-| **Developer Personal Emails** | 212 | 🔴 MEDIUM | Personal email addresses (`a.musthaq@gmail.com`, `starq.sys@gmail.com`, `nashidh3566@gmail.com`, `naleeeez@gmail.com`) across commit authors and allowlist seeds. |
+| **Developer Personal Emails** | 212 | 🔴 MEDIUM | Personal email addresses (`founder@example.com`, `engineering@example.com`, `reviewer@example.com`, `ops@example.com`) across commit authors and allowlist seeds. |
 | **Synthetic Test Passwords** | 11 | ℹ️ BENIGN | Synthetic probe passwords (e.g. `synthetic-serp176-only`) in isolated integration test scripts. |
 | **Real Customer / PII Data** | 0 | ✅ CLEAN | Customer records in seed data use synthetic names (e.g. "Ahmed Naseer", "Ibrahim Rasheed"). |
 
