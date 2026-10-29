@@ -40,6 +40,7 @@ import { DEFAULT_CHART_OF_ACCOUNTS } from '../../data/defaultChartOfAccounts';
 import { NewAccountModal } from './NewAccountModal';
 import { AccountDetailModal } from './AccountDetailModal';
 import { ManualJournalModal } from './ManualJournalModal';
+import { OpeningTrialBalanceWizard } from '../migration/OpeningTrialBalanceWizard';
 import { GeneralLedgerView } from './GeneralLedgerView';
 import { PeriodManagementView } from './PeriodManagementView';
 import { BankReconciliationView } from './BankReconciliationView';
@@ -169,6 +170,7 @@ export const AccountsView: React.FC = () => {
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isManualJournalOpen, setIsManualJournalOpen] = useState(false);
+  const [isOpeningBalanceWizardOpen, setIsOpeningBalanceWizardOpen] = useState(false);
   const [selectedParentForNew, setSelectedParentForNew] = useState<string | null>(null);
   const [editingAccount, setEditingAccount] = useState<AccountRecord | null>(null);
   const [viewingAccount, setViewingAccount] = useState<AccountRecord | null>(null);
@@ -415,18 +417,28 @@ export const AccountsView: React.FC = () => {
           onOpenNewJournalModal={() => setIsManualJournalOpen(true)}
         />
       ) : activeTab === 'periods' ? (
-        <PeriodManagementView
-          periods={periods}
-          onPeriodsUpdated={savePeriods}
-          journals={allJournals}
-          accounts={accounts}
-          onClosingJournalPosted={(closingJe) => {
-            // The close is the one process permitted to write Retained Earnings
-            // and to post into the period it is closing.
-            postJournal(closingJe, 'system');
-          }}
-          formatMVR={formatMVR}
-        />
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <Button
+              variant="outlined"
+              onClick={() => setIsOpeningBalanceWizardOpen(true)}
+            >
+              Opening Trial Balance Wizard
+            </Button>
+          </div>
+          <PeriodManagementView
+            periods={periods}
+            onPeriodsUpdated={savePeriods}
+            journals={allJournals}
+            accounts={accounts}
+            onClosingJournalPosted={(closingJe) => {
+              // The close is the one process permitted to write Retained Earnings
+              // and to post into the period it is closing.
+              postJournal(closingJe, 'system');
+            }}
+            formatMVR={formatMVR}
+          />
+        </div>
       ) : activeTab === 'bank_reconciliation' ? (
         <BankReconciliationView
           journals={allJournals}
@@ -805,6 +817,12 @@ export const AccountsView: React.FC = () => {
         onClose={() => setIsManualJournalOpen(false)}
         accounts={accounts}
         onSave={handleSaveManualJournal}
+      />
+
+      <OpeningTrialBalanceWizard
+        isOpen={isOpeningBalanceWizardOpen}
+        onClose={() => setIsOpeningBalanceWizardOpen(false)}
+        onJournalPosted={(entry) => postJournal(entry, 'system')}
       />
     </div>
   );

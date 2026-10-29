@@ -1,8 +1,20 @@
 import { describe, it, expect } from 'vitest';
+import { DEFAULT_CHART_OF_ACCOUNTS } from '../data/defaultChartOfAccounts';
 import {
   calculateJobCostSheet,
   createJobCompletionCogsJournal,
 } from './jobCosting';
+import { AccountingPeriod, generateFiscalPeriods } from './periods';
+
+const accounts = DEFAULT_CHART_OF_ACCOUNTS;
+
+function augustPeriods(status: AccountingPeriod['status']): AccountingPeriod[] {
+  return generateFiscalPeriods(2026).map((period) => (
+    period.month === 8
+      ? { ...period, status, lockedBy: 'Controller' }
+      : period
+  ));
+}
 
 describe('SERP-012: Projects & Job-Costing Absorption Engine', () => {
   const sampleParams = {
@@ -57,5 +69,30 @@ describe('SERP-012: Projects & Job-Costing Absorption Engine', () => {
     expect(je?.totalCredit).toBe(62725);
     expect(je?.lines.find((l) => l.accountCode === '5110')?.debit).toBe(62725);
     expect(je?.lines.find((l) => l.accountCode === '1330')?.credit).toBe(62725);
+  });
+
+  it('posts the completion journal in an open period and rejects a LOCKED or CLOSED period', () => {
+    const openSheet = calculateJobCostSheet({
+      ...sampleParams,
+      status: 'COMPLETED',
+      periods: augustPeriods('OPEN'),
+      accounts,
+    });
+    expect(openSheet.completionJournal?.status).toBe('POSTED');
+    expect(openSheet.completionJournal?.isBalanced).toBe(true);
+
+    const inProgress = calculateJobCostSheet(sampleParams);
+    expect(() => createJobCompletionCogsJournal(
+      inProgress,
+      sampleParams.tenantId,
+      augustPeriods('LOCKED'),
+      accounts,
+    )).toThrow(/LOCKED/);
+    expect(() => calculateJobCostSheet({
+      ...sampleParams,
+      status: 'COMPLETED',
+      periods: augustPeriods('CLOSED'),
+      accounts,
+    })).toThrow(/CLOSED/);
   });
 });
