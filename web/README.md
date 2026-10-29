@@ -1,20 +1,32 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# StarqERP web application
 
-# Run and deploy your AI Studio app
+This directory contains the StarqERP React and Vite application.
 
-This contains everything you need to run your app locally.
+## Requirements
 
-View your app in AI Studio: https://ai.studio/apps/dde1149e-ec5b-4a79-a3e1-465a0b12d65a
+- Node.js 22 or later
+- npm
 
-## Run Locally
+## Run locally
 
-**Prerequisites:**  Node.js
+```sh
+npm ci
+npm run dev
+```
 
+The development server listens on port `3001`. Set `VITE_SUPABASE_URL` in a
+local `.env.local` when the API is hosted by Supabase. Vite proxies `/api`
+through the configured Starq API function. `VITE_API_URL` may be set when a
+different API base is required. Leave backend secrets outside the browser
+application; only public client configuration belongs in `VITE_*` variables.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Checks
+
+```sh
+npm run lint
+npm test
+npm run build
+npm run test:e2e
+```
+
+The Playwright suite starts its own Vite server and uses the local test gateway.

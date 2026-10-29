@@ -26,6 +26,7 @@ export const SuppliersView: React.FC = () => {
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [confirmingDeactivate, setConfirmingDeactivate] = useState<Supplier | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [draft, setDraft] = useState({ name: '', contactPerson: '', phone: '', email: '', address: '', islandOrCountry: '', category: '', leadTimeDays: '7' });
 
   const openEdit = (supplier: Supplier) => {
@@ -57,10 +58,16 @@ export const SuppliersView: React.FC = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const submitSupplier = (event: React.FormEvent) => {
+  const submitSupplier = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!draft.name.trim()) return;
-    createSupplier({ ...draft, name: draft.name.trim(), leadTimeDays: Math.max(0, Number(draft.leadTimeDays) || 7) });
+    try {
+      await createSupplier({ ...draft, name: draft.name.trim(), leadTimeDays: Math.max(0, Number(draft.leadTimeDays) || 7) });
+      setSaveError(null);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Supplier could not be saved.');
+      return;
+    }
     setDraft({ name: '', contactPerson: '', phone: '', email: '', address: '', islandOrCountry: '', category: '', leadTimeDays: '7' });
     setIsCreateOpen(false);
   };
@@ -215,6 +222,7 @@ export const SuppliersView: React.FC = () => {
         emptyMessage="No suppliers found matching filter criteria."
       />
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Add supplier" subtitle="Create a tenant-scoped supplier contact" maxWidth="lg" actions={<><Button variant="outlined" onClick={() => setIsCreateOpen(false)}>Cancel</Button><Button variant="filled" onClick={submitSupplier}>Save supplier</Button></>}>
+        {saveError && <p role="alert" className="rounded-lg border border-[var(--negative)] bg-[var(--negative-subtle)] px-3 py-2 text-xs text-[var(--negative)]">{saveError}</p>}
         <form onSubmit={submitSupplier} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {(['name', 'contactPerson', 'phone', 'email', 'address', 'islandOrCountry', 'category', 'leadTimeDays'] as const).map((field) => <label key={field} className="text-xs font-semibold">{field === 'name' ? 'Supplier name *' : field.replace(/[A-Z]/g, (m) => ` ${m}`).replace(/^./, (m) => m.toUpperCase())}<input required={field === 'name'} value={draft[field]} onChange={(e) => setDraft({ ...draft, [field]: e.target.value })} className="mt-1 w-full px-3 py-2 rounded-xl border text-xs font-normal" /></label>)}
         </form>

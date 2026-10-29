@@ -237,5 +237,31 @@ describe('SERP-303: Maldivian Contact Bulk Import Domain', () => {
       expect(report.errors.length).toBe(1);
       expect(report.errors[0].reason).toBe('Database conflict');
     });
+
+    it('stops after a persistence failure and reports earlier committed records as partial', async () => {
+      const records = ['First', 'Fails', 'Not attempted'].map((displayName) => ({
+        displayName,
+        kind: 'customer' as const,
+        phone: '',
+        email: '',
+        taxIdentifier: '',
+        paymentTermsDays: 0,
+        creditLimit: 0,
+        status: 'active' as const,
+      }));
+      const attempted: string[] = [];
+      const inserter = async (record: any) => {
+        attempted.push(record.displayName);
+        if (record.displayName === 'Fails') throw new Error('persistence_failed');
+        return { success: true, id: `server-${record.displayName}` };
+      };
+
+      const report = await executeContactImport(records, { organisationId: 'org-tenant-a' }, 'abort_on_error', [], inserter);
+
+      expect(attempted).toEqual(['First', 'Fails']);
+      expect(report.importedCount).toBe(1);
+      expect(report.skippedCount).toBe(2);
+      expect(report.errors[0].reason).toBe('persistence_failed');
+    });
   });
 });

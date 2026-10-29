@@ -45,6 +45,8 @@ export const ContactBulkImportModal: React.FC<ContactBulkImportModalProps> = ({
 }) => {
   const { currentTenant, createCustomer, createSupplier } = useERP();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const activeOrganisationId = useRef(currentTenant?.id);
+  activeOrganisationId.current = currentTenant?.id;
 
   const [step, setStep] = useState<WizardStep>('upload');
   const [kind, setKind] = useState<ContactKind>(defaultKind);
@@ -56,6 +58,7 @@ export const ContactBulkImportModal: React.FC<ContactBulkImportModalProps> = ({
   const [importMode, setImportMode] = useState<'skip_invalid' | 'abort_on_error'>('skip_invalid');
   const [summaryReport, setSummaryReport] = useState<ImportSummaryReport | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [blockingError, setBlockingError] = useState<string | null>(null);
 
   const resetState = () => {
     setStep('upload');
@@ -66,6 +69,7 @@ export const ContactBulkImportModal: React.FC<ContactBulkImportModalProps> = ({
     setTotalParsedRows(0);
     setSummaryReport(null);
     setIsProcessing(false);
+    setBlockingError(null);
   };
 
   const handleClose = () => {
@@ -147,37 +151,47 @@ export const ContactBulkImportModal: React.FC<ContactBulkImportModalProps> = ({
   };
 
   const handleExecuteImport = async () => {
+    const organisationId = currentTenant?.id;
+    if (!organisationId) {
+      setBlockingError('Select an organisation before importing contacts. No records were imported.');
+      return;
+    }
+
+    setBlockingError(null);
     setIsProcessing(true);
     setStep('executing');
 
-    const tenantContext = {
-      organisationId: currentTenant?.id || 'demo-org-id',
-    };
+    const tenantContext = { organisationId };
 
-    const inserter = async (rec: ContactImportRecord) => {
+    const inserter = async (rec: ContactImportRecord, tenant: { organisationId: string }) => {
+      if (tenant.organisationId !== organisationId || activeOrganisationId.current !== organisationId) {
+        return { success: false, error: 'Organisation context changed before persistence.' };
+      }
+
       if (rec.kind === 'supplier') {
-        createSupplier({
+        const supplier = await createSupplier({
           name: rec.displayName,
           contactPerson: rec.contactPerson || '',
           phone: rec.phone,
-          email: rec.email,
+          email: rec.email || '',
           address: rec.address || '',
           islandOrCountry: rec.island || 'Male',
           category: rec.category || 'General',
           leadTimeDays: rec.leadTimeDays || 7,
         });
+        return { success: true, id: supplier.id };
       } else {
-        createCustomer({
+        const customer = await createCustomer({
           name: rec.displayName,
           phone: rec.phone,
-          email: rec.email || `${rec.displayName.toLowerCase().replace(/[^a-z0-9]/g, '')}@client.mv`,
+          email: rec.email || '',
           type: 'Corporate',
           vehicles: [],
           island: rec.island || 'Male',
           notes: rec.taxIdentifier ? `MIRA TIN: ${rec.taxIdentifier}` : '',
         });
+        return { success: true, id: customer.id };
       }
-      return { success: true, id: `cont-${Date.now()}` };
     };
 
     const report = await executeContactImport(
@@ -335,6 +349,7 @@ export const ContactBulkImportModal: React.FC<ContactBulkImportModalProps> = ({
         {/* STEP 2: PREVIEW & VALIDATION */}
         {step === 'preview' && (
           <div className="space-y-4">
+            {blockingError && <p role="alert" className="rounded-lg border border-[var(--negative)] bg-[var(--negative-subtle)] px-3 py-2 text-xs text-[var(--negative)]">{blockingError}</p>}
             {/* Summary Metrics Banner */}
             <div className="grid grid-cols-3 gap-3">
               <div className="p-3 bg-[var(--md-sys-color-surface-container)] rounded-xl border border-[var(--md-sys-color-outline-variant)]">
@@ -377,7 +392,7 @@ export const ContactBulkImportModal: React.FC<ContactBulkImportModalProps> = ({
                       onChange={() => setImportMode('abort_on_error')}
                       className="text-[var(--md-sys-color-primary)]"
                     />
-                    <span>Abort on any error</span>
+                    <span>Stop at first import error</span>
                   </label>
                 </div>
               </div>
@@ -453,28 +468,41 @@ export const ContactBulkImportModal: React.FC<ContactBulkImportModalProps> = ({
         {/* STEP 4: IMPORT SUMMARY REPORT */}
         {step === 'report' && summaryReport && (
           <div className="space-y-4">
-            <div className="p-4 bg-[var(--positive-subtle)] rounded-2xl border border-[var(--positive)] flex items-start gap-3">
-              <CheckCircle2 size={24} className="text-[var(--positive)] shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-sm font-bold text-[var(--positive)]">Bulk Import Processed</h4>
-                <p className="text-xs text-[var(--positive)] mt-1">
-                  Master contact data has been processed into {currentTenant?.name || 'the organisation workspace'}.
-                </p>
+            {summaryReport.importedCount > 0 ? (
+              <div className="p-4 bg-[var(--positive-subtle)] rounded-2xl border border-[var(--positive)] flex items-start gap-3">
+                <CheckCircle2 size={24} className="text-[var(--positive)] shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-bold text-[var(--positive)]">
+                    {summaryReport.skippedCount > 0 ? 'Partial import persisted' : 'Import persistence confirmed'}
+                  </h4>
+                  <p className="text-xs text-[var(--positive)] mt-1">
+                    {summaryReport.importedCount} contact{summaryReport.importedCount === 1 ? '' : 's'} were confirmed by the backend for {currentTenant?.name || 'the selected organisation'}.
+                    {summaryReport.skippedCount > 0 && ' Processing stopped with errors; confirmed records remain saved.'}
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div role="alert" className="p-4 bg-[var(--negative-subtle)] rounded-2xl border border-[var(--negative)] flex items-start gap-3">
+                <AlertCircle size={24} className="text-[var(--negative)] shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-bold text-[var(--negative)]">No records were imported</h4>
+                  <p className="text-xs text-[var(--negative)] mt-1">The backend did not confirm persistence for any contact. Review the row errors below before retrying.</p>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-3 gap-3">
               <div className="p-3 bg-[var(--md-sys-color-surface-container)] rounded-xl border border-[var(--md-sys-color-outline-variant)] text-center">
                 <div className="text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)]">Total Processed</div>
-                <div className="text-xl font-bold text-[var(--md-sys-color-on-surface)]">{summaryReport.totalProcessed}</div>
+                <div data-testid="import-total-processed" className="text-xl font-bold text-[var(--md-sys-color-on-surface)]">{summaryReport.totalProcessed}</div>
               </div>
               <div className="p-3 bg-[var(--positive-subtle)] rounded-xl border border-[var(--positive)] text-center">
                 <div className="text-[11px] font-medium text-[var(--positive)]">Successfully Imported</div>
-                <div className="text-xl font-bold text-[var(--positive)]">{summaryReport.importedCount}</div>
+                <div data-testid="import-imported-count" className="text-xl font-bold text-[var(--positive)]">{summaryReport.importedCount}</div>
               </div>
               <div className="p-3 bg-[var(--warning-subtle)] rounded-xl border border-[var(--warning)] text-center">
                 <div className="text-[11px] font-medium text-[var(--warning)]">Skipped Records</div>
-                <div className="text-xl font-bold text-[var(--warning)]">{summaryReport.skippedCount}</div>
+                <div data-testid="import-skipped-count" className="text-xl font-bold text-[var(--warning)]">{summaryReport.skippedCount}</div>
               </div>
             </div>
 

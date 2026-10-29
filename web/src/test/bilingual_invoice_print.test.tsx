@@ -18,6 +18,7 @@ describe('SERP-323: Bilingual Dhivehi (Thaana) & English Invoice Print Interface
     expect(screen.getByText('Document Language:')).toBeDefined();
     expect(screen.getByText(/TAX INVOICE/)).toBeDefined();
     expect(screen.getByText(/ޓެކްސް އިންވޮއިސް/)).toBeDefined();
+    expect(screen.getByText(/ޓެކްސް އިންވޮއިސް/).closest('.thaana-text')).not.toBeNull();
     expect(screen.getAllByText(/ޖީ\.އެސް\.ޓީ/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/ފަވަރަ \/ ބީ\.އެމް\.އެލް/)).toBeDefined();
     expect(screen.getByTestId('favara-qr-not-configured')).toBeDefined();
@@ -33,7 +34,7 @@ describe('SERP-323: Bilingual Dhivehi (Thaana) & English Invoice Print Interface
       </AuthProvider>
     );
 
-    const dhivehiBtn = screen.getByText('ދިވެހި (Thaana)');
+    const dhivehiBtn = screen.getByRole('button', { name: /Thaana/ });
     fireEvent.click(dhivehiBtn);
 
     expect(screen.getByText('ޓެކްސް އިންވޮއިސް')).toBeDefined();
