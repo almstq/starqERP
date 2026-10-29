@@ -216,7 +216,7 @@ def test_concurrent_allocations(args):
 def test_same_key_concurrent_idempotency(args):
     print("\n--- Test 2: Two Concurrent Same-Key CALL Idempotency Replays ---")
     org_a = ORG_A
-    person_id = "00000000-0000-4000-8000-000000000101"
+    person_id = PERSON_A
     key_id = "00000000-0000-4000-8000-000000009901"
     req_id = "00000000-0000-4000-8000-000000009902"
     payload = json.dumps({
@@ -313,7 +313,7 @@ def test_same_key_concurrent_idempotency(args):
 def test_idempotency_conflict_burns_zero_numbers(args):
     print("\n--- Test 3: Idempotency Key Conflict Burns Zero Numbers ---")
     org_a = ORG_A
-    person_id = "00000000-0000-4000-8000-000000000101"
+    person_id = PERSON_A
     key_id = "00000000-0000-4000-8000-000000009901"
     req_id = "00000000-0000-4000-8000-000000009903"
     altered_payload = json.dumps({
