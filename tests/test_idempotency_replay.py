@@ -184,8 +184,8 @@ def concurrency_probe(args):
 
 
 def canonical_order_probe(args):
-    left = '{"type":"CALL","customer_name":"Synthetic Canonical Customer","vehicle_reg":"SYN-CANON","consent":true}'
-    right = '{"consent":true,"vehicle_reg":"SYN-CANON","customer_name":"Synthetic Canonical Customer","type":"CALL"}'
+    left = '{"type":"CUSTOMER","name":"Synthetic Canonical Customer","phone":"SYN-CANON"}'
+    right = '{"phone":"SYN-CANON","name":"Synthetic Canonical Customer","type":"CUSTOMER"}'
 
     first_conn = connect(args)
     first = call_command(
