@@ -25,7 +25,7 @@ The following documents contain internal LLM/Agent execution transcripts, prompt
 
 ## 2. Founder / Executive Strategy & Commercial Audits
 The following files contain proprietary commercial analysis, market positioning, pre-sales strategy, and competitor gap teardowns:
-- `docs/ELDER_RETURN_BRIEF_2026-08-28.md` — Private executive return brief
+- `docs/history/ELDER_RETURN_BRIEF_2026-08-28.md` — Private executive return brief
 - `docs/qa/commercial-replacement-audit/ACCOUNTING_READINESS_AUDIT.md` — Internal readiness assessment
 - `docs/qa/commercial-replacement-audit/EXECUTIVE_VERDICT.md` — Private commercial appraisal
 - `docs/qa/commercial-replacement-audit/MALDIVES_LOCALIZATION_AUDIT.md` — Internal market localization audit
@@ -67,6 +67,6 @@ The internal task specifications in `docs/tasks/` contain historical pilot detai
 
 ## 5. Sensitive Identity & Contact Data
 Any instances of real personal developer emails, private client contact details, or staging infrastructure endpoints must be scrubbed:
-- Developer personal emails (`a.musthaq@gmail.com`, `starq.sys@gmail.com`, `nashidh3566@gmail.com`, `naleeeez@gmail.com`)
-- Real client contact records in `contracts/tenant_import_pipeline.ts` (`rauf.ahmed@outlook.com`, `shaan.ib@gmail.com`)
+- Developer personal emails (`founder@example.com`, `engineering@example.com`, `reviewer@example.com`, `ops@example.com`)
+- Real client contact records in `contracts/tenant_import_pipeline.ts` (`customer1@example.com`, `customer2@example.com`)
 - Staging Supabase project references (`wthabguvueewgtabjsdo.supabase.co`) in developer notes (must be replaced with generic `<project-ref>.supabase.co`).

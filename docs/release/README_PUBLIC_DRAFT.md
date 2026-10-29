@@ -224,8 +224,8 @@ starqERP/
 ## Contributing & License
 
 ### Contributing
-Contributions and security vulnerability reports are welcome. Please read [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`SECURITY.md`](./SECURITY.md) before submitting pull requests or vulnerability disclosures.
+Contributions and security vulnerability reports are welcome. Please read [`CONTRIBUTING.md`](../../CONTRIBUTING.md) and [`SECURITY.md`](../../SECURITY.md) before submitting pull requests or vulnerability disclosures.
 
 ### License
 Copyright © 2026 Starq Technologies Pvt Ltd. All rights reserved.  
-Distributed under the terms specified in [`LICENSE`](./LICENSE).
+Distributed under the terms specified in [`LICENSE`](../../LICENSE).
