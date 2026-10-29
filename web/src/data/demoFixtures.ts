@@ -1382,7 +1382,7 @@ export const INITIAL_TENANTS: import('../types/erp').OrganisationTenant[] = [
     financialYearStart: '01-01',
     financialYearEnd: '12-31',
     phone: '+960 778-9900',
-    email: 'accounts@ignitionink.mv',
+    email: 'accounts@example.com',
     address: 'Lot 11492, Industrial Zone, Phase 2',
     island: "Hulhumale'",
     atoll: 'Kaafu Atoll',

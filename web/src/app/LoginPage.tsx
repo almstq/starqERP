@@ -29,9 +29,7 @@ declare global {
   }
 }
 
-const GOOGLE_CLIENT_ID = (
-  import.meta.env.VITE_GOOGLE_CLIENT_ID || '901212915429-l7i347so1avnr0dnaq50hfi91fm0d0o4.apps.googleusercontent.com'
-).trim();
+const getGoogleClientId = () => (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
 
 function sanitizeErrorMessage(code: string): string {
   switch (code) {
@@ -59,6 +57,7 @@ export const LoginPage: React.FC = () => {
   const { login, session } = useAuth();
   const { resolvedTheme } = useTheme();
   const navigate = useNavigate();
+  const googleClientId = getGoogleClientId();
 
   const [error, setError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -139,13 +138,13 @@ export const LoginPage: React.FC = () => {
 
   // Initialize and render Google Sign-In button whenever GIS, theme, or width changes
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID || !gisLoaded || !buttonContainerRef.current || !window.google?.accounts?.id) {
+    if (!googleClientId || !gisLoaded || !buttonContainerRef.current || !window.google?.accounts?.id) {
       return;
     }
 
     try {
       window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
+        client_id: googleClientId,
         callback: handleCredentialResponse,
         auto_select: false,
         cancel_on_tap_outside: true,
@@ -166,7 +165,7 @@ export const LoginPage: React.FC = () => {
     } catch (renderError) {
       console.error('[starqERP] Failed to render Google Sign-In button:', renderError);
     }
-  }, [GOOGLE_CLIENT_ID, gisLoaded, resolvedTheme, buttonWidth, handleCredentialResponse]);
+  }, [googleClientId, gisLoaded, resolvedTheme, buttonWidth, handleCredentialResponse]);
 
   return (
     <div
@@ -257,7 +256,7 @@ export const LoginPage: React.FC = () => {
 
               {/* Primary Action: Continue with Google */}
               <div className="pt-2 space-y-4">
-                {GOOGLE_CLIENT_ID ? (
+                {googleClientId ? (
                   <div className="flex flex-col items-center justify-center min-h-[48px] w-full">
                     <div
                       ref={buttonContainerRef}

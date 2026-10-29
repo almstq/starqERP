@@ -65,8 +65,8 @@ The internal task specifications in `docs/tasks/` contain historical pilot detai
 
 ---
 
-## 5. Sensitive Identity & Contact Data
-Any instances of real personal developer emails, private client contact details, or staging infrastructure endpoints must be scrubbed:
+## 5. Personal Identity & Contact Data
+Real personal developer emails and private client contact details must be scrubbed from source and fixtures. Public OAuth client IDs and Supabase project references remain only where required by deployment configuration, migration tooling, historical evidence, or operational runbooks; these identifiers are not authentication secrets. Local examples and development proxies must not embed account-specific values:
 - Developer personal emails (`founder@example.com`, `engineering@example.com`, `reviewer@example.com`, `ops@example.com`)
 - Real client contact records in `contracts/tenant_import_pipeline.ts` (`customer1@example.com`, `customer2@example.com`)
-- Staging Supabase project references (`wthabguvueewgtabjsdo.supabase.co`) in developer notes (must be replaced with generic `<project-ref>.supabase.co`).
+- `web/.env.example` uses empty values; the Vite development proxy reads `VITE_SUPABASE_URL` from the local environment. `web/vercel.json` retains the deployment's public routing target; replace it only as part of a deployment-aware routing change that preserves production `/api` requests.

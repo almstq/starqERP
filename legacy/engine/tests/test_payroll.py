@@ -76,7 +76,7 @@ def main():
         )
         _assert(err is not None, "empty name")
         row, err = M.create_employee(
-            name="fake@gmail.com", seat="technician", occupancy="CI",
+            name="fixture@example.com", seat="technician", occupancy="CI",
             actor_seat="director", person_id="ali",
         )
         _assert(err is not None, "gmail as name")

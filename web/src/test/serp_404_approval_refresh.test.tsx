@@ -18,7 +18,7 @@ describe("SERP-404: Check Approval Status Real-Time Refresh & Transition", () =>
     const initialApplicantSession: UserSession = {
       person_id: "applicant-1",
       name: "Al Starque",
-      email: "al.starque@gmail.com",
+      email: "founder@example.com",
       seats: [],
       acting_as: "",
       seat_label: "",
