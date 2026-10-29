@@ -1,4 +1,7 @@
-import { JournalEntry } from './journals';
+import { JournalEntry, JournalLine } from './journals';
+import { accountClassForCode, AccountRecord } from './accounts';
+import { assertJournalPostable } from './postingControl';
+import { AccountingPeriod } from './periods';
 
 export type SupportedCurrency = 'MVR' | 'USD' | 'EUR' | 'GBP' | 'SGD' | 'AED';
 
@@ -66,6 +69,9 @@ export function convertToBaseMvr(amount: number, currency: SupportedCurrency, ra
 
 /**
  * Calculates Realized Foreign Exchange Gain/Loss upon settling foreign invoices or bills.
+ * When periods/accounts are supplied, the journal passes through assertJournalPostable()
+ * as actor 'system' before it is returned (1210/2110/4310/6410 are control/system
+ * accounts under the posting-control specification).
  */
 export function calculateRealizedFxGainLoss(params: {
   transactionType: 'AR_COLLECTION' | 'AP_DISBURSEMENT';
@@ -76,6 +82,8 @@ export function calculateRealizedFxGainLoss(params: {
   settlementRate: number;
   settlementDate: string;
   tenantId: string;
+  periods?: AccountingPeriod[];
+  accounts?: AccountRecord[];
 }): FxSettlementResult {
   const {
     transactionType,
@@ -86,6 +94,8 @@ export function calculateRealizedFxGainLoss(params: {
     settlementRate,
     settlementDate,
     tenantId,
+    periods,
+    accounts,
   } = params;
 
   const originalMvr = round2(foreignAmount * originalRate);
@@ -118,19 +128,37 @@ export function calculateRealizedFxGainLoss(params: {
   const absDiff = round2(Math.abs(diffMvr));
 
   // Generate balanced Realized FX Journal Entry
-  const journalLines: any[] = [];
+  const line = (
+    id: string,
+    accountCode: string,
+    accountName: string,
+    debit: number,
+    credit: number,
+    narration: string
+  ): JournalLine => ({
+    id,
+    accountId: `acc-${accountCode}`,
+    accountCode,
+    accountName,
+    accountClass: accountClassForCode(accountCode),
+    debit,
+    credit,
+    narration,
+  });
+
+  const journalLines: JournalLine[] = [];
   if (transactionType === 'AR_COLLECTION') {
     if (isGain) {
       journalLines.push(
-        { id: 'l1', accountCode: '1111', accountName: 'Bank of Maldives (BML) MVR Main', debit: settledMvr, credit: 0, description: `Bank Settlement (${foreignAmount} ${currency} @ ${settlementRate})` },
-        { id: 'l2', accountCode: '1210', accountName: 'Trade Debtors Control Account', debit: 0, credit: originalMvr, description: `AR Invoice Clearing (${foreignAmount} ${currency} @ ${originalRate})` },
-        { id: 'l3', accountCode: '4310', accountName: 'Realized Foreign Exchange Gain', debit: 0, credit: absDiff, description: `FX Gain on ${reference}` }
+        line('l1', '1111', 'Bank of Maldives (BML) MVR Main', settledMvr, 0, `Bank Settlement (${foreignAmount} ${currency} @ ${settlementRate})`),
+        line('l2', '1210', 'Trade Debtors Control Account', 0, originalMvr, `AR Invoice Clearing (${foreignAmount} ${currency} @ ${originalRate})`),
+        line('l3', '4310', 'Realized Foreign Exchange Gain', 0, absDiff, `FX Gain on ${reference}`)
       );
     } else {
       journalLines.push(
-        { id: 'l1', accountCode: '1111', accountName: 'Bank of Maldives (BML) MVR Main', debit: settledMvr, credit: 0, description: `Bank Settlement (${foreignAmount} ${currency} @ ${settlementRate})` },
-        { id: 'l2', accountCode: '6410', accountName: 'Realized Foreign Exchange Loss', debit: absDiff, credit: 0, description: `FX Loss on ${reference}` },
-        { id: 'l3', accountCode: '1210', accountName: 'Trade Debtors Control Account', debit: 0, credit: originalMvr, description: `AR Invoice Clearing (${foreignAmount} ${currency} @ ${originalRate})` }
+        line('l1', '1111', 'Bank of Maldives (BML) MVR Main', settledMvr, 0, `Bank Settlement (${foreignAmount} ${currency} @ ${settlementRate})`),
+        line('l2', '6410', 'Realized Foreign Exchange Loss', absDiff, 0, `FX Loss on ${reference}`),
+        line('l3', '1210', 'Trade Debtors Control Account', 0, originalMvr, `AR Invoice Clearing (${foreignAmount} ${currency} @ ${originalRate})`)
       );
     }
   } else {
@@ -138,16 +166,16 @@ export function calculateRealizedFxGainLoss(params: {
     if (isGain) {
       // Paid less MVR
       journalLines.push(
-        { id: 'l1', accountCode: '2110', accountName: 'Accounts Payable (Trade Creditors)', debit: originalMvr, credit: 0, description: `AP Bill Clearing (${foreignAmount} ${currency} @ ${originalRate})` },
-        { id: 'l2', accountCode: '1111', accountName: 'Bank of Maldives (BML) MVR Main', debit: 0, credit: settledMvr, description: `Bank Settlement (${foreignAmount} ${currency} @ ${settlementRate})` },
-        { id: 'l3', accountCode: '4310', accountName: 'Realized Foreign Exchange Gain', debit: 0, credit: absDiff, description: `FX Gain on ${reference}` }
+        line('l1', '2110', 'Accounts Payable (Trade Creditors)', originalMvr, 0, `AP Bill Clearing (${foreignAmount} ${currency} @ ${originalRate})`),
+        line('l2', '1111', 'Bank of Maldives (BML) MVR Main', 0, settledMvr, `Bank Settlement (${foreignAmount} ${currency} @ ${settlementRate})`),
+        line('l3', '4310', 'Realized Foreign Exchange Gain', 0, absDiff, `FX Gain on ${reference}`)
       );
     } else {
       // Paid more MVR
       journalLines.push(
-        { id: 'l1', accountCode: '2110', accountName: 'Accounts Payable (Trade Creditors)', debit: originalMvr, credit: 0, description: `AP Bill Clearing (${foreignAmount} ${currency} @ ${originalRate})` },
-        { id: 'l2', accountCode: '6410', accountName: 'Realized Foreign Exchange Loss', debit: absDiff, credit: 0, description: `FX Loss on ${reference}` },
-        { id: 'l3', accountCode: '1111', accountName: 'Bank of Maldives (BML) MVR Main', debit: 0, credit: settledMvr, description: `Bank Settlement (${foreignAmount} ${currency} @ ${settlementRate})` }
+        line('l1', '2110', 'Accounts Payable (Trade Creditors)', originalMvr, 0, `AP Bill Clearing (${foreignAmount} ${currency} @ ${originalRate})`),
+        line('l2', '6410', 'Realized Foreign Exchange Loss', absDiff, 0, `FX Loss on ${reference}`),
+        line('l3', '1111', 'Bank of Maldives (BML) MVR Main', 0, settledMvr, `Bank Settlement (${foreignAmount} ${currency} @ ${settlementRate})`)
       );
     }
   }
@@ -171,6 +199,10 @@ export function calculateRealizedFxGainLoss(params: {
     tenantId,
     status: 'POSTED',
   };
+
+  if (periods && accounts) {
+    assertJournalPostable({ entry: journalEntry, periods, accounts, actor: 'system' });
+  }
 
   return {
     settlementId: `FX-SETTLE-${reference}`,

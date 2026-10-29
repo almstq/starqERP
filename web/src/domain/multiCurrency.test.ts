@@ -5,6 +5,9 @@ import {
   calculateUnrealizedRevaluation,
   DEFAULT_MMA_RATES,
 } from './multiCurrency';
+import { AccountingPeriod } from './periods';
+import { AccountRecord } from './accounts';
+import { DEFAULT_CHART_OF_ACCOUNTS } from '../data/defaultChartOfAccounts';
 
 describe('SERP-318: Multi-Currency, MMA Rates & FX Gain/Loss Engine', () => {
   it('converts foreign currencies to base MVR using MMA rates accurately', () => {
@@ -68,5 +71,72 @@ describe('SERP-318: Multi-Currency, MMA Rates & FX Gain/Loss Engine', () => {
     expect(reval.type).toBe('UNREALIZED_GAIN');
     expect(reval.revaluedMvrBalance).toBe(311000); // 20,000 * 15.55
     expect(reval.unrealizedGainLossMvr).toBe(2600); // +2,600 MVR Unrealized Gain
+  });
+
+  describe('SERP-467: posting-control gate on realized FX journals', () => {
+    const openPeriods: AccountingPeriod[] = [
+      {
+        id: 'period-2026-08',
+        periodName: 'August 2026',
+        fiscalYear: 2026,
+        month: 8,
+        startDate: '2026-08-01',
+        endDate: '2026-08-31',
+        status: 'OPEN',
+      },
+    ];
+    const accounts: AccountRecord[] = DEFAULT_CHART_OF_ACCOUNTS;
+
+    it('still posts when the period is open and periods/accounts are supplied', () => {
+      const result = calculateRealizedFxGainLoss({
+        transactionType: 'AR_COLLECTION',
+        reference: 'INV-USD-1002',
+        currency: 'USD',
+        foreignAmount: 10000,
+        originalRate: 15.42,
+        settlementRate: 15.60,
+        settlementDate: '2026-08-25',
+        tenantId: 'tenant-01',
+        periods: openPeriods,
+        accounts,
+      });
+
+      expect(result.journalEntry.isBalanced).toBe(true);
+      expect(result.journalEntry.lines.every((l) => l.accountId && l.accountClass)).toBe(true);
+    });
+
+    it('refuses to post a realized FX journal into a LOCKED or CLOSED period', () => {
+      const closedPeriods: AccountingPeriod[] = [{ ...openPeriods[0], status: 'CLOSED' }];
+
+      expect(() =>
+        calculateRealizedFxGainLoss({
+          transactionType: 'AR_COLLECTION',
+          reference: 'INV-USD-1003',
+          currency: 'USD',
+          foreignAmount: 10000,
+          originalRate: 15.42,
+          settlementRate: 15.60,
+          settlementDate: '2026-08-25',
+          tenantId: 'tenant-01',
+          periods: closedPeriods,
+          accounts,
+        })
+      ).toThrow(/CLOSED/);
+    });
+
+    it('does not gate when periods/accounts are omitted (backward-compatible callers)', () => {
+      const result = calculateRealizedFxGainLoss({
+        transactionType: 'AR_COLLECTION',
+        reference: 'INV-USD-1004',
+        currency: 'USD',
+        foreignAmount: 10000,
+        originalRate: 15.42,
+        settlementRate: 15.60,
+        settlementDate: '2026-08-25',
+        tenantId: 'tenant-01',
+      });
+
+      expect(result.journalEntry.isBalanced).toBe(true);
+    });
   });
 });
