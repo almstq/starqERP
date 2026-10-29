@@ -87,4 +87,4 @@ The correction branch was based on `main` `7c29272decab9330e6d6c2a304b684790f190
 - Branch hygiene: 63 merged, unused GitHub refs removed; 113 remain. No active PR branch, worktree-attached branch ref, unmerged ref, worktree, or commit was removed.
 - `club-ignition-logo.png` remains because Settings UI and demo fixtures reference it; brand neutralization remains a product decision.
 
-After this correction branch merges, replace the provisional base SHA above with the verified merged `main` SHA and record the PR number and CI result here.
+PR #177 is the integration path for these corrections. Its exact-head CI result and the resulting canonical `main` SHA are recorded in the Room closeout; the base SHA above identifies the `main` tree against which this correction pass was reconciled.
