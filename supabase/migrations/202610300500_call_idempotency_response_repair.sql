@@ -1,74 +1,49 @@
--- Repair successful CALL commands whose original handler returned SQL NULL.
--- The existing handler remains the source of mutation behavior; this wrapper
--- only reconstructs and persists its response from the durable event it wrote.
+-- The current CALL handler persists its job but leaves `response` unset.
+-- Inject the canonical response into that branch so both the initial request
+-- and idempotent replay return the same persisted success payload. Apply this
+-- forward-only patch to the installed function definition without copying its
+-- full command implementation into another migration.
 begin;
 
-alter function public.api_garage_command(uuid, uuid, text, uuid, jsonb, uuid)
-  rename to api_garage_command_legacy_20260926;
-
-revoke all on function public.api_garage_command_legacy_20260926(uuid, uuid, text, uuid, jsonb, uuid)
-  from public, anon, authenticated, service_role;
-
-create function public.api_garage_command(
-  target_org uuid,
-  target_person uuid,
-  target_seat text,
-  command_key uuid,
-  command jsonb,
-  request_identifier uuid
-) returns jsonb language plpgsql security definer
-set search_path = public, app_private, extensions, pg_temp as $$
+do $migration$
 declare
-  response jsonb;
-  event_name text := upper(trim(coalesce(command->>'type', command->>'sop', '')));
-begin
-  response := public.api_garage_command_legacy_20260926(
-    target_org, target_person, target_seat, command_key, command, request_identifier
-  );
-
-  if event_name = 'CALL'
-     and (response is null or (response->>'ok' = 'false' and response->>'state' = 'accepted')) then
-    select jsonb_build_object(
+  function_definition text;
+  call_marker constant text := $marker$next_state := 'call';$marker$;
+  call_response constant text := $response$
+next_state := 'call';
+    response := jsonb_build_object(
       'ok', true,
       'state', 'accepted',
       'event', jsonb_build_object(
-        'id', e.id,
-        'type', e.event_type,
-        'job_id', e.job_id,
-        'job_no', j.job_no,
-        'customer_name', j.customer_name,
-        'vehicle_reg', j.vehicle_reg,
-        'phone', j.customer_phone,
-        'to_state', e.to_state,
-        'fields', e.payload
+        'id', event_id,
+        'type', event_name,
+        'job_id', target_job_id,
+        'job_no', target_job_no,
+        'customer_name', c_name,
+        'vehicle_reg', v_reg,
+        'phone', c_phone,
+        'to_state', next_state,
+        'fields', jsonb_build_object(
+          'customer_name', c_name,
+          'vehicle_reg', v_reg,
+          'phone', c_phone
+        )
       )
-    )
-      into response
-      from public.job_events e
-      join public.garage_jobs j
-        on j.organisation_id = e.organisation_id and j.id = e.job_id
-     where e.organisation_id = target_org
-       and e.idempotency_key = command_key
-       and e.event_type = 'CALL'
-     limit 1;
+    );$response$;
+begin
+  select pg_get_functiondef(
+    'public.api_garage_command(uuid, uuid, text, uuid, jsonb, uuid)'::regprocedure
+  ) into function_definition;
 
-    if response is null then
-      raise exception 'call_response_reconstruction_failed';
-    end if;
-
-    update public.idempotency_keys
-       set response_code = 200, response_body = response
-     where organisation_id = target_org and key = command_key;
-
+  if function_definition is null
+     or strpos(function_definition, call_marker) = 0
+     or (length(function_definition) - length(replace(function_definition, call_marker, ''))) <> length(call_marker) then
+    raise exception 'call_response_repair_marker_not_unique';
   end if;
 
-  return response;
+  function_definition := replace(function_definition, call_marker, call_response);
+  execute function_definition;
 end
-$$;
-
-revoke all on function public.api_garage_command(uuid, uuid, text, uuid, jsonb, uuid)
-  from public, anon, authenticated;
-grant execute on function public.api_garage_command(uuid, uuid, text, uuid, jsonb, uuid)
-  to service_role;
+$migration$;
 
 commit;
