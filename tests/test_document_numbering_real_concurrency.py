@@ -31,6 +31,10 @@ except ImportError:
         print("ERROR: psycopg2 or psycopg required for concurrency test", file=sys.stderr)
         sys.exit(1)
 
+ORG_A = "17600000-0000-4000-8000-000000000001"
+PERSON_A = "17600000-0000-4000-8000-000000000101"
+MEMBERSHIP_A = "17600000-0000-4000-8000-000000000201"
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="SERP-176 Document Numbering Real Concurrency Probe")
@@ -58,7 +62,23 @@ def setup_fixtures(args):
     conn.autocommit = True
     cur = conn.cursor()
 
-    org_a = "00000000-0000-4000-8000-000000000001"
+    org_a = ORG_A
+
+    cur.execute(
+        "insert into public.organisations (id, slug, legal_name) values (%s, %s, %s) "
+        "on conflict (id) do nothing",
+        (ORG_A, "serp176-numbering", "SERP-176 Numbering Test"),
+    )
+    cur.execute(
+        "insert into public.persons (id, person_key, display_label) values (%s, %s, %s) "
+        "on conflict (id) do nothing",
+        (PERSON_A, "serp176-numbering", "SERP-176 Test Actor"),
+    )
+    cur.execute(
+        "insert into public.memberships (id, organisation_id, person_id) values (%s, %s, %s) "
+        "on conflict (id) do nothing",
+        (MEMBERSHIP_A, ORG_A, PERSON_A),
+    )
 
     if args.simulate_naive:
         # RED-FIRST SIMULATION: Naive select-then-update without row-locking
@@ -112,9 +132,9 @@ def setup_fixtures(args):
     # Ensure counter seat is granted to person for Tenant A
     cur.execute("""
         insert into public.membership_seats (membership_id, seat_code)
-        values ('00000000-0000-4000-8000-000000000201', 'counter')
+        values (%s, 'counter')
         on conflict (membership_id, seat_code) do nothing;
-    """)
+    """, (MEMBERSHIP_A,))
 
     cur.close()
     conn.close()
@@ -122,7 +142,7 @@ def setup_fixtures(args):
 
 def test_concurrent_allocations(args):
     print("\n--- Test 1: 50 Concurrent Document Number Allocations ---")
-    org_a = "00000000-0000-4000-8000-000000000001"
+    org_a = ORG_A
     num_threads = 50
     allocated_numbers = []
     errors = []
@@ -195,7 +215,7 @@ def test_concurrent_allocations(args):
 
 def test_same_key_concurrent_idempotency(args):
     print("\n--- Test 2: Two Concurrent Same-Key CALL Idempotency Replays ---")
-    org_a = "00000000-0000-4000-8000-000000000001"
+    org_a = ORG_A
     person_id = "00000000-0000-4000-8000-000000000101"
     key_id = "00000000-0000-4000-8000-000000009901"
     req_id = "00000000-0000-4000-8000-000000009902"
@@ -292,7 +312,7 @@ def test_same_key_concurrent_idempotency(args):
 
 def test_idempotency_conflict_burns_zero_numbers(args):
     print("\n--- Test 3: Idempotency Key Conflict Burns Zero Numbers ---")
-    org_a = "00000000-0000-4000-8000-000000000001"
+    org_a = ORG_A
     person_id = "00000000-0000-4000-8000-000000000101"
     key_id = "00000000-0000-4000-8000-000000009901"
     req_id = "00000000-0000-4000-8000-000000009903"

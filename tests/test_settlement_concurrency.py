@@ -52,9 +52,9 @@ def get_connection(args):
 
 
 def run_concurrency_test(args):
-    org_id = "00000000-0000-4000-8000-000000000001"
-    person_id = "00000000-0000-4000-8000-000000000101"
-    cust_id = "00000000-0000-4000-8000-000000000601"
+    org_id = "18100000-0000-4000-8000-000000000001"
+    person_id = "18100000-0000-4000-8000-000000000101"
+    cust_id = "18100000-0000-4000-8000-000000000601"
 
     pay_id = "00000000-0000-4000-8000-000000007001"
     inv_id = "00000000-0000-4000-8000-000000007002"
@@ -63,6 +63,22 @@ def run_concurrency_test(args):
 
     setup_conn = get_connection(args)
     setup_cur = setup_conn.cursor()
+
+    setup_cur.execute(
+        "insert into public.organisations (id, slug, legal_name) values (%s, %s, %s) "
+        "on conflict (id) do nothing",
+        (org_id, "serp181-concurrency", "SERP-181 Concurrency Test"),
+    )
+    setup_cur.execute(
+        "insert into public.persons (id, person_key, display_label) values (%s, %s, %s) "
+        "on conflict (id) do nothing",
+        (person_id, "serp181-concurrency", "SERP-181 Test Actor"),
+    )
+    setup_cur.execute(
+        "insert into public.contacts (id, organisation_id, kind, display_name) values (%s, %s, 'customer', %s) "
+        "on conflict (id) do nothing",
+        (cust_id, org_id, "SERP-181 Test Customer"),
+    )
 
     if args.simulate_unlocked:
         # Red simulation: replace trigger with unlocked version (no FOR UPDATE)

@@ -18,9 +18,9 @@ except ImportError:
         sys.exit(1)
 
 
-ORG_ID = "00000000-0000-4000-8000-000000000001"
-PERSON_ID = "00000000-0000-4000-8000-000000000101"
-MEMBERSHIP_ID = "00000000-0000-4000-8000-000000000201"
+ORG_ID = "18200000-0000-4000-8000-000000000001"
+PERSON_ID = "18200000-0000-4000-8000-000000000101"
+MEMBERSHIP_ID = "18200000-0000-4000-8000-000000000201"
 CONCURRENT_KEY = "00000000-0000-4000-8000-000000008001"
 CANONICAL_KEY = "00000000-0000-4000-8000-000000008002"
 
@@ -57,6 +57,21 @@ def call_command(conn, key: str, raw_command: str, request_id: str):
 def prepare(args):
     conn = connect(args)
     with conn, conn.cursor() as cur:
+        cur.execute(
+            "insert into public.organisations (id, slug, legal_name) values (%s, %s, %s) "
+            "on conflict (id) do nothing",
+            (ORG_ID, "serp182-idempotency", "SERP-182 Idempotency Test"),
+        )
+        cur.execute(
+            "insert into public.persons (id, person_key, display_label) values (%s, %s, %s) "
+            "on conflict (id) do nothing",
+            (PERSON_ID, "serp182-idempotency", "SERP-182 Test Actor"),
+        )
+        cur.execute(
+            "insert into public.memberships (id, organisation_id, person_id) values (%s, %s, %s) "
+            "on conflict (id) do nothing",
+            (MEMBERSHIP_ID, ORG_ID, PERSON_ID),
+        )
         cur.execute(
             "insert into public.membership_seats(membership_id,seat_code) "
             "values (%s,'counter') on conflict do nothing",
