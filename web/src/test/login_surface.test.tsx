@@ -28,10 +28,28 @@ vi.mock('../services/auth', () => ({
 describe('LoginPage Material 3 Real Google Auth Surface', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv('VITE_GOOGLE_CLIENT_ID', 'test-client-id.apps.googleusercontent.com');
   });
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllEnvs();
+  });
+
+  it('requires an environment-provided Google client ID', () => {
+    vi.stubEnv('VITE_GOOGLE_CLIENT_ID', '');
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <AuthProvider>
+            <LoginPage />
+          </AuthProvider>
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/Google OAuth Configuration Required/i)).toBeInTheDocument();
   });
 
   it('renders canonical starqERP brand lockup and company attribution', () => {

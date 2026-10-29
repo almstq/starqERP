@@ -2,7 +2,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import { execSync } from 'child_process';
 
 const envCommit = process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA;
@@ -16,8 +16,10 @@ if (!commitHash) {
   commitHash = 'dev';
 }
 
-export default defineConfig(() => {
+export default defineConfig(({ mode }) => {
   const rootDir = process.cwd();
+  const env = loadEnv(mode, rootDir, '');
+  const supabaseUrl = env.VITE_SUPABASE_URL?.trim().replace(/\/+$/, '');
   return {
     root: rootDir,
     plugins: [react(), tailwindcss()],
@@ -33,9 +35,9 @@ export default defineConfig(() => {
     },
     server: {
       port: 3001,
-      proxy: {
+      proxy: supabaseUrl ? {
         '/api': {
-          target: 'https://wthabguvueewgtabjsdo.supabase.co/functions/v1/starq-api',
+          target: `${supabaseUrl}/functions/v1/starq-api`,
           changeOrigin: true,
           secure: true,
           configure: (proxy) => {
@@ -44,7 +46,7 @@ export default defineConfig(() => {
             });
           },
         },
-      },
+      } : {},
     },
     test: {
       globals: true,

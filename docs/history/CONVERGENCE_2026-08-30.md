@@ -1,3 +1,5 @@
+> Historical reference — not current operating guidance.
+
 # Convergence — 30 August 2026
 
 **Prepared by:** Elder (@claude) · **Scope:** every session, agent and repository in flight

@@ -79,7 +79,7 @@ def main() -> int:
 
     omitted_ci = dict(_person_ci())
     omitted_ci.pop("entities")
-    omitted_ci["email"] = "workshop-future@gmail.com"
+    omitted_ci["email"] = "workshop-future@example.com"
     omitted_ci["person_id"] = "workshop"
     check(
         A.entities_for_person(omitted_ci) == ["club-ignition"],
@@ -204,7 +204,7 @@ def _http_gate() -> None:
         check('class="switch"' not in body, "login must not render the entity switcher")
 
         ci_row = {
-            "email": "ci-http-test@gmail.com",
+            "email": "ci-http-test@example.com",
             "person_id": "ci-http-test",
             "name": "CI HTTP Test",
             "default_seat": "managing_director",
