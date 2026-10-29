@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ContactBulkImportModal } from './ContactBulkImportModal';
+import { ContactBulkImportModal } from '../../components/migration/ContactBulkImportModal';
 import { ERPProvider } from '../../context/ERPContext';
 
 describe('SERP-303: ContactBulkImportModal Component', () => {

@@ -246,7 +246,7 @@ export const ProductBulkImportModal: React.FC<ProductBulkImportModalProps> = ({
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-2xl p-8 text-center cursor-pointer bg-slate-50/50 hover:bg-slate-50 transition-all flex flex-col items-center justify-center space-y-3"
+              className="border-2 border-dashed border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline-variant)] rounded-2xl p-8 text-center cursor-pointer bg-[var(--md-sys-color-surface-container)]/50 hover:bg-[var(--md-sys-color-surface-container)] transition-all flex flex-col items-center justify-center space-y-3"
             >
               <input
                 ref={fileInputRef}
@@ -255,21 +255,21 @@ export const ProductBulkImportModal: React.FC<ProductBulkImportModalProps> = ({
                 className="hidden"
                 onChange={handleFileUpload}
               />
-              <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] flex items-center justify-center">
                 <Upload size={22} />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-800">
+                <p className="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">
                   Click to browse or drag and drop your product catalog CSV
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1">
                   Supports .csv and text formats with SKU, name, kind, prices, and GL accounts
                 </p>
               </div>
             </div>
 
-            <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-100 flex items-start gap-3 text-xs text-blue-900">
-              <FileSpreadsheet size={16} className="text-blue-600 shrink-0 mt-0.5" />
+            <div className="p-3 bg-[var(--md-sys-color-primary-container)]/60 rounded-xl border border-[var(--md-sys-color-primary)] flex items-start gap-3 text-xs text-[var(--md-sys-color-primary)]">
+              <FileSpreadsheet size={16} className="text-[var(--md-sys-color-primary)] shrink-0 mt-0.5" />
               <div>
                 <span className="font-semibold">Note: </span>
                 This import targets existing schema columns (SKU, name, kind, price, cost). Barcodes, custom UoM, and reorder points are tracked separately per SERP-304 narrowing.
@@ -282,25 +282,25 @@ export const ProductBulkImportModal: React.FC<ProductBulkImportModalProps> = ({
         {step === 'preview' && (
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <div className="text-[11px] font-medium text-slate-500">Total Rows Found</div>
-                <div className="text-lg font-bold text-slate-800">{totalParsedRows}</div>
+              <div className="p-3 bg-[var(--md-sys-color-surface-container)] rounded-xl border border-[var(--md-sys-color-outline-variant)]">
+                <div className="text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)]">Total Rows Found</div>
+                <div className="text-lg font-bold text-[var(--md-sys-color-on-surface)]">{totalParsedRows}</div>
               </div>
-              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
-                <div className="text-[11px] font-medium text-emerald-700">Valid Products</div>
-                <div className="text-lg font-bold text-emerald-800">{validRecords.length}</div>
+              <div className="p-3 bg-[var(--positive-subtle)] rounded-xl border border-[var(--positive)]">
+                <div className="text-[11px] font-medium text-[var(--positive)]">Valid Products</div>
+                <div className="text-lg font-bold text-[var(--positive)]">{validRecords.length}</div>
               </div>
-              <div className={`p-3 rounded-xl border ${validationErrors.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
-                <div className={`text-[11px] font-medium ${validationErrors.length > 0 ? 'text-amber-700' : 'text-slate-500'}`}>Validation Issues</div>
-                <div className={`text-lg font-bold ${validationErrors.length > 0 ? 'text-amber-800' : 'text-slate-800'}`}>{validationErrors.length}</div>
+              <div className={`p-3 rounded-xl border ${validationErrors.length > 0 ? 'bg-[var(--warning-subtle)] border-[var(--warning)]' : 'bg-[var(--md-sys-color-surface-container)] border-[var(--md-sys-color-outline-variant)]'}`}>
+                <div className={`text-[11px] font-medium ${validationErrors.length > 0 ? 'text-[var(--warning)]' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}>Validation Issues</div>
+                <div className={`text-lg font-bold ${validationErrors.length > 0 ? 'text-[var(--warning)]' : 'text-[var(--md-sys-color-on-surface)]'}`}>{validationErrors.length}</div>
               </div>
             </div>
 
             {validationErrors.length > 0 && (
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+              <div className="p-3 bg-[var(--md-sys-color-surface-container)] rounded-xl border border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-xs">
                 <div>
-                  <span className="font-semibold text-slate-800">Handling of invalid rows:</span>
-                  <p className="text-slate-500 text-[11px]">Choose whether to import valid products or abort entirely.</p>
+                  <span className="font-semibold text-[var(--md-sys-color-on-surface)]">Handling of invalid rows:</span>
+                  <p className="text-[var(--md-sys-color-on-surface-variant)] text-[11px]">Choose whether to import valid products or abort entirely.</p>
                 </div>
                 <div className="flex gap-2">
                   <label className="flex items-center gap-1.5 cursor-pointer">
@@ -309,7 +309,7 @@ export const ProductBulkImportModal: React.FC<ProductBulkImportModalProps> = ({
                       name="productImportMode"
                       checked={importMode === 'skip_invalid'}
                       onChange={() => setImportMode('skip_invalid')}
-                      className="text-blue-600"
+                      className="text-[var(--md-sys-color-primary)]"
                     />
                     <span>Skip invalid rows</span>
                   </label>
@@ -319,7 +319,7 @@ export const ProductBulkImportModal: React.FC<ProductBulkImportModalProps> = ({
                       name="productImportMode"
                       checked={importMode === 'abort_on_error'}
                       onChange={() => setImportMode('abort_on_error')}
-                      className="text-blue-600"
+                      className="text-[var(--md-sys-color-primary)]"
                     />
                     <span>Abort on any error</span>
                   </label>
@@ -328,19 +328,19 @@ export const ProductBulkImportModal: React.FC<ProductBulkImportModalProps> = ({
             )}
 
             {validationErrors.length > 0 && (
-              <div className="border border-amber-200 rounded-xl overflow-hidden bg-amber-50/30">
-                <div className="px-3 py-2 bg-amber-100/60 border-b border-amber-200 flex items-center gap-2 text-xs font-semibold text-amber-900">
-                  <AlertCircle size={14} className="text-amber-700" />
+              <div className="border border-[var(--warning)] rounded-xl overflow-hidden bg-[var(--warning-subtle)]/30">
+                <div className="px-3 py-2 bg-[var(--warning-subtle)]/60 border-b border-[var(--warning)] flex items-center gap-2 text-xs font-semibold text-[var(--warning)]">
+                  <AlertCircle size={14} className="text-[var(--warning)]" />
                   Validation Issues ({validationErrors.length})
                 </div>
-                <div className="max-h-40 overflow-y-auto divide-y divide-amber-100 text-xs">
+                <div className="max-h-40 overflow-y-auto divide-y divide-[var(--warning)] text-xs">
                   {validationErrors.map((err, i) => (
                     <div key={i} className="px-3 py-2 flex items-start justify-between gap-2">
                       <div>
-                        <span className="font-mono font-semibold text-amber-900">Row {err.row}</span>: {err.reason}
+                        <span className="font-mono font-semibold text-[var(--warning)]">Row {err.row}</span>: {err.reason}
                       </div>
                       {err.value && (
-                        <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-amber-200 text-slate-700">
+                        <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-[var(--warning)] text-[var(--md-sys-color-on-surface)]">
                           {err.value}
                         </span>
                       )}
@@ -351,23 +351,23 @@ export const ProductBulkImportModal: React.FC<ProductBulkImportModalProps> = ({
             )}
 
             {validRecords.length > 0 && (
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <div className="px-3 py-2 bg-slate-100/70 border-b border-slate-200 flex items-center justify-between text-xs font-semibold text-slate-800">
+              <div className="border border-[var(--md-sys-color-outline-variant)] rounded-xl overflow-hidden">
+                <div className="px-3 py-2 bg-[var(--md-sys-color-surface-container)]/70 border-b border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-xs font-semibold text-[var(--md-sys-color-on-surface)]">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 size={14} className="text-emerald-600" />
+                    <CheckCircle2 size={14} className="text-[var(--positive)]" />
                     Valid Products Ready to Import ({validRecords.length})
                   </div>
-                  <span className="text-[11px] font-normal text-slate-500">Previewing first 5 items</span>
+                  <span className="text-[11px] font-normal text-[var(--md-sys-color-on-surface-variant)]">Previewing first 5 items</span>
                 </div>
-                <div className="max-h-52 overflow-y-auto divide-y divide-slate-100 text-xs">
+                <div className="max-h-52 overflow-y-auto divide-y divide-[var(--md-sys-color-outline-variant)] text-xs">
                   {validRecords.slice(0, 5).map((rec, i) => (
                     <div key={i} className="px-3 py-2.5 flex items-center justify-between">
                       <div>
-                        <div className="font-semibold text-slate-800">
-                          <span className="font-mono text-blue-600 mr-2">{rec.sku}</span>
+                        <div className="font-semibold text-[var(--md-sys-color-on-surface)]">
+                          <span className="font-mono text-[var(--md-sys-color-primary)] mr-2">{rec.sku}</span>
                           {rec.name}
                         </div>
-                        <div className="text-[11px] text-slate-500 flex items-center gap-3 mt-0.5">
+                        <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] flex items-center gap-3 mt-0.5">
                           <span>Kind: {rec.kind}</span>
                           <span>Price: MVR {rec.sellingPrice.toFixed(2)}</span>
                           <span>Cost: MVR {rec.costPrice.toFixed(2)}</span>
@@ -385,10 +385,10 @@ export const ProductBulkImportModal: React.FC<ProductBulkImportModalProps> = ({
         {/* STEP 3: EXECUTING */}
         {step === 'executing' && (
           <div className="py-12 flex flex-col items-center justify-center space-y-4 text-center">
-            <RefreshCw size={36} className="text-blue-600 animate-spin" />
+            <RefreshCw size={36} className="text-[var(--md-sys-color-primary)] animate-spin" />
             <div>
-              <p className="text-base font-semibold text-slate-800">Importing Product Catalog...</p>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-base font-semibold text-[var(--md-sys-color-on-surface)]">Importing Product Catalog...</p>
+              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1">
                 Populating products and product prices into the tenant catalog.
               </p>
             </div>
@@ -398,45 +398,45 @@ export const ProductBulkImportModal: React.FC<ProductBulkImportModalProps> = ({
         {/* STEP 4: REPORT */}
         {step === 'report' && summaryReport && (
           <div className="space-y-4">
-            <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-start gap-3">
-              <CheckCircle2 size={24} className="text-emerald-600 shrink-0 mt-0.5" />
+            <div className="p-4 bg-[var(--positive-subtle)] rounded-2xl border border-[var(--positive)] flex items-start gap-3">
+              <CheckCircle2 size={24} className="text-[var(--positive)] shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-sm font-bold text-emerald-950">Product Catalog Import Processed</h4>
-                <p className="text-xs text-emerald-800 mt-1">
+                <h4 className="text-sm font-bold text-[var(--positive)]">Product Catalog Import Processed</h4>
+                <p className="text-xs text-[var(--positive)] mt-1">
                   SKU master data has been processed into {currentTenant?.name || 'the organisation workspace'}.
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
-                <div className="text-[11px] font-medium text-slate-500">Total Processed</div>
-                <div className="text-xl font-bold text-slate-800">{summaryReport.totalProcessed}</div>
+              <div className="p-3 bg-[var(--md-sys-color-surface-container)] rounded-xl border border-[var(--md-sys-color-outline-variant)] text-center">
+                <div className="text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)]">Total Processed</div>
+                <div className="text-xl font-bold text-[var(--md-sys-color-on-surface)]">{summaryReport.totalProcessed}</div>
               </div>
-              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-center">
-                <div className="text-[11px] font-medium text-emerald-700">Successfully Imported</div>
-                <div className="text-xl font-bold text-emerald-800">{summaryReport.importedCount}</div>
+              <div className="p-3 bg-[var(--positive-subtle)] rounded-xl border border-[var(--positive)] text-center">
+                <div className="text-[11px] font-medium text-[var(--positive)]">Successfully Imported</div>
+                <div className="text-xl font-bold text-[var(--positive)]">{summaryReport.importedCount}</div>
               </div>
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-center">
-                <div className="text-[11px] font-medium text-amber-700">Skipped Records</div>
-                <div className="text-xl font-bold text-amber-800">{summaryReport.skippedCount}</div>
+              <div className="p-3 bg-[var(--warning-subtle)] rounded-xl border border-[var(--warning)] text-center">
+                <div className="text-[11px] font-medium text-[var(--warning)]">Skipped Records</div>
+                <div className="text-xl font-bold text-[var(--warning)]">{summaryReport.skippedCount}</div>
               </div>
             </div>
 
             {summaryReport.errors.length > 0 && (
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <div className="px-3 py-2 bg-slate-100/70 border-b border-slate-200 text-xs font-semibold text-slate-800 flex items-center justify-between">
+              <div className="border border-[var(--md-sys-color-outline-variant)] rounded-xl overflow-hidden">
+                <div className="px-3 py-2 bg-[var(--md-sys-color-surface-container)]/70 border-b border-[var(--md-sys-color-outline-variant)] text-xs font-semibold text-[var(--md-sys-color-on-surface)] flex items-center justify-between">
                   <span>Report of Skipped Products & Error Reasons</span>
                   <Badge variant="warning">{summaryReport.errors.length} items</Badge>
                 </div>
-                <div className="max-h-44 overflow-y-auto divide-y divide-slate-100 text-xs">
+                <div className="max-h-44 overflow-y-auto divide-y divide-[var(--md-sys-color-outline-variant)] text-xs">
                   {summaryReport.errors.map((err, i) => (
                     <div key={i} className="px-3 py-2 flex items-start justify-between gap-2">
                       <div>
-                        <span className="font-mono font-semibold text-slate-800">Row {err.row}</span> ({err.field}): {err.reason}
+                        <span className="font-mono font-semibold text-[var(--md-sys-color-on-surface)]">Row {err.row}</span> ({err.field}): {err.reason}
                       </div>
                       {err.value && (
-                        <span className="text-[10px] font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">
+                        <span className="text-[10px] font-mono bg-[var(--md-sys-color-surface-container)] px-1.5 py-0.5 rounded text-[var(--md-sys-color-on-surface-variant)]">
                           {err.value}
                         </span>
                       )}

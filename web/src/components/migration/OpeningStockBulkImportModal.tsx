@@ -254,7 +254,7 @@ export const OpeningStockBulkImportModal: React.FC<OpeningStockBulkImportModalPr
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-2xl p-8 text-center cursor-pointer bg-slate-50/50 hover:bg-slate-50 transition-all flex flex-col items-center justify-center space-y-3"
+              className="border-2 border-dashed border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline-variant)] rounded-2xl p-8 text-center cursor-pointer bg-[var(--md-sys-color-surface-container)]/50 hover:bg-[var(--md-sys-color-surface-container)] transition-all flex flex-col items-center justify-center space-y-3"
             >
               <input
                 ref={fileInputRef}
@@ -263,21 +263,21 @@ export const OpeningStockBulkImportModal: React.FC<OpeningStockBulkImportModalPr
                 className="hidden"
                 onChange={handleFileUpload}
               />
-              <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] flex items-center justify-center">
                 <Upload size={22} />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-800">
+                <p className="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">
                   Click to browse or drag and drop your opening stock count CSV
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1">
                   Columns: SKU, Location/Warehouse Code, Quantity on Hand, Unit Cost (MVR)
                 </p>
               </div>
             </div>
 
-            <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-100 flex items-start gap-3 text-xs text-blue-900">
-              <FileSpreadsheet size={16} className="text-blue-600 shrink-0 mt-0.5" />
+            <div className="p-3 bg-[var(--md-sys-color-primary-container)]/60 rounded-xl border border-[var(--md-sys-color-primary)] flex items-start gap-3 text-xs text-[var(--md-sys-color-primary)]">
+              <FileSpreadsheet size={16} className="text-[var(--md-sys-color-primary)] shrink-0 mt-0.5" />
               <div>
                 <span className="font-semibold">Double-Entry Valuation: </span>
                 Importing opening stock automatically generates <span className="font-mono">movement_type = 'opening'</span> records and posts an asset valuation journal entry (DR 1310 Merchandise Inventory, CR 3100 Owner Capital).
@@ -290,26 +290,26 @@ export const OpeningStockBulkImportModal: React.FC<OpeningStockBulkImportModalPr
         {step === 'preview' && (
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <div className="text-[11px] font-medium text-slate-500">Valid Stock Lines</div>
-                <div className="text-lg font-bold text-slate-800">{validRecords.length} / {totalParsedRows}</div>
+              <div className="p-3 bg-[var(--md-sys-color-surface-container)] rounded-xl border border-[var(--md-sys-color-outline-variant)]">
+                <div className="text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)]">Valid Stock Lines</div>
+                <div className="text-lg font-bold text-[var(--md-sys-color-on-surface)]">{validRecords.length} / {totalParsedRows}</div>
               </div>
-              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
-                <div className="text-[11px] font-medium text-emerald-700">Total Asset Valuation</div>
-                <div className="text-lg font-bold text-emerald-800">{formatMVR(totalValuationMvr)}</div>
+              <div className="p-3 bg-[var(--positive-subtle)] rounded-xl border border-[var(--positive)]">
+                <div className="text-[11px] font-medium text-[var(--positive)]">Total Asset Valuation</div>
+                <div className="text-lg font-bold text-[var(--positive)]">{formatMVR(totalValuationMvr)}</div>
               </div>
-              <div className={`p-3 rounded-xl border ${validationErrors.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
-                <div className={`text-[11px] font-medium ${validationErrors.length > 0 ? 'text-amber-700' : 'text-slate-500'}`}>Validation Issues</div>
-                <div className={`text-lg font-bold ${validationErrors.length > 0 ? 'text-amber-800' : 'text-slate-800'}`}>{validationErrors.length}</div>
+              <div className={`p-3 rounded-xl border ${validationErrors.length > 0 ? 'bg-[var(--warning-subtle)] border-[var(--warning)]' : 'bg-[var(--md-sys-color-surface-container)] border-[var(--md-sys-color-outline-variant)]'}`}>
+                <div className={`text-[11px] font-medium ${validationErrors.length > 0 ? 'text-[var(--warning)]' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}>Validation Issues</div>
+                <div className={`text-lg font-bold ${validationErrors.length > 0 ? 'text-[var(--warning)]' : 'text-[var(--md-sys-color-on-surface)]'}`}>{validationErrors.length}</div>
               </div>
             </div>
 
             {/* Ingestion Mode */}
             {validationErrors.length > 0 && (
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+              <div className="p-3 bg-[var(--md-sys-color-surface-container)] rounded-xl border border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-xs">
                 <div>
-                  <span className="font-semibold text-slate-800">Handling of invalid rows:</span>
-                  <p className="text-slate-500 text-[11px]">Choose whether to import valid stock or abort entirely.</p>
+                  <span className="font-semibold text-[var(--md-sys-color-on-surface)]">Handling of invalid rows:</span>
+                  <p className="text-[var(--md-sys-color-on-surface-variant)] text-[11px]">Choose whether to import valid stock or abort entirely.</p>
                 </div>
                 <div className="flex gap-2">
                   <label className="flex items-center gap-1.5 cursor-pointer">
@@ -318,7 +318,7 @@ export const OpeningStockBulkImportModal: React.FC<OpeningStockBulkImportModalPr
                       name="openingStockMode"
                       checked={importMode === 'skip_invalid'}
                       onChange={() => setImportMode('skip_invalid')}
-                      className="text-blue-600"
+                      className="text-[var(--md-sys-color-primary)]"
                     />
                     <span>Skip invalid rows</span>
                   </label>
@@ -328,7 +328,7 @@ export const OpeningStockBulkImportModal: React.FC<OpeningStockBulkImportModalPr
                       name="openingStockMode"
                       checked={importMode === 'abort_on_error'}
                       onChange={() => setImportMode('abort_on_error')}
-                      className="text-blue-600"
+                      className="text-[var(--md-sys-color-primary)]"
                     />
                     <span>Abort on any error</span>
                   </label>
@@ -338,19 +338,19 @@ export const OpeningStockBulkImportModal: React.FC<OpeningStockBulkImportModalPr
 
             {/* Errors */}
             {validationErrors.length > 0 && (
-              <div className="border border-amber-200 rounded-xl overflow-hidden bg-amber-50/30">
-                <div className="px-3 py-2 bg-amber-100/60 border-b border-amber-200 flex items-center gap-2 text-xs font-semibold text-amber-900">
-                  <AlertCircle size={14} className="text-amber-700" />
+              <div className="border border-[var(--warning)] rounded-xl overflow-hidden bg-[var(--warning-subtle)]/30">
+                <div className="px-3 py-2 bg-[var(--warning-subtle)]/60 border-b border-[var(--warning)] flex items-center gap-2 text-xs font-semibold text-[var(--warning)]">
+                  <AlertCircle size={14} className="text-[var(--warning)]" />
                   Validation Issues ({validationErrors.length})
                 </div>
-                <div className="max-h-40 overflow-y-auto divide-y divide-amber-100 text-xs">
+                <div className="max-h-40 overflow-y-auto divide-y divide-[var(--warning)] text-xs">
                   {validationErrors.map((err, i) => (
                     <div key={i} className="px-3 py-2 flex items-start justify-between gap-2">
                       <div>
-                        <span className="font-mono font-semibold text-amber-900">Row {err.row}</span> ({err.field}): {err.reason}
+                        <span className="font-mono font-semibold text-[var(--warning)]">Row {err.row}</span> ({err.field}): {err.reason}
                       </div>
                       {err.value && (
-                        <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-amber-200 text-slate-700">
+                        <span className="text-[10px] font-mono bg-white px-1.5 py-0.5 rounded border border-[var(--warning)] text-[var(--md-sys-color-on-surface)]">
                           {err.value}
                         </span>
                       )}
@@ -362,26 +362,26 @@ export const OpeningStockBulkImportModal: React.FC<OpeningStockBulkImportModalPr
 
             {/* Valid Lines Preview */}
             {validRecords.length > 0 && (
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <div className="px-3 py-2 bg-slate-100/70 border-b border-slate-200 flex items-center justify-between text-xs font-semibold text-slate-800">
+              <div className="border border-[var(--md-sys-color-outline-variant)] rounded-xl overflow-hidden">
+                <div className="px-3 py-2 bg-[var(--md-sys-color-surface-container)]/70 border-b border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-xs font-semibold text-[var(--md-sys-color-on-surface)]">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 size={14} className="text-emerald-600" />
+                    <CheckCircle2 size={14} className="text-[var(--positive)]" />
                     Valid Opening Stock Lines ({validRecords.length})
                   </div>
-                  <span className="text-[11px] font-normal text-slate-500">Previewing first 5 lines</span>
+                  <span className="text-[11px] font-normal text-[var(--md-sys-color-on-surface-variant)]">Previewing first 5 lines</span>
                 </div>
-                <div className="max-h-52 overflow-y-auto divide-y divide-slate-100 text-xs">
+                <div className="max-h-52 overflow-y-auto divide-y divide-[var(--md-sys-color-outline-variant)] text-xs">
                   {validRecords.slice(0, 5).map((rec, i) => (
                     <div key={i} className="px-3 py-2.5 flex items-center justify-between">
                       <div>
-                        <div className="font-semibold text-slate-800">
-                          <span className="font-mono text-blue-600 mr-2">{rec.sku}</span>
-                          <span className="text-slate-500 text-xs">@ {rec.locationCode}</span>
+                        <div className="font-semibold text-[var(--md-sys-color-on-surface)]">
+                          <span className="font-mono text-[var(--md-sys-color-primary)] mr-2">{rec.sku}</span>
+                          <span className="text-[var(--md-sys-color-on-surface-variant)] text-xs">@ {rec.locationCode}</span>
                         </div>
-                        <div className="text-[11px] text-slate-500 flex items-center gap-3 mt-0.5">
+                        <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] flex items-center gap-3 mt-0.5">
                           <span>Qty: {rec.quantity}</span>
                           <span>Unit Cost: {formatMVR(rec.unitCost)}</span>
-                          <span className="font-semibold text-slate-700">Valuation: {formatMVR(rec.totalValuation)}</span>
+                          <span className="font-semibold text-[var(--md-sys-color-on-surface)]">Valuation: {formatMVR(rec.totalValuation)}</span>
                         </div>
                       </div>
                       <Badge variant="positive">Verified</Badge>
@@ -396,10 +396,10 @@ export const OpeningStockBulkImportModal: React.FC<OpeningStockBulkImportModalPr
         {/* STEP 3: EXECUTING */}
         {step === 'executing' && (
           <div className="py-12 flex flex-col items-center justify-center space-y-4 text-center">
-            <RefreshCw size={36} className="text-blue-600 animate-spin" />
+            <RefreshCw size={36} className="text-[var(--md-sys-color-primary)] animate-spin" />
             <div>
-              <p className="text-base font-semibold text-slate-800">Recording Opening Stock & Posting Valuation...</p>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-base font-semibold text-[var(--md-sys-color-on-surface)]">Recording Opening Stock & Posting Valuation...</p>
+              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1">
                 Creating stock movements and asserting asset valuation journal entry.
               </p>
             </div>
@@ -409,28 +409,28 @@ export const OpeningStockBulkImportModal: React.FC<OpeningStockBulkImportModalPr
         {/* STEP 4: REPORT */}
         {step === 'report' && summaryReport && (
           <div className="space-y-4">
-            <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-start gap-3">
-              <CheckCircle2 size={24} className="text-emerald-600 shrink-0 mt-0.5" />
+            <div className="p-4 bg-[var(--positive-subtle)] rounded-2xl border border-[var(--positive)] flex items-start gap-3">
+              <CheckCircle2 size={24} className="text-[var(--positive)] shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-sm font-bold text-emerald-950">Opening Stock Successfully Recorded</h4>
-                <p className="text-xs text-emerald-800 mt-1">
+                <h4 className="text-sm font-bold text-[var(--positive)]">Opening Stock Successfully Recorded</h4>
+                <p className="text-xs text-[var(--positive)] mt-1">
                   Opening stock movements created and asset valuation journal posted into {currentTenant?.name || 'the organisation ledger'}.
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
-                <div className="text-[11px] font-medium text-slate-500">Stock Lines Imported</div>
-                <div className="text-xl font-bold text-slate-800">{summaryReport.importedCount}</div>
+              <div className="p-3 bg-[var(--md-sys-color-surface-container)] rounded-xl border border-[var(--md-sys-color-outline-variant)] text-center">
+                <div className="text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)]">Stock Lines Imported</div>
+                <div className="text-xl font-bold text-[var(--md-sys-color-on-surface)]">{summaryReport.importedCount}</div>
               </div>
-              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-center">
-                <div className="text-[11px] font-medium text-emerald-700">Asset Valuation</div>
-                <div className="text-xl font-bold text-emerald-800">{formatMVR(summaryReport.totalValuationMvr)}</div>
+              <div className="p-3 bg-[var(--positive-subtle)] rounded-xl border border-[var(--positive)] text-center">
+                <div className="text-[11px] font-medium text-[var(--positive)]">Asset Valuation</div>
+                <div className="text-xl font-bold text-[var(--positive)]">{formatMVR(summaryReport.totalValuationMvr)}</div>
               </div>
-              <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 text-center">
-                <div className="text-[11px] font-medium text-blue-700">Valuation Journal</div>
-                <div className="text-xs font-mono font-bold text-blue-900 mt-1">
+              <div className="p-3 bg-[var(--md-sys-color-primary-container)] rounded-xl border border-[var(--md-sys-color-primary)] text-center">
+                <div className="text-[11px] font-medium text-[var(--md-sys-color-primary)]">Valuation Journal</div>
+                <div className="text-xs font-mono font-bold text-[var(--md-sys-color-primary)] mt-1">
                   {summaryReport.valuationJournal?.entryNumber || 'JE-POSTED'}
                 </div>
               </div>
@@ -438,23 +438,23 @@ export const OpeningStockBulkImportModal: React.FC<OpeningStockBulkImportModalPr
 
             {/* Valuation Journal Details */}
             {summaryReport.valuationJournal && (
-              <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
-                <div className="px-3 py-2 bg-slate-100/70 border-b border-slate-200 text-xs font-semibold text-slate-800 flex items-center justify-between">
+              <div className="border border-[var(--md-sys-color-outline-variant)] rounded-xl overflow-hidden bg-[var(--md-sys-color-surface-container)]/50">
+                <div className="px-3 py-2 bg-[var(--md-sys-color-surface-container)]/70 border-b border-[var(--md-sys-color-outline-variant)] text-xs font-semibold text-[var(--md-sys-color-on-surface)] flex items-center justify-between">
                   <span>General Ledger Valuation Postings</span>
                   <Badge variant="accent">Double-Entry Balance</Badge>
                 </div>
-                <div className="divide-y divide-slate-100 text-xs">
+                <div className="divide-y divide-[var(--md-sys-color-outline-variant)] text-xs">
                   {summaryReport.valuationJournal.lines.map((l, i) => (
                     <div key={i} className="px-3 py-2 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-slate-800">{l.accountCode}</span>
-                        <span className="text-slate-600">{l.accountName}</span>
+                        <span className="font-mono font-bold text-[var(--md-sys-color-on-surface)]">{l.accountCode}</span>
+                        <span className="text-[var(--md-sys-color-on-surface-variant)]">{l.accountName}</span>
                       </div>
                       <div className="font-mono font-medium">
                         {l.debit > 0 ? (
-                          <span className="text-emerald-700">DR {formatMVR(l.debit)}</span>
+                          <span className="text-[var(--positive)]">DR {formatMVR(l.debit)}</span>
                         ) : (
-                          <span className="text-blue-700">CR {formatMVR(l.credit)}</span>
+                          <span className="text-[var(--md-sys-color-primary)]">CR {formatMVR(l.credit)}</span>
                         )}
                       </div>
                     </div>

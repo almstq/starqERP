@@ -263,7 +263,7 @@ export const OpeningTrialBalanceWizard: React.FC<OpeningTrialBalanceWizardProps>
         {step === 'upload' && (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <label className="text-xs font-semibold text-slate-600">Go-Live Date</label>
+              <label className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)]">Go-Live Date</label>
               <input
                 type="date"
                 value={asOfDate}
@@ -275,19 +275,19 @@ export const OpeningTrialBalanceWizard: React.FC<OpeningTrialBalanceWizardProps>
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-2xl p-8 text-center cursor-pointer bg-slate-50/50 hover:bg-slate-50 transition-all flex flex-col items-center justify-center space-y-3"
+              className="border-2 border-dashed border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline-variant)] rounded-2xl p-8 text-center cursor-pointer bg-[var(--md-sys-color-surface-container)]/50 hover:bg-[var(--md-sys-color-surface-container)] transition-all flex flex-col items-center justify-center space-y-3"
             >
               <input ref={fileInputRef} type="file" accept=".csv,.txt,.tsv" className="hidden" onChange={handleFileUpload} />
-              <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] flex items-center justify-center">
                 <Upload size={22} />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-800">Click to browse or drag and drop your opening balances CSV</p>
-                <p className="text-xs text-slate-500 mt-1">account_code, debit, credit — one row per chart-of-accounts account</p>
+                <p className="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">Click to browse or drag and drop your opening balances CSV</p>
+                <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1">account_code, debit, credit — one row per chart-of-accounts account</p>
               </div>
             </div>
-            <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-100 flex items-start gap-3 text-xs text-blue-900">
-              <FileSpreadsheet size={16} className="text-blue-600 shrink-0 mt-0.5" />
+            <div className="p-3 bg-[var(--md-sys-color-primary-container)]/60 rounded-xl border border-[var(--md-sys-color-primary)] flex items-start gap-3 text-xs text-[var(--md-sys-color-primary)]">
+              <FileSpreadsheet size={16} className="text-[var(--md-sys-color-primary)] shrink-0 mt-0.5" />
               <div>
                 <span className="font-semibold">Note: </span>
                 Debits and credits across all lines must sum exactly. One immutable Opening Balance journal entry is posted.
@@ -313,7 +313,7 @@ export const OpeningTrialBalanceWizard: React.FC<OpeningTrialBalanceWizardProps>
             {(parseErrors.length > 0 || buildResult.errors.length > 0) && (
               <div className="space-y-1">
                 {[...parseErrors, ...buildResult.errors].map((e, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs text-red-700">
+                  <div key={i} className="flex items-start gap-2 text-xs text-[var(--md-sys-color-error)]">
                     <AlertCircle size={14} className="shrink-0 mt-0.5" />
                     <span>{e}</span>
                   </div>
@@ -324,7 +324,7 @@ export const OpeningTrialBalanceWizard: React.FC<OpeningTrialBalanceWizardProps>
             {parsedLines.length > 0 && (
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="text-left text-slate-500">
+                  <tr className="text-left text-[var(--md-sys-color-on-surface-variant)]">
                     <th className="py-1">Account</th>
                     <th className="py-1 text-right">Debit</th>
                     <th className="py-1 text-right">Credit</th>

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { OpeningTrialBalanceWizard } from './OpeningTrialBalanceWizard';
+import { OpeningTrialBalanceWizard } from '../../components/migration/OpeningTrialBalanceWizard';
 import { ERPProvider } from '../../context/ERPContext';
 
 describe('SERP-306: OpeningTrialBalanceWizard Component', () => {
