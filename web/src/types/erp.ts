@@ -432,7 +432,7 @@ export type IndustryType =
  * above the turnover threshold. Until `registered` is set from a verified
  * source, no GST figure, rate, TIN or filing status may be shown.
  */
-export type GstRegistrationStatus = 'not_registered' | 'registered';
+export type GstRegistrationStatus = 'not_registered' | 'registered' | 'pending' | 'suspended' | 'cancelled';
 
 export interface OrganisationTenant {
   id: string;
@@ -446,7 +446,7 @@ export interface OrganisationTenant {
   currencySymbol: string;
   /** MIRA TIN. Empty until registration is verified — never a placeholder. */
   tinNumber: string;
-  gstStatus: GstRegistrationStatus;
+  gstStatus?: GstRegistrationStatus | 'unknown';
   /** General GST is 8%. Tourism GST is 17% from 1 July 2025 (DEC-073). */
   gstRate: number;
   financialYearStart: string; // e.g. "01-01" (Jan 1)
@@ -476,6 +476,9 @@ export interface OrganisationBook {
   isDefault?: boolean;
 }
 
+export type ProductTaxClassification = 'standard_rated' | 'zero_rated' | 'exempt';
+export type OutletTaxRegime = 'gst_general' | 'gst_tourism';
+
 export interface Outlet {
   id: string;
   tenantId: string;
@@ -486,6 +489,7 @@ export interface Outlet {
   address?: string;
   phone?: string;
   isPrimary?: boolean;
+  taxRegime?: OutletTaxRegime;
 }
 
 export interface ModuleEntitlement {

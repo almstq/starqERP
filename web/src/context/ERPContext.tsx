@@ -23,7 +23,8 @@ import {
   AuditLogEntry,
   PermissionModule,
   PermissionAction,
-  PaymentMethod
+  PaymentMethod,
+  GstRegistrationStatus,
 } from '../types/erp';
 // SERP-288 — FOURTEEN demo datasets used to be imported here and NONE of them
 // was referenced. Every transactional state below already initialises to [], so
@@ -50,7 +51,7 @@ import {
   roundToTwoDecimals,
   validatePriceList,
 } from '../domain/priceLists';
-import { dispatchCommand, apiGet, ApiError } from '../services/apiGateway';
+import { dispatchCommand, apiGet, apiPost, ApiError } from '../services/apiGateway';
 import { useAuth } from './AuthContext';
 import { getArchetype, ArchetypeDefinition, ArchetypeTerminology, ArchetypeId, ARCHETYPES } from '../domain/archetypes';
 import { switchContext as apiSwitchContext, fetchCurrentUser } from '../services/auth';
@@ -91,6 +92,8 @@ export interface ERPContextType {
   // Multi-Tenant & Multi-Book Context State
   activePlane: 'platform' | 'tenant';
   currentTenant: OrganisationTenant;
+  tenantHydrated: boolean;
+  tenantIsLive: boolean;
   currentBookId?: string;
   currentBook?: import('../types/erp').OrganisationBook;
   currentArchetype: ArchetypeDefinition;
@@ -100,7 +103,7 @@ export interface ERPContextType {
   switchBook?: (bookId: string) => void;
   switchActiveContext: (context: { plane: 'platform' | 'tenant'; tenantId?: string; bookId?: string }) => void;
   createTenant: (tenantData: Omit<OrganisationTenant, 'id' | 'createdAt'>) => OrganisationTenant;
-  updateTenant: (tenantData: Partial<OrganisationTenant>) => void;
+  updateTenant: (tenantData: Partial<OrganisationTenant>) => Promise<void>;
   updateTenantLogo: (logoUrl: string | null) => void;
   isSetupModalOpen: boolean;
   setIsSetupModalOpen: (open: boolean) => void;
@@ -475,15 +478,21 @@ const ERPContext = createContext<ERPContextType | undefined>(undefined);
 export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [activeTab, setActiveTab] = useState<NavigationTab>('dashboard');
   const { resolvedTheme, setThemeMode } = useTheme();
-  const { session, login, refreshSession } = useAuth();
+  const { session, isLoading: authLoading, login, refreshSession } = useAuth();
   const theme = resolvedTheme;
 
   // Demo / unsigned fixtures only. A live session never reads INITIAL_TENANTS or localStorage.
   const [demoTenants, setDemoTenants] = useState<OrganisationTenant[]>(INITIAL_TENANTS);
-  const tenants = useMemo(
-    () => (session ? mapSessionOrganisationsToTenants(session.organisations) : demoTenants),
-    [session, demoTenants]
-  );
+  const [tenantOverrides, setTenantOverrides] = useState<Record<string, Partial<OrganisationTenant>>>({});
+
+  const tenants = useMemo(() => {
+    const base = session ? mapSessionOrganisationsToTenants(session.organisations) : demoTenants;
+    return base.map((t) => ({
+      ...t,
+      ...(tenantOverrides[t.id] ?? {}),
+    }));
+  }, [session, demoTenants, tenantOverrides]);
+
   const setTenants = useCallback(
     (updater: React.SetStateAction<OrganisationTenant[]>) => {
       if (session) return;
@@ -772,7 +781,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const loadDomainData = async () => {
       try {
         const [customersRes, jobsRes, invoicesRes, expensesRes, paymentsRes,
-                inventoryRes, suppliersRes, poRes, auditRes, priceListsRes] = await Promise.allSettled([
+                inventoryRes, suppliersRes, poRes, auditRes, priceListsRes, taxRegRes] = await Promise.allSettled([
           apiGet<{ ok: boolean; customers: unknown[] }>('/api/ops/customers'),
           apiGet<{ ok: boolean; jobs: unknown[] }>('/api/ops/jobs'),
           apiGet<{ ok: boolean; invoices: unknown[] }>('/api/ops/invoices'),
@@ -783,37 +792,64 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           apiGet<{ ok: boolean; purchaseOrders: unknown[] }>('/api/ops/purchase-orders'),
           apiGet<{ ok: boolean; events: unknown[] }>('/api/ops/audit?limit=100'),
           apiGet<{ ok: boolean; price_lists: unknown[] }>('/api/ops/price-lists'),
+          apiGet<{
+            ok: boolean;
+            registration: {
+              id: string;
+              organisation_id: string;
+              tax_type: string;
+              registration_status: string;
+              tin: string | null;
+              effective_from: string | null;
+              effective_to: string | null;
+            } | null;
+          }>('/api/tenant/tax-registration'),
         ]);
 
         if (isCurrentLoad() && customersRes.status === 'fulfilled' && customersRes.value.ok) {
-          setCustomers(mapBackendCustomers(customersRes.value.customers));
+          setCustomers(mapBackendCustomers(customersRes.value.customers ?? []));
         }
         if (isCurrentLoad() && jobsRes.status === 'fulfilled' && jobsRes.value.ok) {
-          setJobs(mapBackendJobs(jobsRes.value.jobs));
+          setJobs(mapBackendJobs(jobsRes.value.jobs ?? []));
         }
         if (isCurrentLoad() && invoicesRes.status === 'fulfilled' && invoicesRes.value.ok) {
-          setInvoices(mapBackendInvoices(invoicesRes.value.invoices));
+          setInvoices(mapBackendInvoices(invoicesRes.value.invoices ?? []));
         }
         if (isCurrentLoad() && expensesRes.status === 'fulfilled' && expensesRes.value.ok) {
-          setExpenses(mapBackendExpenses(expensesRes.value.expenses));
+          setExpenses(mapBackendExpenses(expensesRes.value.expenses ?? []));
         }
         if (isCurrentLoad() && paymentsRes.status === 'fulfilled' && paymentsRes.value.ok) {
-          setPayments(mapBackendPayments(paymentsRes.value.payments));
+          setPayments(mapBackendPayments(paymentsRes.value.payments ?? []));
         }
         if (isCurrentLoad() && inventoryRes.status === 'fulfilled' && inventoryRes.value.ok) {
-          setInventory(inventoryRes.value.items);
+          setInventory(Array.isArray(inventoryRes.value.items) ? inventoryRes.value.items : []);
         }
         if (isCurrentLoad() && suppliersRes.status === 'fulfilled' && suppliersRes.value.ok) {
-          setSuppliers(mapBackendSuppliers(suppliersRes.value.suppliers));
+          setSuppliers(mapBackendSuppliers(suppliersRes.value.suppliers ?? []));
         }
         if (isCurrentLoad() && poRes.status === 'fulfilled' && poRes.value.ok) {
-          setPurchaseOrders(mapBackendPurchaseOrders(poRes.value.purchaseOrders));
+          setPurchaseOrders(mapBackendPurchaseOrders(poRes.value.purchaseOrders ?? []));
         }
         if (isCurrentLoad() && auditRes.status === 'fulfilled' && auditRes.value.ok) {
-          setAuditLogs(mapBackendAuditEvents(auditRes.value.events));
+          setAuditLogs(mapBackendAuditEvents(auditRes.value.events ?? []));
         }
         if (isCurrentLoad() && priceListsRes.status === 'fulfilled' && priceListsRes.value.ok) {
-          setPriceLists(mapBackendPriceLists(priceListsRes.value.price_lists));
+          setPriceLists(mapBackendPriceLists(priceListsRes.value.price_lists ?? []));
+        }
+        if (isCurrentLoad() && taxRegRes.status === 'fulfilled' && taxRegRes.value.ok) {
+          const reg = taxRegRes.value.registration;
+          const currentOrgId = session.current_organisation_id || (session.organisations && session.organisations[0]?.id);
+          if (currentOrgId) {
+            setTenantOverrides((prev) => ({
+              ...prev,
+              [currentOrgId]: {
+                ...prev[currentOrgId],
+                gstStatus: reg ? (reg.registration_status as GstRegistrationStatus) : 'unknown',
+                tinNumber: reg?.tin || '',
+                gstRate: reg ? (reg.registration_status === 'registered' || reg.registration_status === 'pending' ? 8 : 0) : 0,
+              },
+            }));
+          }
         }
       } catch (err) {
         console.error('[ERP] Failed to load domain data from backend:', err);
@@ -853,6 +889,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     () => resolveCurrentTenant(tenants, currentTenantId),
     [tenants, currentTenantId]
   );
+  const tenantHydrated = !authLoading && (!session || Boolean(session.current_organisation_id && currentTenantId === session.current_organisation_id));
 
   // Current Book computation
   const currentBook = useMemo(() => {
@@ -891,7 +928,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     session &&
       (session.application?.status === 'pending' ||
         session.application?.status === 'info_requested' ||
-        pendingApplications.some((a) => a.status === 'pending_approval'))
+        session.application?.status === 'rejected' ||
+        pendingApplications.some((a) => a.status === 'pending_approval' || a.status === 'rejected'))
   );
   const isPendingApproval = currentUser.status === 'Pending Approval' || applicantPending;
 
@@ -911,12 +949,12 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const list: NeedsAttentionAlert[] = [];
 
     // 1. Real Overdue Invoices
-    const overdueInvoices = invoices.filter((inv) => {
+    const overdueInvoices = Array.isArray(invoices) ? invoices.filter((inv) => {
       if (inv.status === 'Paid' || inv.status === 'Draft') return false;
       if (inv.status === 'Overdue') return true;
       if (inv.dueDate && new Date(inv.dueDate) < new Date() && (inv.amountPaid || 0) < inv.totalAmount) return true;
       return false;
-    });
+    }) : [];
     for (const inv of overdueInvoices.slice(0, 3)) {
       list.push({
         id: `alert-inv-${inv.id}`,
@@ -932,7 +970,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     // 2. Real Low Stock Items
-    const lowStock = inventory.filter((item) => item.quantityOnHand <= item.reorderLevel);
+    const lowStock = Array.isArray(inventory) ? inventory.filter((item) => item.quantityOnHand <= item.reorderLevel) : [];
     if (lowStock.length > 0) {
       const first = lowStock[0];
       list.push({
@@ -948,7 +986,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     // 3. Real Pending Payments
-    const pendingPayments = payments.filter((p) => p.status === 'Pending Reconciliation');
+    const pendingPayments = Array.isArray(payments) ? payments.filter((p) => p.status === 'Pending Reconciliation') : [];
     for (const p of pendingPayments.slice(0, 2)) {
       list.push({
         id: `alert-pay-${p.id}`,
@@ -968,12 +1006,12 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Dynamic real AI insights derived from active operational conditions
   useEffect(() => {
-    if (jobs.length === 0 && invoices.length === 0) {
+    if ((Array.isArray(jobs) && jobs.length === 0) && (Array.isArray(invoices) && invoices.length === 0)) {
       setAiInsights([]);
       return;
     }
     const list: AIAssistantInsight[] = [];
-    const overdue = invoices.filter((i) => i.status === 'Overdue');
+    const overdue = Array.isArray(invoices) ? invoices.filter((i) => i.status === 'Overdue') : [];
     const overdueCount = overdue.length;
     const overdueValue = overdue.reduce(
       (sum, i) => sum + (i.totalAmount - (i.amountPaid || 0)), 0,
@@ -1136,28 +1174,28 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Quick stats calculations
   const totalSalesToday = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    return invoices
-      .filter((inv) => inv.date === today)
-      .reduce((acc, inv) => acc + inv.totalAmount, 0);
+    return Array.isArray(invoices)
+      ? invoices.filter((inv) => inv.date === today).reduce((acc, inv) => acc + inv.totalAmount, 0)
+      : 0;
   }, [invoices]);
   const totalCashReceived = useMemo(() => {
-    return payments.reduce((acc, p) => acc + p.amount, 0);
+    return Array.isArray(payments) ? payments.reduce((acc, p) => acc + p.amount, 0) : 0;
   }, [payments]);
 
   const totalOutstandingInvoices = useMemo(() => {
-    return invoices.reduce((acc, inv) => acc + inv.balanceDue, 0);
+    return Array.isArray(invoices) ? invoices.reduce((acc, inv) => acc + inv.balanceDue, 0) : 0;
   }, [invoices]);
 
   const totalAccountsPayable = useMemo(() => {
-    return suppliers.reduce((acc, sup) => acc + sup.outstandingPayable, 0);
+    return Array.isArray(suppliers) ? suppliers.reduce((acc, sup) => acc + sup.outstandingPayable, 0) : 0;
   }, [suppliers]);
 
   const activeJobsCount = useMemo(() => {
-    return jobs.filter((j) => !['Completed', 'Paid', 'Tax Invoiced & Settled'].includes(j.status)).length;
+    return Array.isArray(jobs) ? jobs.filter((j) => !['Completed', 'Paid', 'Tax Invoiced & Settled'].includes(j.status)).length : 0;
   }, [jobs]);
 
   const lowStockItemsCount = useMemo(() => {
-    return inventory.filter((item) => item.quantityOnHand <= item.reorderLevel).length;
+    return Array.isArray(inventory) ? inventory.filter((item) => item.quantityOnHand <= item.reorderLevel).length : 0;
   }, [inventory]);
 
   // Create new Tenant (Organisation Setup)
@@ -1227,10 +1265,26 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return newTenant;
   };
 
-  const updateTenant = (tenantData: Partial<OrganisationTenant>) => {
+  const updateTenant = async (tenantData: Partial<OrganisationTenant>) => {
+    const orgId = currentTenant.id;
+    if (orgId) {
+      setTenantOverrides((prev) => ({
+        ...prev,
+        [orgId]: {
+          ...prev[orgId],
+          ...tenantData,
+        },
+      }));
+    }
     setTenants((prev) =>
       prev.map((t) => (t.id === currentTenant.id ? { ...t, ...tenantData } : t))
     );
+    if (session && tenantData.gstStatus && tenantData.gstStatus !== 'unknown') {
+      await apiPost('/api/tenant/tax-registration', {
+        registration_status: tenantData.gstStatus,
+        tin: tenantData.tinNumber !== undefined ? tenantData.tinNumber : currentTenant.tinNumber,
+      });
+    }
     logAuditEvent({
       action: 'ORG_CONFIG_SAVED',
       module: 'settings',
@@ -3246,6 +3300,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         // Multi-tenant & Multi-Book Context
         activePlane,
         currentTenant,
+        tenantHydrated,
+        tenantIsLive: Boolean(session),
         currentBookId,
         currentBook,
         currentArchetype,

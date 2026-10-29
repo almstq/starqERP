@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   Banknote,
+  Check,
   CheckCircle2,
   Clock,
   Copy,
@@ -12,10 +13,12 @@ import {
   Minus,
   Package,
   Plus,
+  Printer,
   Receipt,
   RefreshCw,
   RotateCcw,
   Search,
+  ShieldCheck,
   ShoppingCart,
   Sparkles,
   Store,
@@ -71,6 +74,17 @@ import {
   canTransact,
   isRetryableError,
   formatResilienceErrorMessage,
+  calculateEstimatedTax,
+  isTaxRateMissingForSale,
+  formatTaxLineLabel,
+  formatTaxLineValue,
+  formatReceiptGstDetails,
+  CounterPrintStatus,
+  evaluatePrinterOutcome,
+  formatPrinterFailureNotice,
+  calculateCartLineTax,
+  calculateCartTotals,
+  CartTotals,
 } from '../../domain/counter';
 
 const DEFAULT_OUTLET: CounterLocation = {
@@ -82,21 +96,21 @@ const DEFAULT_OUTLET: CounterLocation = {
 };
 
 const DEFAULT_RETAIL_PRODUCTS: CounterProduct[] = [
-  { id: 'prod-coca-cola', sku: 'COLA-330', name: 'Coca-Cola 330ml Can', category: 'Beverages', barcode: '5449000000996', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-sprite', sku: 'SPRITE-330', name: 'Sprite 330ml Can', category: 'Beverages', barcode: '5449000014528', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-taza-water', sku: 'TAZA-500', name: 'Taza Mineral Water 500ml', category: 'Beverages', barcode: '6291000000111', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 20 },
-  { id: 'prod-redbull', sku: 'REDBULL-250', name: 'Red Bull Energy Drink 250ml', category: 'Beverages', barcode: '9002490100070', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-lays-chips', sku: 'LAYS-CLASSIC', name: 'Lays Classic Potato Chips 50g', category: 'Snacks', barcode: '8901491101837', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-pringles', sku: 'PRINGLES-SC', name: 'Pringles Sour Cream & Onion 107g', category: 'Snacks', barcode: '8886467100017', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 8 },
-  { id: 'prod-oreo', sku: 'OREO-133', name: 'Oreo Original Sandwich Cookies 133g', category: 'Snacks', barcode: '8901030000001', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-bajiya', sku: 'BAJIYA-PC', name: 'Maldivian Fish Bajiya (Fresh)', category: 'Bakery', barcode: '2000000000014', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 15 },
-  { id: 'prod-fishroll', sku: 'FISHROLL-PC', name: 'Spicy Fish Roll (Fresh)', category: 'Bakery', barcode: '2000000000021', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 15 },
-  { id: 'prod-almudhish', sku: 'ALMUDHISH-400', name: 'Al Mudhish Milk Powder 400g', category: 'Groceries', barcode: '6084000001018', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5 },
-  { id: 'prod-dilmah-tea', sku: 'DILMAH-100', name: 'Dilmah Ceylon Tea Bags 100s', category: 'Groceries', barcode: '9312631100012', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5 },
-  { id: 'prod-basmati-rice', sku: 'RICE-1KG', name: 'Premium Basmati Rice 1kg', category: 'Groceries', barcode: '8901234567890', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-panadol', sku: 'PANADOL-10', name: 'Panadol Extra 500mg 10s', category: 'Essentials', barcode: '5000000000019', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-dettol-soap', sku: 'DETTOL-100', name: 'Dettol Original Soap 100g', category: 'Essentials', barcode: '5000000000026', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10 },
-  { id: 'prod-usbc-cable', sku: 'USBC-CABLE', name: 'Fast USB-C Braided Cable 1m', category: 'Electronics', barcode: '6934177700019', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5 },
+  { id: 'prod-coca-cola', sku: 'COLA-330', name: 'Coca-Cola 330ml Can', category: 'Beverages', barcode: '5449000000996', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-sprite', sku: 'SPRITE-330', name: 'Sprite 330ml Can', category: 'Beverages', barcode: '5449000014528', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-taza-water', sku: 'TAZA-500', name: 'Taza Mineral Water 500ml', category: 'Beverages', barcode: '6291000000111', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 20, tax_classification: 'standard_rated' },
+  { id: 'prod-redbull', sku: 'REDBULL-250', name: 'Red Bull Energy Drink 250ml', category: 'Beverages', barcode: '9002490100070', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-lays-chips', sku: 'LAYS-CLASSIC', name: 'Lays Classic Potato Chips 50g', category: 'Snacks', barcode: '8901491101837', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-pringles', sku: 'PRINGLES-SC', name: 'Pringles Sour Cream & Onion 107g', category: 'Snacks', barcode: '8886467100017', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 8, tax_classification: 'standard_rated' },
+  { id: 'prod-oreo', sku: 'OREO-133', name: 'Oreo Original Sandwich Cookies 133g', category: 'Snacks', barcode: '8901030000001', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-bajiya', sku: 'BAJIYA-PC', name: 'Maldivian Fish Bajiya (Fresh)', category: 'Bakery', barcode: '2000000000014', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 15, tax_classification: 'standard_rated' },
+  { id: 'prod-fishroll', sku: 'FISHROLL-PC', name: 'Spicy Fish Roll (Fresh)', category: 'Bakery', barcode: '2000000000021', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 15, tax_classification: 'standard_rated' },
+  { id: 'prod-almudhish', sku: 'ALMUDHISH-400', name: 'Al Mudhish Milk Powder 400g', category: 'Groceries', barcode: '6084000001018', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5, tax_classification: 'standard_rated' },
+  { id: 'prod-dilmah-tea', sku: 'DILMAH-100', name: 'Dilmah Ceylon Tea Bags 100s', category: 'Groceries', barcode: '9312631100012', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5, tax_classification: 'standard_rated' },
+  { id: 'prod-basmati-rice', sku: 'RICE-1KG', name: 'Premium Basmati Rice 1kg', category: 'Groceries', barcode: '8901234567890', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'zero_rated' },
+  { id: 'prod-panadol', sku: 'PANADOL-10', name: 'Panadol Extra 500mg 10s', category: 'Essentials', barcode: '5000000000019', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'exempt' },
+  { id: 'prod-dettol-soap', sku: 'DETTOL-100', name: 'Dettol Original Soap 100g', category: 'Essentials', barcode: '5000000000026', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 10, tax_classification: 'standard_rated' },
+  { id: 'prod-usbc-cable', sku: 'USBC-CABLE', name: 'Fast USB-C Braided Cable 1m', category: 'Electronics', barcode: '6934177700019', kind: 'stock', sale_allowed: true, active: true, reorder_threshold: 5, tax_classification: 'standard_rated' },
 ];
 
 const DEFAULT_PRICES: ApprovedPriceRow[] = [
@@ -130,14 +144,27 @@ interface CounterSaleResult {
   receipt_number?: string;
   payment_id: string;
   location_id: string;
+  currency?: string;
   subtotal: number;
   tax_total: number;
   total_amount: number;
+  gst_rate?: number | null;
+  gst_rate_percent?: number | null;
+  gst_registration_status?: 'registered' | 'not_registered' | null;
+  is_taxable?: boolean;
   payment_method?: PaymentMethod;
   tendered_amount?: number;
   change_amount?: number;
   tender?: TenderLine[];
-  lines: Array<{ product_id: string; name: string; quantity: number; unit_price: number; net_amount: number }>;
+  lines: Array<{
+    product_id: string;
+    name: string;
+    quantity: number;
+    unit_price: number;
+    net_amount: number;
+    tax_rate?: number;
+    tax_amount?: number;
+  }>;
   on_hand: Record<string, number>;
 }
 
@@ -179,6 +206,8 @@ export const CounterView: React.FC = () => {
   const [receipt, setReceipt] = useState<CounterReceipt | null>(null);
   const [receiptBusy, setReceiptBusy] = useState(false);
   const [receiptError, setReceiptError] = useState<string | null>(null);
+  const [printStatus, setPrintStatus] = useState<CounterPrintStatus>('idle');
+  const [printError, setPrintError] = useState<string | null>(null);
 
   // SERP-089: Till session lifecycle (Open & Close)
   const [openTillModalOpen, setOpenTillModalOpen] = useState(false);
@@ -296,6 +325,10 @@ export const CounterView: React.FC = () => {
   );
   const [activeSaleKey, setActiveSaleKey] = useState<string | null>(null);
   const [activeReversalKey, setActiveReversalKey] = useState<string | null>(null);
+  const completingRef = useRef(false);
+  const activeSaleKeyRef = useRef<string | null>(null);
+  const submittingReversalRef = useRef(false);
+  const activeReversalKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -309,73 +342,198 @@ export const CounterView: React.FC = () => {
   }, []);
 
   // SERP-088: Returns & Voids state
+  interface SaleLookupItem {
+    line_no: number;
+    product_id: string;
+    description: string;
+    quantity: number;
+    returned_quantity: number;
+    remaining_quantity: number;
+    unit_price: number;
+    net_amount: number;
+    tax_amount: number;
+    gross_amount: number;
+  }
+
+  interface SaleLookupResult {
+    sale_id: string;
+    invoice_number: string;
+    receipt_number?: string | null;
+    receipt_id?: string | null;
+    created_at: string;
+    currency: string;
+    gross_total: number;
+    tax_total: number;
+    net_total: number;
+    is_fully_voided: boolean;
+    lines: SaleLookupItem[];
+    prior_returns: any[];
+  }
+
+  interface SupervisorInfo {
+    person_id: string;
+    name: string;
+    seat: string;
+  }
+
   const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [reversalType, setReversalType] = useState<ReversalType>('return');
-  const [returnSaleId, setReturnSaleId] = useState('');
+  const [returnSearchQuery, setReturnSearchQuery] = useState('');
+  const [searchingSale, setSearchingSale] = useState(false);
+  const [lookedUpSale, setLookedUpSale] = useState<SaleLookupResult | null>(null);
+  const [selectedReturnItems, setSelectedReturnItems] = useState<Record<string, { selected: boolean; qty: number }>>({});
   const [returnReason, setReturnReason] = useState('');
-  const [returnProductId, setReturnProductId] = useState('');
-  const [returnQtyInput, setReturnQtyInput] = useState('1');
   const [refundMethod, setRefundMethod] = useState<RefundMethod>('cash');
-  const [refundAmountInput, setRefundAmountInput] = useState('');
   const [operatingCapacity, setOperatingCapacity] = useState<'segregated' | 'solo'>('segregated');
-  const [approverIdInput, setApproverIdInput] = useState('');
+  const [selectedApproverId, setSelectedApproverId] = useState('');
+  const [availableSupervisors, setAvailableSupervisors] = useState<SupervisorInfo[]>([]);
+  const [loadingSupervisors, setLoadingSupervisors] = useState(false);
   const [submittingReversal, setSubmittingReversal] = useState(false);
   const [reversalError, setReversalError] = useState<string | null>(null);
   const [reversalResult, setReversalResult] = useState<CounterReturn | null>(null);
 
+  // Receipt Modal State
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false);
+
+  const isCurrentUserManager = useMemo(() => {
+    const seats = session?.seats ?? [];
+    return seats.some((s) => ['owner', 'managing_director', 'director'].includes(s));
+  }, [session?.seats]);
+
+  const loadSupervisors = async () => {
+    setLoadingSupervisors(true);
+    try {
+      const res = await apiGet<{ ok: boolean; supervisors: SupervisorInfo[] }>('/api/ops/counter/supervisors');
+      if (res.ok && res.supervisors) {
+        setAvailableSupervisors(res.supervisors);
+        if (res.supervisors.length > 0 && !selectedApproverId) {
+          setSelectedApproverId(res.supervisors[0].person_id);
+        }
+      }
+    } catch {
+      // Non-blocking fallback
+    } finally {
+      setLoadingSupervisors(false);
+    }
+  };
+
+  const openReturnModal = () => {
+    setReturnModalOpen(true);
+    setReversalType('return');
+    setReturnSearchQuery('');
+    setLookedUpSale(null);
+    setSelectedReturnItems({});
+    setReturnReason('');
+    setRefundMethod('cash');
+    setReversalError(null);
+    setReversalResult(null);
+    loadSupervisors();
+  };
+
+  const handleLookupSale = async () => {
+    const q = returnSearchQuery.trim();
+    if (!q) return;
+    setSearchingSale(true);
+    setReversalError(null);
+    try {
+      const res = await apiGet<{ ok: boolean; sale: SaleLookupResult }>(
+        `/api/ops/counter/sale/lookup?query=${encodeURIComponent(q)}`
+      );
+      if (res.ok && res.sale) {
+        setLookedUpSale(res.sale);
+        const initialSelections: Record<string, { selected: boolean; qty: number }> = {};
+        for (const line of res.sale.lines) {
+          if (line.remaining_quantity > 0) {
+            initialSelections[line.product_id] = {
+              selected: true,
+              qty: line.remaining_quantity,
+            };
+          }
+        }
+        setSelectedReturnItems(initialSelections);
+      }
+    } catch (err) {
+      setLookedUpSale(null);
+      setReversalError(err instanceof ApiError && err.code === 'sale_not_found' ? 'sale_not_found' : 'sale_lookup_failed');
+    } finally {
+      setSearchingSale(false);
+    }
+  };
+
+  const calculatedReturnTotal = useMemo(() => {
+    if (!lookedUpSale) return 0;
+    if (reversalType === 'void') {
+      return lookedUpSale.gross_total;
+    }
+    let total = 0;
+    for (const line of lookedUpSale.lines) {
+      const sel = selectedReturnItems[line.product_id];
+      if (sel && sel.selected && sel.qty > 0) {
+        total += line.unit_price * sel.qty;
+      }
+    }
+    return Math.round((total + Number.EPSILON) * 100) / 100;
+  }, [lookedUpSale, reversalType, selectedReturnItems]);
+
   const handleReversalSubmit = async () => {
-    if (!outlet?.id) return;
+    if (submittingReversalRef.current || submittingReversal || !outlet?.id || !lookedUpSale) return;
     if (!canTransact(isOnline)) {
       setReversalError('network_offline');
-      return;
-    }
-    if (!returnSaleId.trim()) {
-      setReversalError('Original Sale ID is required.');
       return;
     }
     if (returnReason.trim().length < 3) {
       setReversalError('Reason must be at least 3 characters.');
       return;
     }
+    submittingReversalRef.current = true;
     setSubmittingReversal(true);
     setReversalError(null);
 
-    const idempotencyKey = activeReversalKey || crypto.randomUUID();
-    if (!activeReversalKey) setActiveReversalKey(idempotencyKey);
+    if (!activeReversalKeyRef.current) {
+      activeReversalKeyRef.current = activeReversalKey || crypto.randomUUID();
+      setActiveReversalKey(activeReversalKeyRef.current);
+    }
+    const idempotencyKey = activeReversalKeyRef.current;
 
     try {
       const endpoint = reversalType === 'void' ? '/api/ops/counter/void' : '/api/ops/counter/return';
       const payload: Record<string, unknown> = {
         location_id: outlet.id,
-        original_sale_id: returnSaleId.trim(),
+        original_sale_id: lookedUpSale.sale_id,
         reason: returnReason.trim(),
         operating_capacity: operatingCapacity,
       };
-      if (approverIdInput.trim()) {
-        payload.approver_person_id = approverIdInput.trim();
+      if (!isCurrentUserManager && operatingCapacity === 'segregated' && selectedApproverId) {
+        payload.approver_person_id = selectedApproverId;
       }
       if (reversalType === 'return') {
-        const qty = parseFloat(returnQtyInput);
-        if (!returnProductId.trim() || isNaN(qty) || qty <= 0) {
-          setReversalError('Valid Product ID and positive quantity are required for return.');
-          setSubmittingReversal(false);
+        const itemsToReturn: Array<{ product_id: string; quantity: number }> = [];
+        for (const line of lookedUpSale.lines) {
+          const sel = selectedReturnItems[line.product_id];
+          if (sel && sel.selected && sel.qty > 0) {
+            itemsToReturn.push({ product_id: line.product_id, quantity: sel.qty });
+          }
+        }
+        if (itemsToReturn.length === 0) {
+          setReversalError('Please select at least one item to return.');
           return;
         }
-        payload.items = [{ product_id: returnProductId.trim(), quantity: qty }];
+        payload.items = itemsToReturn;
       }
-      const refundAmt = parseFloat(refundAmountInput);
-      if (!isNaN(refundAmt) && refundAmt > 0) {
-        payload.refund_tenders = [{ method: refundMethod, amount: refundAmt }];
+      if (calculatedReturnTotal > 0) {
+        payload.refund_tenders = [{ method: refundMethod, amount: calculatedReturnTotal }];
       }
 
       const res = await apiPost<{ ok: boolean; return: CounterReturn }>(endpoint, payload, idempotencyKey);
       if (res.ok && res.return) {
         setReversalResult(res.return);
+        activeReversalKeyRef.current = null;
         setActiveReversalKey(null);
       }
     } catch (err) {
       setReversalError(err instanceof ApiError ? err.code : 'reversal_failed');
     } finally {
+      submittingReversalRef.current = false;
       setSubmittingReversal(false);
     }
   };
@@ -527,30 +685,43 @@ export const CounterView: React.FC = () => {
     );
   }, [products, query, selectedCategory]);
 
-  // LIVE running subtotal/total shown in large type purely for cashier glanceability.
-  // The authoritative financial calculation and taxes remain strictly server-resolved on complete().
+  // SERP-448: Authoritative cart totals structure (Subtotal, GST as sum of line GST, Total Due)
+  // Reconciles exactly with server result. Evaluates line-level GST per item classification.
+  const cartTotals: CartTotals = useMemo(() => {
+    return calculateCartTotals(
+      catalogue?.gst_registration_status,
+      catalogue?.gst_rate,
+      cart,
+      activePrices,
+      allProducts,
+    );
+  }, [catalogue, cart, activePrices, allProducts]);
+
   const liveTotals = useMemo(() => {
-    let subtotal = 0;
-    let hasUnpricedItem = false;
-    for (const line of cart) {
-      const approved = approvedPriceFor(activePrices, line.productId);
-      if (approved && approved.source !== 'none' && approved.unit_amount > 0) {
-        const discountFactor = approved.discount_percent > 0 ? 1 - approved.discount_percent / 100 : 1;
-        subtotal += line.quantity * (approved.unit_amount * discountFactor);
-      } else {
-        hasUnpricedItem = true;
-      }
-    }
-    return { subtotal, hasUnpricedItem };
-  }, [cart, activePrices]);
+    return {
+      subtotal: cartTotals.subtotal,
+      hasUnpricedItem: cartTotals.hasUnpricedItem,
+    };
+  }, [cartTotals]);
 
   const resetForNewSale = () => {
     setSaleResult(null);
     setReceipt(null);
     setSaleError(null);
     setReceiptError(null);
+    setPrintStatus('idle');
+    setPrintError(null);
     setTenderInput({ cash: '', card: '', transfer: '' });
   };
+
+  const isTaxMissing = useMemo(() => {
+    if (!catalogue) return false;
+    return isTaxRateMissingForSale(catalogue.gst_registration_status, catalogue.gst_rate) || cartTotals.isTaxMissing;
+  }, [catalogue, cartTotals.isTaxMissing]);
+
+  const estimatedTax = useMemo(() => {
+    return cartTotals.taxTotal;
+  }, [cartTotals]);
 
   const hold = () => {
     if (cartIsEmpty(cart)) return;
@@ -570,19 +741,31 @@ export const CounterView: React.FC = () => {
   };
 
   const complete = async () => {
-    if (!outlet || cartIsEmpty(cart)) return;
+    if (completingRef.current || completing || !outlet || cartIsEmpty(cart)) return;
     if (!canTransact(isOnline)) {
       setSaleError('network_offline');
       return;
     }
+    if (catalogue?.gst_registration_status === 'unknown') {
+      setSaleError('tax_registration_status_unknown');
+      return;
+    }
+    if (isTaxMissing) {
+      setSaleError('tax_rate_unavailable');
+      return;
+    }
+    completingRef.current = true;
     setCompleting(true);
     setSaleError(null);
     setSaleResult(null);
     setReceipt(null);
     setReceiptError(null);
 
-    const idempotencyKey = activeSaleKey || crypto.randomUUID();
-    if (!activeSaleKey) setActiveSaleKey(idempotencyKey);
+    if (!activeSaleKeyRef.current) {
+      activeSaleKeyRef.current = activeSaleKey || crypto.randomUUID();
+      setActiveSaleKey(activeSaleKeyRef.current);
+    }
+    const idempotencyKey = activeSaleKeyRef.current;
 
     const tender = buildTenderLines(paymentMethod, {
       cash: Number(tenderInput.cash || 0),
@@ -605,53 +788,95 @@ export const CounterView: React.FC = () => {
       // settled. Only the accepted response's receipt + change are shown.
       if (response.ok && response.counter_sale) {
         setSaleResult(response.counter_sale);
+        activeSaleKeyRef.current = null;
         setActiveSaleKey(null);
         persistCart([]);
+        setPrintStatus('idle');
+        setPrintError(null);
+        // Await/sequence receipt load after commit for immediate printing/reprinting
+        await loadReceipt(response.counter_sale.payment_id);
       } else {
         setSaleError('counter_sale_no_response');
       }
     } catch (error) {
       setSaleError(error instanceof ApiError ? error.code : 'counter_sale_failed');
     } finally {
+      completingRef.current = false;
       setCompleting(false);
     }
   };
 
-  const loadReceipt = async () => {
-    if (!saleResult?.payment_id) return;
+  const loadReceipt = async (explicitPaymentId?: string) => {
+    const paymentId = explicitPaymentId || saleResult?.payment_id;
+    if (!paymentId) return null;
     setReceiptBusy(true);
     setReceiptError(null);
     try {
       const data = await apiGet<CounterReceipt>(
-        `/api/ops/counter/receipt?receipt_id=${encodeURIComponent(saleResult.payment_id)}`,
+        `/api/ops/counter/receipt?receipt_id=${encodeURIComponent(paymentId)}`,
       );
-      setReceipt(data);
+      if (data && (data.receipt || (data as any).receipt_number)) {
+        setReceipt(data);
+        return data;
+      }
+      setReceipt(null);
+      return null;
     } catch (error) {
+      setReceipt(null);
       setReceiptError(error instanceof ApiError ? error.code : 'receipt_load_failed');
+      return null;
     } finally {
       setReceiptBusy(false);
     }
   };
 
-  const reRenderReceipt = async () => {
+  /**
+   * SPOS-008: Terminal printer failure resilience.
+   * Receipt emission occurs strictly AFTER database commit has completed.
+   * Printer failure or cancellation NEVER reverses or affects the committed sale.
+   */
+  const handlePrintReceipt = async (isReprint = false) => {
     if (!saleResult?.payment_id) return;
-    setReceiptBusy(true);
-    setReceiptError(null);
+    setPrintStatus('printing');
+    setPrintError(null);
+
     try {
-      // Duplicate-proof: the server increments renders on the SAME financial
-      // record (same receipt_number — never a second document), then we re-fetch.
-      await apiPost<{ ok: boolean; renders: number }>('/api/ops/counter/receipt/render', {
-        receipt_id: saleResult.payment_id,
-      });
-      const data = await apiGet<CounterReceipt>(
-        `/api/ops/counter/receipt?receipt_id=${encodeURIComponent(saleResult.payment_id)}`,
-      );
-      setReceipt(data);
-    } catch (error) {
-      setReceiptError(error instanceof ApiError ? error.code : 'receipt_render_failed');
-    } finally {
-      setReceiptBusy(false);
+      if (isReprint) {
+        // Duplicate-proof: server increments renders on the existing receipt
+        await apiPost<{ ok: boolean; renders: number }>('/api/ops/counter/receipt/render', {
+          receipt_id: saleResult.payment_id,
+        });
+      }
+
+      // Ensure receipt data is loaded and valid before opening physical print dialog
+      const receiptData = await loadReceipt(saleResult.payment_id);
+      if (!receiptData || (!receiptData.receipt && !(receiptData as any).receipt_number)) {
+        const outcome = evaluatePrinterOutcome('receipt_data_unavailable', true);
+        setPrintStatus(outcome.status);
+        setPrintError(outcome.error);
+        return;
+      }
+
+      // Physical printer invocation (window.print() or hardware device)
+      try {
+        window.print();
+        const outcome = evaluatePrinterOutcome(null, true);
+        setPrintStatus(outcome.status);
+        setPrintError(null);
+      } catch (printErr) {
+        const outcome = evaluatePrinterOutcome(printErr, true);
+        setPrintStatus(outcome.status);
+        setPrintError(outcome.error);
+      }
+    } catch (err) {
+      const outcome = evaluatePrinterOutcome(err, true);
+      setPrintStatus(outcome.status);
+      setPrintError(outcome.error);
     }
+  };
+
+  const reRenderReceipt = async () => {
+    await handlePrintReceipt(true);
   };
 
   /**
@@ -724,7 +949,13 @@ export const CounterView: React.FC = () => {
     .filter((entry) => !filterLowStockOnly || entry.isLow || entry.onHand <= 0);
 
   return (
-    <div className="w-full max-w-[1700px] mx-auto px-3 sm:px-6 py-4 space-y-4 font-sans">
+    // SERP-090/Founder seq 6860: fixed cashier terminal viewport. The POS root
+    // is constrained to the screen height (100dvh with 100vh fallback); the
+    // header, till controls, barcode/search/category bar, cart header, totals,
+    // tender controls and Complete Sale stay permanently visible. Only the
+    // product grid and the cart item list scroll internally — long lists can
+    // never push checkout controls off-screen.
+    <div className="counter-root w-full max-w-[1700px] mx-auto px-3 sm:px-6 py-4 flex flex-col h-[100vh] overflow-hidden gap-4 font-sans supports-[height:100dvh]:h-[100dvh]">
       {!isOnline && (
         <div
           role="alert"
@@ -777,6 +1008,23 @@ export const CounterView: React.FC = () => {
               <Badge variant={isOnline ? 'positive' : 'destructive'} dot size="sm">
                 {isOnline ? 'Online' : 'Offline'}
               </Badge>
+              {catalogue && (
+                <Badge
+                  variant={
+                    catalogue.gst_registration_status === 'registered'
+                      ? (isTaxMissing ? 'destructive' : 'info')
+                      : 'neutral'
+                  }
+                  size="sm"
+                  className="font-medium"
+                >
+                  {catalogue.gst_registration_status === 'registered'
+                    ? (isTaxMissing
+                        ? 'GST Registered (Rate Unavailable)'
+                        : `GST Registered (${catalogue.gst_rate_percent}%)`)
+                    : 'Not GST Registered'}
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-2 text-xs font-medium mt-0.5" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
               <span className="flex items-center gap-1 font-semibold text-primary">
@@ -784,10 +1032,12 @@ export const CounterView: React.FC = () => {
                 {session?.name || session?.email || session?.seat_label || 'Cashier'}
               </span>
               <span>•</span>
-              <span className="truncate max-w-[200px] sm:max-w-none">{outlet.name}</span>
-              <span className="font-mono text-[11px] opacity-75">
-                (Till #{outlet.id.slice(-4)})
-              </span>
+              <span className="truncate max-w-[200px] sm:max-w-none">{outlet?.name ?? 'No outlet'}</span>
+              {outlet && (
+                <span className="font-mono text-[11px] opacity-75">
+                  (Till #{outlet.id.slice(-4)})
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -808,11 +1058,7 @@ export const CounterView: React.FC = () => {
             size="sm"
             variant="outlined"
             disabled={!canTransact(isOnline)}
-            onClick={() => {
-              setReturnModalOpen(true);
-              setReversalResult(null);
-              setReversalError(null);
-            }}
+            onClick={openReturnModal}
             icon={<RotateCcw size={14} aria-hidden="true" />}
             aria-label="Return or Void"
           >
@@ -861,12 +1107,14 @@ export const CounterView: React.FC = () => {
         </div>
       )}
 
-      {/* 2. Two-Pane Terminal Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      {/* 2. Two-Pane Terminal Layout — flex-1 min-h-0 so the grid (left) and
+          cart (right) fill the remaining viewport height and scroll INTERNALLY
+          instead of growing the page (Founder seq 6860). */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         {/* LEFT / Majority Width (Catalogue & Holds) */}
-        <main className="lg:col-span-7 xl:col-span-7 2xl:col-span-8 space-y-4">
-          <Surface variant="elevated" padding="md" className="rounded-2xl border border-outline-variant/60 shadow-sm">
-            <div className="flex flex-col gap-3.5">
+        <main className="lg:col-span-7 xl:col-span-7 2xl:col-span-8 space-y-4 flex flex-col min-h-0">
+          <Surface variant="elevated" padding="md" className="rounded-2xl border border-outline-variant/60 shadow-sm flex-1 min-h-0 flex flex-col">
+            <div className="flex flex-col gap-3.5 min-h-0 flex-1">
               {/* Barcode scanner bar pinned at top */}
               <form
                 className="flex items-center gap-2"
@@ -1012,7 +1260,7 @@ export const CounterView: React.FC = () => {
 
               {/* Product Grid - Dense, touch-friendly retail tiles */}
               <div
-                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 max-h-[62vh] overflow-y-auto erp-scroll-region p-1"
+                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 flex-1 min-h-0 overflow-y-auto erp-scroll-region p-1"
                 role="region"
                 aria-label="Product grid"
               >
@@ -1037,20 +1285,21 @@ export const CounterView: React.FC = () => {
                             : '1px solid var(--md-sys-color-outline-variant)',
                         borderRadius: 'var(--md-sys-shape-corner-large, 14px)',
                       }}
-                      className="flex flex-col items-start gap-1 p-3 text-left min-h-[118px] transition-all hover:shadow-md active:scale-[0.99] relative cursor-pointer group"
+                      className="flex flex-col items-start gap-1 p-2.5 sm:p-3 text-left min-h-[118px] transition-all hover:shadow-md active:scale-[0.99] relative cursor-pointer group"
                     >
-                      <div className="w-full flex items-start justify-between gap-1">
+                      <div className="w-full flex items-center justify-between gap-1 min-w-0">
                         <span
-                          className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                          className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded whitespace-nowrap truncate min-w-0"
                           style={{
                             backgroundColor: 'var(--md-sys-color-surface-container-highest)',
                             color: 'var(--md-sys-color-on-surface-variant)',
                           }}
+                          title={product.category || 'General'}
                         >
                           {product.category || 'General'}
                         </span>
                         {inCart > 0 && (
-                          <Badge variant="info" size="sm" className="shrink-0 font-bold">
+                          <Badge variant="info" size="sm" className="shrink-0 font-bold whitespace-nowrap text-[10px] px-1.5 py-0.5">
                             in cart ×{inCart}
                           </Badge>
                         )}
@@ -1071,23 +1320,23 @@ export const CounterView: React.FC = () => {
                       </div>
 
                       {/* Prominent Price & Stock display */}
-                      <div className="mt-auto w-full pt-1.5 flex items-baseline justify-between gap-1 border-t border-outline-variant/30">
-                        <div>
+                      <div className="mt-auto w-full pt-1.5 flex items-baseline justify-between gap-1 border-t border-outline-variant/30 min-w-0">
+                        <div className="min-w-0 shrink-0">
                           {approved && approved.source !== 'none' && approved.unit_amount > 0 ? (
-                            <span className="text-sm sm:text-base font-black font-mono tracking-tight text-primary tabular-nums">
-                              MVR {Number(approved.unit_amount).toFixed(2)}
+                            <span className="text-xs sm:text-sm xl:text-base font-black font-mono tracking-tight text-primary tabular-nums whitespace-nowrap inline-flex items-baseline">
+                              <span>MVR&nbsp;{Number(approved.unit_amount).toFixed(2)}</span>
                               {approved.source === 'price_list_override' ? (
                                 <span className="text-[10px] font-normal text-on-surface-variant ml-0.5">(list)</span>
                               ) : null}
                             </span>
                           ) : (
-                            <span className="text-xs font-medium text-on-surface-variant italic">
+                            <span className="text-xs font-medium text-on-surface-variant italic whitespace-nowrap">
                               no approved price
                             </span>
                           )}
                         </div>
                         <div className="shrink-0">
-                          <Badge variant={onHand > 0 ? 'positive' : 'warning'} dot size="sm">
+                          <Badge variant={onHand > 0 ? 'positive' : 'warning'} dot size="sm" className="whitespace-nowrap text-[10px] px-1.5 py-0.5">
                             {onHand} in stock
                           </Badge>
                         </div>
@@ -1179,24 +1428,24 @@ export const CounterView: React.FC = () => {
         </main>
 
         {/* RIGHT / Dominant Sticky Cart Panel */}
-        <aside className="lg:col-span-5 xl:col-span-5 2xl:col-span-4 sticky top-4 space-y-4">
-          <Surface variant="elevated" padding="md" className="rounded-2xl border border-outline-variant/70 shadow-md">
+        <aside className="lg:col-span-5 xl:col-span-5 2xl:col-span-4 flex flex-col min-h-0">
+          <Surface variant="elevated" padding="none" className="rounded-2xl border border-outline-variant/70 shadow-md flex flex-col h-full min-h-0 overflow-hidden">
             {/* Cart Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/60">
+            <div className="shrink-0 flex items-center justify-between p-3.5 pb-2.5 border-b border-outline-variant/60">
               <div className="flex items-center gap-2">
                 <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center"
                   style={{ backgroundColor: 'var(--md-sys-color-primary-container)', color: 'var(--md-sys-color-on-primary-container)' }}
                 >
-                  <ShoppingCart size={17} aria-hidden="true" />
+                  <ShoppingCart size={15} aria-hidden="true" />
                 </div>
-                <h2 className="text-base sm:text-lg font-black tracking-tight" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                <h2 className="text-base font-black tracking-tight" style={{ color: 'var(--md-sys-color-on-surface)' }}>
                   Cart
                 </h2>
               </div>
               {!cartIsEmpty(cart) && (
                 <div className="flex items-center gap-2">
-                  <Badge variant="neutral" size="sm" className="font-mono font-bold">
+                  <Badge variant="neutral" size="sm" className="font-mono font-bold text-xs">
                     {cartLineCount(cart)} line(s) · {cartItemCount(cart)} item(s)
                   </Badge>
                   <Button
@@ -1212,393 +1461,472 @@ export const CounterView: React.FC = () => {
               )}
             </div>
 
-            {/* Cart Line Items */}
-            {cartIsEmpty(cart) ? (
-              <div
-                className="flex flex-col items-center justify-center py-12 px-4 text-center rounded-2xl my-3"
-                style={{
-                  border: '2px dashed var(--md-sys-color-outline-variant)',
-                  backgroundColor: 'var(--md-sys-color-surface-container-low)',
-                }}
-              >
-                <Package size={34} style={{ color: 'var(--md-sys-color-outline)' }} aria-hidden="true" />
-                <p className="text-sm font-bold mt-3 text-on-surface">Cart is empty</p>
-                <p className="text-xs mt-1 text-on-surface-variant max-w-xs">
-                  Select a product to start. Totals are resolved server-side when the sale completes.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2.5 max-h-[38vh] overflow-y-auto erp-scroll-region my-3 p-1">
-                {cart.map((line) => {
+            {/* Independent Scrolling Cart Items Area */}
+            <div className="flex-1 min-h-0 overflow-y-auto erp-scroll-region p-2.5 space-y-1.5">
+              {cartIsEmpty(cart) ? (
+                <div
+                  className="flex flex-col items-center justify-center py-10 px-4 text-center rounded-xl h-full min-h-[140px]"
+                  style={{
+                    border: '2px dashed var(--md-sys-color-outline-variant)',
+                    backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                  }}
+                >
+                  <Package size={28} style={{ color: 'var(--md-sys-color-outline)' }} aria-hidden="true" />
+                  <p className="text-xs font-bold mt-2" style={{ color: 'var(--md-sys-color-on-surface)' }}>Cart is empty</p>
+                  <p className="text-[11px] mt-0.5 max-w-xs" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                    Select a product to start. Totals are resolved server-side when the sale completes.
+                  </p>
+                </div>
+              ) : (
+                cart.map((line) => {
                   const product = allProducts.find((p) => p.id === line.productId);
                   const onHand = onHandAt(activeOnHand, outlet.id, line.productId);
                   const approved = approvedPriceFor(activePrices, line.productId);
                   const short = line.quantity > onHand;
-                  const unitPrice = (approved && approved.source !== 'none' && approved.unit_amount > 0) ? Number(approved.unit_amount) : 0;
-                  const lineTotal = unitPrice * line.quantity;
+                  const lineTax = cartTotals.lineTaxes[line.productId] || calculateCartLineTax(
+                    catalogue?.gst_registration_status,
+                    catalogue?.gst_rate,
+                    product,
+                    line.quantity,
+                    approved,
+                  );
+                  const lineTotal = lineTax.lineSubtotal;
 
                   return (
                     <div
                       key={line.productId}
-                      className="p-3 rounded-xl transition-all"
+                      className="px-2.5 py-1.5 rounded-lg transition-all"
                       style={{
                         backgroundColor: 'var(--md-sys-color-surface-container-low)',
                         border: `1px solid ${short ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-outline-variant)'}`,
                       }}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold leading-tight truncate" style={{ color: 'var(--md-sys-color-on-surface)' }}>
-                            {product?.name ?? line.productId}
-                          </p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            {approved && approved.source !== 'none' && approved.unit_amount > 0 ? (
-                              <p className="text-xs font-mono font-semibold" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                                MVR {Number(approved.unit_amount).toFixed(2)}
-                                {approved.source === 'price_list_override' ? ' · list' : ''}
-                                {approved.discount_percent > 0 ? ` · −${approved.discount_percent}%` : ''}
-                              </p>
-                            ) : (
-                              <p className="text-xs text-on-surface-variant italic">no approved price</p>
-                            )}
-                          </div>
-                          {short && (
-                            <p className="text-xs font-medium flex items-center gap-1 mt-1" style={{ color: 'var(--md-sys-color-error)' }}>
-                              <AlertTriangle size={12} aria-hidden="true" /> only {onHand} in stock
-                            </p>
-                          )}
-                          {!short && product && isLowStock(product, onHand) && (
-                            <p className="text-[11px] font-medium flex items-center gap-1 mt-0.5" style={{ color: 'var(--warning)' }}>
-                              <AlertTriangle size={11} aria-hidden="true" /> Low stock: {onHand} left
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Line Total */}
-                        <div className="text-right shrink-0">
-                          <span className="text-sm font-bold font-mono text-on-surface tabular-nums">
-                            MVR {lineTotal.toFixed(2)}
-                          </span>
-                        </div>
+                      {/* Top Row: Name and Line Total */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold truncate flex-1" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                          {product?.name ?? line.productId}
+                        </span>
+                        <span className="text-xs font-bold font-mono tabular-nums shrink-0" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                          MVR {lineTotal.toFixed(2)}
+                        </span>
                       </div>
 
-                      {/* Quantity Stepper */}
-                      <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-outline-variant/40">
-                        <span className="text-[11px] text-on-surface-variant font-medium">Quantity</span>
-                        <div className="flex items-center gap-1.5">
-                          <Button
-                            size="xs"
-                            variant="outlined"
-                            className="w-8 h-8 rounded-lg"
+                      {/* Bottom Row: Unit Price, Line GST Treatment, Warnings & Compact Stepper */}
+                      <div className="flex items-center justify-between gap-2 mt-1">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1 flex-wrap">
+                          {approved && approved.source !== 'none' && approved.unit_amount > 0 ? (
+                            <span className="text-[11px] font-mono font-medium" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                              MVR {Number(approved.unit_amount).toFixed(2)}
+                              {approved.source === 'price_list_override' ? ' · list' : ''}
+                              {approved.discount_percent > 0 ? ` · −${approved.discount_percent}%` : ''}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] italic" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>no price</span>
+                          )}
+                          {/* SERP-448 Line GST treatment badge */}
+                          <span
+                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-medium tracking-tight"
+                            style={{
+                              backgroundColor: 'var(--md-sys-color-surface-container-highest)',
+                              color: lineTax.isTaxable ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-on-surface-variant)',
+                            }}
+                            data-testid={`cart-line-gst-${line.productId}`}
+                            title={`Tax classification: ${lineTax.taxClassification}`}
+                          >
+                            {lineTax.treatmentLabel}
+                          </span>
+                          {short ? (
+                            <span className="text-[10px] font-semibold flex items-center gap-0.5" style={{ color: 'var(--md-sys-color-error)' }}>
+                              <AlertTriangle size={10} aria-hidden="true" /> {onHand} left
+                            </span>
+                          ) : product && isLowStock(product, onHand) ? (
+                            <span className="text-[10px] font-semibold flex items-center gap-0.5" style={{ color: 'var(--warning)' }}>
+                              <AlertTriangle size={10} aria-hidden="true" /> {onHand} left
+                            </span>
+                          ) : null}
+                        </div>
+
+                        {/* Compact Stepper */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            className="relative w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80 touch-manipulation before:absolute before:-inset-2.5 before:content-['']"
+                            style={{
+                              borderColor: 'var(--md-sys-color-outline-variant)',
+                              color: 'var(--md-sys-color-on-surface)',
+                            }}
                             aria-label={`Decrease ${product?.name ?? 'item'}`}
                             onClick={() => persistCart(setCartQuantity(cart, line.productId, line.quantity - 1))}
-                            icon={<Minus size={13} aria-hidden="true" />}
-                          />
-                          <span className="w-8 text-center text-sm font-extrabold tabular-nums font-mono" aria-label="quantity">
+                          >
+                            <Minus size={11} aria-hidden="true" />
+                          </button>
+                          <span className="w-5 text-center text-xs font-extrabold tabular-nums font-mono" aria-label="quantity" style={{ color: 'var(--md-sys-color-on-surface)' }}>
                             {line.quantity}
                           </span>
-                          <Button
-                            size="xs"
-                            variant="outlined"
-                            className="w-8 h-8 rounded-lg"
+                          <button
+                            type="button"
+                            className="relative w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80 touch-manipulation before:absolute before:-inset-2.5 before:content-['']"
+                            style={{
+                              borderColor: 'var(--md-sys-color-outline-variant)',
+                              color: 'var(--md-sys-color-on-surface)',
+                            }}
                             aria-label={`Increase ${product?.name ?? 'item'}`}
                             onClick={() => persistCart(addToCart(cart, line.productId, 1))}
-                            icon={<Plus size={13} aria-hidden="true" />}
-                          />
-                          <Button
-                            size="xs"
-                            variant="text"
-                            className="w-8 h-8 rounded-lg text-error hover:bg-error-container/30"
+                          >
+                            <Plus size={11} aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            className="relative w-6 h-6 rounded flex items-center justify-center transition-colors hover:opacity-80 ml-0.5 touch-manipulation before:absolute before:-inset-2.5 before:content-['']"
+                            style={{ color: 'var(--md-sys-color-error)' }}
                             aria-label={`Remove ${product?.name ?? 'item'}`}
                             onClick={() => persistCart(removeFromCart(cart, line.productId))}
-                            icon={<Trash2 size={14} aria-hidden="true" />}
-                          />
+                          >
+                            <Trash2 size={12} aria-hidden="true" />
+                          </button>
                         </div>
                       </div>
                     </div>
                   );
-                })}
-              </div>
-            )}
-
-            {/* LIVE Running Subtotal & Total Display (Requirement 1 & 2) */}
-            <div
-              className="p-4 rounded-2xl border space-y-2 mb-4"
-              style={{
-                backgroundColor: 'var(--md-sys-color-surface-container-high)',
-                borderColor: 'var(--md-sys-color-outline-variant)',
-              }}
-            >
-              <div className="flex justify-between items-baseline text-xs sm:text-sm">
-                <span className="font-semibold text-on-surface-variant">Estimated Subtotal</span>
-                <span className="font-mono font-bold text-on-surface tabular-nums">
-                  MVR {liveTotals.subtotal.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between items-baseline pt-2 border-t border-outline-variant/60">
-                <div>
-                  <span className="text-base sm:text-lg font-black tracking-tight text-on-surface block">
-                    TOTAL DUE
-                  </span>
-                  <span className="text-[10px] text-on-surface-variant">
-                    Server resolves exact final total on complete
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-primary tabular-nums block">
-                    MVR {liveTotals.subtotal.toFixed(2)}
-                  </span>
-                  {liveTotals.hasUnpricedItem && (
-                    <span className="text-[10px] font-semibold text-[var(--warning)]">
-                      Unapproved prices in cart
-                    </span>
-                  )}
-                </div>
-              </div>
+                })
+              )}
             </div>
 
-            {/* Tender & Payment Controls */}
-            <div className="space-y-3">
-              <div role="group" aria-label="Tender">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                    Payment Method
-                  </p>
-                  <span className="text-[11px] text-on-surface-variant">Server calculates change</span>
-                </div>
-
-                {/* Big Tender Buttons */}
-                <div className="grid grid-cols-4 gap-2 mb-3">
-                  {(['cash', 'card', 'transfer', 'mixed'] as const).map((method) => {
-                    const active = paymentMethod === method;
-                    return (
-                      <button
-                        key={method}
-                        type="button"
-                        aria-pressed={active}
-                        onClick={() => setPaymentMethod(method)}
-                        className="h-11 sm:h-12 px-1 text-xs sm:text-sm font-bold rounded-xl capitalize transition-all flex items-center justify-center gap-1 shadow-sm"
-                        style={{
-                          backgroundColor: active
-                            ? 'var(--md-sys-color-primary)'
-                            : 'var(--md-sys-color-surface-container-high)',
-                          color: active
-                            ? 'var(--md-sys-color-on-primary)'
-                            : 'var(--md-sys-color-on-surface)',
-                          border: `2px solid ${active ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-outline-variant)'}`,
-                        }}
-                      >
-                        {method === 'cash' && <Banknote size={15} aria-hidden="true" />}
-                        {method === 'card' && <CreditCard size={15} aria-hidden="true" />}
-                        {method === 'transfer' && <RotateCcw size={14} aria-hidden="true" />}
-                        {method === 'mixed' && <Sparkles size={14} aria-hidden="true" />}
-                        <span>{method}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Tender Inputs */}
-                <div className="flex flex-wrap gap-2.5">
-                  {(['cash', 'card', 'transfer'] as const)
-                    .filter((m) => paymentMethod === 'mixed' || paymentMethod === m)
-                    .map((m) => (
-                      <div key={m} className="flex-1 min-w-[130px]">
-                        <label className="block text-[11px] font-bold capitalize text-on-surface-variant mb-1">
-                          {m} Tendered
-                        </label>
-                        <Input
-                          aria-label={`${m} tendered`}
-                          type="number"
-                          inputMode="decimal"
-                          min={0}
-                          step="0.01"
-                          placeholder="0.00"
-                          className="w-full text-base font-mono font-bold h-11"
-                          value={tenderInput[m] ?? ''}
-                          onChange={(e) => setTenderInput((t) => ({ ...t, [m]: e.target.value }))}
-                        />
+            {/* Fixed Bottom Checkout / Result Controls */}
+            <div className="shrink-0 p-3 border-t border-outline-variant/60 space-y-2.5 bg-surface-container">
+              {saleResult ? (
+                /* Compact Post-Sale Action Card (Register & Catalog Stay Stationary) */
+                <div
+                  className="p-3 rounded-xl border space-y-2"
+                  style={{
+                    backgroundColor: 'var(--positive-subtle)',
+                    borderColor: 'var(--positive)',
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <CheckCircle2 size={18} style={{ color: 'var(--positive)' }} aria-hidden="true" />
+                      <div>
+                        <h2 className="text-xs font-bold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                          Sale complete
+                        </h2>
+                        <p className="text-[11px] font-mono" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                          {saleResult.invoice_number && (
+                            <>Invoice <span className="font-bold">{saleResult.invoice_number}</span> settled.</>
+                          )}
+                          {saleResult.receipt_number && (
+                            <span className="ml-1 font-bold">{saleResult.receipt_number}</span>
+                          )}
+                        </p>
                       </div>
-                    ))}
-                </div>
-              </div>
+                    </div>
+                    <Badge variant="positive" size="sm">Settled</Badge>
+                  </div>
 
-              {/* Action Buttons: Hold and Big Complete Sale / Charge */}
-              <div className="grid grid-cols-3 gap-2 pt-1">
-                <Button
-                  variant="tonal"
-                  size="md"
-                  className="col-span-1 h-12 font-bold text-xs sm:text-sm"
-                  disabled={cartIsEmpty(cart) || !canTransact(isOnline)}
-                  onClick={hold}
-                  icon={<ShoppingCart size={16} aria-hidden="true" />}
-                >
-                  Hold cart
-                </Button>
-                <Button
-                  variant="filled"
-                  size="lg"
-                  className="col-span-2 h-12 sm:h-14 text-base font-black tracking-wide shadow-lg active:scale-[0.99] transition-transform"
-                  loading={completing}
-                  disabled={cartIsEmpty(cart) || !outlet || completing || !canTransact(isOnline)}
-                  onClick={complete}
-                  icon={<CheckCircle2 size={19} aria-hidden="true" />}
-                >
-                  Complete sale
-                </Button>
-              </div>
-
-              {saleError && (
-                <div className="space-y-2 mt-2 p-3 rounded-xl bg-error-container/40 border border-error/30">
-                  <p role="alert" className="text-xs font-semibold text-error">
-                    Sale rejected: {formatResilienceErrorMessage(saleError)}. Nothing was deducted — the transaction failed closed.
-                  </p>
-                  {isRetryableError(saleError) && (
-                    <Button
-                      size="sm"
-                      variant="outlined"
-                      onClick={complete}
-                      loading={completing}
-                      icon={<RefreshCw size={13} aria-hidden="true" />}
+                  {/* Financial Breakdown */}
+                  <div
+                    className="p-2 rounded-lg text-xs space-y-1"
+                    style={{ backgroundColor: 'var(--md-sys-color-surface-container-lowest)' }}
+                  >
+                    {saleResult.total_amount !== undefined && (
+                      <div className="flex justify-between font-bold text-on-surface">
+                        <span>Total</span>
+                        <span className="font-mono tabular-nums">MVR {Number(saleResult.total_amount).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {saleResult.tendered_amount !== undefined && (
+                      <div className="flex justify-between text-on-surface-variant">
+                        <span>Tendered</span>
+                        <span className="font-mono tabular-nums">MVR {Number(saleResult.tendered_amount).toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div
+                      className="flex justify-between font-bold pt-1 border-t border-outline-variant/40"
+                      style={{ color: Number(saleResult.change_amount ?? 0) > 0 ? 'var(--positive)' : 'var(--md-sys-color-on-surface)' }}
                     >
-                      Retry sale (idempotent)
+                      <span>Change Due</span>
+                      <span className="font-mono text-base tabular-nums">
+                        MVR {Number(saleResult.change_amount ?? 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* SPOS-008: Explicit Printer Failure Notice */}
+                  {printStatus === 'print_failed' && (
+                    <div
+                      role="alert"
+                      aria-live="assertive"
+                      className="p-2.5 rounded-lg border text-xs space-y-1"
+                      style={{
+                        borderColor: 'var(--md-sys-color-error, #f87171)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        color: 'var(--md-sys-color-error, #f87171)',
+                      }}
+                    >
+                      <div className="font-bold flex items-center gap-1.5">
+                        <AlertTriangle size={14} aria-hidden="true" />
+                        <span>Printer Error — Sale #{saleResult.invoice_number} Safely Committed</span>
+                      </div>
+                      <p className="text-[11px] opacity-90">
+                        The transaction is durable in the database. The physical printer did not respond.
+                        Reprint is available and will not create a duplicate charge.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Direct Actions: New Sale, View Receipt */}
+                  <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="w-full font-bold text-xs h-9"
+                      onClick={resetForNewSale}
+                      autoFocus
+                      icon={<Plus size={14} aria-hidden="true" />}
+                    >
+                      Start New Sale
                     </Button>
+                    <Button
+                      variant="tonal"
+                      size="sm"
+                      className="w-full font-bold text-xs h-9"
+                      loading={receiptBusy || printStatus === 'printing'}
+                      onClick={() => {
+                        loadReceipt();
+                        setReceiptModalOpen(true);
+                      }}
+                      icon={<Receipt size={14} aria-hidden="true" />}
+                    >
+                      View receipt
+                    </Button>
+                  </div>
+
+                  {/* SPOS-008: Print & Re-print actions */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Button
+                      variant={printStatus === 'print_failed' ? 'primary' : 'outlined'}
+                      size="sm"
+                      className="w-full font-bold text-xs h-8"
+                      loading={printStatus === 'printing'}
+                      onClick={() => handlePrintReceipt(false)}
+                      icon={<Printer size={13} aria-hidden="true" />}
+                    >
+                      {printStatus === 'print_failed' ? 'Retry Print' : 'Print Receipt'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="sm"
+                      className="w-full font-bold text-xs h-8"
+                      disabled={!receipt && !saleResult}
+                      loading={printStatus === 'printing'}
+                      onClick={() => handlePrintReceipt(true)}
+                      icon={<Copy size={13} aria-hidden="true" />}
+                    >
+                      Re-print (duplicate)
+                    </Button>
+                  </div>
+
+                  {(printStatus === 'print_requested' || printStatus === 'printed') && (
+                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--md-sys-color-primary)]">
+                      <Printer size={13} aria-hidden="true" />
+                      <span>Print requested • Re-print duplicate available</span>
+                    </div>
+                  )}
+
+                  {receipt && (receipt.receipt || (receipt as any).receipt_number) && (
+                    <div
+                      className="p-1.5 rounded-lg text-xs"
+                      style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)' }}
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-bold text-[11px]">
+                          Receipt {receipt.receipt?.receipt_number ?? (receipt as any).receipt_number ?? saleResult.receipt_number}
+                        </span>
+                        <Badge variant="neutral">
+                          rendered ×{receipt.receipt?.renders ?? (receipt as any).renders ?? 0}
+                        </Badge>
+                      </div>
+                    </div>
                   )}
                 </div>
+              ) : (
+                /* Live Running Totals & Checkout Actions */
+                <>
+                  <div
+                    className="p-3 rounded-xl border space-y-1.5"
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                      borderColor: 'var(--md-sys-color-outline-variant)',
+                    }}
+                  >
+                    <div className="flex justify-between items-baseline text-xs">
+                      <span className="font-semibold text-on-surface-variant">Subtotal</span>
+                      <span className="font-mono font-bold text-on-surface tabular-nums" data-testid="checkout-subtotal">
+                        MVR {cartTotals.subtotal.toFixed(2)}
+                      </span>
+                    </div>
+                    {catalogue?.gst_registration_status === 'registered' ? (
+                      <div className="flex justify-between items-baseline text-xs">
+                        <span className={`font-semibold ${isTaxMissing ? 'text-error' : 'text-on-surface-variant'}`}>
+                          GST
+                        </span>
+                        {isTaxMissing ? (
+                          <span className="font-semibold text-error text-xs" data-testid="checkout-gst-error">Rate unavailable</span>
+                        ) : (
+                          <span className="font-mono font-bold text-on-surface tabular-nums" data-testid="checkout-gst">
+                            MVR {(cartTotals.taxTotal ?? 0).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-baseline text-xs">
+                        <span className="font-semibold text-on-surface-variant">GST</span>
+                        <span className="font-mono font-semibold text-on-surface-variant text-xs" data-testid="checkout-gst-unregistered">
+                          Not GST registered — no GST
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-baseline pt-1.5 border-t border-outline-variant/60">
+                      <div>
+                        <span className="text-sm font-black tracking-tight text-on-surface block">
+                          TOTAL DUE
+                        </span>
+                        <span className="text-[10px] text-on-surface-variant">
+                          {isTaxMissing
+                            ? 'Sale blocked: missing tax configuration'
+                            : 'Exact total resolved server-side'}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        {isTaxMissing ? (
+                          <span className="text-sm font-bold tracking-tight text-error block">
+                            Rate Unavailable
+                          </span>
+                        ) : (
+                          <span className="text-xl font-black font-mono tracking-tight text-primary tabular-nums block" data-testid="checkout-total-due">
+                            MVR {(cartTotals.totalDue ?? cartTotals.subtotal).toFixed(2)}
+                          </span>
+                        )}
+                        {cartTotals.hasUnpricedItem && (
+                          <span className="text-[10px] font-semibold text-[var(--warning)]">
+                            Unapproved prices in cart
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {isTaxMissing && !cartIsEmpty(cart) && (
+                    <div role="alert" className="p-2 rounded-lg bg-error-container/40 border border-error/30 text-xs font-semibold text-error">
+                      Authoritative GST rate is unavailable for this registered organisation. Complete sale is blocked until statutory tax configuration is loaded.
+                    </div>
+                  )}
+
+                  {/* Tender & Payment Controls */}
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {(['cash', 'card', 'transfer', 'mixed'] as const).map((method) => {
+                        const active = paymentMethod === method;
+                        return (
+                          <button
+                            key={method}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => setPaymentMethod(method)}
+                            className="h-9 px-1 text-xs font-bold rounded-lg capitalize transition-all flex items-center justify-center gap-1 shadow-sm"
+                            style={{
+                              backgroundColor: active
+                                ? 'var(--md-sys-color-primary)'
+                                : 'var(--md-sys-color-surface-container-high)',
+                              color: active
+                                ? 'var(--md-sys-color-on-primary)'
+                                : 'var(--md-sys-color-on-surface)',
+                              border: `2px solid ${active ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-outline-variant)'}`,
+                            }}
+                          >
+                            {method === 'cash' && <Banknote size={13} aria-hidden="true" />}
+                            {method === 'card' && <CreditCard size={13} aria-hidden="true" />}
+                            {method === 'transfer' && <RotateCcw size={12} aria-hidden="true" />}
+                            {method === 'mixed' && <Sparkles size={12} aria-hidden="true" />}
+                            <span>{method}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Tender Inputs */}
+                    <div className="flex flex-wrap gap-2">
+                      {(['cash', 'card', 'transfer'] as const)
+                        .filter((m) => paymentMethod === 'mixed' || paymentMethod === m)
+                        .map((m) => (
+                          <div key={m} className="flex-1 min-w-[110px]">
+                            <label className="block text-[10px] font-bold capitalize text-on-surface-variant mb-0.5">
+                              {m} Tendered
+                            </label>
+                            <Input
+                              aria-label={`${m} tendered`}
+                              type="number"
+                              inputMode="decimal"
+                              min={0}
+                              step="0.01"
+                              placeholder="0.00"
+                              onFocus={(e) => e.target.select()}
+                              className="w-full text-sm font-mono font-bold h-9"
+                              value={tenderInput[m] ?? ''}
+                              onChange={(e) => setTenderInput((t) => ({ ...t, [m]: e.target.value }))}
+                            />
+                          </div>
+                        ))}
+                    </div>
+
+                    {/* Action Buttons: Hold and Big Complete Sale / Charge */}
+                    <div className="grid grid-cols-3 gap-2 pt-0.5">
+                      <Button
+                        variant="tonal"
+                        size="md"
+                        className="col-span-1 h-11 font-bold text-xs"
+                        disabled={cartIsEmpty(cart) || !canTransact(isOnline)}
+                        onClick={hold}
+                        icon={<ShoppingCart size={15} aria-hidden="true" />}
+                      >
+                        Hold cart
+                      </Button>
+                      <Button
+                        variant="filled"
+                        size="lg"
+                        className="col-span-2 h-11 text-sm font-black tracking-wide shadow-md active:scale-[0.99] transition-transform"
+                        loading={completing}
+                        disabled={cartIsEmpty(cart) || !outlet || completing || !canTransact(isOnline) || isTaxMissing}
+                        onClick={complete}
+                        icon={<CheckCircle2 size={17} aria-hidden="true" />}
+                      >
+                        {isTaxMissing ? 'Tax rate unavailable' : 'Complete sale'}
+                      </Button>
+                    </div>
+
+                    {saleError && (
+                      <div className="p-2.5 rounded-lg bg-error-container/40 border border-error/30 space-y-1.5">
+                        <p role="alert" className="text-xs font-semibold text-error">
+                          Sale rejected: {formatResilienceErrorMessage(saleError)}
+                        </p>
+                        {isRetryableError(saleError) && (
+                          <Button
+                            size="xs"
+                            variant="outlined"
+                            onClick={complete}
+                            loading={completing}
+                            icon={<RefreshCw size={12} aria-hidden="true" />}
+                          >
+                            Retry sale (idempotent)
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           </Surface>
-
-          {/* 4. Post-Sale State with Clear "New Sale" & Restyled Receipt (Requirements 4 & 5) */}
-          {saleResult && (
-            <Surface variant="elevated" padding="md" className="rounded-2xl border-2 border-positive shadow-lg space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 size={22} className="text-positive" aria-hidden="true" />
-                  <div>
-                    <h2 className="text-base font-bold text-on-surface">Sale complete</h2>
-                    <p className="text-xs text-on-surface-variant font-mono">
-                      Invoice <span className="font-bold text-on-surface">{saleResult.invoice_number}</span> settled.
-                    </p>
-                  </div>
-                </div>
-                <Badge variant="positive" size="sm">Settled</Badge>
-              </div>
-
-              {/* Requirement 4: Obvious New Sale Action */}
-              <Button
-                variant="filled"
-                size="lg"
-                className="w-full h-12 text-base font-black shadow-md rounded-xl"
-                onClick={resetForNewSale}
-                icon={<Plus size={18} aria-hidden="true" />}
-              >
-                Start New Sale
-              </Button>
-
-              {/* Requirement 5: Restyled Authentic Receipt Display */}
-              <div className="p-4 rounded-xl font-mono text-xs bg-[var(--md-sys-color-surface-container-lowest)] text-[var(--md-sys-color-on-surface)] border-2 border-dashed border-[var(--md-sys-color-outline-variant)] shadow-inner space-y-2">
-                <div className="text-center pb-2 border-b border-dashed border-[var(--md-sys-color-outline-variant)]">
-                  <p className="font-black text-sm tracking-wider uppercase">{outlet?.name ?? 'starqPOS'}</p>
-                  <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-sans font-medium uppercase mt-0.5">Tax Invoice / Receipt</p>
-                  <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] opacity-70 mt-1 uppercase tracking-wider">
-                    Official Tax Receipt
-                  </p>
-                  {saleResult.receipt_number && (
-                    <p className="text-xs font-bold text-[var(--md-sys-color-on-surface)] mt-0.5">
-                      Receipt: <span className="font-mono font-bold">{saleResult.receipt_number}</span>
-                    </p>
-                  )}
-                </div>
-
-                {saleResult.lines && saleResult.lines.length > 0 && (
-                  <div className="py-2 border-b border-dashed border-[var(--md-sys-color-outline-variant)] space-y-1">
-                    {saleResult.lines.map((line, idx) => (
-                      <div key={idx} className="flex justify-between items-start text-[11px]">
-                        <div className="pr-2 truncate">
-                          <span>{line.name}</span>
-                          <span className="text-[var(--md-sys-color-on-surface-variant)] ml-1">×{line.quantity}</span>
-                        </div>
-                        <span className="tabular-nums font-semibold shrink-0">
-                          MVR {Number(line.net_amount).toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="space-y-1 pt-1 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-[var(--md-sys-color-on-surface-variant)]">Subtotal</span>
-                    <span className="font-semibold tabular-nums">MVR {Number(saleResult.subtotal).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[var(--md-sys-color-on-surface-variant)]">Tax</span>
-                    <span className="font-semibold tabular-nums">MVR {Number(saleResult.tax_total).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-sm pt-1.5 border-t border-dashed border-[var(--md-sys-color-outline-variant)]">
-                    <span>TOTAL</span>
-                    <span className="font-black tabular-nums">MVR {Number(saleResult.total_amount).toFixed(2)}</span>
-                  </div>
-                  {saleResult.tendered_amount !== undefined && (
-                    <>
-                      <div className="flex justify-between text-[var(--md-sys-color-on-surface-variant)] pt-1">
-                        <span>Tendered</span>
-                        <span className="font-semibold tabular-nums">MVR {Number(saleResult.tendered_amount).toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between font-bold text-[var(--positive)]">
-                        <span>Change{Number(saleResult.change_amount ?? 0) > 0 ? '' : ' (none)'}</span>
-                        <span className="tabular-nums">MVR {Number(saleResult.change_amount ?? 0).toFixed(2)}</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <div className="text-center pt-2 border-t border-dashed border-[var(--md-sys-color-outline-variant)] text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-sans">
-                  <p>Thank you for your business!</p>
-                  <p className="text-[9px]">Duplicate-proof • Server Authoritative</p>
-                </div>
-              </div>
-
-              {/* Receipt Action Buttons */}
-              <div className="flex flex-wrap gap-2 pt-1">
-                <Button size="sm" variant="tonal" loading={receiptBusy} onClick={loadReceipt} icon={<Receipt size={14} aria-hidden="true" />}>
-                  View receipt
-                </Button>
-                <Button size="sm" variant="outlined" disabled={!receipt} onClick={reRenderReceipt} icon={<Copy size={14} aria-hidden="true" />}>
-                  Re-print (duplicate)
-                </Button>
-              </div>
-
-              {receiptError && (
-                <p role="alert" className="text-xs font-semibold text-error mt-1">
-                  Receipt unavailable: {receiptError}
-                </p>
-              )}
-
-              {receipt && (
-                <div className="mt-2 p-3 rounded-xl text-xs bg-surface-container-high border border-outline-variant space-y-1">
-                  <div className="flex items-center justify-between gap-2 pb-1 border-b border-outline-variant/50">
-                    <span className="font-bold">Receipt {receipt.receipt.receipt_number}</span>
-                    <Badge variant="neutral">rendered ×{receipt.receipt.renders}</Badge>
-                  </div>
-                  {receipt.receipt.tender.map((leg) => (
-                    <div key={leg.payment_method} className="flex justify-between text-on-surface-variant">
-                      <span className="capitalize">{leg.payment_method}</span>
-                      <span className="tabular-nums font-semibold">MVR {Number(leg.amount_tendered).toFixed(2)}</span>
-                    </div>
-                  ))}
-                  <div className="flex justify-between font-bold text-on-surface pt-1 border-t border-outline-variant/30">
-                    <span>Change</span>
-                    <span className="tabular-nums">MVR {Number(receipt.receipt.change_amount).toFixed(2)}</span>
-                  </div>
-                  <p className="mt-1 text-[10px] text-on-surface-variant">
-                    Duplicate-proof: every re-print reuses receipt {receipt.receipt.receipt_number} — one financial record per sale.
-                  </p>
-                </div>
-              )}
-            </Surface>
-          )}
         </aside>
       </div>
 
@@ -1654,6 +1982,7 @@ export const CounterView: React.FC = () => {
                     min="0"
                     placeholder="0.00"
                     value={openingFloatInput}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setOpeningFloatInput(e.target.value)}
                     autoFocus
                     aria-label="Opening Cash Float"
@@ -1798,22 +2127,63 @@ export const CounterView: React.FC = () => {
                       min="0"
                       placeholder="0.00"
                       value={countedCashInput}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => setCountedCashInput(e.target.value)}
+                      autoFocus
                       aria-label="Counted Cash in Drawer"
                     />
                   </div>
 
-                  {countedCashInput !== '' && !isNaN(parseFloat(countedCashInput)) && (
-                    <div className="p-2.5 rounded-lg text-xs flex justify-between items-center" style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)' }}>
-                      <span className="font-medium">Calculated Variance:</span>
-                      <span className="font-bold tabular-nums">
-                        {formatVarianceLabel(
-                          calculateVariance(tillSession?.expected_cash ?? 0, parseFloat(countedCashInput)),
-                          tillSession?.currency ?? 'MVR',
-                        )}
-                      </span>
-                    </div>
-                  )}
+                  {countedCashInput !== '' && !isNaN(parseFloat(countedCashInput)) && (() => {
+                    const counted = parseFloat(countedCashInput);
+                    const expected = Number(tillSession?.expected_cash ?? 0);
+                    const variance = calculateVariance(expected, counted);
+                    const isBalanced = variance === 0;
+                    const isShortage = variance < 0;
+                    return (
+                      <div
+                        className="p-3 rounded-xl border space-y-2"
+                        style={{
+                          backgroundColor: isBalanced
+                            ? 'var(--positive-subtle)'
+                            : isShortage
+                              ? 'var(--md-sys-color-error-container)'
+                              : 'var(--md-sys-color-surface-container-high)',
+                          borderColor: isBalanced
+                            ? 'var(--positive)'
+                            : isShortage
+                              ? 'var(--md-sys-color-error)'
+                              : 'var(--md-sys-color-outline-variant)',
+                        }}
+                      >
+                        <div className="flex justify-between items-center text-xs">
+                          <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Expected Cash:</span>
+                          <span className="font-mono font-bold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                            {tillSession?.currency ?? 'MVR'} {expected.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Counted Cash:</span>
+                          <span className="font-mono font-bold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                            {tillSession?.currency ?? 'MVR'} {counted.toFixed(2)}
+                          </span>
+                        </div>
+                        <div
+                          className="flex justify-between items-center pt-2 border-t font-bold text-xs"
+                          style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}
+                        >
+                          <span>Calculated Variance:</span>
+                          <Badge variant={isBalanced ? 'positive' : isShortage ? 'destructive' : 'info'} size="sm">
+                            {isBalanced
+                              ? 'BALANCED (MVR 0.00)'
+                              : isShortage
+                                ? `SHORTAGE: -MVR ${Math.abs(variance).toFixed(2)}`
+                                : `OVERAGE: +MVR ${variance.toFixed(2)}`}
+                          </Badge>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <div>
                     <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--md-sys-color-on-surface)' }}>
@@ -1843,7 +2213,11 @@ export const CounterView: React.FC = () => {
                       loading={closingTill}
                       disabled={countedCashInput === '' || isNaN(parseFloat(countedCashInput))}
                     >
-                      Close Till &amp; Record Variance
+                      {countedCashInput !== '' && !isNaN(parseFloat(countedCashInput))
+                        ? calculateVariance(Number(tillSession?.expected_cash ?? 0), parseFloat(countedCashInput)) === 0
+                          ? 'Confirm Till Close (Balanced)'
+                          : `Confirm Till Close (${formatVarianceLabel(calculateVariance(Number(tillSession?.expected_cash ?? 0), parseFloat(countedCashInput)), tillSession?.currency ?? 'MVR')})`
+                        : 'Close Till & Record Variance'}
                     </Button>
                   </div>
                 </div>
@@ -1853,16 +2227,16 @@ export const CounterView: React.FC = () => {
         </div>
       )}
 
-      {/* Return & Void Modal */}
+      {/* Cashier-Usable Return & Void Modal (SERP-088) */}
       {returnModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div className="w-full max-w-lg">
+          <div className="w-full max-w-xl">
             <Surface variant="elevated" padding="lg" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 pb-2 border-b border-outline-variant/60">
                 <div className="flex items-center gap-2">
                   <RotateCcw size={18} style={{ color: 'var(--md-sys-color-primary)' }} aria-hidden="true" />
-                  <h2 className="text-base font-semibold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
-                    Controlled Return &amp; Void (SERP-088)
+                  <h2 className="text-base font-bold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                    Process Return or Void
                   </h2>
                 </div>
                 <Button
@@ -1876,39 +2250,41 @@ export const CounterView: React.FC = () => {
               </div>
 
               {reversalResult ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 p-3 rounded-lg" style={{ backgroundColor: 'var(--positive-subtle)', color: 'var(--positive)' }}>
-                    <CheckCircle2 size={18} aria-hidden="true" />
-                    <span className="text-xs font-semibold">Reversal Processed Successfully</span>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 p-3 rounded-xl" style={{ backgroundColor: 'var(--positive-subtle)', color: 'var(--positive)' }}>
+                    <CheckCircle2 size={20} aria-hidden="true" />
+                    <span className="text-sm font-bold">Reversal Processed Successfully</span>
                   </div>
-                  <div className="text-xs space-y-1.5 p-3 rounded-lg" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
+                  <div className="text-xs space-y-2 p-3.5 rounded-xl border" style={{ backgroundColor: 'var(--md-sys-color-surface-container)', borderColor: 'var(--md-sys-color-outline-variant)' }}>
                     <div className="flex justify-between">
                       <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Return Number</span>
-                      <span className="font-mono font-semibold">{reversalResult.return_number}</span>
+                      <span className="font-mono font-bold">{reversalResult.return_number}</span>
                     </div>
                     <div className="flex justify-between">
                       <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Type</span>
-                      <span className="font-semibold uppercase">{reversalResult.reversal_type}</span>
+                      <span className="font-bold uppercase">{reversalResult.reversal_type}</span>
                     </div>
                     <div className="flex justify-between">
                       <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Credit Note</span>
-                      <span className="font-mono font-semibold">{reversalResult.credit_note_number ?? reversalResult.credit_note_id}</span>
+                      <span className="font-mono font-bold">{reversalResult.credit_note_number ?? reversalResult.credit_note_id}</span>
                     </div>
                     <div className="flex justify-between">
                       <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Total Refund</span>
-                      <span className="font-bold tabular-nums">{reversalResult.currency} {Number(reversalResult.total_refund_amount).toFixed(2)}</span>
+                      <span className="font-bold font-mono text-sm tabular-nums" style={{ color: 'var(--positive)' }}>
+                        {reversalResult.currency} {Number(reversalResult.total_refund_amount).toFixed(2)}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Approval Mode</span>
-                      <span className="font-medium">{reversalResult.approval_mode}</span>
+                      <span className="font-semibold capitalize">{reversalResult.approval_mode.replace('_', ' ')}</span>
                     </div>
-                    <div className="pt-1 border-t text-[11px]" style={{ borderColor: 'var(--md-sys-color-outline-variant)', color: 'var(--md-sys-color-on-surface-variant)' }}>
+                    <div className="pt-2 border-t text-[11px]" style={{ borderColor: 'var(--md-sys-color-outline-variant)', color: 'var(--md-sys-color-on-surface-variant)' }}>
                       <span className="font-medium">Reason:</span> {reversalResult.reason}
                     </div>
                   </div>
                   <Button
                     variant="primary"
-                    className="w-full"
+                    className="w-full h-11 text-sm font-bold"
                     onClick={() => setReturnModalOpen(false)}
                   >
                     Done
@@ -1916,128 +2292,314 @@ export const CounterView: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant={reversalType === 'return' ? 'primary' : 'outlined'}
-                      onClick={() => setReversalType('return')}
-                    >
-                      Itemized Return
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={reversalType === 'void' ? 'primary' : 'outlined'}
-                      onClick={() => setReversalType('void')}
-                    >
-                      Void Entire Sale
-                    </Button>
-                  </div>
-
-                  <Input
-                    label="Original Sale ID (UUID)"
-                    aria-label="Original Sale ID"
-                    placeholder="e.g. 00000000-0000-0000-0000-000000000000"
-                    value={returnSaleId}
-                    onChange={(e) => setReturnSaleId(e.target.value)}
-                  />
-
-                  {reversalType === 'return' && (
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="col-span-2">
-                        <Input
-                          label="Product ID"
-                          aria-label="Product ID"
-                          placeholder="Product UUID"
-                          value={returnProductId}
-                          onChange={(e) => setReturnProductId(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Input
-                          label="Quantity"
-                          aria-label="Return Quantity"
-                          type="number"
-                          min="1"
-                          value={returnQtyInput}
-                          onChange={(e) => setReturnQtyInput(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Select
-                        label="Refund Method"
-                        aria-label="Refund Method"
-                        value={refundMethod}
-                        onChange={(e) => setRefundMethod(e.target.value as RefundMethod)}
-                        options={[
-                          { value: 'cash', label: 'Cash' },
-                          { value: 'card', label: 'Card' },
-                          { value: 'transfer', label: 'Bank Transfer' },
-                          { value: 'store_credit', label: 'Store Credit' },
-                        ]}
-                      />
-                    </div>
-                    <div>
+                  {/* Search / Scan Bar */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                      Scan Barcode or Enter Receipt / Invoice Number
+                    </label>
+                    <div className="flex gap-2">
                       <Input
-                        label="Refund Amount (optional override)"
-                        aria-label="Refund Amount"
-                        type="number"
-                        placeholder="Auto"
-                        value={refundAmountInput}
-                        onChange={(e) => setRefundAmountInput(e.target.value)}
+                        placeholder="e.g. RCT-00001, SI-00001, or scan receipt barcode"
+                        value={returnSearchQuery}
+                        onChange={(e) => setReturnSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleLookupSale();
+                        }}
+                        autoFocus
+                        className="flex-1 text-sm font-mono"
+                        aria-label="Search receipt or invoice"
                       />
+                      <Button
+                        variant="primary"
+                        onClick={handleLookupSale}
+                        loading={searchingSale}
+                        disabled={!returnSearchQuery.trim()}
+                        icon={<Search size={14} aria-hidden="true" />}
+                      >
+                        Find Sale
+                      </Button>
                     </div>
                   </div>
 
-                  <Input
-                    label="Reason for Return / Void"
-                    aria-label="Reason"
-                    placeholder="e.g. Defective part / Customer cancelled / Wrong item"
-                    value={returnReason}
-                    onChange={(e) => setReturnReason(e.target.value)}
-                  />
+                  {/* Sale Lookup Result Details */}
+                  {lookedUpSale ? (
+                    <div className="space-y-4 pt-1">
+                      {/* Sale Summary Banner */}
+                      <div className="p-3 rounded-xl border text-xs space-y-1.5" style={{ backgroundColor: 'var(--md-sys-color-surface-container)', borderColor: 'var(--md-sys-color-outline-variant)' }}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-sm" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                            Invoice: {lookedUpSale.invoice_number}
+                          </span>
+                          {lookedUpSale.receipt_number && (
+                            <Badge variant="neutral" size="sm" className="font-mono font-bold">
+                              Receipt: {lookedUpSale.receipt_number}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                          <span>Date: {new Date(lookedUpSale.created_at).toLocaleString()}</span>
+                          <span className="font-mono font-bold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                            Original Total: {lookedUpSale.currency} {lookedUpSale.gross_total.toFixed(2)}
+                          </span>
+                        </div>
+                        {lookedUpSale.is_fully_voided && (
+                          <div className="p-2 rounded-lg font-bold text-center" style={{ backgroundColor: 'var(--md-sys-color-error-container)', color: 'var(--md-sys-color-error)' }}>
+                            This sale has already been fully voided.
+                          </div>
+                        )}
+                      </div>
 
-                  <div className="space-y-2 pt-1 border-t" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-medium" style={{ color: 'var(--md-sys-color-on-surface)' }}>Operating Capacity (SERP-030)</span>
-                      <Select
-                        aria-label="Operating Capacity"
-                        value={operatingCapacity}
-                        onChange={(e) => setOperatingCapacity(e.target.value as 'segregated' | 'solo')}
-                        options={[
-                          { value: 'segregated', label: 'Segregated (Requires Approval)' },
-                          { value: 'solo', label: 'Solo Operator (Compensated)' },
-                        ]}
-                      />
+                      {!lookedUpSale.is_fully_voided && (
+                        <>
+                          {/* Mode Tabs */}
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant={reversalType === 'void' ? 'primary' : 'outlined'}
+                              onClick={() => setReversalType('void')}
+                            >
+                              Void Entire Sale
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant={reversalType === 'return' ? 'primary' : 'outlined'}
+                              onClick={() => setReversalType('return')}
+                            >
+                              Itemized Return
+                            </Button>
+                          </div>
+
+                          {reversalType === 'void' ? (
+                            <div className="p-3 rounded-xl border text-xs" style={{ backgroundColor: 'var(--md-sys-color-surface-container-low)', borderColor: 'var(--md-sys-color-outline-variant)' }}>
+                              <p className="font-medium" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                                Void will cancel the entire transaction, return all items to stock, and issue a full refund of <span className="font-bold font-mono">MVR {lookedUpSale.gross_total.toFixed(2)}</span>.
+                              </p>
+                            </div>
+                          ) : (
+                            /* Itemized Return List */
+                            <div className="space-y-2">
+                              <label className="block text-xs font-bold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                                Select Items to Return
+                              </label>
+                              <div className="max-h-48 overflow-y-auto space-y-1.5 p-1 rounded-xl border" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}>
+                                {lookedUpSale.lines.map((line) => {
+                                  const sel = selectedReturnItems[line.product_id] ?? { selected: false, qty: 1 };
+                                  const disabled = line.remaining_quantity <= 0;
+
+                                  return (
+                                    <div
+                                      key={line.product_id}
+                                      className="p-2.5 rounded-lg flex items-center justify-between gap-2 transition-colors text-xs"
+                                      style={{
+                                        backgroundColor: sel.selected && !disabled
+                                          ? 'var(--md-sys-color-surface-container-high)'
+                                          : 'var(--md-sys-color-surface-container-low)',
+                                        opacity: disabled ? 0.5 : 1,
+                                      }}
+                                    >
+                                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                                        <input
+                                          type="checkbox"
+                                          disabled={disabled}
+                                          checked={sel.selected && !disabled}
+                                          onChange={(e) =>
+                                            setSelectedReturnItems((prev) => ({
+                                              ...prev,
+                                              [line.product_id]: {
+                                                selected: e.target.checked,
+                                                qty: prev[line.product_id]?.qty || 1,
+                                              },
+                                            }))
+                                          }
+                                          className="rounded cursor-pointer"
+                                          aria-label={`Select ${line.description}`}
+                                        />
+                                        <div className="min-w-0">
+                                          <p className="font-bold truncate" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                                            {line.description}
+                                          </p>
+                                          <p className="text-[11px] font-mono" style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
+                                            MVR {line.unit_price.toFixed(2)} each · {line.remaining_quantity} returnable (sold {line.quantity})
+                                          </p>
+                                        </div>
+                                      </div>
+
+                                      {/* Quantity Stepper */}
+                                      {!disabled && (
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          <button
+                                            type="button"
+                                            className="relative w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80 touch-manipulation before:absolute before:-inset-2.5 before:content-['']"
+                                            style={{
+                                              borderColor: 'var(--md-sys-color-outline-variant)',
+                                              color: 'var(--md-sys-color-on-surface)',
+                                            }}
+                                            onClick={() =>
+                                              setSelectedReturnItems((prev) => ({
+                                                ...prev,
+                                                [line.product_id]: {
+                                                  selected: true,
+                                                  qty: Math.max(1, (prev[line.product_id]?.qty || 1) - 1),
+                                                },
+                                              }))
+                                            }
+                                            aria-label="Decrease quantity"
+                                          >
+                                            <Minus size={11} aria-hidden="true" />
+                                          </button>
+                                          <span className="w-5 text-center text-xs font-bold font-mono tabular-nums">
+                                            {sel.qty}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            className="relative w-6 h-6 rounded flex items-center justify-center text-xs font-bold border transition-colors hover:opacity-80 touch-manipulation before:absolute before:-inset-2.5 before:content-['']"
+                                            style={{
+                                              borderColor: 'var(--md-sys-color-outline-variant)',
+                                              color: 'var(--md-sys-color-on-surface)',
+                                            }}
+                                            onClick={() =>
+                                              setSelectedReturnItems((prev) => ({
+                                                ...prev,
+                                                [line.product_id]: {
+                                                  selected: true,
+                                                  qty: Math.min(line.remaining_quantity, (prev[line.product_id]?.qty || 1) + 1),
+                                                },
+                                              }))
+                                            }
+                                            aria-label="Increase quantity"
+                                          >
+                                            <Plus size={11} aria-hidden="true" />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Refund Tender & Method */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <Select
+                                label="Refund Method"
+                                aria-label="Refund Method"
+                                value={refundMethod}
+                                onChange={(e) => setRefundMethod(e.target.value as RefundMethod)}
+                                options={[
+                                  { value: 'cash', label: 'Cash' },
+                                  { value: 'card', label: 'Card' },
+                                  { value: 'transfer', label: 'Bank Transfer' },
+                                  { value: 'store_credit', label: 'Store Credit' },
+                                ]}
+                              />
+                            </div>
+                            <div className="flex flex-col justify-end">
+                              <span className="text-[11px] font-bold text-on-surface-variant mb-1">Total Refund Amount</span>
+                              <div className="h-10 px-3 rounded-xl border flex items-center font-mono font-bold text-sm tabular-nums" style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)', borderColor: 'var(--md-sys-color-outline-variant)', color: 'var(--positive)' }}>
+                                MVR {calculatedReturnTotal.toFixed(2)}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Reason Selector */}
+                          <div className="space-y-1.5">
+                            <label className="block text-xs font-bold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                              Reason for Reversal
+                            </label>
+                            <div className="flex flex-wrap gap-1.5 mb-1">
+                              {['Customer Cancelled', 'Defective / Damaged', 'Cashier Error', 'Wrong Item Scanned'].map((chip) => (
+                                <button
+                                  key={chip}
+                                  type="button"
+                                  onClick={() => setReturnReason(chip)}
+                                  className="text-[11px] px-2 py-0.5 rounded-full border transition-colors hover:opacity-80"
+                                  style={{
+                                    backgroundColor: returnReason === chip ? 'var(--md-sys-color-primary-container)' : 'var(--md-sys-color-surface-container-high)',
+                                    color: returnReason === chip ? 'var(--md-sys-color-on-primary-container)' : 'var(--md-sys-color-on-surface)',
+                                    borderColor: returnReason === chip ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-outline-variant)',
+                                  }}
+                                >
+                                  {chip}
+                                </button>
+                              ))}
+                            </div>
+                            <Input
+                              placeholder="Type reason for audit log..."
+                              value={returnReason}
+                              onChange={(e) => setReturnReason(e.target.value)}
+                              aria-label="Reason for reversal"
+                            />
+                          </div>
+
+                          {/* Manager Approval Workflow (Zero UUIDs) */}
+                          <div className="pt-2 border-t space-y-2" style={{ borderColor: 'var(--md-sys-color-outline-variant)' }}>
+                            {isCurrentUserManager ? (
+                              <div className="flex items-center gap-2 p-2.5 rounded-lg text-xs" style={{ backgroundColor: 'var(--positive-subtle)', color: 'var(--positive)' }}>
+                                <ShieldCheck size={16} aria-hidden="true" />
+                                <span className="font-semibold">
+                                  Manager Authorization Active ({session?.name || session?.seat_label || 'Manager'})
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="space-y-2 text-xs">
+                                <div className="flex justify-between items-center">
+                                  <span className="font-bold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                                    Operating Capacity (SERP-030)
+                                  </span>
+                                  <Select
+                                    aria-label="Operating Capacity"
+                                    value={operatingCapacity}
+                                    onChange={(e) => setOperatingCapacity(e.target.value as 'segregated' | 'solo')}
+                                    options={[
+                                      { value: 'segregated', label: 'Supervisor Approval' },
+                                      { value: 'solo', label: 'Solo Operator (Compensated Audit)' },
+                                    ]}
+                                  />
+                                </div>
+                                {operatingCapacity === 'segregated' && (
+                                  <div>
+                                    <Select
+                                      label="Authorizing Supervisor"
+                                      aria-label="Authorizing Supervisor"
+                                      value={selectedApproverId}
+                                      onChange={(e) => setSelectedApproverId(e.target.value)}
+                                      options={
+                                        availableSupervisors.length > 0
+                                          ? availableSupervisors.map((s) => ({
+                                              value: s.person_id,
+                                              label: `${s.name} (${s.seat})`,
+                                            }))
+                                          : [{ value: '', label: loadingSupervisors ? 'Loading supervisors…' : 'No supervisor found' }]
+                                      }
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
-                    {operatingCapacity === 'segregated' && (
-                      <Input
-                        label="Supervisor Approver Person ID (UUID)"
-                        aria-label="Supervisor Approver Person ID"
-                        placeholder="Manager / Director Person UUID"
-                        value={approverIdInput}
-                        onChange={(e) => setApproverIdInput(e.target.value)}
-                      />
-                    )}
-                  </div>
+                  ) : null}
 
                   {reversalError && (
-                    <div className="space-y-1.5">
-                      <p role="alert" className="text-xs font-medium" style={{ color: 'var(--md-sys-color-error)' }}>
-                        {formatResilienceErrorMessage(reversalError)}
+                    <div className="space-y-1 p-2.5 rounded-lg bg-error-container/40 border border-error/30">
+                      <p role="alert" className="text-xs font-semibold text-error">
+                        {reversalError === 'sale_not_found'
+                          ? 'Sale not found. Please verify the receipt or invoice number.'
+                          : formatResilienceErrorMessage(reversalError)}
                       </p>
                       {isRetryableError(reversalError) && (
                         <Button
-                          size="sm"
+                          size="xs"
                           variant="outlined"
                           onClick={handleReversalSubmit}
                           loading={submittingReversal}
-                          icon={<RefreshCw size={13} aria-hidden="true" />}
+                          icon={<RefreshCw size={12} aria-hidden="true" />}
                         >
-                          Retry {reversalType === 'void' ? 'Void' : 'Return'} (idempotent)
+                          Retry {reversalType === 'void' ? 'Void' : 'Return'}
                         </Button>
                       )}
                     </div>
@@ -2047,17 +2609,171 @@ export const CounterView: React.FC = () => {
                     <Button variant="outlined" onClick={() => setReturnModalOpen(false)} disabled={submittingReversal}>
                       Cancel
                     </Button>
-                    <Button
-                      variant="primary"
-                      onClick={handleReversalSubmit}
-                      loading={submittingReversal}
-                      disabled={!returnSaleId.trim() || returnReason.trim().length < 3 || !canTransact(isOnline)}
-                    >
-                      Process {reversalType === 'void' ? 'Void' : 'Return'}
-                    </Button>
+                    {lookedUpSale && !lookedUpSale.is_fully_voided && (
+                      <Button
+                        variant="primary"
+                        onClick={handleReversalSubmit}
+                        loading={submittingReversal}
+                        disabled={
+                          returnReason.trim().length < 3 ||
+                          calculatedReturnTotal <= 0 ||
+                          !canTransact(isOnline) ||
+                          (!isCurrentUserManager && operatingCapacity === 'segregated' && !selectedApproverId)
+                        }
+                      >
+                        Process {reversalType === 'void' ? 'Void' : 'Return'} (MVR {calculatedReturnTotal.toFixed(2)})
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
+            </Surface>
+          </div>
+        </div>
+      )}
+
+      {/* Official Tax Receipt Modal Dialog */}
+      {receiptModalOpen && saleResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="w-full max-w-sm">
+            <Surface variant="elevated" padding="md" className="rounded-2xl space-y-3" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+              <div className="flex items-center justify-between pb-2 border-b border-outline-variant/60">
+                <div className="flex items-center gap-2">
+                  <Receipt size={17} style={{ color: 'var(--md-sys-color-primary)' }} aria-hidden="true" />
+                  <h2 className="text-base font-bold" style={{ color: 'var(--md-sys-color-on-surface)' }}>
+                    Tax Receipt
+                  </h2>
+                </div>
+                <Button
+                  size="sm"
+                  variant="text"
+                  onClick={() => setReceiptModalOpen(false)}
+                  aria-label="Close dialog"
+                >
+                  ✕
+                </Button>
+              </div>
+
+              {/* Monospace Authentic Receipt Card */}
+              <div className="p-4 rounded-xl font-mono text-xs bg-[var(--md-sys-color-surface-container-lowest)] text-[var(--md-sys-color-on-surface)] border-2 border-dashed border-[var(--md-sys-color-outline-variant)] shadow-inner space-y-2">
+                <div className="text-center pb-2 border-b border-dashed border-[var(--md-sys-color-outline-variant)]">
+                  <p className="font-black text-sm tracking-wider uppercase">{outlet?.name ?? 'starqPOS'}</p>
+                  <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-sans font-medium uppercase mt-0.5">
+                    {formatReceiptGstDetails(saleResult).receiptSubtitle}
+                  </p>
+                  {saleResult.receipt_number && (
+                    <p className="text-xs font-bold text-[var(--md-sys-color-on-surface)] mt-1">
+                      Receipt: <span className="font-mono font-bold">{saleResult.receipt_number}</span>
+                    </p>
+                  )}
+                  <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)]">
+                    Invoice: {saleResult.invoice_number}
+                  </p>
+                  <p className="text-[9px] text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
+                    GST Status: {formatReceiptGstDetails(saleResult).statusBadge}
+                  </p>
+                </div>
+
+                {saleResult.lines && saleResult.lines.length > 0 && (
+                  <div className="py-2 border-b border-dashed border-[var(--md-sys-color-outline-variant)] space-y-1">
+                    {saleResult.lines.map((line, idx) => (
+                      <div key={idx} className="flex justify-between items-start text-[11px]">
+                        <div className="pr-2 truncate">
+                          <span>{line.name}</span>
+                          <span className="text-[var(--md-sys-color-on-surface-variant)] ml-1">×{line.quantity}</span>
+                        </div>
+                        <span className="tabular-nums font-semibold shrink-0">
+                          MVR {Number(line.net_amount).toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="space-y-1 pt-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-[var(--md-sys-color-on-surface-variant)]">Subtotal</span>
+                    <span className="font-semibold tabular-nums">MVR {Number(saleResult.subtotal).toFixed(2)}</span>
+                  </div>
+                  {(() => {
+                    const gst = formatReceiptGstDetails(saleResult);
+                    return (
+                      <div className="flex justify-between">
+                        <span className="text-[var(--md-sys-color-on-surface-variant)]">{gst.label}</span>
+                        <span className={`tabular-nums ${gst.isRegistered ? 'font-semibold' : 'text-[11px] font-medium'}`}>
+                          {gst.value}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                  <div className="flex justify-between font-bold text-sm pt-1.5 border-t border-dashed border-[var(--md-sys-color-outline-variant)]">
+                    <span>TOTAL</span>
+                    <span className="font-black tabular-nums">MVR {Number(saleResult.total_amount).toFixed(2)}</span>
+                  </div>
+                  {saleResult.tendered_amount !== undefined && (
+                    <>
+                      <div className="flex justify-between text-[var(--md-sys-color-on-surface-variant)] pt-1">
+                        <span>Tendered</span>
+                        <span className="font-semibold tabular-nums">MVR {Number(saleResult.tendered_amount).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-[var(--positive)]">
+                        <span>Change{Number(saleResult.change_amount ?? 0) > 0 ? '' : ' (none)'}</span>
+                        <span className="tabular-nums">MVR {Number(saleResult.change_amount ?? 0).toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="text-center pt-2 border-t border-dashed border-[var(--md-sys-color-outline-variant)] text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-sans">
+                  <p>Thank you for your business!</p>
+                  <p className="text-[9px]">Duplicate-proof • Server Authoritative</p>
+                </div>
+              </div>
+
+              {printStatus === 'print_failed' && (
+                <div
+                  role="alert"
+                  className="p-2 rounded-lg border text-xs space-y-1"
+                  style={{
+                    borderColor: 'var(--md-sys-color-error, #f87171)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    color: 'var(--md-sys-color-error, #f87171)',
+                  }}
+                >
+                  <div className="font-bold flex items-center gap-1.5">
+                    <AlertTriangle size={13} aria-hidden="true" />
+                    <span>Printer Failure</span>
+                  </div>
+                  <p className="text-[10px] opacity-90">
+                    Printer is unavailable. Sale is committed and reprint is safe.
+                  </p>
+                </div>
+              )}
+
+              {/* Receipt Modal Actions */}
+              <div className="flex gap-2 pt-1">
+                <Button
+                  size="sm"
+                  variant="outlined"
+                  className="flex-1"
+                  disabled={!receipt && !saleResult}
+                  loading={printStatus === 'printing'}
+                  onClick={() => handlePrintReceipt(true)}
+                  icon={<Copy size={13} aria-hidden="true" />}
+                >
+                  Re-print Copy
+                </Button>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  className="flex-1"
+                  loading={printStatus === 'printing'}
+                  onClick={() => handlePrintReceipt(false)}
+                  icon={<Printer size={13} aria-hidden="true" />}
+                >
+                  {printStatus === 'print_failed' ? 'Retry Print' : 'Print'}
+                </Button>
+              </div>
             </Surface>
           </div>
         </div>

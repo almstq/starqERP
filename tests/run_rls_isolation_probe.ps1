@@ -25,21 +25,23 @@ try {
   Invoke-DockerChecked info --format '{{.ServerVersion}}' | Out-Null
   Invoke-DockerChecked image inspect $image | Out-Null
 
-  $existing = & docker container inspect $containerName 2>$null
-  if ($LASTEXITCODE -ne 0) {
-    Invoke-DockerChecked create `
-      --name $containerName `
-      --mount "type=bind,source=$repoRoot,target=/workspace,readonly" `
-      --tmpfs '/var/lib/postgresql/data:rw,noexec,nosuid,size=1g' `
-      --env "POSTGRES_PASSWORD=$password" `
-      --env 'POSTGRES_DB=postgres' `
-      $image | Out-Null
-  } else {
-    $running = (& docker inspect --format '{{.State.Running}}' $containerName).Trim()
-    if ($running -eq 'true') {
-      Invoke-DockerChecked stop $containerName | Out-Null
-    }
+  try {
+    & docker container inspect $containerName *> $null
+    $exists = ($LASTEXITCODE -eq 0)
+  } catch {
+    $exists = $false
   }
+  if ($exists) {
+    Invoke-DockerChecked rm --force $containerName | Out-Null
+  }
+
+  Invoke-DockerChecked create `
+    --name $containerName `
+    --mount "type=bind,source=$repoRoot,target=/workspace,readonly" `
+    --tmpfs '/var/lib/postgresql/data:rw,noexec,nosuid,size=1g' `
+    --env "POSTGRES_PASSWORD=$password" `
+    --env 'POSTGRES_DB=postgres' `
+    $image | Out-Null
 
   Invoke-DockerChecked start $containerName | Out-Null
   $started = $true

@@ -12,11 +12,15 @@
  * operator, or another outlet is ever reachable from a given scope.
  */
 
+export type ProductTaxClassification = 'standard_rated' | 'zero_rated' | 'exempt';
+export type OutletTaxRegime = 'gst_general' | 'gst_tourism';
+
 export interface CounterLocation {
   id: string;
   code: string;
   name: string;
   kind: string;
+  tax_regime?: OutletTaxRegime;
   active: boolean;
 }
 
@@ -28,6 +32,7 @@ export interface CounterProduct {
   category?: string | null;
   barcode: string | null;
   reorder_threshold?: number | null;
+  tax_classification?: ProductTaxClassification;
   sale_allowed: boolean;
   active: boolean;
 }
@@ -60,6 +65,7 @@ export interface PriceResolution {
     kind: string;
     name: string;
     barcode: string | null;
+    tax_classification?: ProductTaxClassification;
     active: boolean;
     sale_allowed: boolean;
   } | null;
@@ -76,6 +82,8 @@ export interface PriceResolution {
   tax?: {
     mode: string;
     rate: number;
+    tax_classification?: ProductTaxClassification;
+    rule_version?: string;
     tax_amount: number;
     net_amount: number;
     gross_amount: number;
@@ -96,6 +104,9 @@ export interface CounterCatalogue {
   products: CounterProduct[];
   on_hand: OnHandRow[];
   prices: ApprovedPriceRow[];
+  gst_registration_status: 'registered' | 'not_registered' | 'pending' | 'suspended' | 'cancelled' | 'unknown';
+  gst_rate?: number | null;
+  gst_rate_percent?: number | null;
 }
 
 export interface CartLine {
@@ -369,6 +380,267 @@ export function approvedPriceFor(prices: ApprovedPriceRow[], productId: string):
 }
 
 /**
+ * SERP-448 — Line-level GST calculation and compact treatment label (Founder #6931 §6).
+ */
+export interface LineTaxCalculation {
+  productId: string;
+  taxClassification: ProductTaxClassification;
+  isTaxable: boolean;
+  rate: number;
+  ratePercent: number;
+  unitPrice: number;
+  discountPercent: number;
+  lineSubtotal: number;
+  lineTaxAmount: number;
+  treatmentLabel: string;
+}
+
+/**
+ * SERP-448 — Evaluate line-level GST and compact treatment label.
+ * Compact format per Founder #6931 §6:
+ * - standard_rated: 'GST 8% · MVR x.xx'
+ * - zero_rated: 'GST 0% · Zero-rated'
+ * - exempt: 'Exempt'
+ * - not registered: 'No GST'
+ * - rate missing/fail-closed: 'Rate unavailable'
+ */
+export function calculateCartLineTax(
+  status: CounterCatalogue['gst_registration_status'] | null | undefined,
+  effectiveRate: number | null | undefined,
+  product: CounterProduct | null | undefined,
+  quantity: number,
+  approvedPrice: ApprovedPriceRow | null | undefined,
+  currency = 'MVR',
+): LineTaxCalculation {
+  const classification: ProductTaxClassification = product?.tax_classification ?? 'standard_rated';
+  const unitPrice = approvedPrice && approvedPrice.source !== 'none' && approvedPrice.unit_amount > 0
+    ? Number(approvedPrice.unit_amount)
+    : 0;
+  const discountPercent = approvedPrice?.discount_percent ?? 0;
+  const discountFactor = discountPercent > 0 ? 1 - discountPercent / 100 : 1;
+  const lineSubtotal = Math.round(quantity * (unitPrice * discountFactor) * 100) / 100;
+
+  if (status !== 'registered') {
+    return {
+      productId: product?.id ?? '',
+      taxClassification: classification,
+      isTaxable: false,
+      rate: 0,
+      ratePercent: 0,
+      unitPrice,
+      discountPercent,
+      lineSubtotal,
+      lineTaxAmount: 0,
+      treatmentLabel: 'No GST',
+    };
+  }
+
+  if (classification === 'zero_rated') {
+    return {
+      productId: product?.id ?? '',
+      taxClassification: 'zero_rated',
+      isTaxable: false,
+      rate: 0,
+      ratePercent: 0,
+      unitPrice,
+      discountPercent,
+      lineSubtotal,
+      lineTaxAmount: 0,
+      treatmentLabel: 'GST 0% · Zero-rated',
+    };
+  }
+
+  if (classification === 'exempt') {
+    return {
+      productId: product?.id ?? '',
+      taxClassification: 'exempt',
+      isTaxable: false,
+      rate: 0,
+      ratePercent: 0,
+      unitPrice,
+      discountPercent,
+      lineSubtotal,
+      lineTaxAmount: 0,
+      treatmentLabel: 'Exempt',
+    };
+  }
+
+  // standard_rated: requires authoritative effective rate
+  if (effectiveRate == null || typeof effectiveRate !== 'number' || effectiveRate < 0) {
+    return {
+      productId: product?.id ?? '',
+      taxClassification: 'standard_rated',
+      isTaxable: true,
+      rate: 0,
+      ratePercent: 0,
+      unitPrice,
+      discountPercent,
+      lineSubtotal,
+      lineTaxAmount: 0,
+      treatmentLabel: 'Rate unavailable',
+    };
+  }
+
+  const ratePercent = Math.round(effectiveRate * 100);
+  const lineTaxAmount = Math.round(lineSubtotal * effectiveRate * 100) / 100;
+
+  return {
+    productId: product?.id ?? '',
+    taxClassification: 'standard_rated',
+    isTaxable: true,
+    rate: effectiveRate,
+    ratePercent,
+    unitPrice,
+    discountPercent,
+    lineSubtotal,
+    lineTaxAmount,
+    treatmentLabel: `GST ${ratePercent}% · ${currency} ${lineTaxAmount.toFixed(2)}`,
+  };
+}
+
+/**
+ * SERP-448 — Checkout Totals structure and exact reconciliation (Founder #6931 §7).
+ * Conventional structure: Subtotal, GST (SUM of line GST amounts), TOTAL DUE.
+ */
+export interface CartTotals {
+  subtotal: number;
+  taxTotal: number | null;
+  totalDue: number | null;
+  hasUnpricedItem: boolean;
+  isTaxMissing: boolean;
+  isMixedBasket: boolean;
+  lineTaxes: Record<string, LineTaxCalculation>;
+}
+
+export function calculateCartTotals(
+  status: CounterCatalogue['gst_registration_status'] | null | undefined,
+  effectiveRate: number | null | undefined,
+  cart: Cart,
+  prices: ApprovedPriceRow[],
+  products: CounterProduct[],
+  currency = 'MVR',
+): CartTotals {
+  let subtotal = 0;
+  let taxSum = 0;
+  let hasUnpricedItem = false;
+  let isTaxMissing = false;
+  const lineTaxes: Record<string, LineTaxCalculation> = {};
+  const observedClassifications = new Set<ProductTaxClassification>();
+
+  for (const line of cart) {
+    const product = products.find((p) => p.id === line.productId);
+    const approved = approvedPriceFor(prices, line.productId);
+    if (!approved || approved.source === 'none' || approved.unit_amount <= 0) {
+      hasUnpricedItem = true;
+    }
+
+    const lineTax = calculateCartLineTax(status, effectiveRate, product, line.quantity, approved, currency);
+    lineTaxes[line.productId] = lineTax;
+    subtotal += lineTax.lineSubtotal;
+    taxSum += lineTax.lineTaxAmount;
+    observedClassifications.add(lineTax.taxClassification);
+
+    if (status === 'registered' && lineTax.taxClassification === 'standard_rated' && (effectiveRate == null || effectiveRate < 0)) {
+      isTaxMissing = true;
+    }
+  }
+
+  if (status === 'unknown') {
+    isTaxMissing = true;
+  }
+
+  const roundedSubtotal = Math.round(subtotal * 100) / 100;
+  const isRegistered = status === 'registered';
+
+  if (!isRegistered) {
+    return {
+      subtotal: roundedSubtotal,
+      taxTotal: 0,
+      totalDue: roundedSubtotal,
+      hasUnpricedItem,
+      isTaxMissing: false,
+      isMixedBasket: observedClassifications.size > 1,
+      lineTaxes,
+    };
+  }
+
+  if (isTaxMissing) {
+    return {
+      subtotal: roundedSubtotal,
+      taxTotal: null,
+      totalDue: null,
+      hasUnpricedItem,
+      isTaxMissing: true,
+      isMixedBasket: observedClassifications.size > 1,
+      lineTaxes,
+    };
+  }
+
+  const roundedTaxTotal = Math.round(taxSum * 100) / 100;
+  const totalDue = Math.round((roundedSubtotal + roundedTaxTotal) * 100) / 100;
+
+  return {
+    subtotal: roundedSubtotal,
+    taxTotal: roundedTaxTotal,
+    totalDue,
+    hasUnpricedItem,
+    isTaxMissing: false,
+    isMixedBasket: observedClassifications.size > 1,
+    lineTaxes,
+  };
+}
+
+/**
+ * SERP-085/086/144/448: Evaluate estimated GST for the counter cart.
+ * If not registered, estimated tax is 0.
+ * If registered and authoritative rate is available, returns numeric tax amount.
+ * If registered and authoritative rate is missing/null, returns null (fail closed: no numeric fallback, do NOT default to 0 or 0.08).
+ * Accounts for line tax_classification (standard_rated, zero_rated, exempt).
+ */
+export function calculateEstimatedTax(
+  status: CounterCatalogue['gst_registration_status'],
+  rate: number | null | undefined,
+  lines: CartLine[],
+  prices: ApprovedPriceRow[],
+  products?: CounterProduct[],
+): number | null {
+  if (status !== 'registered') {
+    return 0;
+  }
+  if (rate == null || typeof rate !== 'number' || rate < 0) {
+    return null; // Authoritative rate unavailable — fail closed without numeric fallback!
+  }
+  let totalTax = 0;
+  for (const line of lines) {
+    const approved = approvedPriceFor(prices, line.productId);
+    if (approved && approved.source !== 'none' && approved.unit_amount > 0) {
+      const product = products?.find((p) => p.id === line.productId);
+      const classification = product?.tax_classification ?? 'standard_rated';
+      if (classification === 'standard_rated') {
+        const discountFactor = approved.discount_percent > 0 ? 1 - approved.discount_percent / 100 : 1;
+        const lineAmount = line.quantity * (approved.unit_amount * discountFactor);
+        totalTax += Math.round(lineAmount * rate * 100) / 100;
+      }
+    }
+  }
+  return Math.round(totalTax * 100) / 100;
+}
+
+/**
+ * SERP-144: Check whether counter sale completion is blocked by missing authoritative tax rate.
+ * For registered entities, an authoritative GST rate is required to complete sale.
+ */
+export function isTaxRateMissingForSale(
+  status: CounterCatalogue['gst_registration_status'],
+  rate: number | null | undefined,
+): boolean {
+  if (status === 'unknown') {
+    return true; // Statutory status unconfigured or lookup failed - fail closed!
+  }
+  return status === 'registered' && (rate == null || typeof rate !== 'number' || rate < 0);
+}
+
+/**
  * Pure guard used by the scan surface: indicates whether a normalized scan
  * should be sent to the server at all. A run of printable scanner characters
  * (letters, digits, dot/underscore/hyphen) is worth resolving; anything shorter
@@ -612,6 +884,10 @@ export function formatResilienceErrorMessage(errorCode: string): string {
       return 'Network offline: Counter transactions require an active connection to the server.';
     case 'request_timeout':
       return 'Request timed out: Server did not respond in time. You may retry safely using the same transaction key.';
+    case 'tax_rate_unavailable':
+      return 'Authoritative tax rate unavailable. Cannot complete sale for GST-registered entity without valid tax configuration.';
+    case 'tax_registration_status_unknown':
+      return 'Statutory tax registration unconfigured. Cannot complete sale without authoritative tax status.';
     default:
       return `Transaction rejected (${errorCode}).`;
   }
@@ -633,5 +909,133 @@ export function incrementRetry(context: RetryContext): RetryContext {
   return {
     idempotencyKey: context.idempotencyKey,
     attemptCount: context.attemptCount + 1,
+  };
+}
+
+/**
+ * SERP-445 / SERP-448 / Founder #6860 / #6931: Format the tax label for checkout totals or receipt.
+ * Distinguishes registered (with rate) from not_registered.
+ * Supports conventional 'GST' label for mixed baskets or accounting summary.
+ */
+export function formatTaxLineLabel(
+  status: 'registered' | 'not_registered' | null | undefined,
+  ratePercent?: number | null | undefined,
+  options?: { isMixed?: boolean; useConventionalGst?: boolean },
+): string {
+  if (options?.useConventionalGst || options?.isMixed) {
+    return 'GST';
+  }
+  if (status === 'registered') {
+    return ratePercent != null ? `Estimated Tax (${ratePercent}%)` : 'Estimated Tax';
+  }
+  return 'Tax';
+}
+
+/**
+ * SERP-445 / Founder #6860: Format the tax value for checkout totals or receipt.
+ * Ensures not_registered renders an explicit row ('Not GST registered — no GST')
+ * so that exempt/unregistered is clearly distinguishable from hidden tax.
+ */
+export function formatTaxLineValue(
+  status: 'registered' | 'not_registered' | null | undefined,
+  taxTotal: number,
+  currency = 'MVR',
+): string {
+  if (status === 'registered' || taxTotal > 0) {
+    return `${currency} ${taxTotal.toFixed(2)}`;
+  }
+  return 'Not GST registered — no GST';
+}
+
+/**
+ * SERP-445 / Founder #6860: Format receipt GST details strictly from authoritative server response.
+ * Server values (gst_rate_percent, gst_registration_status, tax_total) are preserved verbatim,
+ * never client-recomputed.
+ */
+export function formatReceiptGstDetails(sale: {
+  gst_rate_percent?: number | null;
+  gst_rate?: number | null;
+  gst_registration_status?: 'registered' | 'not_registered' | null;
+  tax_total?: number | null;
+}): {
+  label: string;
+  value: string;
+  isRegistered: boolean;
+  statusBadge: string;
+  receiptSubtitle: string;
+} {
+  const isRegistered = sale.gst_registration_status === 'registered'
+    || (sale.gst_registration_status !== 'not_registered' && Number(sale.tax_total ?? 0) > 0);
+  const ratePct = sale.gst_rate_percent != null
+    ? sale.gst_rate_percent
+    : sale.gst_rate != null
+      ? Math.round(Number(sale.gst_rate) * 100)
+      : null;
+
+  if (isRegistered) {
+    return {
+      label: ratePct != null ? `GST (${ratePct}%)` : 'GST',
+      value: `MVR ${Number(sale.tax_total ?? 0).toFixed(2)}`,
+      isRegistered: true,
+      statusBadge: 'GST Registered',
+      receiptSubtitle: 'Tax Invoice / Receipt',
+    };
+  }
+
+  return {
+    label: 'GST',
+    value: 'Not GST registered — no GST',
+    isRegistered: false,
+    statusBadge: 'Not GST Registered',
+    receiptSubtitle: 'Receipt (Not GST registered)',
+  };
+}
+
+/**
+ * SPOS-008: Terminal printer failure resilience & print status lifecycle.
+ * Destination law: Receipt emission occurs strictly after database commit.
+ * Printer failure never reverses a committed sale.
+ */
+export type CounterPrintStatus = 'idle' | 'printing' | 'print_requested' | 'printed' | 'print_failed';
+
+export interface PrinterExecutionOutcome {
+  ok: boolean;
+  status: CounterPrintStatus;
+  error: string | null;
+}
+
+export function evaluatePrinterOutcome(
+  printError: unknown | null,
+  isCommitted: boolean,
+): PrinterExecutionOutcome {
+  if (!isCommitted) {
+    throw new Error('SPOS-008 Invariant Violation: Attempted to print before database commit');
+  }
+  if (!printError) {
+    // Window.print() returns undefined regardless of whether cashier clicked Print or Cancel.
+    // We report 'print_requested' rather than claiming physical completion.
+    return {
+      ok: true,
+      status: 'print_requested',
+      error: null,
+    };
+  }
+  const errorMsg = printError instanceof Error ? printError.message : String(printError || 'printer_unavailable');
+  return {
+    ok: false,
+    status: 'print_failed',
+    error: errorMsg,
+  };
+}
+
+export function formatPrinterFailureNotice(invoiceNumber: string, error?: string | null): {
+  title: string;
+  description: string;
+  isCommitted: boolean;
+} {
+  return {
+    title: `Printer Failure — Sale #${invoiceNumber} Safely Committed`,
+    description: `The transaction is durable in the database. ${error ? `(${error}) ` : ''}Reprint is available and will not create a duplicate charge.`,
+    isCommitted: true,
   };
 }

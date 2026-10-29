@@ -98,7 +98,6 @@ const BASELINE = {
   'platform/StarqHQHealth.tsx': 10,
   'invoices/CreditNoteModal.tsx': 9,
   'accounts/AccountsView.tsx': 8,
-  'settings/SettingsView.tsx': 8,
   'accounts/ManualJournalModal.tsx': 7,
   'inventory/StockAdjustmentModal.tsx': 7,
   'platform/StarqHQOverview.tsx': 7,

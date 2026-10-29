@@ -138,6 +138,10 @@ import {
   validateProductIdentityMetadata,
   CI_MANDATORY_GATES,
   validateCiGateRegistry,
+  PAYMENT_COMMANDS,
+  PAYMENT_SOD_PAIRS,
+  paymentSodViolation,
+  type PaymentStepRecord,
 } from '../../contracts/commands.ts';
 
 const ORG = '20000000-0000-4000-8000-000000000001';
@@ -3443,27 +3447,63 @@ Deno.test('SERP-263: validateCiGateRegistry detects missing mandatory gates (fai
   assertEquals(res.missingMandatoryGates.length >= 5, true);
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERP-348: Canonical Payment Command Boundary & SoD Separation
+// ─────────────────────────────────────────────────────────────────────────────
 
+Deno.test('SERP-348: PAYMENT_CAPTURE, PAYMENT_REFUND, PAYMENT_SETTLEMENT_RECORD are in COMMANDS', () => {
+  for (const cmd of PAYMENT_COMMANDS) {
+    assertEquals(COMMANDS.includes(cmd), true, `${cmd} must be in COMMANDS`);
+  }
+});
 
+Deno.test('SERP-348: Three payment commands are registered across all four matrices', () => {
+  for (const cmd of PAYMENT_COMMANDS) {
+    // 1. COMMANDS
+    assertEquals(COMMANDS.includes(cmd), true, `${cmd} in COMMANDS`);
+    // 2. COMMAND_SEATS
+    assertEquals(cmd in COMMAND_SEATS, true, `${cmd} in COMMAND_SEATS`);
+    assertEquals(COMMAND_SEATS[cmd].length > 0, true, `${cmd} has seats in COMMAND_SEATS`);
+    // 3. SQL_REQUIRED_SEAT
+    assertEquals(cmd in SQL_REQUIRED_SEAT, true, `${cmd} in SQL_REQUIRED_SEAT`);
+    // 4. SQL_PERMITTED_SEATS
+    assertEquals(cmd in SQL_PERMITTED_SEATS, true, `${cmd} in SQL_PERMITTED_SEATS`);
+    // Conformance: COMMAND_SEATS must match SQL_PERMITTED_SEATS
+    assertEquals(COMMAND_SEATS[cmd], SQL_PERMITTED_SEATS[cmd], `${cmd} seats match SQL permitted`);
+  }
+});
 
+Deno.test('SERP-348: PAYMENT_REFUND sits opposite PAYMENT_CAPTURE in an SoD pair', () => {
+  const pair = PAYMENT_SOD_PAIRS.find(
+    ([a, b]) => (a === 'PAYMENT_CAPTURE' && b === 'PAYMENT_REFUND') ||
+                (a === 'PAYMENT_REFUND' && b === 'PAYMENT_CAPTURE'),
+  );
+  assertNotEquals(pair, undefined, 'PAYMENT_SOD_PAIRS must contain PAYMENT_CAPTURE / PAYMENT_REFUND pair');
+  if (pair) {
+    assertEquals(pair[0] === 'PAYMENT_CAPTURE' ? pair[1] : pair[0], 'PAYMENT_REFUND');
+  }
+});
 
+Deno.test('SERP-348: PAYMENT_CAPTURE and PAYMENT_REFUND separation — same person cannot do both', () => {
+  const personA = '11111111-0000-4000-8000-000000000001';
+  const history: PaymentStepRecord[] = [
+    { command: 'PAYMENT_CAPTURE', personId: personA },
+  ];
 
+  // Same person attempting refund: blocked
+  const violation = paymentSodViolation(history, 'PAYMENT_REFUND', personA);
+  assertNotEquals(violation, null, 'Same person cannot capture and refund');
+  assertEquals(violation, ['PAYMENT_CAPTURE', 'PAYMENT_REFUND']);
+});
 
+Deno.test('SERP-348: two different people satisfying capture and refund passes SoD check', () => {
+  const personA = '11111111-0000-4000-8000-000000000001';
+  const personB = '22222222-0000-4000-8000-000000000002';
+  const history: PaymentStepRecord[] = [
+    { command: 'PAYMENT_CAPTURE', personId: personA },
+  ];
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  // Different person attempting refund: permitted
+  const violation = paymentSodViolation(history, 'PAYMENT_REFUND', personB);
+  assertEquals(violation, null, 'Different person refunding should not cause SoD violation');
+});

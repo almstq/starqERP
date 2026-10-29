@@ -41,6 +41,13 @@ import {
   formatResilienceErrorMessage,
   createRetryContext,
   incrementRetry,
+  calculateEstimatedTax,
+  isTaxRateMissingForSale,
+  formatTaxLineLabel,
+  formatTaxLineValue,
+  formatReceiptGstDetails,
+  calculateCartLineTax,
+  calculateCartTotals,
 } from './counter';
 
 describe('SERP-085 counter cart domain', () => {
@@ -189,10 +196,58 @@ describe('SERP-085 counter uses only server-authoritative data', () => {
         { organisation_id: 'org', location_id: OUTLET, product_id: PRODUCT, derived_quantity: 12.5 },
       ],
       prices: [],
+      gst_registration_status: 'not_registered',
     };
     expect(onHandAt(catalogue.on_hand, OUTLET, PRODUCT)).toBe(12.5);
     expect(onHandAt(catalogue.on_hand, OUTLET, 'other-product')).toBe(0);
     expect(onHandAt(catalogue.on_hand, 'other-outlet', PRODUCT)).toBe(0);
+  });
+
+  it('supports dynamic server-provided GST rates for registered entities', () => {
+    const registeredCatalogue: CounterCatalogue = {
+      ok: true,
+      locations: [{ id: OUTLET, code: 'MAIN', name: 'Main', kind: 'outlet', active: true }],
+      products: [],
+      on_hand: [],
+      prices: [],
+      gst_registration_status: 'registered',
+      gst_rate: 0.08,
+      gst_rate_percent: 8,
+    };
+    expect(registeredCatalogue.gst_registration_status).toBe('registered');
+    expect(registeredCatalogue.gst_rate).toBe(0.08);
+    expect(registeredCatalogue.gst_rate_percent).toBe(8);
+  });
+
+  it('SERP-144: calculateEstimatedTax fails closed with null when registered tenant has missing rate (no numeric fallback)', () => {
+    const lines: CartLine[] = [{ productId: PRODUCT, quantity: 2 }];
+    const prices: ApprovedPriceRow[] = [
+      {
+        product_id: PRODUCT,
+        unit_amount: 100,
+        discount_percent: 0,
+        source: 'product_prices',
+        price_list_version: null,
+        currency: 'MVR',
+      },
+    ];
+
+    // Missing rate on registered tenant: MUST return null, never invent 0.08 or substitute 0
+    expect(calculateEstimatedTax('registered', null, lines, prices)).toBeNull();
+    expect(calculateEstimatedTax('registered', undefined, lines, prices)).toBeNull();
+    expect(isTaxRateMissingForSale('registered', null)).toBe(true);
+    expect(isTaxRateMissingForSale('registered', undefined)).toBe(true);
+
+    // Valid authoritative rate on registered tenant: computes exact tax
+    expect(calculateEstimatedTax('registered', 0.08, lines, prices)).toBe(16); // 200 * 0.08
+    expect(calculateEstimatedTax('registered', 0.06, lines, prices)).toBe(12); // 200 * 0.06
+    expect(isTaxRateMissingForSale('registered', 0.08)).toBe(false);
+
+    // Non-registered tenant: strictly returns 0 (preserves non-GST behavior)
+    expect(calculateEstimatedTax('not_registered', null, lines, prices)).toBe(0);
+    expect(calculateEstimatedTax('not_registered', undefined, lines, prices)).toBe(0);
+    expect(calculateEstimatedTax('not_registered', 0.08, lines, prices)).toBe(0);
+    expect(isTaxRateMissingForSale('not_registered', null)).toBe(false);
   });
 
   it('only offers active sale-allowed inventoried products', () => {
@@ -538,6 +593,7 @@ describe('SERP-090 counter retry and resilience domain', () => {
     expect(formatResilienceErrorMessage('no_open_session')).toContain('No open session');
     expect(formatResilienceErrorMessage('network_offline')).toContain('Network offline');
     expect(formatResilienceErrorMessage('request_timeout')).toContain('Request timed out');
+    expect(formatResilienceErrorMessage('tax_rate_unavailable')).toContain('Authoritative tax rate unavailable');
     expect(formatResilienceErrorMessage('unknown_error_code')).toBe('Transaction rejected (unknown_error_code).');
   });
 
@@ -560,5 +616,206 @@ describe('SERP-090 counter retry and resilience domain', () => {
     expect(ctx.idempotencyKey).toBeTruthy();
     expect(typeof ctx.idempotencyKey).toBe('string');
     expect(ctx.attemptCount).toBe(1);
+  });
+
+  describe('SERP-445 GST visibility and receipt formatting', () => {
+    it('formats checkout tax line for registered vs not_registered', () => {
+      // Registered with known rate
+      expect(formatTaxLineLabel('registered', 8)).toBe('Estimated Tax (8%)');
+      expect(formatTaxLineValue('registered', 8.5)).toBe('MVR 8.50');
+
+      // Registered without rate
+      expect(formatTaxLineLabel('registered', null)).toBe('Estimated Tax');
+
+      // Not registered — explicit label and row
+      expect(formatTaxLineLabel('not_registered', null)).toBe('Tax');
+      expect(formatTaxLineValue('not_registered', 0)).toBe('Not GST registered — no GST');
+    });
+
+    it('formats receipt GST details strictly from authoritative server response', () => {
+      // 1. Registered entity with rate and tax
+      const regSale = formatReceiptGstDetails({
+        gst_rate_percent: 8,
+        gst_registration_status: 'registered',
+        tax_total: 12.00,
+      });
+      expect(regSale.label).toBe('GST (8%)');
+      expect(regSale.value).toBe('MVR 12.00');
+      expect(regSale.isRegistered).toBe(true);
+      expect(regSale.statusBadge).toBe('GST Registered');
+      expect(regSale.receiptSubtitle).toBe('Tax Invoice / Receipt');
+
+      // 2. Fractional decimal gst_rate fallback (0.08 -> 8%)
+      const decimalRateSale = formatReceiptGstDetails({
+        gst_rate: 0.08,
+        gst_registration_status: 'registered',
+        tax_total: 4.80,
+      });
+      expect(decimalRateSale.label).toBe('GST (8%)');
+      expect(decimalRateSale.value).toBe('MVR 4.80');
+      expect(decimalRateSale.isRegistered).toBe(true);
+
+      // 3. Not registered entity — explicit non-empty row distinguishes from hidden tax
+      const unregSale = formatReceiptGstDetails({
+        gst_registration_status: 'not_registered',
+        tax_total: 0,
+      });
+      expect(unregSale.label).toBe('GST');
+      expect(unregSale.value).toBe('Not GST registered — no GST');
+      expect(unregSale.isRegistered).toBe(false);
+      expect(unregSale.statusBadge).toBe('Not GST Registered');
+      expect(unregSale.receiptSubtitle).toBe('Receipt (Not GST registered)');
+    });
+  });
+
+  describe('SERP-448 POS cart line GST display and checkout totals (Founder #6931 §6, §7)', () => {
+    const PROD_STD: CounterProduct = {
+      id: 'prod-cola',
+      sku: 'COLA-330',
+      kind: 'stock',
+      name: 'Coca-Cola 330ml',
+      barcode: '1234567890123',
+      tax_classification: 'standard_rated',
+      sale_allowed: true,
+      active: true,
+    };
+
+    const PROD_ZERO: CounterProduct = {
+      id: 'prod-rice',
+      sku: 'RICE-1KG',
+      kind: 'stock',
+      name: 'Basmati Rice 1kg',
+      barcode: '1234567890124',
+      tax_classification: 'zero_rated',
+      sale_allowed: true,
+      active: true,
+    };
+
+    const PROD_EXEMPT: CounterProduct = {
+      id: 'prod-panadol',
+      sku: 'PANADOL-10',
+      kind: 'stock',
+      name: 'Panadol Extra 500mg',
+      barcode: '1234567890125',
+      tax_classification: 'exempt',
+      sale_allowed: true,
+      active: true,
+    };
+
+    const PRICES: ApprovedPriceRow[] = [
+      { product_id: 'prod-cola', source: 'product_prices', unit_amount: 15.00, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+      { product_id: 'prod-rice', source: 'product_prices', unit_amount: 38.00, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+      { product_id: 'prod-panadol', source: 'product_prices', unit_amount: 25.00, discount_percent: 0, price_list_version: null, currency: 'MVR' },
+    ];
+
+    const ALL_PRODUCTS = [PROD_STD, PROD_ZERO, PROD_EXEMPT];
+
+    it('compact line-level GST communicates applied treatment (Founder §6)', () => {
+      // 1. Standard-rated with 8% rate: GST 8% · MVR 1.20 (1 * 15 * 0.08 = 1.20)
+      const stdLine = calculateCartLineTax('registered', 0.08, PROD_STD, 1, PRICES[0]);
+      expect(stdLine.taxClassification).toBe('standard_rated');
+      expect(stdLine.isTaxable).toBe(true);
+      expect(stdLine.lineSubtotal).toBe(15.00);
+      expect(stdLine.lineTaxAmount).toBe(1.20);
+      expect(stdLine.treatmentLabel).toBe('GST 8% · MVR 1.20');
+
+      // Quantity 2: 2 * 15 * 0.08 = 2.40
+      const stdLineQty2 = calculateCartLineTax('registered', 0.08, PROD_STD, 2, PRICES[0]);
+      expect(stdLineQty2.lineSubtotal).toBe(30.00);
+      expect(stdLineQty2.lineTaxAmount).toBe(2.40);
+      expect(stdLineQty2.treatmentLabel).toBe('GST 8% · MVR 2.40');
+
+      // 2. Zero-rated: GST 0% · Zero-rated
+      const zeroLine = calculateCartLineTax('registered', 0.08, PROD_ZERO, 1, PRICES[1]);
+      expect(zeroLine.taxClassification).toBe('zero_rated');
+      expect(zeroLine.isTaxable).toBe(false);
+      expect(zeroLine.lineSubtotal).toBe(38.00);
+      expect(zeroLine.lineTaxAmount).toBe(0.00);
+      expect(zeroLine.treatmentLabel).toBe('GST 0% · Zero-rated');
+
+      // 3. Exempt: Exempt
+      const exemptLine = calculateCartLineTax('registered', 0.08, PROD_EXEMPT, 1, PRICES[2]);
+      expect(exemptLine.taxClassification).toBe('exempt');
+      expect(exemptLine.isTaxable).toBe(false);
+      expect(exemptLine.lineSubtotal).toBe(25.00);
+      expect(exemptLine.lineTaxAmount).toBe(0.00);
+      expect(exemptLine.treatmentLabel).toBe('Exempt');
+
+      // 4. Tourism regime (16% rate): GST 16% · MVR 2.40
+      const tourismLine = calculateCartLineTax('registered', 0.16, PROD_STD, 1, PRICES[0]);
+      expect(tourismLine.treatmentLabel).toBe('GST 16% · MVR 2.40');
+
+      // 5. Unregistered entity: No GST
+      const unregLine = calculateCartLineTax('not_registered', 0.08, PROD_STD, 1, PRICES[0]);
+      expect(unregLine.isTaxable).toBe(false);
+      expect(unregLine.lineTaxAmount).toBe(0.00);
+      expect(unregLine.treatmentLabel).toBe('No GST');
+
+      // 6. Registered but rate unavailable: Rate unavailable
+      const missingRateLine = calculateCartLineTax('registered', null, PROD_STD, 1, PRICES[0]);
+      expect(missingRateLine.treatmentLabel).toBe('Rate unavailable');
+    });
+
+    it('checkout totals reconcile exactly as SUM of authoritative line GST amounts (Founder §7)', () => {
+      // Mixed basket: 1 Cola (standard 8%) + 1 Rice (zero-rated 0%) + 1 Panadol (exempt 0%)
+      const cart: Cart = [
+        { productId: 'prod-cola', quantity: 1 },
+        { productId: 'prod-rice', quantity: 1 },
+        { productId: 'prod-panadol', quantity: 1 },
+      ];
+
+      const totals = calculateCartTotals('registered', 0.08, cart, PRICES, ALL_PRODUCTS);
+
+      // Subtotal = 15.00 + 38.00 + 25.00 = 78.00
+      expect(totals.subtotal).toBe(78.00);
+
+      // GST total = SUM(line GST) = 1.20 + 0.00 + 0.00 = 1.20
+      // Notice: Blanket rate would have erroneously calculated 78.00 * 0.08 = 6.24.
+      expect(totals.taxTotal).toBe(1.20);
+
+      // TOTAL DUE = Subtotal + GST = 78.00 + 1.20 = 79.20
+      expect(totals.totalDue).toBe(79.20);
+      expect(totals.isMixedBasket).toBe(true);
+      expect(totals.isTaxMissing).toBe(false);
+
+      // Reconciles exactly with SUM of line amounts
+      const sumOfLines = Object.values(totals.lineTaxes).reduce((acc, l) => acc + l.lineTaxAmount, 0);
+      expect(totals.taxTotal).toBe(Math.round(sumOfLines * 100) / 100);
+    });
+
+    it('unregistered entity produces zero GST with exact subtotal and total due', () => {
+      const cart: Cart = [
+        { productId: 'prod-cola', quantity: 2 },
+        { productId: 'prod-rice', quantity: 1 },
+      ];
+
+      const totals = calculateCartTotals('not_registered', 0.08, cart, PRICES, ALL_PRODUCTS);
+      // Subtotal = (2 * 15) + 38 = 68.00
+      expect(totals.subtotal).toBe(68.00);
+      expect(totals.taxTotal).toBe(0.00);
+      expect(totals.totalDue).toBe(68.00);
+      expect(totals.isTaxMissing).toBe(false);
+    });
+
+    it('fails closed when authoritative rate is missing for registered entity', () => {
+      const cart: Cart = [{ productId: 'prod-cola', quantity: 1 }];
+
+      const totals = calculateCartTotals('registered', null, cart, PRICES, ALL_PRODUCTS);
+      expect(totals.subtotal).toBe(15.00);
+      expect(totals.taxTotal).toBeNull();
+      expect(totals.totalDue).toBeNull();
+      expect(totals.isTaxMissing).toBe(true);
+    });
+
+    it('discount applies to line subtotal and line tax calculation correctly', () => {
+      const discountedPrice: ApprovedPriceRow[] = [
+        { product_id: 'prod-cola', source: 'product_prices', unit_amount: 100.00, discount_percent: 10, price_list_version: null, currency: 'MVR' },
+      ];
+      // 1 unit at 100.00 with 10% discount = 90.00 net. Tax at 8% = 7.20.
+      const line = calculateCartLineTax('registered', 0.08, PROD_STD, 1, discountedPrice[0]);
+      expect(line.lineSubtotal).toBe(90.00);
+      expect(line.lineTaxAmount).toBe(7.20);
+      expect(line.treatmentLabel).toBe('GST 8% · MVR 7.20');
+    });
   });
 });
