@@ -25,7 +25,7 @@ Archive: `D:\StarqTech\archives\starqERP-cleanup-20261030\` (outside the reposit
 | 17 | Preserved | `legacy/retired-ui/StarqHQView.tsx` remains classified as archived history. |
 | 18 | Completed | Removed the stale `platform/StarqHQView.tsx` baseline entry from `scripts/lint-design-tokens.mjs`; the file is outside that script's scan root. |
 | 19 | Deferred | Five Node scripts (including one QA draft) and three PowerShell probe runners still contain `D:/StarqTech` paths; the running-system audit also reads machine-local `_secrets`. Path/config changes require a bounded runner contract and local-path validation. |
-| 20 | Deferred | Deno tests were not wired into CI because the audit could not install/run Deno (proxy 403); current toolchain availability and runtime results remain unverified. |
+| 20 | Implemented on current workflow | The current GitHub Actions run includes the Deno contract suite (169 tests); it passed on PR #177. The earlier audit's statement that CI only runs `commands_test.ts` is stale. Local Deno tests were not run during this pass. |
 | 21 | Preserved | All PowerShell probe runners remain; no SQL probe invocation surface was removed or ported without per-runner parity verification. |
 | 22 | Completed | All 12 retained files moved from `tests/evidence/` to `docs/evidence/`; task/handoff references were updated. |
 | 23 | Preserved | `OrganisationSetupModal.tsx` remains because active SERP-275/SERP-276 tests import it. |
@@ -81,7 +81,7 @@ The correction branch was based on `main` `7c29272decab9330e6d6c2a304b684790f190
 - Design-token ratchet: PASS — 1,701 raw palette usages against the 1,702 baseline; no file grew.
 - Strict reachability: PASS — 178 unreachable files accounted for, zero unreviewed.
 - Focused login surface: PASS — 7 tests, including missing-client-ID behavior. GitHub CI is the final post-merge integration gate.
-- Focused Python tests: NOT RUN (`pytest` is not installed). Deno contract coverage remains outside CI and unverified; no Deno installation or proxy attempt was made in this pass.
+- Focused Python tests: NOT RUN (`pytest` is not installed). The Deno contract suite was not run locally in this pass; GitHub CI ran all 169 contract tests successfully on PR #177.
 - Residual webmail scan: no Gmail/Yahoo/Hotmail/Outlook addresses remain in web tests, legacy engine tests, or demo fixtures. Generic domain rules and the setup guide's explanation of tenant allowlists remain.
 - Duplicate logo: archived copy matches the removed file's SHA-256 and is recorded in the 46-entry archive manifest.
 - Branch hygiene: 63 merged, unused GitHub refs removed; 113 remain. No active PR branch, worktree-attached branch ref, unmerged ref, worktree, or commit was removed.
