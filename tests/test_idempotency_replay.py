@@ -18,9 +18,9 @@ except ImportError:
         sys.exit(1)
 
 
-ORG_ID = "00000000-0000-4000-8000-000000000001"
-PERSON_ID = "00000000-0000-4000-8000-000000000101"
-MEMBERSHIP_ID = "00000000-0000-4000-8000-000000000201"
+ORG_ID = "18200000-0000-4000-8000-000000000001"
+PERSON_ID = "18200000-0000-4000-8000-000000000101"
+MEMBERSHIP_ID = "18200000-0000-4000-8000-000000000201"
 CONCURRENT_KEY = "00000000-0000-4000-8000-000000008001"
 CANONICAL_KEY = "00000000-0000-4000-8000-000000008002"
 
@@ -58,6 +58,21 @@ def prepare(args):
     conn = connect(args)
     with conn, conn.cursor() as cur:
         cur.execute(
+            "insert into public.organisations (id, slug, legal_name) values (%s, %s, %s) "
+            "on conflict (id) do nothing",
+            (ORG_ID, "serp182-idempotency", "SERP-182 Idempotency Test"),
+        )
+        cur.execute(
+            "insert into public.persons (id, person_key, display_label) values (%s, %s, %s) "
+            "on conflict (id) do nothing",
+            (PERSON_ID, "serp182-idempotency", "SERP-182 Test Actor"),
+        )
+        cur.execute(
+            "insert into public.memberships (id, organisation_id, person_id) values (%s, %s, %s) "
+            "on conflict (id) do nothing",
+            (MEMBERSHIP_ID, ORG_ID, PERSON_ID),
+        )
+        cur.execute(
             "insert into public.membership_seats(membership_id,seat_code) "
             "values (%s,'counter') on conflict do nothing",
             (MEMBERSHIP_ID,),
@@ -90,12 +105,7 @@ def prepare(args):
 
 def concurrency_probe(args):
     raw_command = json.dumps(
-        {
-            "type": "CALL",
-            "customer_name": "Synthetic Concurrent Customer",
-            "vehicle_reg": "SYN-182",
-            "consent": True,
-        },
+        {"type": "CUSTOMER", "name": "Synthetic Concurrent Customer", "phone": "SYN-182"},
         separators=(",", ":"),
     )
     barrier = threading.Barrier(2)
@@ -140,10 +150,11 @@ def concurrency_probe(args):
         )
         key_rows, distinct_responses = cur.fetchone()
         cur.execute(
-            "select count(*) from public.job_events where organisation_id=%s and idempotency_key=%s",
-            (ORG_ID, CONCURRENT_KEY),
+            "select count(*) from public.contacts "
+            "where organisation_id=%s and kind='customer' and display_name=%s",
+            (ORG_ID, "Synthetic Concurrent Customer"),
         )
-        event_rows = cur.fetchone()[0]
+        contact_rows = cur.fetchone()[0]
         cur.execute(
             "select count(*) from public.audit_events "
             "where organisation_id=%s and metadata->>'idempotency_key'=%s",
@@ -157,20 +168,20 @@ def concurrency_probe(args):
         print(f"{name} error: {error}")
     print(
         f"Database state: idempotency_rows={key_rows}, distinct_responses={distinct_responses}, "
-        f"job_events={event_rows}, audit_events={audit_rows}"
+        f"customer_contacts={contact_rows}, audit_events={audit_rows}"
     )
 
     if errors:
         raise AssertionError("a concurrent retry surfaced an exception")
     if len(responses) != 2 or responses["worker_1"] != responses["worker_2"]:
         raise AssertionError("concurrent callers did not receive the same response")
-    if (key_rows, distinct_responses, event_rows, audit_rows) != (1, 1, 1, 1):
+    if (key_rows, distinct_responses, contact_rows, audit_rows) != (1, 1, 1, 1):
         raise AssertionError("concurrent retry produced more than one durable mutation")
 
 
 def canonical_order_probe(args):
-    left = '{"type":"CALL","customer_name":"Synthetic Canonical Customer","vehicle_reg":"SYN-CANON","consent":true}'
-    right = '{"consent":true,"vehicle_reg":"SYN-CANON","customer_name":"Synthetic Canonical Customer","type":"CALL"}'
+    left = '{"type":"CUSTOMER","name":"Synthetic Canonical Customer","phone":"SYN-CANON"}'
+    right = '{"phone":"SYN-CANON","name":"Synthetic Canonical Customer","type":"CUSTOMER"}'
 
     first_conn = connect(args)
     first = call_command(
@@ -222,9 +233,13 @@ def canonical_order_probe(args):
 
     print(
         f"Canonical JSONB order: same_text={same_jsonb_text}, "
-        f"same_digest={same_digest}, same_response={first == second}"
+        f"same_digest={same_digest}, "
+        f"same_response={json.dumps(first, sort_keys=True, default=str) == json.dumps(second, sort_keys=True, default=str)}"
     )
-    if not (same_jsonb_text and same_digest and first == second):
+    same_response = json.dumps(first, sort_keys=True, default=str) == json.dumps(second, sort_keys=True, default=str)
+    if not (same_jsonb_text and same_digest and same_response):
+        print(f"First response: {json.dumps(first, sort_keys=True, default=str)}")
+        print(f"Replay response: {json.dumps(second, sort_keys=True, default=str)}")
         raise AssertionError("semantic JSON object key ordering changed the replay digest")
     if "idempotency_key_conflict" not in conflict_error:
         raise AssertionError("different payload under the same key was not rejected as a conflict")

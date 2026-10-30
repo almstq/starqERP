@@ -26,8 +26,8 @@ function TierAutoResolutionHarness() {
     });
   };
 
-  const bindCustomer = () => {
-    const cust = createCustomer({
+  const bindCustomer = async () => {
+    const cust = await createCustomer({
       name: 'Bound One',
       phone: '+960 7000001',
       email: 'bound@client.mv',
@@ -94,6 +94,7 @@ function TierAutoResolutionHarness() {
       <output data-testid="subtotal">{invoices[0]?.subtotal ?? ''}</output>
       <output data-testid="registry-count">{priceLists.length}</output>
       <output data-testid="active-count">{priceLists.filter((list) => list.active !== false).length}</output>
+      <output data-testid="bound-customer-id">{boundId}</output>
     </>
   );
 }
@@ -101,7 +102,10 @@ function TierAutoResolutionHarness() {
 describe('SERP-314 invoice tier auto-resolution', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(apiGateway, 'dispatchCommand').mockResolvedValue({ ok: true } as any);
+    vi.spyOn(apiGateway, 'dispatchCommand').mockResolvedValue({
+      ok: true,
+      customer: { customer_id: 'test-backend-customer' },
+    } as any);
     vi.spyOn(apiGateway, 'apiGet').mockResolvedValue({ ok: true, customers: [] } as any);
   });
 
@@ -115,6 +119,7 @@ describe('SERP-314 invoice tier auto-resolution', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Seed registry' }));
     await waitFor(() => expect(screen.getByTestId('registry-count')).toHaveTextContent('5'));
     fireEvent.click(screen.getByRole('button', { name: 'Bind customer' }));
+    await waitFor(() => expect(screen.getByTestId('bound-customer-id')).not.toHaveTextContent(''));
     fireEvent.click(screen.getByRole('button', { name: 'Invoice bound' }));
 
     expect(screen.getByTestId('unit-price')).toHaveTextContent('85');
@@ -132,13 +137,14 @@ describe('SERP-314 invoice tier auto-resolution', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Seed registry' }));
     await waitFor(() => expect(screen.getByTestId('registry-count')).toHaveTextContent('5'));
     fireEvent.click(screen.getByRole('button', { name: 'Bind customer' }));
+    await waitFor(() => expect(screen.getByTestId('bound-customer-id')).not.toHaveTextContent(''));
     fireEvent.click(screen.getByRole('button', { name: 'Invoice explicit override' }));
 
     expect(screen.getByTestId('unit-price')).toHaveTextContent('80');
     expect(screen.getByTestId('amount')).toHaveTextContent('160');
   });
 
-  it('leaves unbound customers at standard pricing', () => {
+  it('leaves unbound customers at standard pricing', async () => {
     render(
       <ERPProvider>
         <TierAutoResolutionHarness />
@@ -151,7 +157,7 @@ describe('SERP-314 invoice tier auto-resolution', () => {
     expect(screen.getByTestId('amount')).toHaveTextContent('200');
   });
 
-  it('leaves a bound code with no registry row at standard pricing (Unknown Tier)', () => {
+  it('leaves a bound code with no registry row at standard pricing (Unknown Tier)', async () => {
     render(
       <ERPProvider>
         <TierAutoResolutionHarness />
@@ -159,6 +165,7 @@ describe('SERP-314 invoice tier auto-resolution', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Bind customer' }));
+    await waitFor(() => expect(screen.getByTestId('bound-customer-id')).not.toHaveTextContent(''));
     fireEvent.click(screen.getByRole('button', { name: 'Invoice bound' }));
 
     expect(screen.getByTestId('unit-price')).toHaveTextContent('100');
@@ -175,6 +182,7 @@ describe('SERP-314 invoice tier auto-resolution', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Seed registry' }));
     await waitFor(() => expect(screen.getByTestId('registry-count')).toHaveTextContent('5'));
     fireEvent.click(screen.getByRole('button', { name: 'Bind customer' }));
+    await waitFor(() => expect(screen.getByTestId('bound-customer-id')).not.toHaveTextContent(''));
     fireEvent.click(screen.getByRole('button', { name: 'Archive price list' }));
     await waitFor(() => expect(screen.getByTestId('active-count')).toHaveTextContent('4'));
     fireEvent.click(screen.getByRole('button', { name: 'Invoice bound' }));

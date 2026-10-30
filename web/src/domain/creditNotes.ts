@@ -4,6 +4,27 @@
 
 import { JournalEntry, JournalLine } from './journals';
 import { AccountRecord, accountClassForCode } from './accounts';
+import { assertJournalPostable } from './postingControl';
+import { AccountingPeriod } from './periods';
+
+/**
+ * Credit notes, advances, and settlement allocations all post to control
+ * accounts (1210, 2121, 2150). The engine posts them, not a manual user.
+ * The gate runs when the caller supplies periods.
+ */
+function gateControlJournal(
+  entry: JournalEntry,
+  periods: AccountingPeriod[] | undefined,
+  accounts: AccountRecord[] | undefined,
+): void {
+  if (!periods) return;
+  assertJournalPostable({
+    entry,
+    periods,
+    accounts: accounts ?? [],
+    actor: 'system',
+  });
+}
 
 /**
  * Double-entry totals for a journal entry, computed rather than asserted.
@@ -110,6 +131,7 @@ export function generateCreditNoteJournals(params: {
   creditNotes: CreditNote[];
   accounts: AccountRecord[];
   isGstRegistered?: boolean;
+  periods?: AccountingPeriod[];
 }): JournalEntry[] {
   const journals: JournalEntry[] = [];
 
@@ -160,7 +182,7 @@ export function generateCreditNoteJournals(params: {
       narration: `Credit Note Issued: ${cn.creditNoteNumber} - ${cn.customerName}`,
     });
 
-    journals.push({
+    const entry: JournalEntry = {
       id: `je-cn-${cn.id}`,
       entryNumber: `JE-${cn.creditNoteNumber}`,
       date: cn.issueDate,
@@ -173,7 +195,9 @@ export function generateCreditNoteJournals(params: {
       status: 'POSTED',
       postedAt: cn.createdAt,
       postedBy: cn.createdBy || 'System',
-    });
+    };
+    gateControlJournal(entry, params.periods, params.accounts);
+    journals.push(entry);
   });
 
   return journals;
@@ -189,6 +213,7 @@ export function generateCreditNoteJournals(params: {
 export function generateCustomerAdvanceJournals(params: {
   advances: CustomerAdvance[];
   accounts: AccountRecord[];
+  periods?: AccountingPeriod[];
 }): JournalEntry[] {
   const journals: JournalEntry[] = [];
 
@@ -220,7 +245,7 @@ export function generateCustomerAdvanceJournals(params: {
       },
     ];
 
-    journals.push({
+    const entry: JournalEntry = {
       id: `je-adv-${adv.id}`,
       entryNumber: `JE-${adv.receiptNumber}`,
       date: adv.paymentDate,
@@ -233,7 +258,9 @@ export function generateCustomerAdvanceJournals(params: {
       status: 'POSTED',
       postedAt: adv.createdAt,
       postedBy: adv.createdBy || 'System',
-    });
+    };
+    gateControlJournal(entry, params.periods, params.accounts);
+    journals.push(entry);
   });
 
   return journals;
@@ -248,6 +275,8 @@ export function generateCustomerAdvanceJournals(params: {
  */
 export function generateSettlementAllocationJournals(params: {
   allocations: SettlementAllocation[];
+  accounts?: AccountRecord[];
+  periods?: AccountingPeriod[];
 }): JournalEntry[] {
   const journals: JournalEntry[] = [];
 
@@ -282,7 +311,7 @@ export function generateSettlementAllocationJournals(params: {
       },
     ];
 
-    journals.push({
+    const entry: JournalEntry = {
       id: `je-alloc-${alloc.id}`,
       entryNumber: `JE-${alloc.allocationNumber}`,
       date: alloc.allocationDate,
@@ -295,7 +324,9 @@ export function generateSettlementAllocationJournals(params: {
       status: 'POSTED',
       postedAt: alloc.createdAt,
       postedBy: alloc.createdBy || 'System',
-    });
+    };
+    gateControlJournal(entry, params.periods, params.accounts);
+    journals.push(entry);
   });
 
   return journals;

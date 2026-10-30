@@ -1,6 +1,10 @@
 import { rateMatchesBand, taxOnExclusive, taxWithinInclusive } from './taxRates';
 import { hold, FinanceDecision } from './financeGovernance';
 import { resolveTimeOfSupply, SupplyDocument, SupplyEventType } from './timeOfSupply';
+import { accountClassForCode, type AccountRecord } from './accounts';
+import type { JournalEntry } from './journals';
+import { assertJournalPostable } from './postingControl';
+import type { AccountingPeriod } from './periods';
 
 export interface GreenTaxStayRecord {
   id: string;
@@ -278,11 +282,16 @@ export function calculateMiraTgstReturn(params: CalculateTgstParams): MiraTgstRe
 /**
  * Creates double-entry journal entry for Green Tax liability booking.
  */
-export function createGreenTaxJournalEntry(ret: MiraTgstReturn, tenantId: string) {
+export function createGreenTaxJournalEntry(
+  ret: MiraTgstReturn,
+  tenantId: string,
+  periods?: AccountingPeriod[],
+  accounts?: AccountRecord[],
+) {
   const mvrAmount = ret.totalGreenTaxPayableMvr;
   if (mvrAmount <= 0) return null;
 
-  return {
+  const entry: JournalEntry = {
     id: `je-green-tax-${ret.taxPeriod}`,
     entryNumber: `JE-GT-${ret.taxPeriod.replace('-', '')}`,
     date: ret.periodEndDate,
@@ -292,19 +301,23 @@ export function createGreenTaxJournalEntry(ret: MiraTgstReturn, tenantId: string
     lines: [
       {
         id: `gt-line-dr`,
-        accountCode: '1210', // Accounts Receivable (or Guest Ledger)
+        accountId: 'acc-1210',
+        accountCode: '1210',
+        accountClass: accountClassForCode('1210'),
         accountName: 'Trade Debtors Control Account',
         debit: mvrAmount,
         credit: 0,
-        description: `Green Tax Collected (${ret.totalTouristBedNights} nights)`,
+        narration: `Green Tax Collected (${ret.totalTouristBedNights} nights)`,
       },
       {
         id: `gt-line-cr`,
-        accountCode: '2123', // Green Tax Payable to MIRA
+        accountId: 'acc-2123',
+        accountCode: '2123',
+        accountClass: accountClassForCode('2123'),
         accountName: 'Green Tax Payable (MIRA)',
         debit: 0,
         credit: mvrAmount,
-        description: `Green Tax Statutory Liability to MIRA`,
+        narration: 'Green Tax Statutory Liability to MIRA',
       },
     ],
     totalDebit: mvrAmount,
@@ -315,6 +328,18 @@ export function createGreenTaxJournalEntry(ret: MiraTgstReturn, tenantId: string
     tenantId,
     status: 'POSTED',
   };
+
+  // 1210 and 2123 are control accounts, so this posts as the engine.
+  if (periods) {
+    assertJournalPostable({
+      entry,
+      periods,
+      accounts: accounts ?? [],
+      actor: 'system',
+    });
+  }
+
+  return entry;
 }
 
 function round2(val: number): number {

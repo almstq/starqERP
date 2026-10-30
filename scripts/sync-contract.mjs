@@ -4,8 +4,8 @@
  *
  * WHY THIS EXISTS
  * Supabase bundles only what lives under `supabase/functions/`. The canonical
- * contract lives at repo-root `contracts/commands.ts` — where the clean-room
- * layout wants it, and where the Flutter and Python sides can also read it —
+ * contract lives at repo-root `contracts/commands.ts` as the canonical source
+ * for boundary tests, compatibility fixtures, and tooling —
  * so a relative import from the Edge function reaches outside the bundle and
  * cannot be relied on to deploy.
  *

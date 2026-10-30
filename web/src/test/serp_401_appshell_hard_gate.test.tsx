@@ -17,7 +17,7 @@ describe('SERP-401 & Reference Blueprint — Hard AppShell Route-Guard Isolation
     const pendingSession: authService.UserSession = {
       person_id: 'user-buzz-pending',
       name: 'Buzz Test Applicant',
-      email: 'alstarque@gmail.com',
+      email: 'founder@example.com',
       seats: [],
       acting_as: '',
       seat_label: 'Pending Applicant',
@@ -121,7 +121,7 @@ describe('SERP-401 & Reference Blueprint — Hard AppShell Route-Guard Isolation
     const operatorSession: authService.UserSession = {
       person_id: 'user-platform-operator',
       name: 'Ali Mushthaq (MD)',
-      email: 'a.musthaq@gmail.com',
+      email: 'founder@example.com',
       seats: ['managing_director'],
       acting_as: 'managing_director',
       seat_label: 'Managing Director & Operator',

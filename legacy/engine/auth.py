@@ -202,7 +202,7 @@ OCCUPANCY_ENTITIES = ("starq", "club-ignition", "group")
 ALL_ENTITIES = ["starq", "club-ignition", "group"]
 CI_ONLY_ENTITIES = ["club-ignition"]
 STARQ_PRINCIPAL_PERSON_IDS = frozenset({"ali"})
-STARQ_PRINCIPAL_EMAILS = frozenset({"a.musthaq@gmail.com"})
+STARQ_PRINCIPAL_EMAILS = frozenset({"founder@example.com"})
 ENTITY_ALIASES = {
     "group": "group",
     "starq": "starq",

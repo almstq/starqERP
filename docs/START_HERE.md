@@ -1,11 +1,11 @@
 # starqERP — Senior Engineering & Agent Start Here Guide
 
-**Authoritative Baseline Date**: 2026-08-27 / 2026-08-28  
-**System Status**: Gate 1 (G1) Pre-Hosting Friend Onboarding Complete | Ready for Staging Acceptance  
-**Canonical Board**: 338 Tasks (125 Done = 36.98%)  
-**Private Main Commit**: `7c05723`  
-**Live Staging Migration Ceiling**: `202608270027_staff_invitations.sql` (100% applied)  
-**Detailed 27 Aug Ledger**: [`docs/CHANGELOG_2026-08-27.md`](./CHANGELOG_2026-08-27.md)  
+**Authoritative Baseline Date**: 2026-08-27 / 2026-08-28
+**System Status**: Gate 1 (G1) Pre-Hosting Friend Onboarding Complete | Ready for Staging Acceptance
+**Canonical Board**: 338 Tasks (125 Done = 36.98%)
+**Private Main Commit**: `7c05723`
+**Live Staging Migration Ceiling**: `202608270027_staff_invitations.sql` (100% applied)
+**Detailed 27 Aug Ledger**: [`docs/history/CHANGELOG_2026-08-27.md`](./history/CHANGELOG_2026-08-27.md)
 
 ---
 
@@ -42,8 +42,8 @@ Elder should review this section first to understand today's transformation with
 
 | Area | Authoritative Source | Notes |
 | :--- | :--- | :--- |
-| **Session Changelog** | [`docs/CHANGELOG_2026-08-27.md`](./CHANGELOG_2026-08-27.md) | Technical ledger of all 27 Aug implementations |
-| **Elder Command Brief** | [`docs/ELDER_RETURN_BRIEF_2026-08-28.md`](./ELDER_RETURN_BRIEF_2026-08-28.md) | Comprehensive 15-minute command orientation |
+| **Session Changelog** | [`docs/history/CHANGELOG_2026-08-27.md`](./history/CHANGELOG_2026-08-27.md) | Technical ledger of all 27 Aug implementations |
+| **Elder Command Brief** | [`docs/history/ELDER_RETURN_BRIEF_2026-08-28.md`](./history/ELDER_RETURN_BRIEF_2026-08-28.md) | Comprehensive 15-minute command orientation |
 | **Product Architecture** | [`docs/architecture/overview.md`](./architecture/overview.md) | Zero-trust, two-plane SaaS model |
 | **Organizational Spine** | [`docs/architecture/multi-tenancy.md`](./architecture/multi-tenancy.md) | 5-tier entity hierarchy |
 | **Control Plane** | [`docs/architecture/control-plane.md`](./architecture/control-plane.md) | Starq HQ SaaS console (`platform` schema) |

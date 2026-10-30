@@ -14,12 +14,12 @@ This file is the contract. If code and this file disagree, **this file wins** un
 > “even three people, we fill all individual roles to make scm and all workflows accountable”
 > then: CRM, finance, accounts, management too.
 > then: “make my user only for now. with a user management, where nashid and naleez can sign up, and i assign roles and permissions”
-> then: **`a.musthaq@gmail.com` as superadmin**
+> then: **`founder@example.com` as superadmin**
 
 - **Three humans. Full role seats** across CRM, SCM, finance, accounts, management, workshop.
 - Google authenticates the **person**. The app authorizes the **seat** (`acting_as`).
 - Every workflow event is **(person, seat, timestamp)**. Never “the shop.” Never one click that is both PO and payment, or technician and QC.
-- **`a.musthaq@gmail.com` is the only live user until Ali activates someone.** Superadmin is a *user-management* power (`/ops/users`), not a fused workflow mega-seat. When Ali logs a job event he still **Acts as** director / FC / payer / etc.
+- **`founder@example.com` is the only live user until Ali activates someone.** Superadmin is a *user-management* power (`/ops/users`), not a fused workflow mega-seat. When Ali logs a job event he still **Acts as** director / FC / payer / etc.
 - Nashid and Naleez **sign up**. They are `pending` with **zero seats**. Ali assigns seats and modules. Do not invent their Gmails.
 - Occupancy lives in `ops/users.json` after Ali clicks Save. **Not** a static allowlist of fused accounts.
 

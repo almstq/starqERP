@@ -88,7 +88,6 @@ const BASELINE = {
   'auth/MfaChallengeModal.tsx': 21,
   'accounts/YearEndClosingModal.tsx': 17,
   'customers/NewCustomerModal.tsx': 16,
-  'platform/StarqHQView.tsx': 16,
   'inventory/NewItemModal.tsx': 14,
   'invoices/CreateInvoiceModal.tsx': 13,
   'purchasing/CreatePOModal.tsx': 11,

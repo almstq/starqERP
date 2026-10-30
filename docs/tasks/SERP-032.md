@@ -25,7 +25,7 @@ Key specifications locked:
    * `contactEmail`: `ops@starq.mv`
    * `tagline`: `Multi-tenant ERP & Commercial Operating System`
 2. **Runtime & UI Standardizations:**
-   * Updated [`web/metadata.json`](file:///d:/StarqTech/starqERP/web/metadata.json) with canonical `starqERP — Maldives Multi-Tenant SME ERP`.
+   * Updated `web/metadata.json` (archived outside the repository; SHA-256 is recorded in the cleanup archive manifest) with canonical `starqERP — Maldives Multi-Tenant SME ERP`.
    * Standardized embedded assistant branding in [`web/src/components/ai/StarqAICopilot.tsx`](file:///d:/StarqTech/starqERP/web/src/components/ai/StarqAICopilot.tsx) to `starqAI Copilot` and `starqAI`.
    * Preserved all historical migration documentation references to legacy system evolution without rewriting history.
 
@@ -50,7 +50,7 @@ Key specifications locked:
 
 - `contracts/commands.ts` (Modified): Added `STARQ_ERP_CANONICAL_METADATA`, `ProductIdentityMetadata`, and `validateProductIdentityMetadata`.
 - `supabase/functions/_shared/commands.ts` (Modified): Synced from contracts.
-- `web/metadata.json` (Modified): Updated canonical product name.
+- `web/metadata.json` (archived outside the repository; SHA-256 is recorded in the cleanup archive manifest) (Modified): Updated canonical product name.
 - `web/src/components/ai/StarqAICopilot.tsx` (Modified): Standardized to `starqAI`.
 - `web/src/test/serp_032_product_metadata.test.tsx` (New): Vitest suite.
 - `tests/contract/commands_test.ts` (Modified): 2 Deno contract tests.
