@@ -78,6 +78,7 @@ const INTENTIONALLY_UNMOUNTED = {
   'domain/timeOfSupply.ts': 'HOLD under SERP-339 / DEC-117: Maldives GST time-of-supply resolution beta module.',
   'domain/financeGovernance.ts': 'HOLD under SERP-339 / DEC-117: Shared beta finance provenance and explicit HOLD contract; not yet wired to posting.',
   'domain/maldivesOperationalDefaults.ts': 'HOLD under SERP-326: Maldives operational geographic directory, MED business registration validator & prayer-pause operating schedule module.',
+  'domain/arReconciliation.ts': 'SERP-461 AR reconciliation invariant. No production caller yet -- exercised only by its own test (arReconciliation.test.ts). Backend accounting logic, legitimately outside the render graph; held pending its own activation/wiring decision, not retired.',
   'data/mockData.ts': 'HOLD under SERP-237: compatibility-only re-export shim, superseded by data/demoFixtures.ts as the single named demo/seed boundary. Kept for any external or legacy imports; no production code should add new imports here.',
 };
 
