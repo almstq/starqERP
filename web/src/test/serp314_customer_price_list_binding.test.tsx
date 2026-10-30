@@ -40,7 +40,10 @@ function BindingHarness() {
 describe('SERP-314 customer price list binding', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(apiGateway, 'dispatchCommand').mockResolvedValue({ ok: true } as any);
+    vi.spyOn(apiGateway, 'dispatchCommand').mockResolvedValue({
+      ok: true,
+      customer: { customer_id: 'test-backend-customer' },
+    } as any);
     vi.spyOn(apiGateway, 'apiGet').mockResolvedValue({ ok: true, customers: [] } as any);
   });
 

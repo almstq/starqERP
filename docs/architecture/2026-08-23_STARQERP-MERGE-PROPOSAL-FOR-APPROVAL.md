@@ -257,7 +257,7 @@ the same value against every technician.
 | Cross-tenant isolation | structural + policy | adversarial suite, `§37` |
 | **AI tenant isolation** | **nothing exists yet** | retrieval, embeddings, prompts, logs and analytics inside the same boundary. A copilot that can read another tenant is a breach with a friendly interface |
 | AI authority | — | observe → explain → recommend → prepare → **human approval** → execute. No unapproved authority over money, ever |
-| Secrets | — | `GEMINI_API_KEY` server-side only, rate-limited per organisation, actions audited |
+| Secrets | — | If an AI service is approved, its credentials remain server-side, rate-limited per organisation, and auditable |
 
 **Multi-tenancy is not verified because two tenants render correctly. It is verified when attacks
 fail.** Nine of them, from memo §37, each with a test.

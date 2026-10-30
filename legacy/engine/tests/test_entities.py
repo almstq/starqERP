@@ -21,7 +21,7 @@ def _person_ali(**extra):
     row = {
         "person_id": "ali",
         "name": "Ali Mushthaq Ibrahim",
-        "email": "a.musthaq@gmail.com",
+        "email": "founder@example.com",
         "default_seat": "director",
         "seats": ["director", "financial_controller", "payer", "ledger_poster", "counter"],
         "entities": ["starq", "club-ignition", "group"],
@@ -79,7 +79,7 @@ def main() -> int:
 
     omitted_ci = dict(_person_ci())
     omitted_ci.pop("entities")
-    omitted_ci["email"] = "workshop-future@gmail.com"
+    omitted_ci["email"] = "workshop-future@example.com"
     omitted_ci["person_id"] = "workshop"
     check(
         A.entities_for_person(omitted_ci) == ["club-ignition"],
@@ -123,7 +123,7 @@ def main() -> int:
     check(A.decision_visible(ci_dec, ali) and A.decision_visible(ci_dec, ci), "CI decisions both")
     check(A.decision_visible(untagged, ali) and not A.decision_visible(untagged, ci), "untagged = founder inbox")
 
-    live = A.lookup_person("a.musthaq@gmail.com")
+    live = A.lookup_person("founder@example.com")
     check(live is not None, "Ali live allowlist must still authenticate")
     check("*" not in (live.get("seats") or []), "Ali seats must stay real ids")
     check(
@@ -204,7 +204,7 @@ def _http_gate() -> None:
         check('class="switch"' not in body, "login must not render the entity switcher")
 
         ci_row = {
-            "email": "ci-http-test@gmail.com",
+            "email": "ci-http-test@example.com",
             "person_id": "ci-http-test",
             "name": "CI HTTP Test",
             "default_seat": "managing_director",

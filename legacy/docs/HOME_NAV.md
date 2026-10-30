@@ -16,7 +16,7 @@ This is a garage + founder **command surface**, not a SaaS marketing landing pag
 
 - One web app. Books (journals viewer) + Club Ignition Ops (`/ops`). Same `serve.py`.
 - Client skin: **Club Ignition Ops by starqBooks**. Ali signs garage paper as **Director of Club Ignition**, never as Starq. Product footer: “by starqBooks”.
-- `a.musthaq@gmail.com` (Ali) must see **ALL**: Group, Starq Technologies, Club Ignition, Ops. Do not remove his switcher.
+- `founder@example.com` (Ali) must see **ALL**: Group, Starq Technologies, Club Ignition, Ops. Do not remove his switcher.
 - A Club Ignition occupant (Nashid later, Naleez later) must **never** see Starq — not git, **especially not the portal switcher**, not ST journal rows, not a “Starq Technologies Pvt Ltd — group finance” header.
 - Google authenticates the **person**. `acting_as` is the **seat**. Superadmin is Users power, not a fused workflow mega-seat. Switching seat is required (SoD); do not hide Acting as.
 - Unauthenticated: `/login` only. No books peek.
@@ -122,7 +122,7 @@ Ops is always Club Ignition workflow. No entity switcher on `/ops`.
 
 Land here after GIS unless `next` is an explicit deep link (`/ops/log`, `/tb?entity=CI`, …). Direct `/login` default `next` becomes `/` (not `/ops`).
 
-### 4.1 Ali (`a.musthaq@gmail.com` — `user.entities` includes `group`, `starq`, `club-ignition`)
+### 4.1 Ali (`founder@example.com` — `user.entities` includes `group`, `starq`, `club-ignition`)
 
 Home = **command center**. Skin = Starq Deep Space when current occupancy is `group` or `starq`; CI signal red when current occupancy is `club-ignition`.
 
@@ -193,7 +193,7 @@ Shared chrome on **books pages and `/`**. Ops pages (`ops.py` `shell`) use the *
 | 3h | Decisions | `/decisions` + entity qs | yes | CI qs only | Untagged decisions are Group-finance (Elder `decision_visible`). Do not list Group-tagged decisions to CI-only. |
 | 3i | Entity switcher | same path, new `entity` qs | **yes** | **omit** | Inside the drawer, under Books. Same three chips as home. Hidden when `A.is_ci_only`. Single entity → no switcher. |
 | 4 | Acting as | POST `/auth/seat` | yes | yes | Seat `<select>` + csrf. Required for SoD. Never hide. |
-| 5 | Users | `/ops/users` | Ali only (`email == a.musthaq@gmail.com` or `person_id == ali`) | hide | Slot only. 404 is OK until Elder lands the page. Do not build Users CRUD. |
+| 5 | Users | `/ops/users` | Ali only (`email == founder@example.com` or `person_id == ali`) | hide | Slot only. 404 is OK until Elder lands the page. Do not build Users CRUD. |
 | 6 | Sign out | `/logout` | yes | yes | Last item. |
 
 **Do not register** Group or Starq hrefs when `group` / `starq` ∉ `user.entities`. Server-side omit. CSS hide is not enough.

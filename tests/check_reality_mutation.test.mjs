@@ -137,7 +137,7 @@ headers.set("Access-Control-Allow-Headers", "x-starq-client-kind, x-csrf-token")
     GOOGLE_SERVER_CLIENT_ID: '999999999999-abc.apps.googleusercontent.com',
     GOOGLE_ANDROID_CLIENT_ID: '999999999999-xyz.apps.googleusercontent.com'
   };
-  const envContent = 'STARQBOOKS_GOOGLE_CLIENT_ID=901212915429-l7i347so1avnr0dnaq50hfi91fm0d0o4.apps.googleusercontent.com';
+  const envContent = 'STARQBOOKS_GOOGLE_CLIENT_ID=111111111111-web-fixture.apps.googleusercontent.com';
   const res = checkOauthIdentity({ definesData: mutatedDefines, envContent });
   assert.equal(res.state, 'FAIL');
   assert.match(res.detail, /GOOGLE_SERVER_CLIENT_ID does not match/);

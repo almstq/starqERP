@@ -10,11 +10,14 @@ import {
   TrendingDown,
   DollarSign,
   Truck,
-  RotateCcw
+  RotateCcw,
+  Upload
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { StockAdjustmentModal } from './StockAdjustmentModal';
 import { NewItemModal } from './NewItemModal';
+import { ProductBulkImportModal } from '../migration/ProductBulkImportModal';
+import { OpeningStockBulkImportModal } from '../migration/OpeningStockBulkImportModal';
 import { InventoryItem } from '../../types/erp';
 import {
   Button,
@@ -41,6 +44,8 @@ export const InventoryView: React.FC = () => {
   const [stockStatusFilter, setStockStatusFilter] = useState<'All' | 'Low' | 'Healthy'>('All');
   const [selectedItemForAdjust, setSelectedItemForAdjust] = useState<InventoryItem | null>(null);
   const [isNewItemOpen, setIsNewItemOpen] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isOpeningStockOpen, setIsOpeningStockOpen] = useState(false);
 
   const totalInventoryValue = inventory.reduce(
     (sum, item) => sum + item.quantityOnHand * item.unitCost,
@@ -220,6 +225,22 @@ export const InventoryView: React.FC = () => {
             <span>New PO</span>
           </Button>
           <Button
+            variant="outlined"
+            size="sm"
+            onClick={() => setIsBulkImportOpen(true)}
+            icon={<Upload size={14} />}
+          >
+            <span>Bulk Import SKUs</span>
+          </Button>
+          <Button
+            variant="outlined"
+            size="sm"
+            onClick={() => setIsOpeningStockOpen(true)}
+            icon={<Layers size={14} />}
+          >
+            <span>Opening Stock</span>
+          </Button>
+          <Button
             variant="filled"
             size="sm"
             onClick={() => setIsNewItemOpen(true)}
@@ -341,6 +362,14 @@ export const InventoryView: React.FC = () => {
       <NewItemModal
         isOpen={isNewItemOpen}
         onClose={() => setIsNewItemOpen(false)}
+      />
+      <ProductBulkImportModal
+        isOpen={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+      />
+      <OpeningStockBulkImportModal
+        isOpen={isOpeningStockOpen}
+        onClose={() => setIsOpeningStockOpen(false)}
       />
     </div>
   );

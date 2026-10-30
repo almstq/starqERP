@@ -7,12 +7,12 @@ import {
   SchemeFidelity,
   SchemeContent,
   MaterialDynamicColors,
-} from './node_modules/@material/material-color-utilities/index.js';
+} from '../web/node_modules/@material/material-color-utilities/index.js';
 
 const seedHex = '#E59500';
 const argb = argbFromHex(seedHex);
 const hct = Hct.fromInt(argb);
-const mdc = new MaterialDynamicColors();
+const mdc = MaterialDynamicColors;
 
 console.log('Seed:', seedHex, 'HCT:', Math.round(hct.hue), Math.round(hct.chroma), Math.round(hct.tone));
 

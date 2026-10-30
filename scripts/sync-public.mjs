@@ -11,7 +11,7 @@
  * An exclusion list fails OPEN: every new private file is public by default
  * until somebody remembers to exclude it. On 2026-08-29 a naive mirror would
  * have published 82 internal documents, including:
- *   - docs/ELDER_RETURN_BRIEF_2026-08-28.md, named in PRIVATE_EXCLUSION_MANIFEST
+ *   - docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, named in PRIVATE_EXCLUSION_MANIFEST
  *   - docs/qa/current/ISO_27001_READINESS_GAP_AUDIT_*.md — a map of where our
  *     controls are NOT yet in place, which is a genuine security disclosure
  *   - 62 internal docs/tasks/SERP-*.md completion reports
@@ -27,8 +27,8 @@
  *      deploy. A new file anywhere else is NOT added, and is reported so the
  *      omission is visible rather than silent.
  *
- * The public README is generated from README_PUBLIC_DRAFT.md, per
- * PUBLIC_RELEASE_CHECKLIST.md. The private README is never published.
+ * The public README is generated from docs/release/README_PUBLIC_DRAFT.md, per
+ * docs/release/PUBLIC_RELEASE_CHECKLIST.md. The private README is never published.
  *
  * ─── USAGE ─────────────────────────────────────────────────────────────────
  *   node scripts/sync-public.mjs              # dry run. Shows every change. Writes nothing.
@@ -52,7 +52,7 @@ const PUBLIC = process.env.STARQ_PUBLIC_REPO || path.resolve(PRIVATE, '..', 'sta
 const CODE_PREFIXES = ['web/', 'supabase/', 'contracts/', 'tests/', '.well-known/'];
 
 /** Generated public file <- private source. */
-const RENAMES = { 'README.md': 'README_PUBLIC_DRAFT.md' };
+const RENAMES = { 'README.md': 'docs/release/README_PUBLIC_DRAFT.md' };
 
 /** Belt and braces: never publish these even if a prefix would allow them. */
 const NEVER = [/(^|\/)\.env($|\.)/i, /_secrets?\//i, /PRIVATE_/, /ELDER_RETURN_BRIEF/, /_dream\//];

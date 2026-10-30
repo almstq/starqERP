@@ -73,6 +73,8 @@ import {
   CreateStaffInvitationPayload,
 } from '../services/apiGateway';
 
+const createEntityId = (prefix: string): string => `${prefix}-${crypto.randomUUID()}`;
+
 export interface ERPContextType {
   activeTab: NavigationTab;
   setActiveTab: (tab: NavigationTab) => void;
@@ -242,8 +244,8 @@ export interface ERPContextType {
   addLaborEntry: (entry: Omit<LaborEntry, 'id' | 'totalCostMvr' | 'clockedAt'>) => void;
   laborEntries: LaborEntry[];
   createJob: (jobData: Omit<JobOrder, 'id' | 'jobId' | 'materialsUsed' | 'actualMaterialCost' | 'actualLaborCost' | 'totalLaborHours' | 'actualProfit'>) => JobOrder;
-  createCustomer: (customerData: Omit<Customer, 'id' | 'createdAt' | 'activeJobsCount' | 'totalInvoiced' | 'outstandingBalance'>) => Customer;
-  createSupplier: (supplierData: Omit<Supplier, 'id' | 'outstandingPayable' | 'rating'>) => Supplier;
+  createCustomer: (customerData: Omit<Customer, 'id' | 'createdAt' | 'activeJobsCount' | 'totalInvoiced' | 'outstandingBalance'>) => Promise<Customer>;
+  createSupplier: (supplierData: Omit<Supplier, 'id' | 'outstandingPayable' | 'rating'>) => Promise<Supplier>;
   updateSupplier: (supplierData: Supplier) => Supplier;
   deactivateSupplier: (supplierId: string) => void;
   createInvoice: (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber'> & { priceList?: PriceList }) => Invoice;
@@ -1062,7 +1064,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Audit Logging Helper
   const logAuditEvent = (entry: Omit<AuditLogEntry, 'id' | 'userId' | 'userName' | 'userRole' | 'userEmail' | 'timestamp' | 'ipAddress' | 'location' | 'tenantId'> & { location?: string; tenantId?: string }) => {
     const newAudit: AuditLogEntry = {
-      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      id: createEntityId('audit'),
       userId: currentUser.id,
       userName: currentUser.name,
       userRole: currentUser.roleName,
@@ -1202,7 +1204,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const createTenant = (tenantData: Omit<OrganisationTenant, 'id' | 'createdAt'>): OrganisationTenant => {
     const newTenant: OrganisationTenant = {
       ...tenantData,
-      id: `tenant-${Date.now()}`,
+      id: createEntityId('tenant'),
       createdAt: new Date().toISOString().split('T')[0]
     };
     setTenants((prev) => [...prev, newTenant]);
@@ -1666,7 +1668,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }): AppUser => {
     const roleObj = roles.find((r) => r.id === userData.roleId);
     const newUser: AppUser = {
-      id: `user-${Date.now()}`,
+      id: createEntityId('user'),
       tenantId: currentTenant.id,
       name: userData.name,
       email: userData.email,
@@ -1733,7 +1735,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const createRole = (roleData: Omit<UserRole, 'id' | 'tenantId'>): UserRole => {
     const newRole: UserRole = {
       ...roleData,
-      id: `role-${Date.now()}`,
+      id: createEntityId('role'),
       tenantId: currentTenant.id
     };
     setRoles((prev) => [...prev, newRole]);
@@ -1806,7 +1808,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const nextOrder = workflowStages.length + 1;
     const newStage: WorkflowStage = {
       ...stage,
-      id: `stage-${Date.now()}`,
+      id: createEntityId('stage'),
       tenantId: currentTenant.id,
       order: nextOrder
     };
@@ -1943,7 +1945,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const totalCost = item.unitCost * quantity;
     const materialUsage = {
-      id: `mat-${Date.now()}`,
+      id: createEntityId('mat'),
       inventoryId: item.id,
       itemName: item.name,
       quantity,
@@ -2005,7 +2007,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     // Add stock movement log
     const newMovement: StockMovement = {
-      id: `mov-${Date.now()}`,
+      id: createEntityId('mov'),
       itemId: item.id,
       itemName: item.name,
       type: 'Deducted (Job)',
@@ -2034,7 +2036,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const totalCostMvr = Math.round(entry.hoursWorked * entry.hourlyCostRateMvr);
     const newEntry: LaborEntry = {
       ...entry,
-      id: `lab-${Date.now()}`,
+      id: createEntityId('lab'),
       totalCostMvr,
       clockedAt: new Date().toISOString()
     };
@@ -2110,10 +2112,10 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   };
 
-  const createCustomer = (customerData: Omit<Customer, 'id' | 'createdAt' | 'activeJobsCount' | 'totalInvoiced' | 'outstandingBalance'>): Customer => {
+  const createCustomer = async (customerData: Omit<Customer, 'id' | 'createdAt' | 'activeJobsCount' | 'totalInvoiced' | 'outstandingBalance'>): Promise<Customer> => {
     const newCustomer: Customer = {
       ...customerData,
-      id: `cust-${Date.now()}`,
+      id: createEntityId('cust'),
       activeJobsCount: 0,
       totalInvoiced: 0,
       outstandingBalance: 0,
@@ -2124,59 +2126,71 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setMutationPending(true);
     setLastMutationError(null);
 
-    // Dispatch to backend (SERP-289)
-    dispatchCommand({
-      command: 'CUSTOMER',
-      payload: {
-        name: customerData.name,
-        phone: customerData.phone,
-        email: customerData.email,
-        island: customerData.island,
-        notes: customerData.notes,
-        type: customerData.type,
-        vehicles: customerData.vehicles,
-        price_list_id: customerData.priceListId,
-      },
-    }).then(() => {
+    try {
+      const result = await dispatchCommand({
+        command: 'CUSTOMER',
+        payload: {
+          name: customerData.name,
+          phone: customerData.phone,
+          email: customerData.email,
+          island: customerData.island,
+          notes: customerData.notes,
+          type: customerData.type,
+          vehicles: customerData.vehicles,
+          price_list_id: customerData.priceListId,
+        },
+      });
+      if (!result.ok) throw new Error('CUSTOMER command was not confirmed by the backend.');
+      const persistedCustomerId = (result as { customer?: { customer_id?: unknown } }).customer?.customer_id;
+      if (typeof persistedCustomerId !== 'string' || !persistedCustomerId) {
+        throw new Error('CUSTOMER persistence response did not include its canonical ID.');
+      }
+      const persistedCustomer = { ...newCustomer, id: persistedCustomerId };
+      setCustomers((prev) => prev.map((customer) => customer.id === newCustomer.id ? persistedCustomer : customer));
       setMutationPending(false);
-    }).catch((err) => {
+      logAuditEvent({
+        action: 'CREATED',
+        module: 'customers' as PermissionModule,
+        entityType: 'Customer',
+        entityId: persistedCustomer.id,
+        entityName: newCustomer.name,
+        summary: `Created customer record for ${newCustomer.name} (${newCustomer.phone}, ${newCustomer.island}).`,
+      });
+      return persistedCustomer;
+    } catch (err) {
       setMutationPending(false);
       const errMsg = err instanceof Error ? err.message : 'CUSTOMER command failed';
       setLastMutationError(errMsg);
       console.error('[ERP] CUSTOMER command failed:', err);
 
-      // Rollback on authoritative server rejection or authenticated session failure
-      if (session || err instanceof ApiError) {
-        setCustomers((prev) => prev.filter((c) => c.id !== newCustomer.id));
-      }
-    });
-
-    logAuditEvent({
-      action: 'CREATED',
-      module: 'customers' as PermissionModule,
-      entityType: 'Customer',
-      entityId: newCustomer.id,
-      entityName: newCustomer.name,
-      summary: `Created customer record for ${newCustomer.name} (${newCustomer.phone}, ${newCustomer.island}).`
-    });
-
-    return newCustomer;
+      setCustomers((prev) => prev.filter((c) => c.id !== newCustomer.id));
+      throw err;
+    }
   };
 
-  const createSupplier = (supplierData: Omit<Supplier, 'id' | 'outstandingPayable' | 'rating'>): Supplier => {
-    const newSupplier: Supplier = { ...supplierData, id: `supplier-${Date.now()}`, outstandingPayable: 0, rating: 0 };
+  const createSupplier = async (supplierData: Omit<Supplier, 'id' | 'outstandingPayable' | 'rating'>): Promise<Supplier> => {
+    const newSupplier: Supplier = { ...supplierData, id: createEntityId('supplier'), outstandingPayable: 0, rating: 0 };
     setSuppliers((prev) => [newSupplier, ...prev]);
     setMutationPending(true);
     setLastMutationError(null);
-    dispatchCommand({ command: 'SUPPLIER', payload: supplierData })
-      .then(() => setMutationPending(false))
-      .catch((err) => {
-        setMutationPending(false);
-        setLastMutationError(err instanceof Error ? err.message : 'SUPPLIER command failed');
-        if (session || err instanceof ApiError) setSuppliers((prev) => prev.filter((s) => s.id !== newSupplier.id));
-      });
-    logAuditEvent({ action: 'CREATED', module: 'suppliers', entityType: 'Supplier', entityId: newSupplier.id, entityName: newSupplier.name, summary: `Created supplier record for ${newSupplier.name}.` });
-    return newSupplier;
+    try {
+      const result = await dispatchCommand({ command: 'SUPPLIER', payload: supplierData });
+      if (!result.ok) throw new Error('SUPPLIER command was not confirmed by the backend.');
+      const persistedSupplierId = (result as { supplier?: { id?: unknown } }).supplier?.id;
+      if (typeof persistedSupplierId !== 'string' || !persistedSupplierId) {
+        throw new Error('SUPPLIER persistence response did not include its canonical ID.');
+      }
+      const persistedSupplier = { ...newSupplier, id: persistedSupplierId };
+      setSuppliers((prev) => prev.map((supplier) => supplier.id === newSupplier.id ? persistedSupplier : supplier));
+      setMutationPending(false);
+      logAuditEvent({ action: 'CREATED', module: 'suppliers', entityType: 'Supplier', entityId: persistedSupplier.id, entityName: persistedSupplier.name, summary: `Created supplier record for ${persistedSupplier.name}.` });
+      return persistedSupplier;
+    } catch (err) {
+      setMutationPending(false);
+      setLastMutationError(err instanceof Error ? err.message : 'SUPPLIER command failed');
+      setSuppliers((prev) => prev.filter((s) => s.id !== newSupplier.id));
+      throw err;
+    }
   };
 
   const updateSupplier = (supplierData: Supplier): Supplier => {
@@ -2359,7 +2373,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const jobIdStr = `${prefix}-0${nextNumber}`;
     const newJob: JobOrder = {
       ...jobData,
-      id: `job-${Date.now()}`,
+      id: createEntityId('job'),
       jobId: jobIdStr,
       materialsUsed: [],
       actualMaterialCost: 0,
@@ -2481,7 +2495,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const invNumberStr = `INV-2026-0${nextNum}`;
     const newInvoice: Invoice = {
       ...finalizedInvoiceData,
-      id: `inv-${Date.now()}`,
+      id: createEntityId('inv'),
       invoiceNumber: invNumberStr
     };
 
@@ -2603,7 +2617,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const gstAmount = Math.round((job.quotedAmount - subtotal) * 100) / 100;
 
     const newInvoice: Invoice = {
-      id: `inv-${Date.now()}`,
+      id: createEntityId('inv'),
       invoiceNumber: `INV-2026-0${invoices.length + 88}`,
       customerId: job.customerId,
       customerName: job.customerName,
@@ -2615,7 +2629,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       dueDate: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
       items: [
         {
-          id: `li-${Date.now()}-1`,
+          id: createEntityId('li'),
           description: `${job.serviceType}: ${job.vehicle?.make || 'Service'} ${job.vehicle?.model || ''} (${job.vehicle?.plateNumber || 'Job'})`,
           quantity: 1,
           unitPrice: subtotal,
@@ -2706,7 +2720,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const nextNum = payments.length + 1093;
     const newPayment: Payment = {
       ...paymentData,
-      id: `pay-${Date.now()}`,
+      id: createEntityId('pay'),
       paymentNumber: `PAY-${nextNum}`
     };
 
@@ -2863,7 +2877,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     // Add stock movements
     const newMovements: StockMovement[] = saleData.items.map((it) => ({
-      id: `mov-${Date.now()}-${it.sku}`,
+      id: `${createEntityId('mov')}-${it.sku}`,
       tenantId: currentTenant.id,
       itemId: it.itemId,
       itemName: it.name,
@@ -2883,7 +2897,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     // 4. Create Paid Invoice
     const newInvoice: Invoice = {
-      id: `inv-${Date.now()}`,
+      id: createEntityId('inv'),
       invoiceNumber: invNumberStr,
       customerId: saleData.customerId || 'walk-in',
       customerName: saleData.customerName || 'Walk-in Counter Customer',
@@ -2892,7 +2906,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       date: new Date().toISOString().split('T')[0],
       dueDate: new Date().toISOString().split('T')[0],
       items: saleData.items.map((it, idx) => ({
-        id: `li-${Date.now()}-${idx}`,
+        id: `${createEntityId('li')}-${idx}`,
         description: `${it.name} (${it.sku})`,
         quantity: it.quantity,
         unitPrice: it.unitPrice,
@@ -2914,7 +2928,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     // 5. Create Completed Payment
     const newPayment: Payment = {
-      id: `pay-${Date.now()}`,
+      id: createEntityId('pay'),
       paymentNumber: `PAY-POS-${payments.length + 101}`,
       invoiceId: newInvoice.id,
       invoiceNumber: newInvoice.invoiceNumber,
@@ -3000,7 +3014,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const nextNum = expenses.length + 55;
     const newExpense: Expense = {
       ...expenseData,
-      id: `exp-${Date.now()}`,
+      id: createEntityId('exp'),
       expenseNumber: `EXP-2026-0${nextNum}`
     };
     setExpenses((prev) => [newExpense, ...prev]);
@@ -3082,7 +3096,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
 
     const newMovement: StockMovement = {
-      id: `mov-${Date.now()}`,
+      id: createEntityId('mov'),
       itemId: item.id,
       itemName: item.name,
       type: 'Received',
@@ -3108,7 +3122,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const addInventoryItem = (itemData: Omit<InventoryItem, 'id' | 'stockStatus' | 'lastRestockedDate'>): InventoryItem => {
     const newItem: InventoryItem = {
       ...itemData,
-      id: `inv-${Date.now()}`,
+      id: createEntityId('inv'),
       stockStatus: itemData.quantityOnHand > itemData.reorderLevel ? 'In Stock' : itemData.quantityOnHand > 0 ? 'Low Stock' : 'Out of Stock',
       lastRestockedDate: new Date().toISOString().split('T')[0]
     };
@@ -3123,7 +3137,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     .catch((err) => { setMutationPending(false); console.error('[ERP] PURCHASE command failed:', err); if (session || err instanceof ApiError) { setInventory((prev) => prev.filter((i) => i.id !== newItem.id)); } });
 
     const newMovement: StockMovement = {
-      id: `mov-${Date.now()}`,
+      id: createEntityId('mov'),
       itemId: newItem.id,
       itemName: newItem.name,
       type: 'Received',
@@ -3169,7 +3183,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
 
     const newMovement: StockMovement = {
-      id: `mov-${Date.now()}`,
+      id: createEntityId('mov'),
       itemId: item.id,
       itemName: item.name,
       type: 'Adjustment',
@@ -3196,7 +3210,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const nextNum = purchaseOrders.length + 43;
     const newPO: PurchaseOrder = {
       ...poData,
-      id: `po-${Date.now()}`,
+      id: createEntityId('po'),
       poNumber: `PO-2026-0${nextNum}`
     };
 

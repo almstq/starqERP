@@ -1,6 +1,8 @@
 import type { JournalEntry } from './journals';
 import { accountClassForCode } from './accounts';
 import type { AccountRecord } from './accounts';
+import { assertJournalPostable, postingControlFor, type PostingActor } from './postingControl';
+import type { AccountingPeriod } from './periods';
 export interface BankAccountConfig {
   id: string;
   accountCode: string; // canonical bank codes: "1111" BML MVR, "1112" BML USD, "1113" MIB MVR
@@ -360,6 +362,7 @@ export function createBankAdjustmentEntry(params: {
   narration?: string;
   tenantId: string;
   authorizedAccounts: AccountRecord[];
+  periods?: AccountingPeriod[];
 }): JournalEntry {
   const { statementLine, bankAccountCode, adjustmentType, narration, tenantId, authorizedAccounts } = params;
 
@@ -423,7 +426,7 @@ export function createBankAdjustmentEntry(params: {
         },
       ];
 
-  return {
+  const entry: JournalEntry = {
     id: `je-bank-adj-${statementLine.id}`,
     entryNumber: `JE-ADJ-${Date.now().toString().slice(-6)}`,
     date: statementLine.date,
@@ -439,6 +442,28 @@ export function createBankAdjustmentEntry(params: {
     tenantId,
     status: 'POSTED',
   };
+
+  if (params.periods) {
+    assertJournalPostable({
+      entry,
+      periods: params.periods,
+      accounts: authorizedAccounts,
+      actor: bankAdjustmentActor(entry, authorizedAccounts),
+    });
+  }
+
+  return entry;
+}
+
+/** User when every line is postable. System when a line is a control or system account. */
+function bankAdjustmentActor(entry: JournalEntry, accounts: AccountRecord[]): PostingActor {
+  const needsEngine = entry.lines.some((line) => {
+    const account = accounts.find((item) => item.code === line.accountCode);
+    if (!account) return false;
+    const control = postingControlFor(account, accounts);
+    return control === 'control' || control === 'system';
+  });
+  return needsEngine ? 'system' : 'user';
 }
 
 /**

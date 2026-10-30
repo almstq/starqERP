@@ -30,99 +30,99 @@ let errors = 0;
 const MIGRATION_STATUS_MAP = {
   '202608200001_core_foundation.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608200002_garage_inventory.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608200003_commercial_accounting.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608200004_pilot_security.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608200005_garage_api.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608200006_garage_api_search_path.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608200007_garage_api_self_test.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608200008_session_authority.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608210009_seat_vocabulary.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608210010_purchase_seat_matrix.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608250012_settlement_allocations.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608250013_workflow_stages.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608250014_idempotency_replay.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608250015_roles_as_data.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608250016_sod_exceptions.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608250017_tax_regimes_and_periods.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608250018_bank_accounts_entities.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608250019_job_customer_vehicle_phone.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608250020_revision_missing_endpoints.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608270023_round1_foundation_remediation.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608270024_platform_control_plane.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608270025_books_and_operating_activities.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608270026_organisation_applications_and_provisioning.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608270027_staff_invitations_and_lifecycle.sql': {
     status: 'APPLIED',
-    notes: 'Applied baseline. Source: docs/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
+    notes: 'Applied baseline. Source: docs/history/ELDER_RETURN_BRIEF_2026-08-28.md, which records migrations 0001-0027 applied 1:1 on the live Supabase project. Registered explicitly on 2026-08-29 when the linter default flipped to unapplied — an APPLIED status is now a deliberate claim, not a fallback.',
   },
   '202608220011_wire_purchase_seat_matrix.sql': {
     status: 'REVIEWER_GATED',

@@ -178,9 +178,9 @@ def case_refund_ceiling(args) -> bool:
         print(f"   thread {i}: {'COMMITTED' if ok else 'refused'} — {msg[:96]}")
     print(f"   total refunded now: {total}")
 
-    ok = len(committed) == 1 and total <= 100000
+    ok = len(committed) == 1 and total == 60000.000000
     if ok:
-        print("   PASS — exactly one refund landed and the capture is not exceeded")
+        print("   PASS — exactly one refund landed and the exact stored total is 60000.000000")
     else:
         print(f"   FAIL — {len(committed)} committed, total {total} against a capture of 100000")
         print("   The ceiling guard reads prior refunds then decides; under concurrency")

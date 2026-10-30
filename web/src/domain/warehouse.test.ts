@@ -4,8 +4,15 @@ import {
   dispatchStockTransfer,
   receiveStockTransfer,
   evaluateWarehouseStockReorders,
+  availableQuantity,
+  reserveStock,
+  releaseReservationOnIssue,
+  cancelReservation,
+  reverseReservation,
+  StockReservationError,
   MALDIVES_DEFAULT_WAREHOUSES,
   WarehouseStockItem,
+  StockReservation,
 } from './warehouse';
 
 describe('SERP-013: Multi-Warehouse & Inter-Island Stock Transfer Engine', () => {
@@ -106,5 +113,245 @@ describe('SERP-013: Multi-Warehouse & Inter-Island Stock Transfer Engine', () =>
     expect(alerts.length).toBe(1);
     expect(alerts[0].itemCode).toBe('SEAL-01');
     expect(alerts[0].deficitQuantity).toBe(11); // 10 + 5 - 4
+  });
+});
+
+describe('SERP-466: stock reservation', () => {
+  const scope = {
+    tenantId: 'tenant-01',
+    itemId: 'item-01',
+    warehouseId: 'wh-01',
+  };
+  const onHand = 10;
+
+  function hold(overrides: Partial<Parameters<typeof reserveStock>[0]> = {}): StockReservation {
+    return reserveStock({
+      id: 'res-1',
+      quantity: 4,
+      sourceType: 'ORDER',
+      sourceId: 'order-1',
+      quantityOnHand: onHand,
+      reservations: [],
+      reservedAt: '2026-10-29T08:00:00.000Z',
+      ...scope,
+      ...overrides,
+    });
+  }
+
+  it('reduces available quantity and leaves on-hand unchanged', () => {
+    const stock = { quantityOnHand: onHand };
+    const reservation = hold();
+
+    expect(reservation.status).toBe('ACTIVE');
+    expect(stock.quantityOnHand).toBe(10);
+    expect(availableQuantity({
+      quantityOnHand: stock.quantityOnHand,
+      reservations: [reservation],
+      ...scope,
+    })).toBe(6);
+  });
+
+  it('ignores released, cancelled, and out-of-scope holds', () => {
+    const active = hold();
+    const released = { ...hold({ id: 'res-2', sourceId: 'order-2', quantity: 1 }), status: 'RELEASED' as const };
+    const cancelled = { ...hold({ id: 'res-3', sourceId: 'order-3', quantity: 2 }), status: 'CANCELLED' as const };
+    const otherTenant = hold({ id: 'res-4', tenantId: 'tenant-02', sourceId: 'order-4', quantity: 9, quantityOnHand: 9 });
+    const otherWarehouse = hold({ id: 'res-5', warehouseId: 'wh-02', sourceId: 'order-5', quantity: 3 });
+
+    expect(availableQuantity({
+      quantityOnHand: onHand,
+      reservations: [active, released, cancelled, otherTenant, otherWarehouse],
+      ...scope,
+    })).toBe(6);
+  });
+
+  it('fails closed on a non-positive or over-available quantity', () => {
+    expect(() => hold({ quantity: 0 })).toThrow(StockReservationError);
+    expect(() => hold({ quantity: -2 })).toThrow(StockReservationError);
+    expect(() => hold({ quantity: Number.NaN })).toThrow(StockReservationError);
+
+    const existing = hold();
+    expect(() => hold({
+      id: 'res-2',
+      sourceId: 'order-2',
+      quantity: 7,
+      reservations: [existing],
+    })).toThrow(StockReservationError);
+
+    const exact = hold({
+      id: 'res-2',
+      sourceId: 'order-2',
+      quantity: 6,
+      reservations: [existing],
+    });
+    expect(exact.quantity).toBe(6);
+  });
+
+  it('refuses a second active hold for the same order or pending sale', () => {
+    const existing = hold({ sourceType: 'PENDING_SALE', sourceId: 'sale-9' });
+    expect(() => hold({
+      id: 'res-2',
+      sourceType: 'PENDING_SALE',
+      sourceId: 'sale-9',
+      quantity: 1,
+      reservations: [existing],
+    })).toThrow(StockReservationError);
+  });
+
+  it('releases the hold on issue without changing on-hand', () => {
+    const original = hold();
+    const issued = releaseReservationOnIssue({
+      reservation: original,
+      tenantId: scope.tenantId,
+      quantityOnHand: onHand,
+      releasedAt: '2026-10-29T09:00:00.000Z',
+    });
+
+    expect(original.status).toBe('ACTIVE');
+    expect(issued.reservation.status).toBe('RELEASED');
+    expect(issued.quantityOnHand).toBe(onHand);
+    expect(availableQuantity({
+      quantityOnHand: issued.quantityOnHand,
+      reservations: [issued.reservation],
+      ...scope,
+    })).toBe(onHand);
+    expect(() => releaseReservationOnIssue({
+      reservation: issued.reservation,
+      tenantId: scope.tenantId,
+      quantityOnHand: onHand,
+      releasedAt: '2026-10-29T09:01:00.000Z',
+    })).toThrow(StockReservationError);
+  });
+
+  it('cancels an active hold and frees available quantity', () => {
+    const original = hold({ sourceType: 'PENDING_SALE', sourceId: 'sale-1' });
+    const cancelled = cancelReservation({
+      reservation: original,
+      tenantId: scope.tenantId,
+      quantityOnHand: onHand,
+      cancelledAt: '2026-10-29T09:05:00.000Z',
+    });
+
+    expect(original.status).toBe('ACTIVE');
+    expect(cancelled.reservation.status).toBe('CANCELLED');
+    expect(cancelled.quantityOnHand).toBe(onHand);
+    expect(availableQuantity({
+      quantityOnHand: onHand,
+      reservations: [cancelled.reservation],
+      ...scope,
+    })).toBe(onHand);
+    expect(() => cancelReservation({
+      reservation: cancelled.reservation,
+      tenantId: scope.tenantId,
+      quantityOnHand: onHand,
+      cancelledAt: '2026-10-29T09:06:00.000Z',
+    })).toThrow(StockReservationError);
+  });
+
+  it('reverses a release by appending a new active hold', () => {
+    const original = hold();
+    const issued = releaseReservationOnIssue({
+      reservation: original,
+      tenantId: scope.tenantId,
+      quantityOnHand: onHand,
+      releasedAt: '2026-10-29T09:00:00.000Z',
+    });
+    const reversed = reverseReservation({
+      reservation: issued.reservation,
+      reservations: [issued.reservation],
+      newReservationId: 'res-1-rev',
+      tenantId: scope.tenantId,
+      quantityOnHand: onHand,
+      reversedAt: '2026-10-29T10:00:00.000Z',
+    });
+
+    expect(reversed.original.status).toBe('RELEASED');
+    expect(issued.reservation.status).toBe('RELEASED');
+    expect(reversed.restored.status).toBe('ACTIVE');
+    expect(reversed.restored.reversesReservationId).toBe(original.id);
+    expect(reversed.quantityOnHand).toBe(onHand);
+    expect(availableQuantity({
+      quantityOnHand: onHand,
+      reservations: [reversed.original, reversed.restored],
+      ...scope,
+    })).toBe(6);
+    expect(() => reverseReservation({
+      reservation: reversed.original,
+      reservations: [reversed.original, reversed.restored],
+      newReservationId: 'res-1-rev-2',
+      tenantId: scope.tenantId,
+      quantityOnHand: onHand,
+      reversedAt: '2026-10-29T10:05:00.000Z',
+    })).toThrow(StockReservationError);
+  });
+
+  it('reverses a cancellation the same way and refuses an active hold', () => {
+    const original = hold();
+    const cancelled = cancelReservation({
+      reservation: original,
+      tenantId: scope.tenantId,
+      quantityOnHand: onHand,
+      cancelledAt: '2026-10-29T09:05:00.000Z',
+    });
+    const reversed = reverseReservation({
+      reservation: cancelled.reservation,
+      reservations: [cancelled.reservation],
+      newReservationId: 'res-1-rev',
+      tenantId: scope.tenantId,
+      quantityOnHand: onHand,
+      reversedAt: '2026-10-29T10:00:00.000Z',
+    });
+
+    expect(reversed.original.status).toBe('CANCELLED');
+    expect(reversed.restored.status).toBe('ACTIVE');
+    expect(() => reverseReservation({
+      reservation: reversed.restored,
+      reservations: [reversed.original, reversed.restored],
+      newReservationId: 'res-again',
+      tenantId: scope.tenantId,
+      quantityOnHand: onHand,
+      reversedAt: '2026-10-29T10:10:00.000Z',
+    })).toThrow(StockReservationError);
+  });
+
+  it('refuses to restore a hold when the quantity is no longer available', () => {
+    const original = hold({ quantity: 8 });
+    const issued = releaseReservationOnIssue({
+      reservation: original,
+      tenantId: scope.tenantId,
+      quantityOnHand: onHand,
+      releasedAt: '2026-10-29T09:00:00.000Z',
+    });
+    const taken = hold({
+      id: 'res-other',
+      sourceId: 'order-other',
+      quantity: 6,
+      reservations: [issued.reservation],
+    });
+
+    expect(() => reverseReservation({
+      reservation: issued.reservation,
+      reservations: [issued.reservation, taken],
+      newReservationId: 'res-1-rev',
+      tenantId: scope.tenantId,
+      quantityOnHand: onHand,
+      reversedAt: '2026-10-29T10:00:00.000Z',
+    })).toThrow(StockReservationError);
+  });
+
+  it('refuses a reservation operation for a different tenant', () => {
+    const original = hold();
+    expect(() => releaseReservationOnIssue({
+      reservation: original,
+      tenantId: 'tenant-02',
+      quantityOnHand: onHand,
+      releasedAt: '2026-10-29T09:00:00.000Z',
+    })).toThrow(StockReservationError);
+    expect(() => cancelReservation({
+      reservation: original,
+      tenantId: 'tenant-02',
+      quantityOnHand: onHand,
+      cancelledAt: '2026-10-29T09:00:00.000Z',
+    })).toThrow(StockReservationError);
   });
 });

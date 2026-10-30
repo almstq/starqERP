@@ -72,14 +72,14 @@ All Google OAuth credentials must reside within the canonical Google Cloud proje
    - **Internal**: Optional if deployment is strictly restricted to an internal Google Workspace domain.
 3. **App Information**:
    - **App name**: `starqERP`
-   - **User support email**: Administrator / Founder email (e.g. `a.musthaq@gmail.com`)
+   - **User support email**: Administrator / Founder email (e.g. `founder@example.com`)
    - **App logo**: Optional for development; standard 120x120px square icon for production.
 4. **Authorized Domains**:
    - `starq.mv`
    - `supabase.co`
    - `vercel.app` (if preview/staging hosting uses Vercel)
 5. **Developer Contact Information**:
-   - Primary technical contact email (e.g. `a.musthaq@gmail.com`).
+   - Primary technical contact email (e.g. `founder@example.com`).
 6. **Scopes**:
    Configure the minimal non-sensitive identity scopes:
    - `openid`

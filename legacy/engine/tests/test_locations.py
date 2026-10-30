@@ -129,7 +129,7 @@ def main():
 
         ali = _user(person_id="ali", acting_as="director",
                     entities=["starq", "club-ignition", "group"],
-                    email="a.musthaq@gmail.com")
+                    email="founder@example.com")
         html_group = S.h_settings({}, None, "", "", ali)
         _assert("Add location" not in html_group, "Group is not a write occupancy")
         html_ali_st = S.h_settings({}, "STARQ", "", "", ali)

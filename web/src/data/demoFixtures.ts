@@ -39,7 +39,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     id: 'cust-1',
     name: 'Ahmed Rauf',
     phone: '+960 778-4321',
-    email: 'rauf.ahmed@outlook.com',
+    email: 'customer1@example.com',
     type: 'Individual',
     island: "Male'",
     vehicles: [
@@ -63,7 +63,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     id: 'cust-2',
     name: 'Ibrahim Shaan',
     phone: '+960 790-1122',
-    email: 'shaan.ib@gmail.com',
+    email: 'customer2@example.com',
     type: 'VIP',
     island: "Hulhumale'",
     vehicles: [
@@ -87,7 +87,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     id: 'cust-3',
     name: 'Ismail Ziyad',
     phone: '+960 766-9900',
-    email: 'ziyad.marine@dhivehinet.net.mv',
+    email: 'customer3@example.com',
     type: 'Individual',
     island: "Hulhumale' Phase 2",
     vehicles: [
@@ -111,7 +111,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     id: 'cust-4',
     name: 'Trans Maldivian Transfers (Fleet)',
     phone: '+960 332-9090',
-    email: 'fleet@tma.com.mv',
+    email: 'fleet@example.com',
     type: 'Fleet',
     island: "Hulhule / Male'",
     vehicles: [
@@ -143,7 +143,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     id: 'cust-5',
     name: 'Aishath Maya',
     phone: '+960 771-5544',
-    email: 'maya.aishath@gmail.com',
+    email: 'customer4@example.com',
     type: 'Individual',
     island: "Male'",
     vehicles: [
@@ -167,7 +167,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     id: 'cust-6',
     name: 'Hassan Samah',
     phone: '+960 798-2233',
-    email: 'samah.h@mohe.gov.mv',
+    email: 'customer5@example.com',
     type: 'Individual',
     island: "Villimale'",
     vehicles: [
@@ -1000,7 +1000,7 @@ export const INITIAL_SUPPLIERS: Supplier[] = [
     name: 'Autofix Supplies Hulhumale',
     contactPerson: 'Ali Rasheed',
     phone: '+960 779-6611',
-    email: 'autofix.mv@gmail.com',
+    email: 'customer6@example.com',
     address: 'Lot 10428, Hithigas Magu, Hulhumale',
     islandOrCountry: "Hulhumale', Maldives",
     category: '3M Abrasives, Masking Tapes, Fillers & Buffing Pads',
@@ -1382,7 +1382,7 @@ export const INITIAL_TENANTS: import('../types/erp').OrganisationTenant[] = [
     financialYearStart: '01-01',
     financialYearEnd: '12-31',
     phone: '+960 778-9900',
-    email: 'accounts@ignitionink.mv',
+    email: 'accounts@example.com',
     address: 'Lot 11492, Industrial Zone, Phase 2',
     island: "Hulhumale'",
     atoll: 'Kaafu Atoll',
