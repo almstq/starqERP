@@ -60,3 +60,31 @@ closest to done:
 
 Room is the ledger for execution against this; this file is the position, re-stated as the
 picture changes materially — not on a schedule.
+
+## 4. End-of-day update (same session, materially changed picture)
+
+Sections 1–3 above describe the position when the ERP floor restarted. By end of session, the
+full wave they describe has executed:
+
+| Gap / item | Status at restart (Sec. 1–3) | Status now |
+|---|---|---|
+| **G1** accounting-event/subledger | closed (SERP-460 merged via PR #167) | unchanged, holds |
+| **G4** migration gate | PR #169 open, CI green | **merged** |
+| **G4** environmental CI blocker | PR #180 open | **merged** — GHCR throttling fix landed |
+| **G3** reconciliation invariants | PRs #170–173 open, CI-blocked | **all four merged** (#170 inventory, #171 AR, #172 cash-clearing, #173 AP) — each also had an independent governance-gate orphan-code finding (new domain module, no production caller yet), fixed and merged with each PR, same reviewed pattern |
+| PR #168 (SERP-303–306 + SERP-466/467) | access gap, unresolved | **root-caused** (49 commits stale, broken CI workflow, not an access problem) and **closed as superseded** — 6 of 11 commits were already on `main` via other PRs; **PR #182** opened as its replacement (the ~2 genuinely unique commits plus a corrective restart-authorization/status doc, since the superseded docs asserted a now-false "ON HOLD" state) |
+| SERP-463 (process acceptance suites) | not started | scoped (coverage-gap analysis) and a Chain-1 skeleton drafted + independently reviewed — still unmerged, pre-PR scaffolding, not activated |
+
+**Net effect:** every PR open at the start of this session (6) is now resolved — 6 merged outright,
+1 closed-and-replaced. G1–G4 (the convergence-critical set) are all either closed or merged.
+
+**Still correctly not started, per the roadmap's own sequencing (Sec. "First implementation
+wave"):** SERP-464 (Cash-to-Bank completion) and SERP-465 (Procure-to-Pay closure) — net-new
+chain work that the roadmap itself gates behind SERP-463's acceptance suites, which are
+scaffolded, not built. SERP-467 (period close) shipped as part of PR #176 per its own merged
+description, but — like SERP-461/466's reconciliation modules — the production wiring is
+deliberately **held, not activated** (Founder direction: hold for now rather than wire in as
+part of this wave). This is a decision, not a gap.
+
+**Board-vs-reality gap (Sec. 1) is now wider**, not narrower: the board hasn't moved at all while
+six more PRs merged today. Still out of this file's authorized scope to correct directly.
