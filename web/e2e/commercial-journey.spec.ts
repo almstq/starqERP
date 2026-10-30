@@ -77,6 +77,7 @@ test.describe('SERP-328 complete commercial journey', () => {
     await fillNear(addJob, 'Requested Scope of Work *', SCOPE);
     await fillNear(addJob, 'Quoted Price (MVR) *', AMOUNT);
     await addJob.getByRole('button', { name: 'Create & Assign to Bay' }).click();
+    await expect(addJob).toBeHidden();
     await page.getByRole('radio', { name: 'Table' }).click();
     await expect(page.getByText(CUSTOMER, { exact: true }).first()).toBeVisible();
 

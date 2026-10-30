@@ -35,10 +35,10 @@ All fixtures are synthetic and created inside a rolled-back transaction.
 
 - `tests/serp_300_security_boundaries.test.mjs` is the red/green server-boundary regression suite.
 - `tests/serp_300_adversarial_isolation_probe.sql` is the behavioral PostgreSQL probe.
-- `tests/evidence/SERP-300/remote-db-lint-before.txt` is a read-only linked Alpha lint result.
-- `tests/evidence/SERP-300/classification-2026-08-28.md` records the exact clean-room catalogue, role-execution, runtime, and schema-contract results at HEAD `fda71811cdb77dea5e0f39eac9d09231ee1845bf`.
-- `tests/evidence/SERP-300/green-static-boundaries.txt` records the eight focused Edge/RPC boundary tests passing after remediation.
-- `tests/evidence/SERP-300/green-postgres-boundaries.txt` records the clean 0001–0028 replay and all sixteen adversarial/runtime checks passing after remediation.
+- `docs/evidence/SERP-300/remote-db-lint-before.txt` is a read-only linked Alpha lint result.
+- `docs/evidence/SERP-300/classification-2026-08-28.md` records the exact clean-room catalogue, role-execution, runtime, and schema-contract results at HEAD `fda71811cdb77dea5e0f39eac9d09231ee1845bf`.
+- `docs/evidence/SERP-300/green-static-boundaries.txt` records the eight focused Edge/RPC boundary tests passing after remediation.
+- `docs/evidence/SERP-300/green-postgres-boundaries.txt` records the clean 0001–0028 replay and all sixteen adversarial/runtime checks passing after remediation.
 - No live tenant rows are read and no live writes are performed by these local probes.
 
 ## Classification result — 2026-08-28

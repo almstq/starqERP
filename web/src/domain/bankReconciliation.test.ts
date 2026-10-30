@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { DEFAULT_CHART_OF_ACCOUNTS } from '../data/defaultChartOfAccounts';
 import {
   parseBmlCsv,
   parseMibCsv,
@@ -12,6 +13,7 @@ import {
 } from './bankReconciliation';
 import { AccountRecord } from './accounts';
 import { JournalEntry } from './journals';
+import { generateFiscalPeriods } from './periods';
 
 describe('SERP-296: Bank & Cash Ledger Reconciliation Engine', () => {
   const SAMPLE_BML_CSV = `
@@ -249,5 +251,74 @@ Transaction Date,Details,Withdrawal,Deposit,Balance,Ref No
     expect(summary.adjustedBankBalance).toBe(160300);
     expect(summary.isBalanced).toBe(true);
     expect(summary.variance).toBeLessThan(0.01);
+  });
+});
+
+describe('SERP-467: bank adjustment posting gate', () => {
+  const feeLine: BankStatementLine = {
+    id: 'stmt-serp467-fee',
+    statementId: 'stmt-serp467',
+    date: '2026-08-15',
+    description: 'Monthly BML Service Fee',
+    reference: 'FEE-AUG-2026',
+    debit: 150,
+    credit: 0,
+    balance: 1000,
+    status: 'unreconciled',
+  };
+
+  function augustPeriods(status: 'OPEN' | 'LOCKED' | 'CLOSED') {
+    return generateFiscalPeriods(2026).map((period) => (
+      period.month === 8
+        ? { ...period, status, lockedBy: 'Controller' }
+        : period
+    ));
+  }
+
+  it('posts a bank fee in an open period and rejects a LOCKED or CLOSED period', () => {
+    const open = createBankAdjustmentEntry({
+      statementLine: feeLine,
+      bankAccountCode: '1111',
+      adjustmentType: 'bank_fee',
+      tenantId: 'tenant-01',
+      authorizedAccounts: DEFAULT_CHART_OF_ACCOUNTS,
+      periods: augustPeriods('OPEN'),
+    });
+    expect(open.status).toBe('POSTED');
+    expect(open.lines.map((line) => line.accountCode)).toEqual(['6310', '1111']);
+
+    expect(() => createBankAdjustmentEntry({
+      statementLine: feeLine,
+      bankAccountCode: '1111',
+      adjustmentType: 'bank_fee',
+      tenantId: 'tenant-01',
+      authorizedAccounts: DEFAULT_CHART_OF_ACCOUNTS,
+      periods: augustPeriods('LOCKED'),
+    })).toThrow(/LOCKED/);
+    expect(() => createBankAdjustmentEntry({
+      statementLine: feeLine,
+      bankAccountCode: '1111',
+      adjustmentType: 'bank_fee',
+      tenantId: 'tenant-01',
+      authorizedAccounts: DEFAULT_CHART_OF_ACCOUNTS,
+      periods: augustPeriods('CLOSED'),
+    })).toThrow(/CLOSED/);
+  });
+
+  it('rejects interest income when the chart has no account 8000', () => {
+    const interestLine: BankStatementLine = {
+      ...feeLine,
+      id: 'stmt-serp467-interest',
+      debit: 0,
+      credit: 25,
+    };
+    expect(() => createBankAdjustmentEntry({
+      statementLine: interestLine,
+      bankAccountCode: '1111',
+      adjustmentType: 'interest_income',
+      tenantId: 'tenant-01',
+      authorizedAccounts: DEFAULT_CHART_OF_ACCOUNTS,
+      periods: augustPeriods('OPEN'),
+    })).toThrow(/8000/);
   });
 });

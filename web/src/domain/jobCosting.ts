@@ -1,5 +1,7 @@
-import { accountClassForCode } from './accounts';
+import { AccountRecord, accountClassForCode } from './accounts';
 import { JournalEntry } from './journals';
+import { assertJournalPostable } from './postingControl';
+import { AccountingPeriod } from './periods';
 
 export interface MaterialCostItem {
   id: string;
@@ -84,6 +86,8 @@ export function calculateJobCostSheet(params: {
   labor?: LaborCostItem[];
   directExpenses?: ExpenseCostItem[];
   tenantId: string;
+  periods?: AccountingPeriod[];
+  accounts?: AccountRecord[];
 }): JobCostSheet {
   const {
     jobId,
@@ -100,6 +104,8 @@ export function calculateJobCostSheet(params: {
     labor = [],
     directExpenses = [],
     tenantId,
+    periods,
+    accounts,
   } = params;
 
   const totalMaterialCost = round2(materials.reduce((s, m) => s + (m.quantity * m.unitCostMvr), 0));
@@ -140,7 +146,7 @@ export function calculateJobCostSheet(params: {
   };
 
   if (status === 'COMPLETED') {
-    sheet.completionJournal = createJobCompletionCogsJournal(sheet, tenantId);
+    sheet.completionJournal = createJobCompletionCogsJournal(sheet, tenantId, periods, accounts);
   }
 
   return sheet;
@@ -149,7 +155,12 @@ export function calculateJobCostSheet(params: {
 /**
  * Creates balanced double-entry General Ledger journal recognizing COGS and clearing Work-in-Progress (WIP).
  */
-export function createJobCompletionCogsJournal(sheet: JobCostSheet, tenantId: string): JournalEntry {
+export function createJobCompletionCogsJournal(
+  sheet: JobCostSheet,
+  tenantId: string,
+  periods?: AccountingPeriod[],
+  accounts?: AccountRecord[],
+): JournalEntry {
   const lines = [
     // 1. Debit COGS - Job Costs (Account 5000)
     {
@@ -175,7 +186,7 @@ export function createJobCompletionCogsJournal(sheet: JobCostSheet, tenantId: st
     },
   ];
 
-  return {
+  const entry: JournalEntry = {
     id: `je-job-${sheet.jobCode}`,
     entryNumber: `JE-JOB-${sheet.jobCode.replace(/[^a-zA-Z0-9]/g, '')}`,
     date: sheet.targetCompletionDate || new Date().toISOString().slice(0, 10),
@@ -191,6 +202,18 @@ export function createJobCompletionCogsJournal(sheet: JobCostSheet, tenantId: st
     tenantId,
     status: 'POSTED',
   };
+
+  // 5110 and 1330 are control accounts, so this posts as the engine.
+  if (periods) {
+    assertJournalPostable({
+      entry,
+      periods,
+      accounts: accounts ?? [],
+      actor: 'system',
+    });
+  }
+
+  return entry;
 }
 
 function round2(val: number): number {

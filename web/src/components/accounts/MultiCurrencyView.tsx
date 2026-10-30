@@ -15,6 +15,10 @@ import {
   UnrealizedRevaluationResult,
 } from '../../domain/multiCurrency';
 import { JournalEntry } from '../../domain/journals';
+import { PostingRejected } from '../../domain/postingControl';
+import { AccountingPeriod, generateFiscalPeriods } from '../../domain/periods';
+import { AccountRecord } from '../../domain/accounts';
+import { DEFAULT_CHART_OF_ACCOUNTS } from '../../data/defaultChartOfAccounts';
 import { useERP } from '../../context/ERPContext';
 import { Badge, Surface, Button } from '../ui';
 
@@ -35,6 +39,33 @@ export const MultiCurrencyView: React.FC<{
   const [originalRate, setOriginalRate] = useState<number>(15.42);
   const [settlementRate, setSettlementRate] = useState<number>(15.65);
   const [recentSettlements, setRecentSettlements] = useState<FxSettlementResult[]>([]);
+  const [postingError, setPostingError] = useState<string | null>(null);
+
+  // Shared with AccountsView/MultiWarehouseView (SERP-467): same localStorage
+  // keys so a realized-FX journal is gated by the same periods/chart of
+  // accounts the rest of the ledger uses.
+  const [periods] = useState<AccountingPeriod[]>(() => {
+    const saved = localStorage.getItem('starq:accounting_periods:v1');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return generateFiscalPeriods(2026);
+      }
+    }
+    return generateFiscalPeriods(2026);
+  });
+  const [chartOfAccounts] = useState<AccountRecord[]>(() => {
+    const saved = localStorage.getItem('starq:chart_of_accounts:v1');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return DEFAULT_CHART_OF_ACCOUNTS;
+      }
+    }
+    return DEFAULT_CHART_OF_ACCOUNTS;
+  });
 
   // Period End Revaluation State
   const [usdBankBalance, setUsdBankBalance] = useState<number>(25000);
@@ -49,16 +80,25 @@ export const MultiCurrencyView: React.FC<{
   };
 
   const handleCalculateSettlement = () => {
-    const result = calculateRealizedFxGainLoss({
-      transactionType: transType,
-      reference: refDoc,
-      currency,
-      foreignAmount: foreignAmt,
-      originalRate,
-      settlementRate,
-      settlementDate: new Date().toISOString().slice(0, 10),
-      tenantId: currentTenant.id || 'tenant-01',
-    });
+    setPostingError(null);
+    let result: FxSettlementResult;
+    try {
+      result = calculateRealizedFxGainLoss({
+        transactionType: transType,
+        reference: refDoc,
+        currency,
+        foreignAmount: foreignAmt,
+        originalRate,
+        settlementRate,
+        settlementDate: new Date().toISOString().slice(0, 10),
+        tenantId: currentTenant.id || 'tenant-01',
+        periods,
+        accounts: chartOfAccounts,
+      });
+    } catch (err) {
+      setPostingError(err instanceof PostingRejected ? err.message : (err as Error).message || 'Realized FX journal was rejected by posting control.');
+      return;
+    }
 
     setRecentSettlements([result, ...recentSettlements]);
 
@@ -80,6 +120,23 @@ export const MultiCurrencyView: React.FC<{
 
   return (
     <div className="space-y-6 finance-light-compat" data-testid="multi-currency-view">
+      {postingError && (
+        <div
+          role="alert"
+          data-testid="posting-rejected"
+          className="flex items-start gap-3 rounded-lg border border-[var(--md-sys-color-error)] bg-[var(--md-sys-color-error-container)] p-4 text-[var(--md-sys-color-on-error-container)]"
+        >
+          <span className="font-semibold shrink-0">Posting rejected</span>
+          <span className="text-sm">{postingError}</span>
+          <button
+            type="button"
+            onClick={() => setPostingError(null)}
+            className="ml-auto text-sm underline shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       {/* Header & MMA Rates Board */}
       <Surface className="p-6 rounded-2xl border border-slate-800 bg-[#0a0f1d]">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

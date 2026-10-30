@@ -76,7 +76,7 @@ def main():
         )
         _assert(err is not None, "empty name")
         row, err = M.create_employee(
-            name="fake@gmail.com", seat="technician", occupancy="CI",
+            name="fixture@example.com", seat="technician", occupancy="CI",
             actor_seat="director", person_id="ali",
         )
         _assert(err is not None, "gmail as name")
@@ -160,7 +160,7 @@ def main():
 
         ali = _user(person_id="ali", acting_as="director",
                     entities=["starq", "club-ignition", "group"],
-                    email="a.musthaq@gmail.com")
+                    email="founder@example.com")
         html_group = S.h_settings({}, None, "", "", ali)
         _assert("Add employee" not in html_group, "Group is not a write occupancy")
         _assert("not a third roster" in html_group, html_group)

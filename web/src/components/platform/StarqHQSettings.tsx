@@ -72,7 +72,7 @@ export const StarqHQSettings: React.FC = () => {
           <div className="space-y-1.5 text-[var(--md-sys-color-on-surface-variant)]">
             <div className="flex justify-between">
               <span>Client ID:</span>
-              <span className="font-mono text-[11px] text-[var(--md-sys-color-on-surface)]">901212915429-***.apps.googleusercontent.com</span>
+              <span className="font-mono text-[11px] text-[var(--md-sys-color-on-surface)]">&lt;configured-client-id&gt;</span>
             </div>
             <div className="flex justify-between">
               <span>Identity Provider:</span>

@@ -327,6 +327,27 @@ Deno.test({
     };
 
     try {
+      // The catalogue path invokes api_counter_approved_prices, which checks
+      // database-backed seat authority. Keep this request fixture self-contained
+      // instead of relying on another contract test to seed the synthetic actor.
+      await client.query(
+        `INSERT INTO public.persons (id, person_key, display_label, status)
+         VALUES ($1, 'serp446-ignition-counter', 'SERP-446 Ignition Counter', 'active')
+         ON CONFLICT (id) DO NOTHING`,
+        [sessionOrgB.person_uuid],
+      );
+      await client.query(
+        `INSERT INTO public.memberships (id, organisation_id, person_id, status, valid_from)
+         VALUES ('44600000-0000-4000-8000-000000000201', $1, $2, 'active', now())
+         ON CONFLICT (id) DO NOTHING`,
+        [ignitionOrgId, sessionOrgB.person_uuid],
+      );
+      await client.query(
+        `INSERT INTO public.membership_seats (membership_id, seat_code)
+         VALUES ('44600000-0000-4000-8000-000000000201', 'counter')
+         ON CONFLICT (membership_id, seat_code) DO NOTHING`,
+      );
+
       const adapter = createPgDbAdapter(client);
       setDbForTesting(adapter);
 

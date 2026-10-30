@@ -66,7 +66,7 @@ def main():
         )
         _assert(err is not None, "empty name")
         row, err = M.create_contact(
-            name="fake@gmail.com", kind="customer", occupancy="CI",
+            name="fixture@example.com", kind="customer", occupancy="CI",
             seat="director", person_id="ali",
         )
         _assert(err is not None, "gmail as name")
@@ -130,7 +130,7 @@ def main():
 
         ali = _user(person_id="ali", acting_as="director",
                     entities=["starq", "club-ignition", "group"],
-                    email="a.musthaq@gmail.com")
+                    email="founder@example.com")
         html_group = S.h_contacts({}, None, "", "", ali)
         _assert("Add contact" not in html_group, "Group is not a write occupancy")
         _assert("not a third master" in html_group, html_group)
