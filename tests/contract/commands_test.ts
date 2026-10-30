@@ -3278,10 +3278,10 @@ Deno.test('SERP-038: CANONICAL_MIGRATION_LINEAGE contains exactly 22 migrations 
   assertEquals(result.errors.length, 0);
   assertEquals(CANONICAL_MIGRATION_LINEAGE.length, 22);
 
-  // Verify 0011 is reviewer gated
+  // Verify 0011 is now approved/applied (reviewer gate cleared 2026-10-30)
   const m0011 = CANONICAL_MIGRATION_LINEAGE.find((m) => m.version === '202608220011');
-  assertEquals(m0011?.status, 'REVIEWER_GATED');
-  assertEquals(m0011?.requiresReviewerApproval, true);
+  assertEquals(m0011?.status, 'APPLIED');
+  assertEquals(m0011?.requiresReviewerApproval, undefined);
 
   // Verify 0021 and 0022 are forward unapplied
   const m0021 = CANONICAL_MIGRATION_LINEAGE.find((m) => m.version === '202608260021');
