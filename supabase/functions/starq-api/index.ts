@@ -21,6 +21,7 @@ import {
 import { logRequest, severityFor } from "../_shared/observability.ts";
 import { resolveInvoiceFinanceDecision, type InvoiceTaxLineResult } from "../_shared/invoiceFinance.ts";
 import { buildInvoicePaymentAccountingEvent, isUniqueViolation } from "../_shared/accountingEventFromPayment.ts";
+import { buildErpRoadmapProgressSnapshot } from "../_shared/erpRoadmapProgress.ts";
 
 function safeEnv(key: string, fallback = ""): string {
   try {
@@ -1442,6 +1443,13 @@ export async function handleRequest(
         });
         if (error) throw new Error(error.message || "platform_tenants_query_failed");
         return json(200, { ok: true, tenants: data ?? [] }, origin);
+      }
+
+      // Read-only, source-backed ERP roadmap progress snapshot for Command's
+      // Project Portfolio display. Not tenant data; no DB read. See
+      // supabase/functions/_shared/erpRoadmapProgress.ts for the audit source.
+      if (req.method === "GET" && path === "/api/platform/erp-roadmap-progress") {
+        return json(200, buildErpRoadmapProgressSnapshot() as unknown as Json, origin);
       }
 
 
