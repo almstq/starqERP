@@ -103,7 +103,7 @@ When the founder authenticates, the gateway returns their full authorization gra
 {
   "person_id": "uuid-ali",
   "name": "Ali Musthaq",
-  "email": "a.musthaq@gmail.com",
+  "email": "founder@example.com",
   "platform_entitlement": {
     "operator_role": "platform_admin",
     "mfa_verified": true

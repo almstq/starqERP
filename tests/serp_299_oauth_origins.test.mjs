@@ -22,6 +22,7 @@ console.log('=== SERP-299: Running Google OAuth, Origins & Secrets Verification 
   // explicit allowlist entry - never covered by the wildcard vercel.app pattern below,
   // which SERP-299/Founder Ruling #1475 deliberately restricts to non-production.
   assert.match(content, /['"]https:\/\/starq-erp\.vercel\.app['"]/, 'DEFAULT_ALLOWED_ORIGINS must include https://starq-erp.vercel.app');
+  assert.doesNotMatch(content, /['"]https:\/\/web-(?:dhivashi|eight-psi-92)\.vercel\.app['"]/, 'throwaway Vercel preview origins must not ship in the default allowlist');
 
   // Verify production guard against arbitrary vercel preview wildcards
   assert.match(content, /const IS_PROD =/, 'Edge function must determine production environment');
@@ -39,8 +40,6 @@ console.log('=== SERP-299: Running Google OAuth, Origins & Secrets Verification 
     "http://localhost:3002",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
-    "https://web-dhivashi.vercel.app",
-    "https://web-eight-psi-92.vercel.app",
     "https://starq-erp.vercel.app",
     "https://erp.starq.mv",
     "https://starq.mv",
@@ -72,6 +71,8 @@ console.log('=== SERP-299: Running Google OAuth, Origins & Secrets Verification 
   assert.equal(testOriginAllowed('https://erp.starq.mv', true, false), true, 'Production origin erp.starq.mv must be allowed');
   assert.equal(testOriginAllowed('https://starq.mv', true, false), true, 'Root domain starq.mv must be allowed');
   assert.equal(testOriginAllowed('https://arbitrary-attacker.vercel.app', true, false), false, 'Wildcard vercel apps must be REJECTED in production');
+  assert.equal(testOriginAllowed('https://web-dhivashi.vercel.app', true, false), false, 'Retired preview domain must not be implicitly authorized');
+  assert.equal(testOriginAllowed('https://web-eight-psi-92.vercel.app', true, false), false, 'Retired preview domain must not be implicitly authorized');
   assert.equal(testOriginAllowed('https://malicious-site.com', true, false), false, 'Unauthorized domains must be REJECTED');
 
   // SERP-437/#137 incident regression fixture: production v33 accepted ANY *.vercel.app
@@ -88,6 +89,7 @@ console.log('=== SERP-299: Running Google OAuth, Origins & Secrets Verification 
   // Preview / non-prod behavior
   assert.equal(testOriginAllowed('https://preview-feat-branch.vercel.app', false, false), true, 'Preview vercel apps permitted in non-prod');
   assert.equal(testOriginAllowed('https://preview-feat-branch.vercel.app', true, true), true, 'Preview permitted in prod only with explicit opt-in');
+  assert.equal(testOriginAllowed('https://web-dhivashi.vercel.app', true, true), true, 'A preview may be opted in through the explicit preview setting');
 
   console.log('  ✓ PASS: Origin evaluation behavior matches Founder Ruling #1475 invariants');
 }

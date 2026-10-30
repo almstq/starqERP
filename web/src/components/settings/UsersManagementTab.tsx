@@ -431,7 +431,7 @@ export const UsersManagementTab: React.FC = () => {
                     required
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="e.g. nazim@starqtech.com or nazim@gmail.com"
+                    placeholder="e.g. nazim@starqtech.com or name@example.com"
                     className="w-full px-3 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-low)] bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] dark:border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-blue-500 font-mono"
                   />
                 </div>

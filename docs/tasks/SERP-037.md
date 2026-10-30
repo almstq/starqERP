@@ -58,4 +58,4 @@ The harness:
 | Production restore target | failed closed and recorded |
 | Catalogue mutation | rejected as append-only |
 
-Raw execution output is preserved in `tests/evidence/SERP-037/green-backup-restore-probe.txt`. This checkpoint is not self-accepted; a separate reviewer must reproduce the drill before the task can close.
+Raw execution output is preserved in `docs/evidence/SERP-037/green-backup-restore-probe.txt`. This checkpoint is not self-accepted; a separate reviewer must reproduce the drill before the task can close.

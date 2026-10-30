@@ -54,6 +54,9 @@ jobs:
       - name: Legal Terms Tests
         run: node tests/legal_terms.test.mjs
 
+      - name: Current Documentation Content Guard
+        run: node scripts/lint-documentation-content.mjs
+
       - name: Reality Mutation Checks
         run: node tests/check_reality_mutation.test.mjs
 
@@ -74,9 +77,6 @@ jobs:
 
       - name: Reachability Ratchet Enforcement Gate (SERP-392)
         run: node tests/serp_392_reachability_ratchet.test.mjs
-
-      - name: Deno Contract Test Suite (169 tests)
-        run: deno test --allow-read tests/contract/commands_test.ts
 
       - name: SERP-314 Gap 2 authenticated Price List boundary test
         run: deno test --allow-read tests/serp314_price_list_edge_path.test.ts
@@ -102,9 +102,15 @@ jobs:
       PGHOST: localhost
       PGUSER: postgres
       PGDATABASE: postgres
+      DATABASE_URL: postgres://postgres:synthetic-serp124-only@localhost:5432/postgres
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5 (SERP-382: immutable SHA pin)
+        with:
+          deno-version: v2.x
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -137,6 +143,12 @@ jobs:
             echo "Applying $migration"
             psql --set ON_ERROR_STOP=1 --file "$migration"
           done
+
+      - name: Deno contract suite (all 20 contract files)
+        run: >-
+          deno test --allow-read --allow-net=localhost:5432,127.0.0.1:5432,127.0.0.1:55432
+          --allow-env=DATABASE_URL,STARQBOOKS_SESSION_SECRET,SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,PG*
+          tests/contract/
 
       - name: Load RLS isolation fixture (SERP-124)
         run: psql --set ON_ERROR_STOP=1 --file tests/rls_isolation_fixture.sql
@@ -231,6 +243,33 @@ jobs:
             --port 5432 \
             --db "$PGDATABASE" \
             --user "$PGUSER"
+
+      - name: Run settlement allocation concurrency test (SERP-181)
+        run: |
+          set -euo pipefail
+          python3 tests/test_settlement_concurrency.py \
+            --host "$PGHOST" --port 5432 --dbname "$PGDATABASE" \
+            --user "$PGUSER" --password "$PGPASSWORD"
+
+      - name: Run idempotency replay concurrency test (SERP-182)
+        run: |
+          set -euo pipefail
+          python3 tests/test_idempotency_replay.py \
+            --host "$PGHOST" --port 5432 --dbname "$PGDATABASE" \
+            --user "$PGUSER" --password "$PGPASSWORD"
+
+      - name: Run document numbering real concurrency test (SERP-176)
+        run: |
+          set -euo pipefail
+          python3 tests/test_document_numbering_real_concurrency.py \
+            --host "$PGHOST" --port 5432 --dbname "$PGDATABASE" \
+            --user "$PGUSER" --password "$PGPASSWORD"
+
+      - name: Run in-memory document numbering suite
+        run: python3 tests/test_document_numbering.py
+
+      - name: Run Python seat-matrix drift detector (SERP-180)
+        run: python3 tests/test_seat_matrix.py
 
   frontend:
     name: Web Frontend Build & Test Suite

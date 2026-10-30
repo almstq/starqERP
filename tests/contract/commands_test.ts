@@ -3507,29 +3507,3 @@ Deno.test('SERP-348: two different people satisfying capture and refund passes S
   const violation = paymentSodViolation(history, 'PAYMENT_REFUND', personB);
   assertEquals(violation, null, 'Different person refunding should not cause SoD violation');
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

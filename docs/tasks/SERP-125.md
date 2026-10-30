@@ -175,7 +175,7 @@ The migration was restored byte-identical afterwards (`cmp` clean) and the gate 
   asserts exact counts (lines 117-132). Adding `product_publications` will trip it. Its classifier
   also has no category for a table intended to be readable by a public role. **This must be
   reconciled before 0028 is applied** — flagged as the one hard prerequisite.
-- `docs/ELDER_RETURN_BRIEF_2026-08-28.md` §3 lists migration filenames for 0024-0027 that do not
+- `docs/history/ELDER_RETURN_BRIEF_2026-08-28.md` §3 lists migration filenames for 0024-0027 that do not
   match the files on disk.
 - Pre-existing and unrelated: `web/src/test/serp_197_jobs_runtime_regression.test.tsx` hangs
   indefinitely on its fourth test — an unstable `switchCurrentUser` dependency in
