@@ -1,3 +1,25 @@
+<!-- SUPERSEDED-2026-09-28-ERP-COURSE-CORRECTION -->
+> ## ⚠️ STARQERP COURSE CORRECTION — 28 SEPTEMBER 2026
+>
+> **This document is SUPERSEDED and is retained as history only.**
+>
+> G1-G4 milestone roadmap dated 2026-08-27. Replaced for ERP completion sequencing. Do not use it to plan, implement, review or decide current StarqERP work.
+>
+> **Current development SSOT:** [`STARQERP_CONVERGENCE_DOCTRINE_2026-09-28.md`](../governance/STARQERP_CONVERGENCE_DOCTRINE_2026-09-28.md)
+> **Current roadmap:** [`ERP_PROCESS_CLOSURE_ROADMAP_2026-09-28.md`](ERP_PROCESS_CLOSURE_ROADMAP_2026-09-28.md)
+> **Supersession index:** [`SUPERSESSION_2026-09-28_ERP_COURSE_CORRECTION.md`](../governance/SUPERSESSION_2026-09-28_ERP_COURSE_CORRECTION.md)
+>
+> **What changed on 28 Sep 2026:** StarqERP development was stopped and the completion model
+> was corrected from *complete the remaining modules* to *close the remaining business
+> processes*. The five canonical ERP process chains are Order-to-Cash, Procure-to-Pay,
+> Inventory-to-GL, Cash-to-Bank and Record-to-Report. This is **convergence, not rewrite** —
+> all existing architecture, migrations, tests, evidence and completed tasks remain valid.
+> **StarqERP implementation is ON HOLD** pending explicit Founder restart authorization.
+>
+> **Original content is preserved verbatim below.** Nothing was removed or rewritten.
+>
+---
+
 # COMMERCIAL READINESS MASTER ROADMAP (G1 → G4)
 
 **Document Status**: Authoritative Commercial Milestone Roadmap  
