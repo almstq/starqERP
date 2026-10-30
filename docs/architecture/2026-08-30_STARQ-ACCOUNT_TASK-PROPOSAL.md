@@ -1,3 +1,24 @@
+<!-- SUPERSEDED-2026-09-28-ERP-COURSE-CORRECTION -->
+> ## ⚠️ STARQERP COURSE CORRECTION — 28 SEPTEMBER 2026
+>
+> **This document is SUPERSEDED and is retained as history only.**
+>
+> Pre-28-Sep task proposal. Its accounting intent survives in the corrected doctrine; its task-scoped framing does not. Do not use it to plan, implement, review or decide current StarqERP work.
+>
+> **Current development SSOT:** [`STARQERP_CONVERGENCE_DOCTRINE_2026-09-28.md`](../governance/STARQERP_CONVERGENCE_DOCTRINE_2026-09-28.md)
+> **Current roadmap:** [`ERP_PROCESS_CLOSURE_ROADMAP_2026-09-28.md`](../roadmap/ERP_PROCESS_CLOSURE_ROADMAP_2026-09-28.md)
+> **Supersession index:** [`SUPERSESSION_2026-09-28_ERP_COURSE_CORRECTION.md`](../governance/SUPERSESSION_2026-09-28_ERP_COURSE_CORRECTION.md)
+>
+> StarqERP development is **ON HOLD** pending explicit Founder restart authorization. The
+> completion model is *close complete business processes*, not *complete the remaining
+> modules*, across the five canonical chains: Order-to-Cash, Procure-to-Pay, Inventory-to-GL,
+> Cash-to-Bank, Record-to-Report. This is **convergence, not rewrite** — existing
+> architecture, migrations, tests, evidence and completed tasks all remain valid.
+>
+> **Original content is preserved verbatim below.** Nothing was removed or rewritten.
+>
+---
+
 # Starq Account — proposed SERP tasks
 
 **Author:** Elder · **Date:** 30 Aug 2026 · **Status:** APPLIED to the SSOT
