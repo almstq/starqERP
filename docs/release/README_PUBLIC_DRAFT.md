@@ -3,11 +3,11 @@
 >
 > **This document REMAINS VALID as a record, and is extended, not superseded, by the 28 Sep 2026 course correction.**
 >
-> Public-facing product README draft. Product description remains accurate. Annotated because it sits at the repo root and could be mistaken for the current cold-boot entry point. Follow the doctrine where it touches StarqERP completion guidance.
+> Public-facing product README draft. Product description remains accurate. Annotated because it has been relocated to `docs/release/` (from repo root) and could be mistaken for the current cold-boot entry point; follow the doctrine where it touches StarqERP completion guidance.
 >
-> **Current development SSOT:** [`STARQERP_CONVERGENCE_DOCTRINE_2026-09-28.md`](docs/governance/STARQERP_CONVERGENCE_DOCTRINE_2026-09-28.md)
-> **Current roadmap:** [`ERP_PROCESS_CLOSURE_ROADMAP_2026-09-28.md`](docs/roadmap/ERP_PROCESS_CLOSURE_ROADMAP_2026-09-28.md)
-> **Supersession index:** [`SUPERSESSION_2026-09-28_ERP_COURSE_CORRECTION.md`](docs/governance/SUPERSESSION_2026-09-28_ERP_COURSE_CORRECTION.md)
+> **Current development SSOT:** [`STARQERP_CONVERGENCE_DOCTRINE_2026-09-28.md`](../governance/STARQERP_CONVERGENCE_DOCTRINE_2026-09-28.md)
+> **Current roadmap:** [`ERP_PROCESS_CLOSURE_ROADMAP_2026-09-28.md`](../roadmap/ERP_PROCESS_CLOSURE_ROADMAP_2026-09-28.md)
+> **Supersession index:** [`SUPERSESSION_2026-09-28_ERP_COURSE_CORRECTION.md`](../governance/SUPERSESSION_2026-09-28_ERP_COURSE_CORRECTION.md)
 >
 > StarqERP development is **ON HOLD** pending explicit Founder restart authorization. The
 > completion model is *close complete business processes*, not *complete the remaining
