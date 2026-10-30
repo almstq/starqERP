@@ -1,5 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import { calculateMiraTgstReturn, createGreenTaxJournalEntry, GreenTaxStayRecord } from './miraTgst';
+import { DEFAULT_CHART_OF_ACCOUNTS } from '../data/defaultChartOfAccounts';
+import {
+  calculateMiraTgstReturn,
+  createGreenTaxJournalEntry,
+  GreenTaxStayRecord,
+} from './miraTgst';
+import { AccountingPeriod, generateFiscalPeriods } from './periods';
+
+function augustPeriods(status: AccountingPeriod['status']): AccountingPeriod[] {
+  return generateFiscalPeriods(2026).map((period) => (
+    period.month === 8
+      ? { ...period, status, lockedBy: 'Controller' }
+      : period
+  ));
+}
 
 describe('SERP-319: MIRA Tourism GST (16% TGSTA) and Green Tax Engine', () => {
   const sampleInvoices = [
@@ -141,6 +155,40 @@ describe('SERP-319: MIRA Tourism GST (16% TGSTA) and Green Tax Engine', () => {
     expect(je?.totalDebit).toBe(647.64);
     expect(je?.totalCredit).toBe(647.64);
     expect(je?.lines[1].accountCode).toBe('2123'); // Green Tax Payable (MIRA)
+  });
+
+  it('posts green tax in an open period and rejects a LOCKED or CLOSED period', () => {
+    const result = calculateMiraTgstReturn({
+      invoices: sampleInvoices,
+      expenses: sampleExpenses,
+      greenTaxStays: sampleStays,
+      periodYear: 2026,
+      periodMonth: 8,
+      tin: '1002345GST501',
+      legalEntityName: 'Maldives Yacht Charters Pvt Ltd',
+    });
+
+    const open = createGreenTaxJournalEntry(
+      result,
+      'tenant-safari-01',
+      augustPeriods('OPEN'),
+      DEFAULT_CHART_OF_ACCOUNTS,
+    );
+    expect(open?.status).toBe('POSTED');
+    expect(open?.isBalanced).toBe(true);
+
+    expect(() => createGreenTaxJournalEntry(
+      result,
+      'tenant-safari-01',
+      augustPeriods('LOCKED'),
+      DEFAULT_CHART_OF_ACCOUNTS,
+    )).toThrow(/LOCKED/);
+    expect(() => createGreenTaxJournalEntry(
+      result,
+      'tenant-safari-01',
+      augustPeriods('CLOSED'),
+      DEFAULT_CHART_OF_ACCOUNTS,
+    )).toThrow(/CLOSED/);
   });
 });
 

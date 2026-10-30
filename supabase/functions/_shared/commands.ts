@@ -18,24 +18,21 @@
  * The single source of truth for every command the ERP accepts: its envelope,
  * who may issue it, how it is authorized, and how it is made idempotent.
  *
- * Three runtimes must agree with this file and with each other:
+ * The active server-side implementations that must agree with this file are:
  *
  *   supabase/functions/starq-api/index.ts   (Deno — the boundary)
  *   supabase/migrations/*.sql                (PostgreSQL — the enforcement)
- *   starq-ops-app/lib/**.dart                (Flutter — the caller)
  *
- * They currently do not. This contract states the target; the runtimes are
- * refactored toward it. Where a runtime disagrees with this file, the runtime
- * is wrong.
+ * The browser application is the current client. The former Flutter client is
+ * not part of this repository and is not a current contract consumer. Where an
+ * active runtime disagrees with this file, the runtime must be reconciled.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * WHY IT EXISTS
  * ─────────────────────────────────────────────────────────────────────────────
- * An independent audit on 21 August 2026 found five critical defects. Each is
- * a disagreement between what a document claims and what the code does. The
- * five invariants below resolve all five ON PAPER, before implementation, so
- * that the client, the boundary and the database are built against one settled
- * shape rather than three drifting ones.
+ * An independent audit on 21 August 2026 found five critical defects. Those
+ * historical findings motivated the rules below. The contract makes the
+ * active implementations testable and reduces the chance of future drift.
  *
  * Authority: Elder review 2026-08-21 (docs/foundation/ELDER-REVIEW-2026-08-21).
  * Approved slices: SERP-025, SERP-026, SERP-029. SERP-031 deferred.
@@ -450,9 +447,9 @@ export function evaluateSoDCapacityAndAction(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * TODAY the Flutter client posts workflow forms whose shape does not
- * consistently match what the Edge accepts, so approval and receive flows can
- * fail or skip a stage.
+ * The retired Flutter client posted workflow forms whose shape did not
+ * consistently match what the Edge accepted. The current browser client still
+ * uses the legacy command body; migrating it to this envelope is separate work.
  *
  * THE RULE: exactly one envelope. Every field a client may send is below.
  * Anything else is dropped, not merged.
@@ -505,11 +502,10 @@ export interface CommandResult {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * TODAY the Flutter client holds idempotency keys in memory
- * (api_client.dart:115) and the Python API has no durable store
- * (ops.py:230). A process restart, a retry, a double-tap or a resubmitted form
- * can therefore create duplicate operational effects — two job cards, two
- * payments.
+ * The retired Flutter client held idempotency keys in memory, and the frozen
+ * Python engine used no durable store. Those historical weaknesses motivated
+ * this rule. The active browser client still needs durable key reuse across
+ * retries before this client-side requirement is fully met.
  *
  * THE RULE
  *   1. The CLIENT generates the key and persists it with the pending command,
@@ -519,8 +515,8 @@ export interface CommandResult {
  *   4. Same key + different hash → reject as `idempotency_key_conflict`.
  *      This is the case that catches a client reusing a key for a new command.
  *
- * Rule 1 is the one currently missing on both clients, and it is the one that
- * makes the other three worth having.
+ * Rule 1 remains an integration requirement for any client that retries a
+ * command after an uncertain response.
  */
 export interface IdempotencyRecord {
   organisationId: Uuid;
@@ -1223,9 +1219,9 @@ export function audienceIsValid(
 /**
  * Read a LEGACY request body as an envelope.
  *
- * The Flutter client does not yet send `CommandEnvelope`; it posts the older shape that
- * `api_garage_command` was written against. This adapter exists until the client is migrated,
- * and is then deleted.
+ * The active browser client does not yet send `CommandEnvelope`; it posts the
+ * older shape that `api_garage_command` was written against. This adapter stays
+ * until that client is migrated, and is then deleted.
  *
  * ⚠ THE KEY ORDER AND CASING MIRROR THE SQL EXACTLY:
  *

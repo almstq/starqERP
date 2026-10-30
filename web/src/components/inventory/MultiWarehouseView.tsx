@@ -24,6 +24,10 @@ import {
   receiveStockTransfer,
   evaluateWarehouseStockReorders,
 } from '../../domain/warehouse';
+import { PostingRejected } from '../../domain/postingControl';
+import { AccountingPeriod, generateFiscalPeriods } from '../../domain/periods';
+import { AccountRecord } from '../../domain/accounts';
+import { DEFAULT_CHART_OF_ACCOUNTS } from '../../data/defaultChartOfAccounts';
 import { useERP } from '../../context/ERPContext';
 import { Badge, Surface, Button } from '../ui';
 
@@ -32,6 +36,33 @@ export const MultiWarehouseView: React.FC = () => {
 
   const [warehouses] = useState<WarehouseLocation[]>(MALDIVES_DEFAULT_WAREHOUSES);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>('wh-male');
+  const [postingError, setPostingError] = useState<string | null>(null);
+
+  // Shared with AccountsView (SERP-467): same localStorage keys so a transfer
+  // journal is gated by the same periods/chart of accounts the rest of the
+  // ledger uses, instead of posting through an ungated side door.
+  const [periods] = useState<AccountingPeriod[]>(() => {
+    const saved = localStorage.getItem('starq:accounting_periods:v1');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return generateFiscalPeriods(2026);
+      }
+    }
+    return generateFiscalPeriods(2026);
+  });
+  const [chartOfAccounts] = useState<AccountRecord[]>(() => {
+    const saved = localStorage.getItem('starq:chart_of_accounts:v1');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return DEFAULT_CHART_OF_ACCOUNTS;
+      }
+    }
+    return DEFAULT_CHART_OF_ACCOUNTS;
+  });
 
   const [stockItems, setStockItems] = useState<WarehouseStockItem[]>([
     {
@@ -108,7 +139,15 @@ export const MultiWarehouseView: React.FC = () => {
     const tr = transfers.find((t) => t.id === transferId);
     if (!tr) return;
 
-    const dispatched = dispatchStockTransfer(tr, '2026-08-28', currentTenant.id || 'tenant-starq');
+    setPostingError(null);
+    let dispatched: StockTransferOrder;
+    try {
+      dispatched = dispatchStockTransfer(tr, '2026-08-28', currentTenant.id || 'tenant-starq', periods, chartOfAccounts);
+    } catch (err) {
+      setPostingError(err instanceof PostingRejected ? err.message : (err as Error).message || 'Dispatch journal was rejected by posting control.');
+      return;
+    }
+
     if (dispatched.dispatchJournal) {
       if (typeof (addJournalEntry as any) === 'function') {
         (addJournalEntry as any)(dispatched.dispatchJournal);
@@ -125,7 +164,15 @@ export const MultiWarehouseView: React.FC = () => {
     const tr = transfers.find((t) => t.id === transferId);
     if (!tr) return;
 
-    const received = receiveStockTransfer(tr, '2026-08-29', currentTenant.id || 'tenant-starq');
+    setPostingError(null);
+    let received: StockTransferOrder;
+    try {
+      received = receiveStockTransfer(tr, '2026-08-29', currentTenant.id || 'tenant-starq', periods, chartOfAccounts);
+    } catch (err) {
+      setPostingError(err instanceof PostingRejected ? err.message : (err as Error).message || 'Receipt journal was rejected by posting control.');
+      return;
+    }
+
     if (received.receiptJournal) {
       if (typeof (addJournalEntry as any) === 'function') {
         (addJournalEntry as any)(received.receiptJournal);
@@ -140,6 +187,23 @@ export const MultiWarehouseView: React.FC = () => {
 
   return (
     <div className="space-y-6" data-testid="multi-warehouse-view">
+      {postingError && (
+        <div
+          role="alert"
+          data-testid="posting-rejected"
+          className="flex items-start gap-3 rounded-lg border border-[var(--md-sys-color-error)] bg-[var(--md-sys-color-error-container)] p-4 text-[var(--md-sys-color-on-error-container)]"
+        >
+          <span className="font-semibold shrink-0">Posting rejected</span>
+          <span className="text-sm">{postingError}</span>
+          <button
+            type="button"
+            onClick={() => setPostingError(null)}
+            className="ml-auto text-sm underline shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       {/* Header */}
       <Surface className="p-6 rounded-2xl border border-slate-800 bg-[#0a0f1d]">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

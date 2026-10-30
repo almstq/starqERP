@@ -8,11 +8,13 @@ import {
   Phone,
   Mail,
   MapPin,
+  Upload,
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { Surface, Button, Badge, DataTable, ColumnDef } from '../ui';
 import { Supplier } from '../../types/erp';
 import { Modal } from '../common/Modal';
+import { ContactBulkImportModal } from '../migration/ContactBulkImportModal';
 
 export const SuppliersView: React.FC = () => {
   const navigate = useNavigate();
@@ -21,8 +23,10 @@ export const SuppliersView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [confirmingDeactivate, setConfirmingDeactivate] = useState<Supplier | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [draft, setDraft] = useState({ name: '', contactPerson: '', phone: '', email: '', address: '', islandOrCountry: '', category: '', leadTimeDays: '7' });
 
   const openEdit = (supplier: Supplier) => {
@@ -54,10 +58,16 @@ export const SuppliersView: React.FC = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const submitSupplier = (event: React.FormEvent) => {
+  const submitSupplier = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!draft.name.trim()) return;
-    createSupplier({ ...draft, name: draft.name.trim(), leadTimeDays: Math.max(0, Number(draft.leadTimeDays) || 7) });
+    try {
+      await createSupplier({ ...draft, name: draft.name.trim(), leadTimeDays: Math.max(0, Number(draft.leadTimeDays) || 7) });
+      setSaveError(null);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Supplier could not be saved.');
+      return;
+    }
     setDraft({ name: '', contactPerson: '', phone: '', email: '', address: '', islandOrCountry: '', category: '', leadTimeDays: '7' });
     setIsCreateOpen(false);
   };
@@ -156,7 +166,10 @@ export const SuppliersView: React.FC = () => {
           <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
             Manage supplier and vendor records, contacts, settlement accounts, and purchase relationships
           </p>
-          <Button variant="filled" size="sm" onClick={() => setIsCreateOpen(true)}><Plus size={14} /> Add supplier</Button>
+          <div className="flex gap-2">
+            <Button variant="outlined" size="sm" onClick={() => setIsBulkImportOpen(true)} icon={<Upload size={14} />}>Bulk Import</Button>
+            <Button variant="filled" size="sm" onClick={() => setIsCreateOpen(true)}><Plus size={14} /> Add supplier</Button>
+          </div>
           </div>
         </div>
       </div>
@@ -209,6 +222,7 @@ export const SuppliersView: React.FC = () => {
         emptyMessage="No suppliers found matching filter criteria."
       />
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Add supplier" subtitle="Create a tenant-scoped supplier contact" maxWidth="lg" actions={<><Button variant="outlined" onClick={() => setIsCreateOpen(false)}>Cancel</Button><Button variant="filled" onClick={submitSupplier}>Save supplier</Button></>}>
+        {saveError && <p role="alert" className="rounded-lg border border-[var(--negative)] bg-[var(--negative-subtle)] px-3 py-2 text-xs text-[var(--negative)]">{saveError}</p>}
         <form onSubmit={submitSupplier} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {(['name', 'contactPerson', 'phone', 'email', 'address', 'islandOrCountry', 'category', 'leadTimeDays'] as const).map((field) => <label key={field} className="text-xs font-semibold">{field === 'name' ? 'Supplier name *' : field.replace(/[A-Z]/g, (m) => ` ${m}`).replace(/^./, (m) => m.toUpperCase())}<input required={field === 'name'} value={draft[field]} onChange={(e) => setDraft({ ...draft, [field]: e.target.value })} className="mt-1 w-full px-3 py-2 rounded-xl border text-xs font-normal" /></label>)}
         </form>
@@ -221,6 +235,11 @@ export const SuppliersView: React.FC = () => {
       <Modal isOpen={confirmingDeactivate !== null} onClose={() => setConfirmingDeactivate(null)} title="Deactivate supplier" subtitle="Remove this supplier from the active supplier list. The record is kept and can be restored." maxWidth="sm" actions={<><Button variant="outlined" onClick={() => setConfirmingDeactivate(null)}>Cancel</Button><Button variant="filled" onClick={() => { if (confirmingDeactivate) deactivateSupplier(confirmingDeactivate.id); setConfirmingDeactivate(null); }}>Deactivate</Button></>}>
         <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">Are you sure you want to deactivate <span className="font-semibold">{(confirmingDeactivate ?? { name: '' }).name}</span>? It will no longer appear in the approved suppliers list.</p>
       </Modal>
+      <ContactBulkImportModal
+        isOpen={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+        defaultKind="supplier"
+      />
     </div>
   );
 };

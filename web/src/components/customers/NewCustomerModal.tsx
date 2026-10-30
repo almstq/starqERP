@@ -16,6 +16,7 @@ export const NewCustomerModal: React.FC = () => {
   const [island, setIsland] = useState("Hulhumale'");
   const [priceListId, setPriceListId] = useState<string>('');
   const [notes, setNotes] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Primary vehicle
   const [plateNumber, setPlateNumber] = useState('');
@@ -26,7 +27,7 @@ export const NewCustomerModal: React.FC = () => {
   const [vehicleType, setVehicleType] = useState<'Car' | 'Motorcycle' | 'Speedboat/Jetski' | 'Van/Truck'>('Car');
   const [logoUrl, setLogoUrl] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || (priceListsLoading && priceListId)) return;
 
@@ -43,17 +44,23 @@ export const NewCustomerModal: React.FC = () => {
         ]
       : [];
 
-    createCustomer({
-      name,
-      phone,
-      email: email || `${name.toLowerCase().replace(/\s+/g, '')}@client.mv`,
-      type,
-      island,
-      vehicles,
-      notes,
-      logoUrl: logoUrl.trim() || undefined,
-      priceListId: priceListId || undefined,
-    });
+    try {
+      await createCustomer({
+        name,
+        phone,
+        email,
+        type,
+        island,
+        vehicles,
+        notes,
+        logoUrl: logoUrl.trim() || undefined,
+        priceListId: priceListId || undefined,
+      });
+      setSaveError(null);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Customer could not be saved.');
+      return;
+    }
 
     setIsNewCustomerOpen(false);
     setName('');
@@ -100,6 +107,7 @@ export const NewCustomerModal: React.FC = () => {
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {saveError && <p role="alert" className="rounded-lg border border-[var(--negative)] bg-[var(--negative-subtle)] px-3 py-2 text-xs text-[var(--negative)]">{saveError}</p>}
         {/* Basic Info */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div>

@@ -54,6 +54,9 @@ jobs:
       - name: Legal Terms Tests
         run: node tests/legal_terms.test.mjs
 
+      - name: Current Documentation Content Guard
+        run: node scripts/lint-documentation-content.mjs
+
       - name: Reality Mutation Checks
         run: node tests/check_reality_mutation.test.mjs
 
@@ -75,36 +78,54 @@ jobs:
       - name: Reachability Ratchet Enforcement Gate (SERP-392)
         run: node tests/serp_392_reachability_ratchet.test.mjs
 
-      - name: Deno Contract Test Suite (169 tests)
-        run: deno test --allow-read tests/contract/commands_test.ts
-
       - name: SERP-314 Gap 2 authenticated Price List boundary test
         run: deno test --allow-read tests/serp314_price_list_edge_path.test.ts
 
   rls-isolation-probe:
     name: RLS Tenant Isolation Probe (SERP-337)
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: ghcr.io/supabase/postgres:17.6.1.155@sha256:3866d94d8426927e8db3f1c5d790752292bfbe27b5f1f46e199ae1b7d3c1710b
-        env:
-          POSTGRES_PASSWORD: synthetic-serp124-only
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
     env:
       PGPASSWORD: synthetic-serp124-only
       PGHOST: localhost
       PGUSER: postgres
       PGDATABASE: postgres
+      DATABASE_URL: postgres://postgres:synthetic-serp124-only@localhost:5432/postgres
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # GitHub's service-container pull gets only three short retries, so a
+      # registry burst limit (GHCR "toomanyrequests", seen on PRs #169-#173)
+      # kills the job before any step runs. Pull explicitly with a longer
+      # backoff, then start the same pinned image; the readiness step below
+      # is unchanged.
+      - name: Pull pinned PostgreSQL image (retry through registry throttling)
+        run: |
+          set -euo pipefail
+          image='ghcr.io/supabase/postgres:17.6.1.155@sha256:3866d94d8426927e8db3f1c5d790752292bfbe27b5f1f46e199ae1b7d3c1710b'
+          for attempt in $(seq 1 12); do
+            if docker pull "$image"; then
+              exit 0
+            fi
+            echo "PostgreSQL image pull attempt ${attempt}/12 failed; retrying in 30s" >&2
+            sleep 30
+          done
+          echo "PostgreSQL image pull failed after 12 attempts." >&2
+          exit 1
+
+      - name: Start PostgreSQL
+        run: |
+          set -euo pipefail
+          docker run --detach --name postgres \
+            --publish 5432:5432 \
+            --env POSTGRES_PASSWORD=synthetic-serp124-only \
+            --env POSTGRES_DB=postgres \
+            ghcr.io/supabase/postgres:17.6.1.155@sha256:3866d94d8426927e8db3f1c5d790752292bfbe27b5f1f46e199ae1b7d3c1710b
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5 (SERP-382: immutable SHA pin)
+        with:
+          deno-version: v2.x
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -138,6 +159,12 @@ jobs:
             psql --set ON_ERROR_STOP=1 --file "$migration"
           done
 
+      - name: Deno contract suite (all 20 contract files)
+        run: >-
+          deno test --allow-read --allow-net=localhost:5432,127.0.0.1:5432,127.0.0.1:55432
+          --allow-env=DATABASE_URL,STARQBOOKS_SESSION_SECRET,SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,PG*
+          tests/contract/
+
       - name: Load RLS isolation fixture (SERP-124)
         run: psql --set ON_ERROR_STOP=1 --file tests/rls_isolation_fixture.sql
 
@@ -156,19 +183,6 @@ jobs:
   serp-356-payment-concurrency:
     name: SERP-356 Payment Concurrency (refund ceiling / settlement batch)
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: ghcr.io/supabase/postgres:17.6.1.155@sha256:3866d94d8426927e8db3f1c5d790752292bfbe27b5f1f46e199ae1b7d3c1710b
-        env:
-          POSTGRES_PASSWORD: synthetic-serp356-only
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
     env:
       PGPASSWORD: synthetic-serp356-only
       PGHOST: localhost
@@ -177,6 +191,31 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # Same retry-through-throttling pull as the RLS job: a registry burst
+      # limit previously failed this check before the test ever ran.
+      - name: Pull pinned PostgreSQL image (retry through registry throttling)
+        run: |
+          set -euo pipefail
+          image='ghcr.io/supabase/postgres:17.6.1.155@sha256:3866d94d8426927e8db3f1c5d790752292bfbe27b5f1f46e199ae1b7d3c1710b'
+          for attempt in $(seq 1 12); do
+            if docker pull "$image"; then
+              exit 0
+            fi
+            echo "PostgreSQL image pull attempt ${attempt}/12 failed; retrying in 30s" >&2
+            sleep 30
+          done
+          echo "PostgreSQL image pull failed after 12 attempts." >&2
+          exit 1
+
+      - name: Start PostgreSQL
+        run: |
+          set -euo pipefail
+          docker run --detach --name postgres \
+            --publish 5432:5432 \
+            --env POSTGRES_PASSWORD=synthetic-serp356-only \
+            --env POSTGRES_DB=postgres \
+            ghcr.io/supabase/postgres:17.6.1.155@sha256:3866d94d8426927e8db3f1c5d790752292bfbe27b5f1f46e199ae1b7d3c1710b
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -231,6 +270,33 @@ jobs:
             --port 5432 \
             --db "$PGDATABASE" \
             --user "$PGUSER"
+
+      - name: Run settlement allocation concurrency test (SERP-181)
+        run: |
+          set -euo pipefail
+          python3 tests/test_settlement_concurrency.py \
+            --host "$PGHOST" --port 5432 --dbname "$PGDATABASE" \
+            --user "$PGUSER" --password "$PGPASSWORD"
+
+      - name: Run idempotency replay concurrency test (SERP-182)
+        run: |
+          set -euo pipefail
+          python3 tests/test_idempotency_replay.py \
+            --host "$PGHOST" --port 5432 --dbname "$PGDATABASE" \
+            --user "$PGUSER" --password "$PGPASSWORD"
+
+      - name: Run document numbering real concurrency test (SERP-176)
+        run: |
+          set -euo pipefail
+          python3 tests/test_document_numbering_real_concurrency.py \
+            --host "$PGHOST" --port 5432 --dbname "$PGDATABASE" \
+            --user "$PGUSER" --password "$PGPASSWORD"
+
+      - name: Run in-memory document numbering suite
+        run: python3 tests/test_document_numbering.py
+
+      - name: Run Python seat-matrix drift detector (SERP-180)
+        run: python3 tests/test_seat_matrix.py
 
   frontend:
     name: Web Frontend Build & Test Suite

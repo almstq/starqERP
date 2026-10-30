@@ -77,8 +77,11 @@ const INTENTIONALLY_UNMOUNTED = {
   'domain/greenTax.ts': 'HOLD under SERP-339 / DEC-117: Maldives Green Tax beta calculation module.',
   'domain/timeOfSupply.ts': 'HOLD under SERP-339 / DEC-117: Maldives GST time-of-supply resolution beta module.',
   'domain/financeGovernance.ts': 'HOLD under SERP-339 / DEC-117: Shared beta finance provenance and explicit HOLD contract; not yet wired to posting.',
+  'domain/inventoryReconciliation.ts': 'SERP-461/466 inventory-to-GL reconciliation invariant. No production caller yet -- exercised only by its own test (inventoryReconciliation.test.ts) as part of PR #170\'s reconciliation-invariant lane. Backend accounting logic, legitimately outside the render graph; held pending its own activation/wiring decision, not retired.',
   'domain/maldivesOperationalDefaults.ts': 'HOLD under SERP-326: Maldives operational geographic directory, MED business registration validator & prayer-pause operating schedule module.',
   'domain/apReconciliation.ts': 'SERP-461 AP reconciliation invariant (Account 2110). No production caller yet -- exercised only by its own test (apReconciliation.test.ts). Backend accounting logic, legitimately outside the render graph; held pending its own activation/wiring decision, not retired.',
+  'domain/cashClearingReconciliation.ts': 'SERP-461 cash-clearing reconciliation invariant (Account 1111). No production caller yet -- exercised only by its own test (cashClearingReconciliation.test.ts). Backend accounting logic, legitimately outside the render graph; held pending its own activation/wiring decision, not retired.',
+  'domain/arReconciliation.ts': 'SERP-461 AR reconciliation invariant. No production caller yet -- exercised only by its own test (arReconciliation.test.ts). Backend accounting logic, legitimately outside the render graph; held pending its own activation/wiring decision, not retired.',
   'data/mockData.ts': 'HOLD under SERP-237: compatibility-only re-export shim, superseded by data/demoFixtures.ts as the single named demo/seed boundary. Kept for any external or legacy imports; no production code should add new imports here.',
 };
 

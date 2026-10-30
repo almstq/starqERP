@@ -92,7 +92,7 @@ export const BilingualInvoicePrintView: React.FC<{
                 languageMode === 'dhivehi' ? 'bg-sky-600 text-white font-bold' : 'text-slate-400 hover:text-white'
               }`}
             >
-              ދިވެހި (Thaana)
+              <span className="thaana-text" lang="dv">ދިވެހި</span> (Thaana)
             </button>
             <button
               type="button"
@@ -124,7 +124,7 @@ export const BilingualInvoicePrintView: React.FC<{
             <h1 className="text-2xl font-black tracking-tight text-slate-900 uppercase">
               {languageMode !== 'dhivehi' && 'TAX INVOICE'}
               {languageMode === 'bilingual' && ' / '}
-              {languageMode !== 'english' && <span className="font-serif font-bold text-xl">{d.taxInvoice}</span>}
+              {languageMode !== 'english' && <span className="thaana-text font-bold text-xl" lang="dv">{d.taxInvoice}</span>}
             </h1>
             <div className="text-xs font-bold text-slate-700">
               {currentTenant.name || 'STARQ MARINE & COMMERCIAL SERVICES PVT LTD'}
@@ -142,11 +142,11 @@ export const BilingualInvoicePrintView: React.FC<{
               #{inv.invoiceNumber}
             </div>
             <div className="text-slate-600">
-              Date / {d.date} <span className="font-bold text-slate-900">{inv.issueDate}</span>
-              {languageMode !== 'english' && ` (${formatDhivehiDate(inv.issueDate)})`}
+              Date / <span className="thaana-text" lang="dv">{d.date}</span> <span className="font-bold text-slate-900">{inv.issueDate}</span>
+              {languageMode !== 'english' && <span className="thaana-text" lang="dv"> ({formatDhivehiDate(inv.issueDate)})</span>}
             </div>
             <div className="text-slate-600">
-              Due / {d.dueDate} <span className="font-bold text-slate-900">{inv.dueDate}</span>
+              Due / <span className="thaana-text" lang="dv">{d.dueDate}</span> <span className="font-bold text-slate-900">{inv.dueDate}</span>
             </div>
           </div>
         </div>
@@ -155,7 +155,7 @@ export const BilingualInvoicePrintView: React.FC<{
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs">
           <div className="space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Billed To / {d.customerName}
+              Billed To / <span className="thaana-text" lang="dv">{d.customerName}</span>
             </span>
             <div className="font-bold text-sm text-slate-900">{inv.customerName}</div>
             {inv.customerTin && (
@@ -175,27 +175,27 @@ export const BilingualInvoicePrintView: React.FC<{
                 <th className="py-2.5 px-2">
                   {languageMode !== 'dhivehi' && 'Description'}
                   {languageMode === 'bilingual' && ' / '}
-                  {languageMode !== 'english' && d.itemDescription}
+                  {languageMode !== 'english' && <span className="thaana-text" lang="dv">{d.itemDescription}</span>}
                 </th>
                 <th className="py-2.5 px-2 text-right">
                   {languageMode !== 'dhivehi' && 'Qty'}
                   {languageMode === 'bilingual' && ' / '}
-                  {languageMode !== 'english' && d.quantity}
+                  {languageMode !== 'english' && <span className="thaana-text" lang="dv">{d.quantity}</span>}
                 </th>
                 <th className="py-2.5 px-2 text-right">
                   {languageMode !== 'dhivehi' && 'Unit Price'}
                   {languageMode === 'bilingual' && ' / '}
-                  {languageMode !== 'english' && d.unitPrice}
+                  {languageMode !== 'english' && <span className="thaana-text" lang="dv">{d.unitPrice}</span>}
                 </th>
                 <th className="py-2.5 px-2 text-right">
                   {languageMode !== 'dhivehi' && 'GST (8%)'}
                   {languageMode === 'bilingual' && ' / '}
-                  {languageMode !== 'english' && d.gst8Percent}
+                  {languageMode !== 'english' && <span className="thaana-text" lang="dv">{d.gst8Percent}</span>}
                 </th>
                 <th className="py-2.5 px-2 text-right">
                   {languageMode !== 'dhivehi' && 'Amount (MVR)'}
                   {languageMode === 'bilingual' && ' / '}
-                  {languageMode !== 'english' && d.subtotal}
+                  {languageMode !== 'english' && <span className="thaana-text" lang="dv">{d.subtotal}</span>}
                 </th>
               </tr>
             </thead>
@@ -206,7 +206,7 @@ export const BilingualInvoicePrintView: React.FC<{
                   <td className="py-3 px-2">
                     {languageMode !== 'dhivehi' && <div className="font-semibold">{item.description}</div>}
                     {languageMode !== 'english' && item.descriptionDhivehi && (
-                      <div className="text-[11px] text-slate-600 font-serif pt-0.5" dir="rtl">
+                      <div className="thaana-text text-[11px] text-slate-600 pt-0.5" dir="rtl" lang="dv">
                         {item.descriptionDhivehi}
                       </div>
                     )}
@@ -248,7 +248,7 @@ export const BilingualInvoicePrintView: React.FC<{
             </div>
             <div className="space-y-1 text-xs">
               <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                <span>{d.favaraInstantPay}</span>
+                <span className="thaana-text" lang="dv">{d.favaraInstantPay}</span>
               </div>
               <div className="text-[11px] text-slate-600">
                 Scan with BML Mobile Banking or any Favara app to pay instantly.
@@ -262,15 +262,15 @@ export const BilingualInvoicePrintView: React.FC<{
           {/* Numerical Totals */}
           <div className="space-y-2 text-xs font-mono">
             <div className="flex justify-between py-1 text-slate-600 border-b border-slate-200">
-              <span>Subtotal / {d.subtotal}:</span>
+              <span>Subtotal / <span className="thaana-text" lang="dv">{d.subtotal}</span>:</span>
               <span>{formatMVR(inv.subtotal)}</span>
             </div>
             <div className="flex justify-between py-1 text-slate-600 border-b border-slate-200">
-              <span>MIRA GST (8%) / {d.gst8Percent}:</span>
+              <span>MIRA GST (8%) / <span className="thaana-text" lang="dv">{d.gst8Percent}</span>:</span>
               <span>{formatMVR(inv.taxAmount)}</span>
             </div>
             <div className="flex justify-between py-2 text-base font-black text-slate-900 border-b-2 border-slate-900">
-              <span>Total Payable / {d.totalAmountDue}:</span>
+              <span>Total Payable / <span className="thaana-text" lang="dv">{d.totalAmountDue}</span>:</span>
               <span>{formatMVR(inv.totalAmount)}</span>
             </div>
           </div>
@@ -278,7 +278,7 @@ export const BilingualInvoicePrintView: React.FC<{
 
         {/* Footer Note */}
         <div className="text-center pt-4 border-t border-slate-200 space-y-1 text-xs text-slate-500">
-          <div className="font-bold text-slate-700" dir="rtl">
+          <div className="thaana-text font-bold text-slate-700" dir="rtl" lang="dv">
             {d.thankYouMessage}
           </div>
           <div className="text-[10px]">
