@@ -24,6 +24,8 @@ declare
   t_org_b uuid := 'b2222222-2222-4222-8222-222222222222';
   t_person_a uuid := 'a3333333-3333-4333-8333-333333333333';
   t_person_b uuid := 'b3333333-3333-4333-8333-333333333333';
+  t_mem_a uuid := 'a7777777-7777-4777-8777-777777777777';
+  t_mem_b uuid := 'b7777777-7777-4777-8777-777777777777';
   t_book_a uuid := 'a4444444-4444-4444-8444-444444444444';
   t_book_b uuid := 'b4444444-4444-4444-8444-444444444444';
   t_supplier_a uuid := 'a5555555-5555-4555-8555-555555555555';
@@ -47,31 +49,40 @@ begin
   -- ─────────────────────────────────────────────────────────────────────────
   -- Fixture Setup (Tenant A & Tenant B)
   -- ─────────────────────────────────────────────────────────────────────────
-  insert into public.organisations (id, name, slug)
+  insert into public.organisations (id, slug, legal_name)
   values
-    (t_org_a, 'Alpha Motors', 'alpha-motors-540'),
-    (t_org_b, 'Beta Logistics', 'beta-logistics-540')
+    (t_org_a, 'alpha-motors-540', 'Alpha Motors'),
+    (t_org_b, 'beta-logistics-540', 'Beta Logistics')
   on conflict (id) do nothing;
 
-  insert into public.persons (id, display_name)
+  insert into public.persons (id, person_key, display_label)
   values
-    (t_person_a, 'Alice Quartermaster'),
-    (t_person_b, 'Bob Controller')
+    (t_person_a, 'person_alpha_540', 'Alice Quartermaster'),
+    (t_person_b, 'person_beta_540', 'Bob Controller')
   on conflict (id) do nothing;
 
   insert into public.memberships (id, organisation_id, person_id, status)
   values
-    (gen_random_uuid(), t_org_a, t_person_a, 'active'),
-    (gen_random_uuid(), t_org_b, t_person_b, 'active')
-  on conflict do nothing;
+    (t_mem_a, t_org_a, t_person_a, 'active'),
+    (t_mem_b, t_org_b, t_person_b, 'active')
+  on conflict (organisation_id, person_id) do nothing;
 
-  insert into public.seats (organisation_id, person_id, seat)
+  select id into t_mem_a from public.memberships where organisation_id = t_org_a and person_id = t_person_a;
+  select id into t_mem_b from public.memberships where organisation_id = t_org_b and person_id = t_person_b;
+
+  insert into public.seats (code, label)
   values
-    (t_org_a, t_person_a, 'quartermaster'),
-    (t_org_a, t_person_a, 'financial_controller'),
-    (t_org_b, t_person_b, 'quartermaster'),
-    (t_org_b, t_person_b, 'financial_controller')
-  on conflict do nothing;
+    ('quartermaster', 'Quartermaster'),
+    ('financial_controller', 'Financial Controller')
+  on conflict (code) do nothing;
+
+  insert into public.membership_seats (membership_id, seat_code)
+  values
+    (t_mem_a, 'quartermaster'),
+    (t_mem_a, 'financial_controller'),
+    (t_mem_b, 'quartermaster'),
+    (t_mem_b, 'financial_controller')
+  on conflict (membership_id, seat_code) do nothing;
 
   insert into public.books (id, organisation_id, code, name, is_default, status)
   values
