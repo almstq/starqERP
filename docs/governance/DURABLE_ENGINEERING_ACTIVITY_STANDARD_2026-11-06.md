@@ -36,10 +36,10 @@ Three durable records, kept distinct:
 
 ## 4. Reconciliation status (updated 2026-11-06)
 
-WP-R1 surfaced a concrete instance of the problem this standard addresses: during the board-reconstruction chapter, reviewed reconciliation work (AR/AP/cash-clearing/inventory modules and the supporting migration-compatibility gate; PRs #169–#173, #176) had been dropped from the `main` reconstructed at that time. That gap has since been reconciled:
+WP-R1 surfaced a concrete instance of the problem this standard addresses: during the board-reconstruction chapter, reviewed reconciliation work (AR/AP/cash-clearing/inventory modules and the supporting migration-compatibility gate; PRs #169–#173, #176) had been dropped from the `main` reconstructed at that time. That gap is now largely reconciled, with one artifact staged pending merge:
 
 - The four reconciliation modules and their unit tests (`web/src/domain/{ap,ar,cashClearing,inventory}Reconciliation.ts[.test.ts]`) and `scripts/migration-compatibility-gate.mjs` are now **present on current `main`**, byte-identical to the integration base `wip/serp463-integration-base-20261030` (`fd9b73b`).
-- The net-missing artifact — the DEC-100 acceptance suite `scripts/acceptance-suites/inventory-to-gl.test.mjs` — is recovered via reviewed **PR #189** (Copilot independent PASS + Elder reconciliation PASS; Founder-accepted for merge), which adds that suite, the gate modularization it consumes, and the reachability-sweep registration.
+- The remaining artifact — the DEC-100 acceptance suite `scripts/acceptance-suites/inventory-to-gl.test.mjs` — is **not yet on `main`**; it is staged in **open PR #189** (Copilot independent PASS + Elder reconciliation PASS; Founder-accepted, pending merge), which adds that suite, the gate modularization it consumes, and the reachability-sweep registration. It lands on `main` when the Founder merges #189.
 - Outstanding follow-up: wire the migration gate + DEC-100 suite into CI (tracked separately).
 
 This recovery — executed under builder/reviewer separation and independent review, with Founder merge authority — is the first application of this standard.
