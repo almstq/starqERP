@@ -1258,7 +1258,7 @@ begin
         );
       else
         -- B1 PO Creation (step = 'need', or 'award' creating a PO directly)
-        v_doc_id := coalesce(v_po_id, nullif(command->>'id', ''))::uuid;
+        v_doc_id := coalesce(v_po_id, nullif(command->>'id', '')::uuid);
         if v_doc_id is null then
           v_doc_id := gen_random_uuid();
         end if;
@@ -1473,7 +1473,7 @@ begin
            quantity, unit_price, tax_rate, net_amount, tax_amount, gross_amount)
         select target_org, v_doc_id,
                (l->>'line_no')::integer,
-               (l->>'product_id')::uuid,
+               nullif(l->>'product_id', '')::uuid,
                l->>'description',
                (l->>'quantity')::numeric,
                (l->>'unit_price')::numeric,
