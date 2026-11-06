@@ -1,3 +1,24 @@
+<!-- SUPERSEDED-2026-09-28-ERP-COURSE-CORRECTION -->
+> ## ⚠️ STARQERP COURSE CORRECTION — 28 SEPTEMBER 2026
+>
+> **This document is HISTORICAL and is retained as evidence of the state at the time.**
+>
+> 29 Aug verification finish report. Evidence of the state then; not current instruction. Do not use it as current instruction.
+>
+> **Current development SSOT:** [`STARQERP_CONVERGENCE_DOCTRINE_2026-09-28.md`](../../governance/STARQERP_CONVERGENCE_DOCTRINE_2026-09-28.md)
+> **Current roadmap:** [`ERP_PROCESS_CLOSURE_ROADMAP_2026-09-28.md`](../../roadmap/ERP_PROCESS_CLOSURE_ROADMAP_2026-09-28.md)
+> **Supersession index:** [`SUPERSESSION_2026-09-28_ERP_COURSE_CORRECTION.md`](../../governance/SUPERSESSION_2026-09-28_ERP_COURSE_CORRECTION.md)
+>
+> StarqERP development is **ON HOLD** pending explicit Founder restart authorization. The
+> completion model is *close complete business processes*, not *complete the remaining
+> modules*, across the five canonical chains: Order-to-Cash, Procure-to-Pay, Inventory-to-GL,
+> Cash-to-Bank, Record-to-Report. This is **convergence, not rewrite** — existing
+> architecture, migrations, tests, evidence and completed tasks all remain valid.
+>
+> **Original content is preserved verbatim below.** Nothing was removed or rewritten.
+>
+---
+
 VISION FINISH — Board sync audit complete. Model=inkling:free. No mutations. DEC-072 applies (Elder spot-check; not self-claimed). Evidence from real python/stat command outputs preserved.
 
 CANONICAL STATE (D:/StarqTech/starqNexus/data/starq-erp-tasks.json, timestamp 2026-08-29 20:56:13.764Z, 747202 bytes): 342 tasks; done=144 / planned=189 / in_progress=5 / blocked=3 / todo=1; 22 epics; SERP-E11 epic present (tasks=[]); SERP-347..360 all present, all planned, epic=None, primary_contributor=None.

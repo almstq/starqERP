@@ -60,7 +60,6 @@ closest to done:
 
 Room is the ledger for execution against this; this file is the position, re-stated as the
 picture changes materially — not on a schedule.
-
 ## 4. End-of-day update (same session, materially changed picture)
 
 Sections 1–3 above describe the position when the ERP floor restarted. By end of session, the

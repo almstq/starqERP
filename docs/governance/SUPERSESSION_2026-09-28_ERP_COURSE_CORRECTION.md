@@ -50,7 +50,7 @@ supersession header was added at the top of the file. **No historical content wa
 | 5 | `docs/roadmap/BOARD_REPRIORITIZATION_2026-08-27.md` | **SUPERSEDED** | Prior reprioritization exercise. Historical. |
 | 6 | `docs/roadmap/2026-09-03_MILESTONE_PROPOSAL_ELDER.md` | **SUPERSEDED** | Prior milestone proposal. Historical. |
 | 7 | `docs/foundation/STARQ-ERP-OPERATING-PLAN.md` | **SUPERSEDED** | Pre-28-Sep operating plan. Historical. |
-| 8 | `docs/foundation/STARQ-ERP-UNIFIED_BLUEPRINT.md` | **SUPERSEDED** | Pre-28-Sep blueprint. Historical. |
+| 8 | `docs/foundation/STARQ-ERP-UNIFIED-BLUEPRINT.md` | **SUPERSEDED** | Pre-28-Sep blueprint. Historical. (Corrected from underscore to hyphen per #17111 F3 review.) |
 | 9 | `docs/architecture/overview.md` | **EXTENDED, not superseded** | The zero-trust / two-plane / append-only principles remain fully valid. Annotated with a pointer to the canonical transaction architecture. |
 | 10 | `docs/architecture/accounting-model.md` | **EXTENDED, not superseded** | Double-entry invariant remains canonical. Annotated with the accounting-event layer requirement and the posting boundary. |
 | 11 | `docs/development/testing.md` | **EXTENDED, not superseded** | Existing test architecture stands. Annotated with the process-acceptance requirement (scenario, negative, replay, concurrency, reversal, reconciliation). |
@@ -61,6 +61,13 @@ supersession header was added at the top of the file. **No historical content wa
 | 16 | `00_STARQ_HQ/operations/MASTER_CURSOR_PROMPT_BETA_EXECUTION_TOWER.md` | **SUPERSEDED on sequencing** | The role framework, seat mapping and governance maxims remain valid. The packet-sequencing model is superseded by the convergence doctrine: packets must serve process closure. |
 | 17 | `00_STARQ_HQ/operations/ONBOARDING.md` | **EXTENDED** | Boot steps remain valid and are the universal entry point. **A new Step 0 was added** so every L1 discovers the 28 Sep correction before touching ERP work. |
 | 18 | `00_STARQ_HQ/operations/MISSION_CONTROL_INDEX.md` | **EXTENDED** | New rows added pointing to the doctrine, roadmap and supersession record. |
+| 19 | `docs/development/DEFINITION-OF-DONE.md` | **EXTENDED** | Process-definition of done adopted by DEC-100; annotated with process-closure standard; historical v0.2 retained, v0.3 current. |
+| 20 | `docs/foundation/ELDER-OPERATING-PARAMETERS.md` | **EXTENDED** | Elder authority and operating parameters remain; annotated with restart authorization and session binding (DEC-100). |
+| 21 | `docs/foundation/ELDER-GOVERNANCE-FOUNDATION.md` | **EXTENDED** | Governance foundation preserved; annotated with DEC-100 course-correction layering. |
+| 22 | `docs/foundation/STARQERP_PROJECT_BOARD_CORRECTION_MISSION_2026-08-31.md` | **HISTORICAL** | Board-correction mission (historical context for board-state evidence gap). |
+| 23 | `docs/release/VISION_FINISH_REPORT.md` | **HISTORICAL** | Vision finish report dated 2026-09-28; contextual for project-state evidence. Historical. |
+| 24 | `README.md` | **EXTENDED** | Doctrine banner added; repo root entry points to docs/START_HERE.md and docs/governance/STARQERP_CONVERGENCE_DOCTRINE_2026-09-28.md. |
+| 25 | `docs/release/README_PUBLIC_DRAFT.md` | **EXTENDED** | Public-facing draft relocated to docs/release/ (from repo root); links corrected to relative paths from docs/release/; self-description updated (per F2 correction). Historical banner preserved.
 
 ---
 
