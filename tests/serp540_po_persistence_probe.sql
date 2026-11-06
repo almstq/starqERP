@@ -73,13 +73,17 @@ begin
   insert into public.seats (code, label)
   values
     ('quartermaster', 'Quartermaster'),
-    ('financial_controller', 'Financial Controller')
+    ('financial_controller', 'Financial Controller'),
+    ('receiver', 'Receiver'),
+    ('payer', 'Payer')
   on conflict (code) do nothing;
 
   insert into public.membership_seats (membership_id, seat_code)
   values
     (t_mem_a, 'quartermaster'),
     (t_mem_a, 'financial_controller'),
+    (t_mem_a, 'receiver'),
+    (t_mem_a, 'payer'),
     (t_mem_b, 'quartermaster'),
     (t_mem_b, 'financial_controller')
   on conflict (membership_id, seat_code) do nothing;
@@ -408,6 +412,164 @@ begin
   if v_doc_count < 2 then
     raise exception 'TEST 6 FAILED: read-through query returned % purchase orders, expected >= 2', v_doc_count;
   end if;
+
+  -- ─────────────────────────────────────────────────────────────────────────
+  -- TEST 7: Lifecycle Non-Need / Non-Award Steps (quote, receive, match, pay)
+  -- Must NOT create duplicate purchase_order documents and must follow prior path.
+  -- ─────────────────────────────────────────────────────────────────────────
+  declare
+    v_doc_count_baseline integer;
+    v_doc_count_after integer;
+    fake_job_id uuid := gen_random_uuid();
+    v_job_event_count integer;
+  begin
+    select count(*) into v_doc_count_baseline
+      from public.commercial_documents
+     where organisation_id = t_org_a
+       and document_type = 'purchase_order';
+
+    -- 7A: quote step
+    res := public.api_garage_command(
+      t_org_a,
+      t_person_a,
+      'quartermaster',
+      gen_random_uuid(),
+      jsonb_build_object(
+        'type', 'PURCHASE',
+        'scm_step', 'quote',
+        'purchase_order_id', v_po_id
+      ),
+      req_id
+    );
+    if coalesce((res->>'ok')::boolean, false) is not true then
+      raise exception 'TEST 7A FAILED: quote step rejected: %', res;
+    end if;
+
+    select count(*) into v_doc_count_after
+      from public.commercial_documents
+     where organisation_id = t_org_a
+       and document_type = 'purchase_order';
+    if v_doc_count_after <> v_doc_count_baseline then
+      raise exception 'TEST 7A FAILED: quote step created a commercial document! before=%, after=%', v_doc_count_baseline, v_doc_count_after;
+    end if;
+
+    -- 7B: receive step with poId alias resolution
+    res := public.api_garage_command(
+      t_org_a,
+      t_person_a,
+      'receiver',
+      gen_random_uuid(),
+      jsonb_build_object(
+        'type', 'PURCHASE',
+        'scm_step', 'receive',
+        'poId', v_po_id
+      ),
+      req_id
+    );
+    if coalesce((res->>'ok')::boolean, false) is not true then
+      raise exception 'TEST 7B FAILED: receive step rejected: %', res;
+    end if;
+
+    select count(*) into v_doc_count_after
+      from public.commercial_documents
+     where organisation_id = t_org_a
+       and document_type = 'purchase_order';
+    if v_doc_count_after <> v_doc_count_baseline then
+      raise exception 'TEST 7B FAILED: receive step created a commercial document! before=%, after=%', v_doc_count_baseline, v_doc_count_after;
+    end if;
+
+    -- 7C: match step
+    res := public.api_garage_command(
+      t_org_a,
+      t_person_a,
+      'financial_controller',
+      gen_random_uuid(),
+      jsonb_build_object(
+        'type', 'PURCHASE',
+        'scm_step', 'match',
+        'purchase_order_id', v_po_id
+      ),
+      req_id
+    );
+    if coalesce((res->>'ok')::boolean, false) is not true then
+      raise exception 'TEST 7C FAILED: match step rejected: %', res;
+    end if;
+
+    select count(*) into v_doc_count_after
+      from public.commercial_documents
+     where organisation_id = t_org_a
+       and document_type = 'purchase_order';
+    if v_doc_count_after <> v_doc_count_baseline then
+      raise exception 'TEST 7C FAILED: match step created a commercial document! before=%, after=%', v_doc_count_baseline, v_doc_count_after;
+    end if;
+
+    -- 7D: pay step
+    res := public.api_garage_command(
+      t_org_a,
+      t_person_a,
+      'payer',
+      gen_random_uuid(),
+      jsonb_build_object(
+        'type', 'PURCHASE',
+        'scm_step', 'pay',
+        'purchase_order_id', v_po_id
+      ),
+      req_id
+    );
+    if coalesce((res->>'ok')::boolean, false) is not true then
+      raise exception 'TEST 7D FAILED: pay step rejected: %', res;
+    end if;
+
+    select count(*) into v_doc_count_after
+      from public.commercial_documents
+     where organisation_id = t_org_a
+       and document_type = 'purchase_order';
+    if v_doc_count_after <> v_doc_count_baseline then
+      raise exception 'TEST 7D FAILED: pay step created a commercial document! before=%, after=%', v_doc_count_baseline, v_doc_count_after;
+    end if;
+
+    -- 7E: Garage Job Lifecycle Path (job_events recording)
+    insert into public.garage_jobs (id, organisation_id, job_no, state, summary)
+    values (fake_job_id, t_org_a, 'JOB-540-001', 'parts', 'garage job for purchase probe');
+
+    res := public.api_garage_command(
+      t_org_a,
+      t_person_a,
+      'receiver',
+      gen_random_uuid(),
+      jsonb_build_object(
+        'type', 'PURCHASE',
+        'scm_step', 'receive',
+        'job_id', fake_job_id,
+        'poId', v_po_id,
+        'qty', '5',
+        'amount', '50.00'
+      ),
+      req_id
+    );
+    if coalesce((res->>'ok')::boolean, false) is not true then
+      raise exception 'TEST 7E FAILED: job receive rejected: %', res;
+    end if;
+
+    select count(*) into v_job_event_count
+      from public.job_events
+     where organisation_id = t_org_a
+       and job_id = fake_job_id
+       and event_type = 'PURCHASE'
+       and payload->>'scm_step' = 'receive';
+
+    if v_job_event_count <> 1 then
+      raise exception 'TEST 7E FAILED: job_event not recorded for job receive step, count=%', v_job_event_count;
+    end if;
+
+    select count(*) into v_doc_count_after
+      from public.commercial_documents
+     where organisation_id = t_org_a
+       and document_type = 'purchase_order';
+    if v_doc_count_after <> v_doc_count_baseline then
+      raise exception 'TEST 7E FAILED: job receive created a commercial document! before=%, after=%', v_doc_count_baseline, v_doc_count_after;
+    end if;
+  end;
 
   raise notice '✓ ALL ERP-540 / B1 PO PERSISTENCE INVARIANT PROBES PASSED CLEANLY.';
 end $$;

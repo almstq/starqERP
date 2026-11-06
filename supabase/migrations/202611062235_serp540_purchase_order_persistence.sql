@@ -1210,7 +1210,8 @@ begin
       v_po_id := coalesce(
         nullif(command->>'purchase_order_id', ''),
         nullif(command->>'purchase_id', ''),
-        nullif(command->>'document_id', '')
+        nullif(command->>'document_id', ''),
+        nullif(command->>'poId', '')
       )::uuid;
 
       if v_po_id is not null and scm_step = 'award' then
@@ -1239,6 +1240,7 @@ begin
              jsonb_build_object(
                'scm_step', scm_step,
                'purchase_order_id', v_po_id,
+               'poId', v_po_id,
                'document_no', v_existing_doc.document_no,
                'gross_total', v_existing_doc.gross_total
              ));
@@ -1251,6 +1253,7 @@ begin
           v_po_id::text,
           jsonb_build_object(
             'purchase_order_id', v_po_id,
+            'poId', v_po_id,
             'document_no', v_existing_doc.document_no,
             'scm_step', scm_step,
             'gross_total', v_existing_doc.gross_total
@@ -1273,8 +1276,8 @@ begin
             'unallocated_balance', v_existing_doc.unallocated_balance
           )
         );
-      else
-        -- B1 PO Creation (step = 'need', or 'award' creating a PO directly)
+      elsif scm_step = 'need' then
+        -- B1 PO Creation (step = 'need')
         v_doc_id := coalesce(v_po_id, nullif(command->>'id', '')::uuid);
         if v_doc_id is null then
           v_doc_id := gen_random_uuid();
@@ -1557,6 +1560,99 @@ begin
             'items', v_line_rows
           )
         );
+      else
+        -- Prior job-event lifecycle path for quote, receive, match, pay (and non-B1 steps)
+        -- In B1, do not create or mutate commercial_documents.
+        target_job_id := nullif(command->>'job_id', '')::uuid;
+        if target_job_id is null and nullif(trim(command->>'job_no'), '') is not null then
+          select id into target_job_id from public.garage_jobs
+           where organisation_id = target_org and job_no = trim(command->>'job_no');
+        end if;
+
+        if target_job_id is not null then
+          select * into target_job from public.garage_jobs
+           where organisation_id = target_org and id = target_job_id for update;
+          if not found then
+            raise exception 'job_not_found';
+          end if;
+          target_job_no := target_job.job_no;
+          c_name := target_job.customer_name;
+          v_reg := target_job.vehicle_reg;
+          c_phone := target_job.customer_phone;
+          next_state := target_job.state;
+
+          event_payload := jsonb_strip_nulls(jsonb_build_object(
+            'summary', nullif(left(trim(coalesce(command->>'summary', '')), 500), ''),
+            'customer_name', coalesce(c_name, nullif(left(trim(coalesce(command->>'customer_name', command->>'customer', '')), 200), '')),
+            'phone', coalesce(c_phone, nullif(left(trim(coalesce(command->>'phone', command->>'customer_phone', '')), 50), '')),
+            'customer_phone', coalesce(c_phone, nullif(left(trim(coalesce(command->>'phone', command->>'customer_phone', '')), 50), '')),
+            'vehicle_reg', coalesce(v_reg, nullif(left(trim(coalesce(command->>'vehicle_reg', command->>'vehicle', '')), 100), '')),
+            'scm_step', nullif(scm_step, ''),
+            'item', nullif(left(trim(coalesce(command->>'item', command->>'description', '')), 300), ''),
+            'qty', nullif(command->>'qty', ''),
+            'amount', nullif(coalesce(command->>'amount', command->>'cost', ''), ''),
+            'purchase_order_id', v_po_id,
+            'poId', nullif(command->>'poId', '')
+          ));
+
+          insert into public.job_events
+            (id, organisation_id, job_id, event_type, from_state, to_state,
+             actor_person_id, acting_seat, idempotency_key, payload)
+          values
+            (event_id, target_org, target_job_id, event_name,
+             target_job.state, next_state, target_person, target_seat, command_key, event_payload);
+
+          response := jsonb_build_object(
+            'ok', true,
+            'state', 'accepted',
+            'event', jsonb_build_object(
+              'id', event_id,
+              'type', event_name,
+              'job_id', target_job_id,
+              'job_no', target_job_no,
+              'customer_name', c_name,
+              'vehicle_reg', v_reg,
+              'phone', c_phone,
+              'to_state', next_state,
+              'fields', event_payload
+            )
+          );
+        else
+          -- Standalone procurement step recording to outbox (no job context)
+          event_payload := jsonb_strip_nulls(jsonb_build_object(
+            'summary', nullif(left(trim(coalesce(command->>'summary', '')), 500), ''),
+            'scm_step', nullif(scm_step, ''),
+            'item', nullif(left(trim(coalesce(command->>'item', command->>'description', '')), 300), ''),
+            'qty', nullif(command->>'qty', ''),
+            'amount', nullif(coalesce(command->>'amount', command->>'cost', ''), ''),
+            'purchase_order_id', v_po_id,
+            'poId', nullif(command->>'poId', '')
+          ));
+
+          perform app_private.append_outbox_event(
+            target_org,
+            'PURCHASE',
+            'procurement',
+            coalesce(v_po_id::text, event_id::text),
+            event_payload,
+            jsonb_build_object('idempotency_key', command_key),
+            target_person,
+            target_seat
+          );
+
+          response := jsonb_build_object(
+            'ok', true,
+            'state', 'accepted',
+            'event', jsonb_build_object(
+              'id', event_id,
+              'type', event_name,
+              'scm_step', scm_step,
+              'purchase_order_id', v_po_id,
+              'poId', nullif(command->>'poId', ''),
+              'fields', event_payload
+            )
+          );
+        end if;
       end if;
     end;
 
