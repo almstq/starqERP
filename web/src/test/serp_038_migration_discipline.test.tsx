@@ -12,11 +12,11 @@ describe('SERP-038: Ordered Migration, Rollback and Compatibility Discipline', (
     expect(validation.errors.length).toBe(0);
   });
 
-  it('verifies migration 0011 is strictly designated as REVIEWER_GATED', () => {
+  it('verifies migration 0011 is now APPLIED (reviewer gate cleared 2026-10-30)', () => {
     const m0011 = CANONICAL_MIGRATION_LINEAGE.find((m) => m.version === '202608220011');
     expect(m0011).toBeDefined();
-    expect(m0011?.status).toBe('REVIEWER_GATED');
-    expect(m0011?.requiresReviewerApproval).toBe(true);
+    expect(m0011?.status).toBe('APPLIED');
+    expect(m0011?.requiresReviewerApproval).toBeUndefined();
   });
 
   it('verifies migrations 0021 and 0022 are designated as UNAPPLIED_FORWARD_ONLY', () => {

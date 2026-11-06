@@ -4100,7 +4100,7 @@ export const CANONICAL_MIGRATION_LINEAGE: readonly MigrationLineageRecord[] = [
   { version: '202608200008', filename: '202608200008_session_authority.sql', status: 'APPLIED', description: 'Session authority and token functions' },
   { version: '202608210009', filename: '202608210009_seat_vocabulary.sql', status: 'APPLIED', description: 'Seat vocabulary expansion' },
   { version: '202608210010', filename: '202608210010_purchase_seat_matrix.sql', status: 'APPLIED', description: 'Purchase seat matrix seeds' },
-  { version: '202608220011', filename: '202608220011_wire_purchase_seat_matrix.sql', status: 'REVIEWER_GATED', requiresReviewerApproval: true, description: 'Wire purchase seat matrix (Gated by 3rd-person reviewer)' },
+  { version: '202608220011', filename: '202608220011_wire_purchase_seat_matrix.sql', status: 'APPLIED', description: 'Wire purchase seat matrix (reviewed and approved, 2026-10-30)' },
   { version: '202608250012', filename: '202608250012_settlement_allocations.sql', status: 'APPLIED', description: 'Settlement allocations and payment linkages' },
   { version: '202608250013', filename: '202608250013_workflow_stages.sql', status: 'APPLIED', description: 'Workflow stages and transitions' },
   { version: '202608250014', filename: '202608250014_idempotency_replay.sql', status: 'APPLIED', description: 'Idempotency replay persistence table' },

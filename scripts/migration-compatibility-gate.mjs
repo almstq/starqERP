@@ -61,11 +61,124 @@ async function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Reusable ephemeral-container lifecycle (exported for SERP-463 acceptance suites).
+ * Behaviour is identical to the CLI path below; the CLI is a thin wrapper over these.
+ * Cleanup is registered the moment `docker create` succeeds (C3).
+ */
+export function createGateContainer({ log = console.log } = {}) {
+  const postgresPassword = crypto.randomBytes(16).toString('hex'); // C1
+  const containerName = `starqerp-migration-gate-${crypto.randomBytes(4).toString('hex')}`;
+  const state = { containerName, created: false };
+
+  const teardown = () => {
+    if (state.created) {
+      log(`\nTearing down ephemeral container ${containerName}...`);
+      runCommand('docker', ['rm', '-f', containerName]);
+      state.created = false;
+      log('Container teardown complete.');
+    }
+  };
+
+  log(`\nCreating ephemeral PostgreSQL container (${containerName})...`);
+  const createResult = runCommand('docker', [
+    'create',
+    '--name', containerName,
+    '--mount', `type=bind,source=${REPO_ROOT},target=/workspace,readonly`,
+    '--tmpfs', '/var/lib/postgresql/data:rw,noexec,nosuid,size=1g',
+    '--env', `POSTGRES_PASSWORD=${postgresPassword}`,
+    '--env', 'POSTGRES_DB=postgres',
+    POSTGRES_IMAGE,
+  ]);
+  if (createResult.status !== 0) {
+    throw new Error(`Failed to create docker container: ${createResult.stderr || createResult.stdout}`);
+  }
+  state.created = true; // C3
+
+  return { containerName, teardown, isCreated: () => state.created };
+}
+
+export function startGateContainer(container, { log = console.log } = {}) {
+  log(`Starting ephemeral PostgreSQL container (${container.containerName})...`);
+  const startResult = runCommand('docker', ['start', container.containerName]);
+  if (startResult.status !== 0) {
+    throw new Error(`Failed to start docker container: ${startResult.stderr || startResult.stdout}`);
+  }
+}
+
+const psqlBase = (containerName) => [
+  'exec', containerName, 'psql', '-U', 'postgres', '-d', 'postgres', '--set', 'ON_ERROR_STOP=1',
+];
+
+/** Two-phase readiness (A3), mirroring ci.yml:119-134. */
+export async function waitForStableDb(container, { log = console.log } = {}) {
+  const { containerName } = container;
+  log('Waiting for PostgreSQL container to become healthy and stable...');
+  for (let attempt = 1; attempt <= 90; attempt++) {
+    const statusText = (runCommand('docker', [
+      'inspect', '--format', '{{.State.Status}} {{.State.Health.Status}}', containerName,
+    ]).stdout || '').trim();
+
+    if (statusText === 'running healthy') {
+      if (runCommand('docker', [...psqlBase(containerName), '-c', 'SELECT 1;']).status === 0) {
+        log(`Connected on attempt ${attempt}; confirming stability after 5s window (ci.yml:121-124)...`);
+        await sleep(5000);
+        if (runCommand('docker', [...psqlBase(containerName), '-c', 'SELECT 1;']).status === 0) {
+          log('PostgreSQL connection stability confirmed.');
+          return;
+        }
+        log('Connection dropped during post-bootstrap restart; resuming poll...');
+      }
+    }
+    if (statusText.startsWith('exited')) {
+      throw new Error(`PostgreSQL container exited unexpectedly during bootstrap: ${statusText}`);
+    }
+    await sleep(1000);
+  }
+  throw new Error('PostgreSQL container failed to achieve stable readiness within wait window.');
+}
+
+/** Apply one migration file; returns the spawn result (status 0 = success). */
+export function applyMigrationFile(container, migrationsDir, file) {
+  const fullPath = join(migrationsDir, file);
+  const relativeToRepo = fullPath.startsWith(REPO_ROOT)
+    ? fullPath.slice(REPO_ROOT.length).replace(/^[\\\/]/, '').replace(/\\/g, '/')
+    : null;
+  if (relativeToRepo) {
+    return runCommand('docker', [...psqlBase(container.containerName), '-f', `/workspace/${relativeToRepo}`]);
+  }
+  return runCommand('docker', ['exec', '-i', container.containerName, 'psql', '-U', 'postgres', '-d', 'postgres', '--set', 'ON_ERROR_STOP=1'], {
+    input: readFileSync(fullPath, 'utf8'),
+  });
+}
+
+/** Run arbitrary SQL against the migrated DB (stdin). Returns spawn result. */
+export function runSql(container, sql, extraPsqlArgs = []) {
+  return runCommand('docker', ['exec', '-i', container.containerName, 'psql', '-U', 'postgres', '-d', 'postgres', '--set', 'ON_ERROR_STOP=1', ...extraPsqlArgs], { input: sql });
+}
+
+/** Apply every migration in sorted order. Returns { applied, total, failedFile, failure }. */
+export function applyAllMigrations(container, migrationsDir = DEFAULT_MIGRATIONS_DIR, { log = console.log, write = (s) => process.stdout.write(s) } = {}) {
+  const files = readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort();
+  let applied = 0;
+  for (const file of files) {
+    write(`  [${applied + 1}/${files.length}] Applying ${file}... `);
+    const r = applyMigrationFile(container, migrationsDir, file);
+    if (r.status !== 0) {
+      write('FAILED!\n\n');
+      return { applied, total: files.length, failedFile: file, failure: r.stderr || r.stdout };
+    }
+    write('OK\n');
+    applied++;
+  }
+  return { applied, total: files.length, failedFile: null, failure: null };
+}
+
+export { REPO_ROOT, DEFAULT_MIGRATIONS_DIR, POSTGRES_IMAGE };
+
 async function main() {
   const startTime = Date.now();
   const { migrationsDir } = parseArgs();
-  // C1: Cryptographically random per-run password (not static constant)
-  const postgresPassword = crypto.randomBytes(16).toString('hex');
 
   console.log('====================================================');
   console.log('STARQ ERP — SERP-462 Migration Compatibility Gate');
@@ -78,208 +191,51 @@ async function main() {
     console.error(`Error: Migrations directory does not exist: ${migrationsDir}`);
     process.exit(1);
   }
-
-  // 1. Collect and sort migration files
-  const files = readdirSync(migrationsDir)
-    .filter((f) => f.endsWith('.sql'))
-    .sort();
-
+  const files = readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort();
   if (files.length === 0) {
     console.error(`Error: No .sql migration files found in ${migrationsDir}`);
     process.exit(1);
   }
-
   console.log(`Found ${files.length} migration files in sorted order.`);
 
-  // 2. Prepare container metadata
-  const containerIdSuffix = crypto.randomBytes(4).toString('hex');
-  const containerName = `starqerp-migration-gate-${containerIdSuffix}`;
-
-  // C3: Track container for cleanup as soon as it exists (even before start)
-  let containerCreated = false;
-
-  const cleanupContainer = () => {
-    if (containerCreated) {
-      console.log(`\nTearing down ephemeral container ${containerName}...`);
-      runCommand('docker', ['rm', '-f', containerName]);
-      containerCreated = false;
-      console.log('Container teardown complete.');
-    }
-  };
-
-  // Register process signal & exit hooks
-  process.on('SIGINT', () => {
-    cleanupContainer();
-    process.exit(130);
-  });
-  process.on('SIGTERM', () => {
-    cleanupContainer();
-    process.exit(143);
-  });
-  process.on('exit', () => {
-    cleanupContainer();
-  });
+  let container = null;
+  const cleanup = () => { if (container) container.teardown(); };
+  process.on('SIGINT', () => { cleanup(); process.exit(130); });
+  process.on('SIGTERM', () => { cleanup(); process.exit(143); });
+  process.on('exit', cleanup);
 
   try {
-    // 3. Create container
-    console.log(`\nCreating ephemeral PostgreSQL container (${containerName})...`);
-    const createArgs = [
-      'create',
-      '--name', containerName,
-      '--mount', `type=bind,source=${REPO_ROOT},target=/workspace,readonly`,
-      '--tmpfs', '/var/lib/postgresql/data:rw,noexec,nosuid,size=1g',
-      '--env', `POSTGRES_PASSWORD=${postgresPassword}`,
-      '--env', 'POSTGRES_DB=postgres',
-      POSTGRES_IMAGE,
-    ];
+    container = createGateContainer();
+    startGateContainer(container);
+    await waitForStableDb(container);
 
-    const createResult = runCommand('docker', createArgs);
-    if (createResult.status !== 0) {
-      console.error(`Failed to create docker container: ${createResult.stderr || createResult.stdout}`);
-      process.exit(1);
-    }
-    // C3: Container is created in docker daemon; register cleanup immediately
-    containerCreated = true;
-
-    // 4. Start container
-    console.log(`Starting ephemeral PostgreSQL container (${containerName})...`);
-    const startResult = runCommand('docker', ['start', containerName]);
-    if (startResult.status !== 0) {
-      console.error(`Failed to start docker container: ${startResult.stderr || startResult.stdout}`);
-      cleanupContainer();
-      process.exit(1);
-    }
-
-    // 5. Wait for PostgreSQL to settle and verify stability (A3)
-    console.log('Waiting for PostgreSQL container to become healthy and stable...');
-    let isStable = false;
-
-    for (let attempt = 1; attempt <= 90; attempt++) {
-      const inspectResult = runCommand('docker', [
-        'inspect',
-        '--format', '{{.State.Status}} {{.State.Health.Status}}',
-        containerName,
-      ]);
-      const statusText = (inspectResult.stdout || '').trim();
-
-      if (statusText === 'running healthy') {
-        // Initial connection test
-        const testConn1 = runCommand('docker', [
-          'exec',
-          containerName,
-          'psql',
-          '-U', 'postgres',
-          '-d', 'postgres',
-          '--set', 'ON_ERROR_STOP=1',
-          '-c', 'SELECT 1;',
-        ]);
-
-        if (testConn1.status === 0) {
-          // A3: Double-check stability logic mirroring ci.yml:119-134
-          // "The Supabase image briefly accepts connections during first-time initialization,
-          // then restarts PostgreSQL to apply its bootstrap SQL. A single successful check can land
-          // in that window, so confirm the connection is stable before trusting it."
-          console.log(`Connected on attempt ${attempt}; confirming stability after 5s window (ci.yml:121-124)...`);
-          await sleep(5000);
-
-          const testConn2 = runCommand('docker', [
-            'exec',
-            containerName,
-            'psql',
-            '-U', 'postgres',
-            '-d', 'postgres',
-            '--set', 'ON_ERROR_STOP=1',
-            '-c', 'SELECT 1;',
-          ]);
-
-          if (testConn2.status === 0) {
-            isStable = true;
-            console.log('PostgreSQL connection stability confirmed.');
-            break;
-          } else {
-            console.log('Connection dropped during post-bootstrap restart; resuming poll...');
-          }
-        }
-      }
-
-      if (statusText.startsWith('exited')) {
-        throw new Error(`PostgreSQL container exited unexpectedly during bootstrap: ${statusText}`);
-      }
-
-      await sleep(1000);
-    }
-
-    if (!isStable) {
-      throw new Error('PostgreSQL container failed to achieve stable readiness within wait window.');
-    }
-
-    // 6. Apply migrations in sequence
     console.log('\nApplying migrations in filename-sorted order...');
-    let appliedCount = 0;
-
-    for (const file of files) {
-      const fullPath = join(migrationsDir, file);
-      process.stdout.write(`  [${appliedCount + 1}/${files.length}] Applying ${file}... `);
-
-      let applyResult;
-      const relativeToRepo = fullPath.startsWith(REPO_ROOT)
-        ? fullPath.slice(REPO_ROOT.length).replace(/^[\\\/]/, '').replace(/\\/g, '/')
-        : null;
-
-      if (relativeToRepo) {
-        const containerPath = `/workspace/${relativeToRepo}`;
-        applyResult = runCommand('docker', [
-          'exec',
-          containerName,
-          'psql',
-          '-U', 'postgres',
-          '-d', 'postgres',
-          '--set', 'ON_ERROR_STOP=1',
-          '-f', containerPath,
-        ]);
-      } else {
-        // External directory (e.g. fixtures): read file content and pipe to docker exec psql
-        const content = readFileSync(fullPath, 'utf8');
-        applyResult = runCommand('docker', [
-          'exec',
-          '-i',
-          containerName,
-          'psql',
-          '-U', 'postgres',
-          '-d', 'postgres',
-          '--set', 'ON_ERROR_STOP=1',
-        ], { input: content });
-      }
-
-      if (applyResult.status !== 0) {
-        process.stdout.write('FAILED!\n\n');
-        console.error('====================================================');
-        console.error(`MIGRATION FAILURE DETECTED ON FILE: ${file}`);
-        console.error('====================================================');
-        console.error(applyResult.stderr || applyResult.stdout);
-        console.error('====================================================\n');
-        cleanupContainer();
-        process.exit(1);
-      } else {
-        process.stdout.write('OK\n');
-        appliedCount++;
-      }
+    const result = applyAllMigrations(container, migrationsDir);
+    if (result.failedFile) {
+      console.error('====================================================');
+      console.error(`MIGRATION FAILURE DETECTED ON FILE: ${result.failedFile}`);
+      console.error('====================================================');
+      console.error(result.failure);
+      console.error('====================================================\n');
+      cleanup();
+      process.exit(1);
     }
 
     const durationSeconds = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log('\n====================================================');
-    console.log(`ALL MIGRATIONS APPLIED CLEANLY (${appliedCount}/${files.length})`);
+    console.log(`ALL MIGRATIONS APPLIED CLEANLY (${result.applied}/${result.total})`);
     console.log(`Total duration: ${durationSeconds}s`);
     console.log('SERP-462 Migration Compatibility Gate: PASS');
     console.log('====================================================\n');
-
-    cleanupContainer();
+    cleanup();
     process.exit(0);
   } catch (err) {
     console.error(`\nUnexpected error in migration compatibility gate: ${err.message}`);
-    cleanupContainer();
+    cleanup();
     process.exit(1);
   }
 }
 
-main();
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main();
+}
