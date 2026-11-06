@@ -1225,11 +1225,9 @@ begin
           raise exception 'purchase_order_not_found';
         end if;
 
-        update public.commercial_documents
-           set status = 'issued',
-               version = version + 1
-         where organisation_id = target_org and id = v_po_id;
-
+        -- Notice: commercial_documents are append-only/immutable once issued
+        -- (governed by app_private.reject_issued_document_mutation). Award step
+        -- records the approval/progression event without mutating the issued document.
         target_job_id := nullif(command->>'job_id', '')::uuid;
         if target_job_id is not null then
           insert into public.job_events
