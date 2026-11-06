@@ -1230,18 +1230,37 @@ begin
                version = version + 1
          where organisation_id = target_org and id = v_po_id;
 
-        insert into public.job_events
-          (id, organisation_id, job_id, event_type, from_state, to_state,
-           actor_person_id, acting_seat, idempotency_key, payload)
-        values
-          (event_id, target_org, nullif(command->>'job_id', '')::uuid, event_name,
-           v_existing_doc.status, 'issued', target_person, target_seat, command_key,
-           jsonb_build_object(
-             'scm_step', scm_step,
-             'purchase_order_id', v_po_id,
-             'document_no', v_existing_doc.document_no,
-             'gross_total', v_existing_doc.gross_total
-           ));
+        target_job_id := nullif(command->>'job_id', '')::uuid;
+        if target_job_id is not null then
+          insert into public.job_events
+            (id, organisation_id, job_id, event_type, from_state, to_state,
+             actor_person_id, acting_seat, idempotency_key, payload)
+          values
+            (event_id, target_org, target_job_id, event_name,
+             v_existing_doc.status, 'issued', target_person, target_seat, command_key,
+             jsonb_build_object(
+               'scm_step', scm_step,
+               'purchase_order_id', v_po_id,
+               'document_no', v_existing_doc.document_no,
+               'gross_total', v_existing_doc.gross_total
+             ));
+        end if;
+
+        perform app_private.append_outbox_event(
+          target_org,
+          'PURCHASE',
+          'commercial_documents',
+          v_po_id::text,
+          jsonb_build_object(
+            'purchase_order_id', v_po_id,
+            'document_no', v_existing_doc.document_no,
+            'scm_step', scm_step,
+            'gross_total', v_existing_doc.gross_total
+          ),
+          jsonb_build_object('idempotency_key', command_key),
+          target_person,
+          target_seat
+        );
 
         response := jsonb_build_object(
           'ok', true,
@@ -1483,22 +1502,42 @@ begin
                (l->>'gross_amount')::numeric
           from jsonb_array_elements(v_line_rows) as l;
 
-        -- Write job_events audit row
+        -- Write job_events audit row if linked to a garage job
         target_job_id := nullif(command->>'job_id', '')::uuid;
-        insert into public.job_events
-          (id, organisation_id, job_id, event_type, from_state, to_state,
-           actor_person_id, acting_seat, idempotency_key, payload)
-        values
-          (event_id, target_org, target_job_id, event_name,
-           'draft', 'issued', target_person, target_seat, command_key,
-           jsonb_build_object(
-             'scm_step', scm_step,
-             'purchase_order_id', v_doc_id,
-             'document_no', v_doc_no,
-             'gross_total', v_total_gross,
-             'tax_total', v_total_tax,
-             'supplier_id', v_supplier_id
-           ));
+        if target_job_id is not null then
+          insert into public.job_events
+            (id, organisation_id, job_id, event_type, from_state, to_state,
+             actor_person_id, acting_seat, idempotency_key, payload)
+          values
+            (event_id, target_org, target_job_id, event_name,
+             'draft', 'issued', target_person, target_seat, command_key,
+             jsonb_build_object(
+               'scm_step', scm_step,
+               'purchase_order_id', v_doc_id,
+               'document_no', v_doc_no,
+               'gross_total', v_total_gross,
+               'tax_total', v_total_tax,
+               'supplier_id', v_supplier_id
+             ));
+        end if;
+
+        perform app_private.append_outbox_event(
+          target_org,
+          'PURCHASE',
+          'commercial_documents',
+          v_doc_id::text,
+          jsonb_build_object(
+            'purchase_order_id', v_doc_id,
+            'document_no', v_doc_no,
+            'scm_step', scm_step,
+            'supplier_id', v_supplier_id,
+            'gross_total', v_total_gross,
+            'tax_total', v_total_tax
+          ),
+          jsonb_build_object('idempotency_key', command_key),
+          target_person,
+          target_seat
+        );
 
         response := jsonb_build_object(
           'ok', true,
