@@ -81,6 +81,9 @@ jobs:
       - name: SERP-314 Gap 2 authenticated Price List boundary test
         run: deno test --allow-read tests/serp314_price_list_edge_path.test.ts
 
+      - name: ERP-540 / B1 authenticated Purchase Order Edge boundary test
+        run: deno test --allow-read tests/contract/serp540_po_persistence_edge_test.ts
+
   rls-isolation-probe:
     name: RLS Tenant Isolation Probe (SERP-337)
     runs-on: ubuntu-latest
@@ -179,6 +182,9 @@ jobs:
 
       - name: SERP-443 isolation matrix probe
         run: psql --set ON_ERROR_STOP=1 --file tests/serp443_isolation_matrix_probe.sql
+
+      - name: ERP-540 / B1 Purchase Order persistence behavioral probe
+        run: psql --set ON_ERROR_STOP=1 --file tests/serp540_po_persistence_probe.sql
 
   serp-356-payment-concurrency:
     name: SERP-356 Payment Concurrency (refund ceiling / settlement batch)

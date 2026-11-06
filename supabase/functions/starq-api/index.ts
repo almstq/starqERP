@@ -1755,11 +1755,14 @@ export async function handleRequest(
     }
 
     if (req.method === "GET" && path === "/api/ops/purchase-orders") {
-      const { data, error } = await db.from("commercial_documents").select("*")
+      let query = db.from("commercial_documents").select("*")
         .eq("organisation_id", session.organisation_id)
-        .eq("book_id", session.book_id)
         .eq("document_type", "purchase_order")
         .order("created_at", { ascending: false });
+      if (session.book_id) {
+        query = query.eq("book_id", session.book_id);
+      }
+      const { data, error } = await query;
       if (error) throw new Error("purchase_orders_query_failed");
       return json(200, { ok: true, purchaseOrders: data ?? [] }, origin);
     }
