@@ -29,16 +29,41 @@ Three durable records, kept distinct:
 ## 3. Durability obligations (owner: @claude)
 
 - Preserve this directive in version-controlled Starq governance documentation (this file).
-- Reference it from the agent onboarding entrypoint (`D:\StarqTech\AGENTS.md`) so new sessions inherit the requirement.
+- Reference it from the agent onboarding entrypoint — `D:\StarqTech\AGENTS.md`, which lives **outside this repository** and is therefore not part of this repo or its PR diffs — so new sessions inherit the requirement.
 - Audit the active engineering floor for uncommitted work, missing GitHub evidence and attribution gaps; reconcile them without disrupting current assignments.
 - Verify that the Starq Technologies organization repositories visibly reflect real engineering progress.
 - Report the committed policy path, commit SHA and implementation evidence in Room.
 
-## 4. Known reconciliation item at ratification (2026-11-06)
+## 4. Reconciliation status (updated 2026-11-06)
 
-WP-R1 surfaced a concrete instance of the problem this standard addresses: the AR/AP/cash-clearing/inventory reconciliation modules were merged historically (PRs #169–#173, #176) but are **absent from current `main`** because `main` was rebuilt during the board-reconstruction chapter (merge `075da1fd` is not an ancestor of HEAD `e8af2fc`). The work survives only on feature branches (notably `wip/serp463-integration-base-20261030`). Recovering that work onto `main` via reviewed PR — subject to Founder merge authority — is the first application of this standard.
+WP-R1 surfaced a concrete instance of the problem this standard addresses: during the board-reconstruction chapter, reviewed reconciliation work (AR/AP/cash-clearing/inventory modules and the supporting migration-compatibility gate; PRs #169–#173, #176) had been dropped from the `main` reconstructed at that time. That gap has since been reconciled:
 
-## 5. Enforcement
+- The four reconciliation modules and their unit tests (`web/src/domain/{ap,ar,cashClearing,inventory}Reconciliation.ts[.test.ts]`) and `scripts/migration-compatibility-gate.mjs` are now **present on current `main`**, byte-identical to the integration base `wip/serp463-integration-base-20261030` (`fd9b73b`).
+- The net-missing artifact — the DEC-100 acceptance suite `scripts/acceptance-suites/inventory-to-gl.test.mjs` — is recovered via reviewed **PR #189** (Copilot independent PASS + Elder reconciliation PASS; Founder-accepted for merge), which adds that suite, the gate modularization it consumes, and the reachability-sweep registration.
+- Outstanding follow-up: wire the migration gate + DEC-100 suite into CI (tracked separately).
+
+This recovery — executed under builder/reviewer separation and independent review, with Founder merge authority — is the first application of this standard.
+
+## 5. Operating model & roles (Founder decision #18372, 2026-11-06)
+
+Engineering runs on a recurring cycle; the companion [`CLOUDROOM_HERDR_HANDOFF_CONTRACT`](./CLOUDROOM_HERDR_HANDOFF_CONTRACT_2026-11-06.md) holds the phase and handover detail.
+
+```
+Cloudroom (plan) → Herdr (execute) → Cloudroom (verify/accept) → repeat
+```
+
+| Role | Environment | Responsibility |
+|---|---|---|
+| **Cloudroom** | Planning / PM | Authoritative project-planning and task-management environment and Kanban; prepares bounded engineering execution packages. |
+| **Herdr — Elder (@claude)** | Engineering execution | Receives the package, coordinates engineering agents, supervises implementation/testing/GitHub delivery, returns an evidence-backed completion receipt. |
+| **Vision** | Cloudroom PM / verifier | Windows Hermes Project Manager operating within Cloudroom; the normal delivery verifier (evidence vs acceptance criteria, Kanban updates, Founder reporting). Serves StarqERP and Hoadhaa. **No Herdr pane, and does not need one.** |
+| **Copilot** | Risk-based specialist assurance | Deeper independent technical review (via Herdr or GitHub) for security-sensitive, architectural, migration or other high-risk changes. **Not** mandatory for routine packages; routine verification stays in Cloudroom. |
+| **Room** | Operational ledger | Communication: assignments, ACKs, progress, blockers, reviews, decisions, receipts — with session attribution. |
+| **GitHub** | Source + evidence | Genuine repository changes and the engineering-evidence record. |
+
+The Founder retains final merge, release and acceptance authority. Future sessions inherit this model via the onboarding entrypoint (which references this standard and the companion contract); it is not carried by any live conversation.
+
+## 6. Enforcement
 
 This is a standing requirement, not a one-time action. New or materially re-bound sessions inherit it via the onboarding entrypoint. Floor audits recur as the engineering floor changes. Independent review and Founder merge authority are preconditions, never bypassed by the visibility requirement.
 

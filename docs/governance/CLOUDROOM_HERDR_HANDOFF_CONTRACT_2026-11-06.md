@@ -17,8 +17,10 @@ Cloudroom → Prepare → Herdr → Execute → Cloudroom → Verify/Close → R
 |---|---|---|
 | **1. Select & Prepare** | Cloudroom | Inspect the board; pick the next eligible task; check dependencies, prerequisites, existing implementations, GitHub history, blockers, acceptance criteria; produce a **durable execution handover** (schema §2). Then pause. |
 | **2. Execute** | Herdr (Elder) | Receive the work package; organize stations; assign implementation + independent verification; supervise; produce engineering, tests, reviews, GitHub activity and Room reporting under existing authority. Return a **delivery receipt** (schema §3). |
-| **3. Verify & Close** | Cloudroom | Examine the delivery receipt, commits, PRs, tests, independent reviews, Room evidence vs acceptance criteria; obtain Founder authorization where required; close only verified+accepted work; return failed verification as a correction task. |
+| **3. Verify & Close** | Cloudroom (Vision) | **Vision** (Cloudroom PM) examines the delivery receipt, commits, PRs, tests, independent reviews, Room evidence vs acceptance criteria; obtains Founder authorization where required; closes only verified+accepted work; returns failed verification as a correction task. |
 | **4. Repeat** | Cloudroom (fresh session) | Read durable project state; select the next eligible task; prepare the next package. |
+
+**Verification roles (Founder decision #18372).** Routine delivery verification is performed in Cloudroom by **Vision** — the Windows Hermes Project Manager operating within Cloudroom, who serves StarqERP and Hoadhaa through their respective lanes and **has no Herdr pane and does not need one**. **Copilot** provides *risk-based* specialist engineering assurance: deeper independent technical review (via Herdr or GitHub) for security-sensitive, architectural, migration or other high-risk changes. Copilot is **not** a mandatory reviewer for routine packages; the project verification cycle remains in Cloudroom. The Founder retains final merge, release and acceptance authority.
 
 ## 2. Durable work-package handover (Cloudroom → Herdr)
 
