@@ -1,5 +1,4 @@
 -- ============================================================================
--- ============================================================================
 -- Migration: 202611071200_serp541_goods_receipt_persistence.sql
 -- ERP-454 / W0-C (ERP-541): B2 Goods Receipt Persistence
 --
@@ -1561,7 +1560,6 @@ begin
             'items', v_line_rows
           )
         );
-      else
       elsif scm_step = 'receive' then
         -- ───────────────────────────────────────────────────────────────────
         -- B2 Goods Receipt Persistence (ERP-541)
@@ -1960,7 +1958,7 @@ begin
             'stock_movements', v_movements
           );
         end;
-
+      else
         -- Prior job-event lifecycle path for quote, match, pay (and non-B1/B2 steps)
         -- In B1, do not create or mutate commercial_documents.
         target_job_id := nullif(command->>'job_id', '')::uuid;
