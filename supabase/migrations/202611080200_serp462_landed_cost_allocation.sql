@@ -50,9 +50,9 @@ create table if not exists public.landed_cost_documents (
 -- 3. Landed Cost Allocations (Lines) Table
 create table if not exists public.landed_cost_allocations (
   id uuid primary key default gen_random_uuid(),
-  organisation_id uuid not null,
+  organisation_id uuid not null references public.organisations(id),
   document_id uuid not null,
-  receipt_line_id uuid not null,
+  receipt_line_id uuid not null references public.goods_receipt_lines(id) on delete restrict,
   item_key text not null,
   goods_value numeric(18,4) not null check (goods_value >= 0),
   allocated_cost numeric(18,4) not null check (allocated_cost >= 0),
@@ -61,8 +61,6 @@ create table if not exists public.landed_cost_allocations (
   created_at timestamptz not null default now(),
   foreign key (organisation_id, document_id)
     references public.landed_cost_documents (organisation_id, id) on delete restrict,
-  foreign key (organisation_id, receipt_line_id)
-    references public.goods_receipt_lines (organisation_id, id) on delete restrict,
   unique (document_id, receipt_line_id)
 );
 
