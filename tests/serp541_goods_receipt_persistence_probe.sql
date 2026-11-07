@@ -88,6 +88,13 @@ declare
   v_tamper_grl_cost numeric(20, 6);
   v_tamper_sm_cost numeric(20, 6);
   v_mismatch_sm_count integer;
+  v_mismatch_gr_count integer;
+  v_mismatch_grl_count integer;
+  v_caught_dup_over boolean := false;
+  v_db_line1_received numeric(20, 6);
+  v_db_line2_received numeric(20, 6);
+  v_db_line1_open numeric(20, 6);
+  v_db_line2_open numeric(20, 6);
 begin
   -- ─────────────────────────────────────────────────────────────────────────
   -- Fixtures Setup (Tenant A & Tenant B)
@@ -628,11 +635,17 @@ begin
   -- Receiver attempts to receive PO Line 1 (Oil Filter / t_product_1) but passes
   -- product_id = t_product_2 (Brake Pad) or same-tenant mismatched SKU.
   -- Database must refuse fail-closed with 'receipt_product_mismatches_po_line'.
-  -- Zero stock movements must be created for t_product_2.
+  -- Zero stock movements, goods_receipts, or goods_receipt_lines must be created.
   -- ---------------------------------------------------------------------------
   select count(*) into v_mismatch_sm_count
     from public.stock_movements
    where organisation_id = t_org_a and product_id = t_product_2;
+  select count(*) into v_mismatch_gr_count
+    from public.goods_receipts
+   where organisation_id = t_org_a;
+  select count(*) into v_mismatch_grl_count
+    from public.goods_receipt_lines
+   where organisation_id = t_org_a;
 
   begin
     perform public.api_garage_command(
@@ -674,12 +687,27 @@ begin
     raise exception 'Invariant Violation: Stock movement was created for mismatched SKU!';
   end if;
 
+  select count(*) into v_gr_count
+    from public.goods_receipts
+   where organisation_id = t_org_a;
+  if v_gr_count <> v_mismatch_gr_count then
+    raise exception 'Invariant Violation: goods_receipts row created despite SKU mismatch!';
+  end if;
+
+  select count(*) into v_grl_count
+    from public.goods_receipt_lines
+   where organisation_id = t_org_a;
+  if v_grl_count <> v_mismatch_grl_count then
+    raise exception 'Invariant Violation: goods_receipt_lines row created despite SKU mismatch!';
+  end if;
+
   -- ---------------------------------------------------------------------------
   -- Step 12: Reordered and Subset Receipts (Correction 2)
   -- Create PO with Line 1: 10 Oil Filters, Line 2: 8 Brake Pads.
   -- Receipt A (Subset): receive Line 2 ONLY (3 units).
   -- Invariants: Line 2 remaining = 5; Line 1 remaining = 10; PO receipt_status = 'partial'.
   -- Persistent PO-line reference in goods_receipt_lines.purchase_order_line_id is verified.
+  -- DB assertions verify per-line open quantities directly from database rows.
   -- Receipt B (Reordered): receive Line 1 (10 units).
   -- Invariants: Line 1 remaining = 0; Line 2 remaining = 5; PO receipt_status = 'partial'.
   -- Receipt C (Remainder): receive remaining 5 units of Line 2.
@@ -739,6 +767,23 @@ begin
     raise exception 'Invariant Violation: goods_receipt_lines.purchase_order_line_id not persisted for subset receipt';
   end if;
 
+  -- Assert per-line open quantities read directly from DB rows
+  select coalesce(sum(quantity), 0) into v_db_line1_received
+    from public.goods_receipt_lines
+   where purchase_order_line_id = v_pol_reorder_1.id;
+  v_db_line1_open := v_pol_reorder_1.quantity - v_db_line1_received;
+  if v_db_line1_received <> 0 or v_db_line1_open <> 10 then
+    raise exception 'Invariant Violation: DB per-line check failed for Line 1 after subset receipt (expected 0 received, 10 open, got % received, % open)', v_db_line1_received, v_db_line1_open;
+  end if;
+
+  select coalesce(sum(quantity), 0) into v_db_line2_received
+    from public.goods_receipt_lines
+   where purchase_order_line_id = v_pol_reorder_2.id;
+  v_db_line2_open := v_pol_reorder_2.quantity - v_db_line2_received;
+  if v_db_line2_received <> 3 or v_db_line2_open <> 5 then
+    raise exception 'Invariant Violation: DB per-line check failed for Line 2 after subset receipt (expected 3 received, 5 open, got % received, % open)', v_db_line2_received, v_db_line2_open;
+  end if;
+
   -- Receipt B: Reordered receiving Line 1 (10 of 10)
   res := public.api_garage_command(
     t_org_a,
@@ -761,6 +806,23 @@ begin
   end if;
   if (res->'purchase_order'->>'remaining_open')::numeric <> 5 then
     raise exception 'Invariant Violation: Expected 5 remaining open for Line 2, got %', res->'purchase_order'->>'remaining_open';
+  end if;
+
+  -- Assert per-line open quantities read directly from DB rows
+  select coalesce(sum(quantity), 0) into v_db_line1_received
+    from public.goods_receipt_lines
+   where purchase_order_line_id = v_pol_reorder_1.id;
+  v_db_line1_open := v_pol_reorder_1.quantity - v_db_line1_received;
+  if v_db_line1_received <> 10 or v_db_line1_open <> 0 then
+    raise exception 'Invariant Violation: DB per-line check failed for Line 1 after reordered receipt (expected 10 received, 0 open, got % received, % open)', v_db_line1_received, v_db_line1_open;
+  end if;
+
+  select coalesce(sum(quantity), 0) into v_db_line2_received
+    from public.goods_receipt_lines
+   where purchase_order_line_id = v_pol_reorder_2.id;
+  v_db_line2_open := v_pol_reorder_2.quantity - v_db_line2_received;
+  if v_db_line2_received <> 3 or v_db_line2_open <> 5 then
+    raise exception 'Invariant Violation: DB per-line check failed for Line 2 after reordered receipt (expected 3 received, 5 open, got % received, % open)', v_db_line2_received, v_db_line2_open;
   end if;
 
   -- Receipt C: Fulfill remainder of Line 2 (5 units)
@@ -787,12 +849,35 @@ begin
     raise exception 'Invariant Violation: Expected 0 remaining open, got %', res->'purchase_order'->>'remaining_open';
   end if;
 
+  -- Assert per-line open quantities read directly from DB rows
+  select coalesce(sum(quantity), 0) into v_db_line1_received
+    from public.goods_receipt_lines
+   where purchase_order_line_id = v_pol_reorder_1.id;
+  v_db_line1_open := v_pol_reorder_1.quantity - v_db_line1_received;
+  if v_db_line1_received <> 10 or v_db_line1_open <> 0 then
+    raise exception 'Invariant Violation: DB per-line check failed for Line 1 after final receipt', v_db_line1_open;
+  end if;
+
+  select coalesce(sum(quantity), 0) into v_db_line2_received
+    from public.goods_receipt_lines
+   where purchase_order_line_id = v_pol_reorder_2.id;
+  v_db_line2_open := v_pol_reorder_2.quantity - v_db_line2_received;
+  if v_db_line2_received <> 8 or v_db_line2_open <> 0 then
+    raise exception 'Invariant Violation: DB per-line check failed for Line 2 after final receipt', v_db_line2_open;
+  end if;
+
   -- ---------------------------------------------------------------------------
-  -- Step 13: Duplicate-SKU Lines on PO (Correction 2)
+  -- Step 13: Duplicate-SKU Lines on PO & Discriminating Over-Receipt (Correction 2)
   -- Create PO with TWO lines having identical product_id (t_product_1):
   -- Line 1: 10 units @ 15.00
   -- Line 2: 5 units @ 15.00
-  -- Invariant: Receiving against Line 1 must NOT reduce or conflate Line 2 open quantity.
+  -- Invariant 1: Receiving against Line 1 must NOT reduce or conflate Line 2 open quantity.
+  -- Invariant 2: Per-line remaining verified directly from DB rows.
+  -- Invariant 3 (Discriminating): When Line 1 is fully received (10 of 10) and Line 2
+  -- has 5 open, attempting to receive against Line 1 with allow_over_receipt=false
+  -- MUST be refused ('over_receipt_not_permitted'), even though Product 1 has 5 open on PO.
+  -- Invariant 4 (Discriminating): Attempting to receive 6 units against Line 2 (ordered 5)
+  -- with allow_over_receipt=false MUST be refused ('over_receipt_not_permitted').
   -- ---------------------------------------------------------------------------
   res := public.api_garage_command(
     t_org_a,
@@ -840,6 +925,92 @@ begin
     raise exception 'Invariant Violation: Duplicate SKU receipt 1 expected 5 remaining for Line 2, got %', res->'purchase_order'->>'remaining_open';
   end if;
 
+  -- Assert per-line open quantities read directly from DB rows
+  select coalesce(sum(quantity), 0) into v_db_line1_received
+    from public.goods_receipt_lines
+   where purchase_order_line_id = v_pol_dup_1.id;
+  v_db_line1_open := v_pol_dup_1.quantity - v_db_line1_received;
+  if v_db_line1_received <> 10 or v_db_line1_open <> 0 then
+    raise exception 'Invariant Violation: DB per-line check failed for Duplicate SKU Line 1 (expected 10 received, 0 open, got % received, % open)', v_db_line1_received, v_db_line1_open;
+  end if;
+
+  select coalesce(sum(quantity), 0) into v_db_line2_received
+    from public.goods_receipt_lines
+   where purchase_order_line_id = v_pol_dup_2.id;
+  v_db_line2_open := v_pol_dup_2.quantity - v_db_line2_received;
+  if v_db_line2_received <> 0 or v_db_line2_open <> 5 then
+    raise exception 'Invariant Violation: DB per-line check failed for Duplicate SKU Line 2 (expected 0 received, 5 open, got % received, % open)', v_db_line2_received, v_db_line2_open;
+  end if;
+
+  -- Discriminating Over-Receipt Check 1:
+  -- Line 1 is fully received (10 of 10). Line 2 has 5 units open.
+  -- A flawed per-SKU check sees 5 open for Product 1 and would allow receiving on Line 1.
+  -- Proper per-line check recognizes Line 1 has 0 open, and refuses with 'over_receipt_not_permitted'.
+  v_caught_dup_over := false;
+  begin
+    perform public.api_garage_command(
+      t_org_a,
+      t_person_rcv_a,
+      'receiver',
+      gen_random_uuid(),
+      jsonb_build_object(
+        'type', 'PURCHASE',
+        'scm_step', 'receive',
+        'purchase_order_id', v_po_dup_id,
+        'location_id', t_location_a,
+        'allow_over_receipt', false,
+        'items', jsonb_build_array(
+          jsonb_build_object('po_line_id', v_pol_dup_1.id, 'quantity', 1)
+        )
+      ),
+      req_id
+    );
+  exception when others then
+    if sqlerrm = 'over_receipt_not_permitted' then
+      v_caught_dup_over := true;
+    else
+      raise exception 'Unexpected exception for duplicate-SKU line 1 over-receipt: %', sqlerrm;
+    end if;
+  end;
+
+  if not v_caught_dup_over then
+    raise exception 'Invariant Violation: Discriminating over-receipt against Line 1 was not refused (per-SKU conflation detected)';
+  end if;
+
+  -- Discriminating Over-Receipt Check 2:
+  -- Line 2 only ordered 5 units (5 open). Receiving 6 units with allow_over_receipt=false
+  -- must be refused with 'over_receipt_not_permitted'.
+  v_caught_dup_over := false;
+  begin
+    perform public.api_garage_command(
+      t_org_a,
+      t_person_rcv_a,
+      'receiver',
+      gen_random_uuid(),
+      jsonb_build_object(
+        'type', 'PURCHASE',
+        'scm_step', 'receive',
+        'purchase_order_id', v_po_dup_id,
+        'location_id', t_location_a,
+        'allow_over_receipt', false,
+        'items', jsonb_build_array(
+          jsonb_build_object('po_line_id', v_pol_dup_2.id, 'quantity', 6)
+        )
+      ),
+      req_id
+    );
+  exception when others then
+    if sqlerrm = 'over_receipt_not_permitted' then
+      v_caught_dup_over := true;
+    else
+      raise exception 'Unexpected exception for duplicate-SKU line 2 over-receipt: %', sqlerrm;
+    end if;
+  end;
+
+  if not v_caught_dup_over then
+    raise exception 'Invariant Violation: Discriminating over-receipt (6 of 5) against Line 2 was not refused';
+  end if;
+
   -- Receive against Line 2 (5 units)
   res := public.api_garage_command(
     t_org_a,
@@ -864,6 +1035,23 @@ begin
     raise exception 'Invariant Violation: Duplicate SKU receipt 2 expected 0 remaining, got %', res->'purchase_order'->>'remaining_open';
   end if;
 
+  -- Assert per-line open quantities read directly from DB rows after complete fulfillment
+  select coalesce(sum(quantity), 0) into v_db_line1_received
+    from public.goods_receipt_lines
+   where purchase_order_line_id = v_pol_dup_1.id;
+  v_db_line1_open := v_pol_dup_1.quantity - v_db_line1_received;
+  if v_db_line1_received <> 10 or v_db_line1_open <> 0 then
+    raise exception 'Invariant Violation: DB per-line check failed for Duplicate SKU Line 1 after fulfillment', v_db_line1_open;
+  end if;
+
+  select coalesce(sum(quantity), 0) into v_db_line2_received
+    from public.goods_receipt_lines
+   where purchase_order_line_id = v_pol_dup_2.id;
+  v_db_line2_open := v_pol_dup_2.quantity - v_db_line2_received;
+  if v_db_line2_received <> 5 or v_db_line2_open <> 0 then
+    raise exception 'Invariant Violation: DB per-line check failed for Duplicate SKU Line 2 after fulfillment', v_db_line2_open;
+  end if;
+  
   -- ---------------------------------------------------------------------------
   -- Step 14: Server-Side Unit Cost Derivation & Tampering Coverage (Correction 3)
   -- Create PO with Line 1: 5 units @ 15.00.
