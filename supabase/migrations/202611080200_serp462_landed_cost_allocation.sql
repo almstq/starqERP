@@ -290,50 +290,10 @@ begin
     v_uplift_ratio := round(v_capitalised / v_total_goods_value, 4);
   end if;
 
-  -- 5. Allocate document number and persist document
+  -- 5. Allocate document number and prepare accounting event
   v_doc_no := app_private.allocate_document_no(p_org, 'landed_cost');
 
-  insert into public.landed_cost_documents (
-    id, organisation_id, receipt_id, allocation_no, total_charges,
-    capitalised_amount, not_capitalised_amount, uplift_ratio, charges, created_by
-  ) values (
-    v_doc_id, p_org, p_receipt_id, v_doc_no, v_total_charges,
-    v_capitalised, v_not_capitalised, v_uplift_ratio, p_charges, p_actor
-  );
-
-  -- 6. Persist line allocations
-  for v_line in
-    select id, line_no, item_key, quantity, coalesce(unit_cost, 0) as unit_cost
-      from public.goods_receipt_lines
-     where organisation_id = p_org and receipt_id = p_receipt_id
-     order by line_no asc
-  loop
-    v_cur_alloc := coalesce((v_allocated_costs->>v_line.id::text)::numeric, 0);
-    v_goods_val := round(v_line.quantity * v_line.unit_cost, 2);
-    v_landed_val := v_goods_val + v_cur_alloc;
-    v_landed_unit := case when v_line.quantity > 0 then round(v_landed_val / v_line.quantity, 4) else 0 end;
-
-    insert into public.landed_cost_allocations (
-      organisation_id, document_id, receipt_line_id, item_key,
-      goods_value, allocated_cost, landed_value, landed_unit_cost
-    ) values (
-      p_org, v_doc_id, v_line.id, v_line.item_key,
-      v_goods_val, v_cur_alloc, v_landed_val, v_landed_unit
-    );
-
-    v_out_lines := v_out_lines || jsonb_build_array(jsonb_build_object(
-      'receipt_line_id', v_line.id,
-      'line_no', v_line.line_no,
-      'item_key', v_line.item_key,
-      'quantity', v_line.quantity,
-      'goods_value', v_goods_val,
-      'allocated_cost', v_cur_alloc,
-      'landed_value', v_landed_val,
-      'landed_unit_cost', v_landed_unit
-    ));
-  end loop;
-
-  -- 7. GL Accrual Accounting Event Emission (Dr 1310 / Cr 1320 + Dr Recoverable Tax)
+  -- 6. GL Accrual Accounting Event Emission (Dr 1310 / Cr 1320 + Dr Recoverable Tax)
   if v_total_charges > 0 then
     v_ae_id := gen_random_uuid();
     v_ae_key := 'landed_cost:' || v_doc_id::text;
@@ -411,11 +371,50 @@ begin
     perform set_config('app.person_id', p_actor::text, true);
     perform set_config('request.jwt.claim.role', 'service_role', true);
     v_proposal_id := public.propose_journal_from_accounting_event(p_org, v_ae_id, p_actor);
-
-    update public.landed_cost_documents
-       set accounting_event_id = v_ae_id
-     where organisation_id = p_org and id = v_doc_id;
   end if;
+
+  -- 7. Persist landed cost document (immutable append-only with accounting_event_id populated)
+  insert into public.landed_cost_documents (
+    id, organisation_id, receipt_id, allocation_no, total_charges,
+    capitalised_amount, not_capitalised_amount, uplift_ratio, charges,
+    accounting_event_id, created_by
+  ) values (
+    v_doc_id, p_org, p_receipt_id, v_doc_no, v_total_charges,
+    v_capitalised, v_not_capitalised, v_uplift_ratio, p_charges,
+    v_ae_id, p_actor
+  );
+
+  -- 8. Persist line allocations
+  for v_line in
+    select id, line_no, item_key, quantity, coalesce(unit_cost, 0) as unit_cost
+      from public.goods_receipt_lines
+     where organisation_id = p_org and receipt_id = p_receipt_id
+     order by line_no asc
+  loop
+    v_cur_alloc := coalesce((v_allocated_costs->>v_line.id::text)::numeric, 0);
+    v_goods_val := round(v_line.quantity * v_line.unit_cost, 2);
+    v_landed_val := v_goods_val + v_cur_alloc;
+    v_landed_unit := case when v_line.quantity > 0 then round(v_landed_val / v_line.quantity, 4) else 0 end;
+
+    insert into public.landed_cost_allocations (
+      organisation_id, document_id, receipt_line_id, item_key,
+      goods_value, allocated_cost, landed_value, landed_unit_cost
+    ) values (
+      p_org, v_doc_id, v_line.id, v_line.item_key,
+      v_goods_val, v_cur_alloc, v_landed_val, v_landed_unit
+    );
+
+    v_out_lines := v_out_lines || jsonb_build_array(jsonb_build_object(
+      'receipt_line_id', v_line.id,
+      'line_no', v_line.line_no,
+      'item_key', v_line.item_key,
+      'quantity', v_line.quantity,
+      'goods_value', v_goods_val,
+      'allocated_cost', v_cur_alloc,
+      'landed_value', v_landed_val,
+      'landed_unit_cost', v_landed_unit
+    ));
+  end loop;
 
   return jsonb_build_object(
     'document_id', v_doc_id,
