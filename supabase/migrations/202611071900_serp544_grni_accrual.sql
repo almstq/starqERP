@@ -1513,7 +1513,7 @@ begin
         ), '')::date;
 
         -- Parse items and recompute line economics server-side
-        v_line_items := command->'items';
+        v_line_items := coalesce(command->'items', command->'lines');
         if v_line_items is not null and jsonb_typeof(v_line_items) = 'array' and jsonb_array_length(v_line_items) > 0 then
           for line_elem in select * from jsonb_array_elements(v_line_items) loop
             v_line_idx := v_line_idx + 1;

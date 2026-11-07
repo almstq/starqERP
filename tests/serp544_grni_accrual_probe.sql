@@ -81,53 +81,94 @@ begin
   -- ─────────────────────────────────────────────────────────────────────────
   -- Fixtures Setup (Tenant A & Tenant B)
   -- ─────────────────────────────────────────────────────────────────────────
-  insert into public.organisations (id, name, slug, status)
+  insert into public.organisations (id, slug, legal_name)
   values
-    (t_org_a, 'Tenant Alpha Motors', 'alpha-motors', 'active'),
-    (t_org_b, 'Tenant Beta Garages', 'beta-garages', 'active')
+    (t_org_a, 'alpha-motors-544', 'Alpha Motors 544'),
+    (t_org_b, 'beta-garages-544', 'Beta Garages 544')
   on conflict (id) do nothing;
 
-  insert into public.books (id, organisation_id, name, is_primary)
+  insert into public.persons (id, person_key, display_label)
   values
-    (t_book_a, t_org_a, 'Alpha Main Book', true),
-    (t_book_b, t_org_b, 'Beta Main Book', true)
+    (t_person_qm_a, 'person_alpha_qm_544', 'Alice Quartermaster'),
+    (t_person_rcv_a, 'person_alpha_rcv_544', 'Charlie Receiver'),
+    (t_person_b, 'person_beta_rcv_544', 'Bob Foreign Receiver')
   on conflict (id) do nothing;
 
-  insert into public.persons (id, full_name, email, status)
+  insert into public.memberships (id, organisation_id, person_id, status)
   values
-    (t_person_qm_a, 'Alice Quartermaster', 'alice.qm@alpha.local', 'active'),
-    (t_person_rcv_a, 'Charlie Receiver', 'charlie.rcv@alpha.local', 'active'),
-    (t_person_b, 'Bob Foreign Receiver', 'bob@beta.local', 'active')
+    (t_mem_qm_a, t_org_a, t_person_qm_a, 'active'),
+    (t_mem_rcv_a, t_org_a, t_person_rcv_a, 'active'),
+    (t_mem_b, t_org_b, t_person_b, 'active')
+  on conflict (organisation_id, person_id) do nothing;
+
+  select id into t_mem_qm_a from public.memberships where organisation_id = t_org_a and person_id = t_person_qm_a;
+  select id into t_mem_rcv_a from public.memberships where organisation_id = t_org_a and person_id = t_person_rcv_a;
+  select id into t_mem_b from public.memberships where organisation_id = t_org_b and person_id = t_person_b;
+
+  insert into public.seats (code, label)
+  values
+    ('quartermaster', 'Quartermaster'),
+    ('financial_controller', 'Financial Controller'),
+    ('receiver', 'Receiver'),
+    ('payer', 'Payer'),
+    ('counter', 'Counter')
+  on conflict (code) do nothing;
+
+  insert into public.membership_seats (membership_id, seat_code)
+  values
+    (t_mem_qm_a, 'quartermaster'),
+    (t_mem_rcv_a, 'receiver'),
+    (t_mem_b, 'receiver')
+  on conflict (membership_id, seat_code) do nothing;
+
+  insert into public.books (id, organisation_id, code, name, is_default, status)
+  values
+    (t_book_a, t_org_a, 'ALPHA544', 'Alpha Main Book', true, 'active'),
+    (t_book_b, t_org_b, 'BETA544', 'Beta Main Book', true, 'active')
   on conflict (id) do nothing;
 
-  insert into public.memberships (id, organisation_id, person_id, role, status, valid_from)
+  insert into public.locations (id, organisation_id, code, name, kind, active)
   values
-    (t_mem_qm_a, t_org_a, t_person_qm_a, 'quartermaster', 'active', now() - interval '1 day'),
-    (t_mem_rcv_a, t_org_a, t_person_rcv_a, 'receiver', 'active', now() - interval '1 day'),
-    (t_mem_b, t_org_b, t_person_b, 'receiver', 'active', now() - interval '1 day')
+    (t_location_a, t_org_a, 'MAIN-WH-544', 'Alpha Main Warehouse', 'warehouse', true),
+    (t_location_b, t_org_b, 'BETA-WH-544', 'Beta Warehouse', 'warehouse', true)
   on conflict (id) do nothing;
 
-  insert into public.locations (id, organisation_id, code, name, is_active)
+  insert into public.contacts (id, organisation_id, kind, display_name)
   values
-    (t_location_a, t_org_a, 'MAIN-WH', 'Alpha Main Warehouse', true),
-    (t_location_b, t_org_b, 'BETA-WH', 'Beta Warehouse', true)
+    (t_supplier_a, t_org_a, 'supplier', 'Alpha Parts Ltd'),
+    (t_supplier_b, t_org_b, 'supplier', 'Beta Spares Co')
   on conflict (id) do nothing;
 
-  insert into public.contacts (id, organisation_id, contact_type, name, status)
+  insert into public.products (id, organisation_id, sku, kind, name, active)
   values
-    (t_supplier_a, t_org_a, 'supplier', 'Alpha Parts Ltd', 'active'),
-    (t_supplier_b, t_org_b, 'supplier', 'Beta Spares Co', 'active')
+    (t_product_1, t_org_a, 'SKU-OIL-FIL-544', 'stock', 'Alpha Synthetic Oil Filter', true),
+    (t_product_2, t_org_a, 'SKU-BRK-PAD-544', 'stock', 'Alpha Ceramic Brake Pads', true)
   on conflict (id) do nothing;
 
-  insert into public.products (id, organisation_id, sku, name, status)
-  values
-    (t_product_1, t_org_a, 'SKU-OIL-FIL', 'Alpha Synthetic Oil Filter', 'active'),
-    (t_product_2, t_org_a, 'SKU-BRK-PAD', 'Alpha Ceramic Brake Pads', 'active')
-  on conflict (id) do nothing;
+  -- Ensure 1310 exists in chart_of_accounts for test tenants
+  insert into public.chart_of_accounts (
+    organisation_id, code, name, account_class, subtype, parent_code, level, currency, posting_control, description
+  ) values
+    (t_org_a, '1310', 'Stock on Hand (Inventory)', 'ASSET', 'INVENTORY', '1300', 3, 'MVR', 'control', 'Inventory stock asset'),
+    (t_org_b, '1310', 'Stock on Hand (Inventory)', 'ASSET', 'INVENTORY', '1300', 3, 'MVR', 'control', 'Inventory stock asset')
+  on conflict (organisation_id, code) do nothing;
 
   -- ─────────────────────────────────────────────────────────────────────────
   -- STEP 1: Acceptance Criteria 1 & 2 — CoA 2160 Seed & Idempotency
   -- ─────────────────────────────────────────────────────────────────────────
+  -- Criterion 1: 2160 exists after applyAllMigrations on seeded organisations
+  select count(*) into v_count
+    from public.chart_of_accounts
+   where code = '2160';
+
+  if v_count < 1 then
+    raise exception 'Invariant Violation (Criterion 1): 2160 does not exist in chart_of_accounts after migrations';
+  end if;
+
+  -- Seed 2160 for Tenant A and Tenant B via seed_grni_account_for_organisation
+  perform public.seed_grni_account_for_organisation(t_org_a);
+  perform public.seed_grni_account_for_organisation(t_org_b);
+
   select count(*) into v_count
     from public.chart_of_accounts
    where organisation_id = t_org_a and code = '2160';
@@ -145,7 +186,7 @@ begin
       v_coa_row.account_class, v_coa_row.posting_control;
   end if;
 
-  -- Test Idempotent re-run: re-running the seed must NOT duplicate or corrupt 2160
+  -- Test Idempotent re-run (Criterion 2): re-running the seed must NOT duplicate or corrupt 2160
   perform public.seed_grni_account_for_organisation(t_org_a);
 
   select count(*) into v_count
@@ -175,7 +216,7 @@ begin
       'scm_step', 'need',
       'supplier_id', t_supplier_a,
       'currency', 'MVR',
-      'lines', jsonb_build_array(
+      'items', jsonb_build_array(
         jsonb_build_object('line_no', 1, 'product_id', t_product_1, 'description', 'Oil Filters', 'quantity', 10, 'unit_price', 15.00),
         jsonb_build_object('line_no', 2, 'product_id', t_product_2, 'description', 'Brake Pads', 'quantity', 5, 'unit_price', 20.00)
       )
@@ -232,7 +273,7 @@ begin
       'scm_step', 'need',
       'supplier_id', t_supplier_a,
       'currency', 'MVR',
-      'lines', jsonb_build_array(
+      'items', jsonb_build_array(
         jsonb_build_object('line_no', 1, 'product_id', t_product_1, 'description', 'Free Samples', 'quantity', 5, 'unit_price', 0.00)
       )
     ),
