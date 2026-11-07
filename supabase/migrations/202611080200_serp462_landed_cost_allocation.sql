@@ -452,18 +452,22 @@ begin
     'total_capitalised', coalesce(sum(d.capitalised_amount), 0),
     'total_not_capitalised', coalesce(sum(d.not_capitalised_amount), 0),
     'lines', coalesce((
-      select jsonb_agg(jsonb_build_object(
-        'receipt_line_id', l.receipt_line_id,
-        'item_key', l.item_key,
-        'goods_value', sum(l.goods_value),
-        'allocated_cost', sum(l.allocated_cost),
-        'landed_value', sum(l.landed_value),
-        'landed_unit_cost', max(l.landed_unit_cost)
-      ))
-      from public.landed_cost_allocations l
-      where l.organisation_id = p_org and l.document_id in (
-        select id from public.landed_cost_documents where organisation_id = p_org and receipt_id = p_receipt_id
-      )
+      select jsonb_agg(line_summary)
+      from (
+        select jsonb_build_object(
+          'receipt_line_id', l.receipt_line_id,
+          'item_key', l.item_key,
+          'goods_value', sum(l.goods_value),
+          'allocated_cost', sum(l.allocated_cost),
+          'landed_value', sum(l.landed_value),
+          'landed_unit_cost', max(l.landed_unit_cost)
+        ) as line_summary
+        from public.landed_cost_allocations l
+        where l.organisation_id = p_org and l.document_id in (
+          select id from public.landed_cost_documents where organisation_id = p_org and receipt_id = p_receipt_id
+        )
+        group by l.receipt_line_id, l.item_key
+      ) sub
     ), '[]'::jsonb)
   ) into v_summary
   from public.landed_cost_documents d
