@@ -470,6 +470,9 @@ begin
   end if;
 
   -- Test propose_journal_from_accounting_event cross-tenant refusal
+  perform set_config('app.organisation_id', t_org_b::text, true);
+  perform set_config('app.person_id', t_person_b::text, true);
+  perform set_config('request.jwt.claim.role', 'service_role', true);
   v_caught_cross_tenant := false;
   begin
     perform public.propose_journal_from_accounting_event(t_org_a, v_ae_id_1, t_person_b);
@@ -487,6 +490,10 @@ begin
   -- STEP 7: Acceptance Criterion 7 — propose_journal_from_accounting_event Validation
   -- Unbalanced event must be rejected; balanced event must be accepted
   -- ─────────────────────────────────────────────────────────────────────────
+  perform set_config('app.organisation_id', t_org_a::text, true);
+  perform set_config('app.person_id', t_person_rcv_a::text, true);
+  perform set_config('request.jwt.claim.role', 'service_role', true);
+
   insert into public.accounting_events (
     id, organisation_id, family, event_type, source_type, source_id,
     idempotency_key, event_date, gross_amount, narration
