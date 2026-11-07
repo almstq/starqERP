@@ -605,7 +605,7 @@ begin
   begin
     update public.landed_cost_documents set total_charges = 9999.00 where id = v_doc_id;
   exception when others then
-    if sqlerrm like '%append_only_mutation_rejected%' or sqlerrm like '%reject_mutation%' then
+    if sqlerrm like '%is append-only%' or sqlerrm like '%append-only%' or sqlerrm like '%reject_mutation%' then
       v_caught_mutation := true;
     end if;
   end;
@@ -617,7 +617,7 @@ begin
   begin
     delete from public.landed_cost_documents where id = v_doc_id;
   exception when others then
-    if sqlerrm like '%append_only_mutation_rejected%' or sqlerrm like '%reject_mutation%' then
+    if sqlerrm like '%is append-only%' or sqlerrm like '%append-only%' or sqlerrm like '%reject_mutation%' then
       v_caught_mutation := true;
     end if;
   end;
@@ -629,7 +629,7 @@ begin
   begin
     update public.landed_cost_allocations set allocated_cost = 9999.00 where document_id = v_doc_id;
   exception when others then
-    if sqlerrm like '%append_only_mutation_rejected%' or sqlerrm like '%reject_mutation%' then
+    if sqlerrm like '%is append-only%' or sqlerrm like '%append-only%' or sqlerrm like '%reject_mutation%' then
       v_caught_mutation := true;
     end if;
   end;
@@ -641,7 +641,7 @@ begin
   begin
     delete from public.landed_cost_allocations where document_id = v_doc_id;
   exception when others then
-    if sqlerrm like '%append_only_mutation_rejected%' or sqlerrm like '%reject_mutation%' then
+    if sqlerrm like '%is append-only%' or sqlerrm like '%append-only%' or sqlerrm like '%reject_mutation%' then
       v_caught_mutation := true;
     end if;
   end;
