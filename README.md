@@ -27,6 +27,14 @@
 
 ---
 
+## Repository & Deployment Model (permanent)
+
+- **PRIMARY — engineering authority:** [`Starq-Technologies-Pvt-Ltd/starqERP`](https://github.com/Starq-Technologies-Pvt-Ltd/starqERP). Single source of truth; all branches, PRs, reviews, tests and Founder-approved merges happen here. Every studio's `origin` points here.
+- **DEPLOYMENT MIRROR — deploy only:** [`almstq/starqERP`](https://github.com/almstq/starqERP). Receives PRIMARY `main` automatically via one-way sync; the Vercel `starq-erp` project deploys from it. **No development, pushes, branches or PRs on the mirror.**
+- **Sync:** PRIMARY `main` → mirror `main` only; both must end at the same immutable SHA. Verification by **Vision through Command**; **Founder merge approval mandatory**. Details: [`docs/operations/DEPLOYMENT_MIRROR_OPERATING_MANUAL.md`](docs/operations/DEPLOYMENT_MIRROR_OPERATING_MANUAL.md).
+
+---
+
 ## Overview
 
 ### What It Is

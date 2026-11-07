@@ -61,3 +61,30 @@ git ls-remote https://github.com/almstq/starqERP.git refs/heads/main
 ```
 
 Both outputs must produce the exact same commit hash.
+
+---
+
+## 5. Permanent Operating Model (Founder-ratified 2026-11-07)
+
+The dual-repository arrangement is the **permanent** StarqERP engineering operating model. All studios and builders — Cloudroom, Herdr, Codex, Claude, WSL Claude, Antigravity and any other assigned builder — operate under these rules:
+
+1. **PRIMARY = `Starq-Technologies-Pvt-Ltd/starqERP`** is the single engineering authority. Every studio's primary Git `origin` points here.
+2. **Development writes = PRIMARY only.** All engineering branches, PRs, reviews, tests and Founder-approved merges happen in PRIMARY.
+3. **DEPLOYMENT MIRROR = `almstq/starqERP`** receives PRIMARY `main` automatically via the PR #198 synchronization workflow. It is **deployment-only**.
+4. The mirror must **never** become a separate development authority or receive independent engineering pushes.
+5. **Deployment source = the mirror.** Vercel (`starq-erp`) connects to `almstq/starqERP`, Production Branch `main`, application root preserved.
+6. **Synchronization = PRIMARY `main` → mirror `main`** only. Every successful PRIMARY-`main` merge must eventually leave both repositories at the **same immutable `main` SHA**.
+7. **Any sync failure or SHA mismatch is a deployment-integration blocker** — surface it to Command immediately. Do **not** reverse-sync or manually alter the mirror.
+
+**Verification authority:** independent verification is performed by **Vision through Command**; **Founder merge approval remains mandatory** for every PRIMARY merge. No automatic merges.
+
+---
+
+## 6. Live-Sync Evidence — Stage A (2026-11-07)
+
+First end-to-end proof that the workflow (not merely PR-branch CI) synchronizes PRIMARY → mirror:
+
+- **Trigger:** merge of PR #198 into PRIMARY `main`. Merge SHA / PRIMARY `main` HEAD = `d9c58546e3fe2d5de76c5ecedac4c09026965995` (merged 2026-11-07T18:11:53Z).
+- **Workflow run:** `deployment-mirror-sync` run **`42400063435`** (event `push`, head `d9c58546…`) — conclusion **`success`**.
+- **Mirror result:** `almstq/starqERP` `main` = `d9c58546e3fe2d5de76c5ecedac4c09026965995` (`git ls-remote`).
+- **Parity:** PRIMARY `main` SHA == MIRROR `main` SHA ✅ — acceptance condition met; one-way sync demonstrated live. Independently verified by Command (not inferred from PR-branch CI).
