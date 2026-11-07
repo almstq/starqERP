@@ -63,6 +63,7 @@ declare
   v_bal_2160_1 numeric(20, 6);
   v_bal_1310_2 numeric(20, 6);
   v_bal_2160_2 numeric(20, 6);
+  v_bal_before_replay numeric(20, 6);
   v_delta_1310 numeric(20, 6);
   v_delta_2160 numeric(20, 6);
 
@@ -586,6 +587,8 @@ begin
   -- STEP 8: Idempotency Replay Protection
   -- Replay Receipt 2 with identical command_key
   -- ─────────────────────────────────────────────────────────────────────────
+  v_bal_before_replay := public.grni_balance(t_org_a);
+
   res_replay := public.api_garage_command(
     t_org_a,
     t_person_rcv_a,
@@ -619,8 +622,9 @@ begin
   end if;
 
   -- Verify 2160 balance remained exact
-  if public.grni_balance(t_org_a) <> v_bal_2160_2 then
-    raise exception 'Invariant Violation (Idempotency): Balance altered on idempotent replay';
+  if public.grni_balance(t_org_a) <> v_bal_before_replay then
+    raise exception 'Invariant Violation (Idempotency): Balance altered on idempotent replay (before=%, after=%)',
+      v_bal_before_replay, public.grni_balance(t_org_a);
   end if;
 
   raise notice '=======================================================';
