@@ -10,6 +10,7 @@ name: Deployment Mirror Sync
 # - Mirror role: almstq/starqERP is an automated deployment target only (no PRs, branches, or manual edits).
 # - Strict SHA preservation: force-updates mirror main to exact PRIMARY main commit.
 # - Security: authenticated via repo-scoped write deploy key (MIRROR_DEPLOY_KEY secret).
+# - Host-key security: pinned GitHub ed25519 SSH host key with StrictHostKeyChecking=yes.
 # - Repository gate: executes exclusively on Starq-Technologies-Pvt-Ltd/starqERP.
 
 on:
@@ -29,12 +30,14 @@ jobs:
     steps:
       - name: Verify repository context and required secret
         id: gate
+        env:
+          DEPLOY_KEY: ${{ secrets.MIRROR_DEPLOY_KEY }}
         run: |
           if [ "${{ github.repository }}" != "Starq-Technologies-Pvt-Ltd/starqERP" ]; then
             echo "Skipping: synchronization only runs on PRIMARY (Starq-Technologies-Pvt-Ltd/starqERP)."
             exit 0
           fi
-          if [ -z "${{ secrets.MIRROR_DEPLOY_KEY }}" ]; then
+          if [ -z "$DEPLOY_KEY" ]; then
             echo "::error::MIRROR_DEPLOY_KEY secret is missing. Synchronization cannot proceed."
             exit 1
           fi
@@ -53,12 +56,15 @@ jobs:
           chmod 700 ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/mirror_deploy_key
           chmod 600 ~/.ssh/mirror_deploy_key
-          ssh-keyscan -t ed25519,rsa github.com >> ~/.ssh/known_hosts
+          # Pin official GitHub ed25519 host key (SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU)
+          cat << 'EOF' > ~/.ssh/known_hosts
+          github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+          EOF
           chmod 644 ~/.ssh/known_hosts
 
       - name: Push PRIMARY main to mirror main
         env:
-          GIT_SSH_COMMAND: "ssh -i ~/.ssh/mirror_deploy_key -o StrictHostKeyChecking=yes"
+          GIT_SSH_COMMAND: "ssh -i ~/.ssh/mirror_deploy_key -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/known_hosts"
         run: |
           PRIMARY_SHA=$(git rev-parse HEAD)
           echo "Synchronizing PRIMARY main (${PRIMARY_SHA}) to git@github.com:almstq/starqERP.git:main..."
@@ -66,7 +72,7 @@ jobs:
 
       - name: Verify SHA equality
         env:
-          GIT_SSH_COMMAND: "ssh -i ~/.ssh/mirror_deploy_key -o StrictHostKeyChecking=yes"
+          GIT_SSH_COMMAND: "ssh -i ~/.ssh/mirror_deploy_key -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/known_hosts"
         run: |
           PRIMARY_SHA=$(git rev-parse HEAD)
           MIRROR_SHA=$(git ls-remote git@github.com:almstq/starqERP.git refs/heads/main | awk '{print $1}')

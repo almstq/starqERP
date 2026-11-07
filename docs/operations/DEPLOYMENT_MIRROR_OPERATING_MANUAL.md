@@ -39,9 +39,8 @@
 
 ## 3. Credential Isolation & Security Guardrails
 
-- **Deploy Key Title:** `Deployment Mirror Push Key` (ID: `169117482`).
-- **Deploy Key Scope:** Read/Write access strictly bounded to `almstq/starqERP`.
-- **Primary Repo Secret:** `MIRROR_DEPLOY_KEY` on `Starq-Technologies-Pvt-Ltd/starqERP`.
+- **Host-Key Security:** Pinned official GitHub ed25519 host key (`SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU`) with strict host-key verification, eliminating unpinned runtime `ssh-keyscan` and guarding against network MITM.
+- **Credential Boundary:** Repository-scoped write deploy key (id `169117482`) on `almstq/starqERP`, private key in Actions secret `MIRROR_DEPLOY_KEY` on `Starq-Technologies-Pvt-Ltd/starqERP`. Secret passed via isolated environment variable (`DEPLOY_KEY`), preventing multiline bash interpolation.
 - **Zero In-Tree Secrets:** No private keys or tokens are stored in source code or Git history.
 - **Reverse Flow Prevention:**
   - The deploy key cannot write to `Starq-Technologies-Pvt-Ltd/starqERP`.
