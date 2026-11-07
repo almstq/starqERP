@@ -129,3 +129,27 @@ Deno.test('ERP-541 Edge: unheld seat is refused even if seat is legal for comman
 
   assertEquals(authorizeCommand(p, envReceive), { ok: false, error: 'seat_not_authorized' });
 });
+
+Deno.test('ERP-541 Edge: fromLegacyBody preserves persisted PO line identities (po_line_id, po_line_no, subset items)', () => {
+  const lineId1 = 'aaaa1111-1111-4111-8111-111111111111';
+  const lineId2 = 'bbbb2222-2222-4222-8222-222222222222';
+  const env = fromLegacyBody({
+    type: 'PURCHASE',
+    scm_step: 'receive',
+    purchase_order_id: '44444444-4444-4444-8444-444444444444',
+    items: [
+      { po_line_id: lineId2, po_line_no: 2, quantity: 3 },
+      { po_line_id: lineId1, po_line_no: 1, quantity: 10 },
+    ],
+  });
+  assert(env !== null);
+  assertEquals(env.command, 'PURCHASE');
+  assertEquals(env.step, 'receive');
+  const items = env.payload.items as Array<Record<string, unknown>>;
+  assertEquals(items.length, 2);
+  assertEquals(items[0].po_line_id, lineId2);
+  assertEquals(items[0].po_line_no, 2);
+  assertEquals(items[1].po_line_id, lineId1);
+  assertEquals(items[1].po_line_no, 1);
+});
+

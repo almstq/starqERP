@@ -19,6 +19,11 @@
 
 begin;
 
+alter table public.goods_receipt_lines
+  add column if not exists purchase_order_line_id uuid references public.commercial_document_lines(id);
+
+create index if not exists goods_receipt_lines_po_line on public.goods_receipt_lines (organisation_id, purchase_order_line_id);
+
 create or replace function public.api_garage_command(
   target_org uuid,
   target_person uuid,
@@ -1561,20 +1566,29 @@ begin
           )
         );
       elsif scm_step = 'receive' then
-        -- ───────────────────────────────────────────────────────────────────
+        -- ------------------------------------------------------------------
         -- B2 Goods Receipt Persistence (ERP-541)
-        -- ───────────────────────────────────────────────────────────────────
+        -- ------------------------------------------------------------------
         declare
           v_gr_id uuid := gen_random_uuid();
           v_location_id uuid;
           v_delivery_note text;
           v_received_at timestamptz;
           v_pol public.commercial_document_lines%rowtype;
+          v_target_po_line_id uuid;
+          v_target_po_line_no integer;
+          v_payload_product_id uuid;
           v_prior_qty numeric(20, 6);
           v_open_qty numeric(20, 6);
           v_line_unit_cost numeric(20, 6);
+          v_line_product_id uuid;
+          v_line_desc text;
+          v_line_qty numeric(20, 6);
           v_item_key text;
           v_line_status text;
+          v_line_idx integer;
+          v_line_items jsonb;
+          line_elem jsonb;
           v_sm_key uuid;
           v_movement_id uuid;
           v_onhand numeric(20, 6);
@@ -1662,9 +1676,8 @@ begin
           v_line_items := coalesce(command->'items', command->'received_items', command->'lines');
           if v_line_items is null and nullif(coalesce(command->>'qty', command->>'quantity', command->>'amount', ''), '') is not null then
             v_line_items := jsonb_build_array(jsonb_build_object(
-              'line_no', coalesce(nullif(command->>'line_no', ''), '1')::integer,
+              'line_no', coalesce(nullif(command->>'po_line_no', ''), nullif(command->>'line_no', ''), '1')::integer,
               'quantity', coalesce(nullif(command->>'qty', ''), nullif(command->>'quantity', ''), '1')::numeric,
-              'unit_cost', coalesce(nullif(command->>'cost', ''), nullif(command->>'amount', ''), nullif(command->>'unit_cost', ''), '0')::numeric,
               'description', coalesce(nullif(trim(command->>'item'), ''), nullif(trim(command->>'description'), ''), 'Received Item')
             ));
           end if;
@@ -1674,105 +1687,129 @@ begin
             for line_elem in select * from jsonb_array_elements(v_line_items) loop
               v_line_idx := v_line_idx + 1;
 
-              select * into v_pol
-                from public.commercial_document_lines
-               where organisation_id = target_org
-                 and document_id = v_po_id
-                 and (
-                   (line_elem->>'line_no' is not null and line_no = (line_elem->>'line_no')::integer)
-                   or (line_elem->>'product_id' is not null and product_id = (line_elem->>'product_id')::uuid)
-                   or (line_elem->>'productId' is not null and product_id = (line_elem->>'productId')::uuid)
-                   or (line_elem->>'description' is not null and description = trim(line_elem->>'description'))
-                   or (line_no = v_line_idx)
-                 )
-               order by line_no asc
-               limit 1;
+              v_target_po_line_id := coalesce(
+                nullif(line_elem->>'po_line_id', ''),
+                nullif(line_elem->>'purchase_order_line_id', ''),
+                nullif(line_elem->>'line_id', '')
+              )::uuid;
+              v_target_po_line_no := coalesce(
+                nullif(line_elem->>'po_line_no', ''),
+                nullif(line_elem->>'line_no', '')
+              )::integer;
+              v_payload_product_id := coalesce(
+                nullif(line_elem->>'product_id', ''),
+                nullif(line_elem->>'productId', '')
+              )::uuid;
+
+              -- 1. BIND TO PERSISTED PO-LINE IDENTITY
+              if v_target_po_line_id is not null then
+                select * into v_pol
+                  from public.commercial_document_lines
+                 where organisation_id = target_org
+                   and document_id = v_po_id
+                   and id = v_target_po_line_id;
+
+                if not found then
+                  raise exception 'purchase_order_line_not_found';
+                end if;
+                if v_target_po_line_no is not null and v_pol.line_no <> v_target_po_line_no then
+                  raise exception 'purchase_order_line_not_found';
+                end if;
+              elsif v_target_po_line_no is not null then
+                select * into v_pol
+                  from public.commercial_document_lines
+                 where organisation_id = target_org
+                   and document_id = v_po_id
+                   and line_no = v_target_po_line_no;
+
+                if not found then
+                  raise exception 'purchase_order_line_not_found';
+                end if;
+              elsif v_payload_product_id is not null then
+                select * into v_pol
+                  from public.commercial_document_lines
+                 where organisation_id = target_org
+                   and document_id = v_po_id
+                   and product_id = v_payload_product_id
+                 order by line_no asc
+                 limit 1;
+
+                if not found then
+                  raise exception 'receipt_product_mismatches_po_line';
+                end if;
+              else
+                select * into v_pol
+                  from public.commercial_document_lines
+                 where organisation_id = target_org
+                   and document_id = v_po_id
+                   and line_no = v_line_idx;
+
+                if not found then
+                  raise exception 'purchase_order_line_not_found';
+                end if;
+              end if;
+
+              -- REJECT SKU/PRODUCT MISMATCH (Correction 1)
+              if v_payload_product_id is not null then
+                if v_pol.product_id is null or v_pol.product_id <> v_payload_product_id then
+                  raise exception 'receipt_product_mismatches_po_line';
+                end if;
+              end if;
 
               v_line_qty := coalesce((line_elem->>'quantity')::numeric, (line_elem->>'qty')::numeric, 0);
               if v_line_qty <= 0 then
                 raise exception 'line_quantity_must_be_positive';
               end if;
 
-              if v_pol.line_no is not null then
-                select coalesce(sum(grl.quantity), 0) into v_prior_qty
-                  from public.goods_receipt_lines grl
-                  join public.goods_receipts gr on gr.id = grl.receipt_id and gr.organisation_id = grl.organisation_id
-                 where gr.organisation_id = target_org
-                   and gr.purchase_order_id = v_po_id
-                   and gr.id <> v_gr_id
-                   and (grl.line_no = v_pol.line_no or grl.item_key = coalesce(v_pol.product_id::text, 'line_' || v_pol.line_no::text));
+              -- 2. SUM PRIOR RECEIPTS ON STABLE PO-LINE IDENTITY (Correction 2)
+              select coalesce(sum(grl.quantity), 0) into v_prior_qty
+                from public.goods_receipt_lines grl
+                join public.goods_receipts gr on gr.id = grl.receipt_id and gr.organisation_id = grl.organisation_id
+               where gr.organisation_id = target_org
+                 and gr.purchase_order_id = v_po_id
+                 and gr.id <> v_gr_id
+                 and (
+                   grl.purchase_order_line_id = v_pol.id
+                   or (grl.purchase_order_line_id is null and grl.item_key = v_pol.id::text)
+                 );
 
-                v_open_qty := v_pol.quantity - v_prior_qty;
+              v_open_qty := v_pol.quantity - v_prior_qty;
 
-                if v_line_qty > v_open_qty then
-                  if not v_allow_over then
-                    raise exception 'over_receipt_not_permitted';
-                  end if;
-                  v_line_status := 'over';
-                  v_any_over := true;
-                elsif v_line_qty < v_open_qty then
-                  v_line_status := 'short';
-                  v_any_short := true;
-                else
-                  v_line_status := 'complete';
+              if v_line_qty > v_open_qty then
+                if not v_allow_over then
+                  raise exception 'over_receipt_not_permitted';
                 end if;
-
-                v_line_product_id := coalesce(
-                  nullif(line_elem->>'product_id', ''),
-                  nullif(line_elem->>'productId', ''),
-                  v_pol.product_id::text
-                )::uuid;
-                v_line_desc := coalesce(nullif(trim(line_elem->>'description'), ''), v_pol.description);
-                v_line_unit_cost := coalesce(
-                  (line_elem->>'unit_cost')::numeric,
-                  (line_elem->>'unitCost')::numeric,
-                  (line_elem->>'cost')::numeric,
-                  (line_elem->>'unit_price')::numeric,
-                  (line_elem->>'unitPrice')::numeric,
-                  v_pol.unit_price,
-                  0
-                );
+                v_line_status := 'over';
+                v_any_over := true;
+              elsif v_line_qty < v_open_qty then
+                v_line_status := 'short';
+                v_any_short := true;
               else
-                v_open_qty := 0;
-                v_line_status := 'unmatched';
-                v_line_product_id := coalesce(
-                  nullif(line_elem->>'product_id', ''),
-                  nullif(line_elem->>'productId', '')
-                )::uuid;
-                v_line_desc := coalesce(nullif(trim(line_elem->>'description'), ''), 'Received Item');
-                v_line_unit_cost := coalesce(
-                  (line_elem->>'unit_cost')::numeric,
-                  (line_elem->>'unitCost')::numeric,
-                  (line_elem->>'cost')::numeric,
-                  (line_elem->>'unit_price')::numeric,
-                  (line_elem->>'unitPrice')::numeric,
-                  0
-                );
+                v_line_status := 'complete';
               end if;
 
-              if v_line_product_id is not null then
-                if not exists (
-                  select 1 from public.products
-                   where organisation_id = target_org and id = v_line_product_id
-                ) then
-                  raise exception 'product_not_found';
-                end if;
-              end if;
+              -- Stock product strictly derived from verified PO line
+              v_line_product_id := v_pol.product_id;
+              v_line_desc := coalesce(nullif(trim(line_elem->>'description'), ''), v_pol.description);
+
+              -- 3. UNIT COST STRICTLY DERIVED FROM SERVER-SIDE PO DATA (Correction 3)
+              v_line_unit_cost := coalesce(v_pol.unit_price, 0);
 
               v_item_key := coalesce(
                 nullif(trim(line_elem->>'item_key'), ''),
                 nullif(trim(line_elem->>'itemKey'), ''),
-                v_line_product_id::text,
-                'line_' || coalesce(v_pol.line_no, v_line_idx)::text
+                v_pol.product_id::text,
+                v_pol.id::text
               );
 
               insert into public.goods_receipt_lines
-                (id, organisation_id, receipt_id, line_no, item_key, description, quantity, unit, unit_cost)
+                (id, organisation_id, receipt_id, line_no, item_key, description, quantity, unit, unit_cost, purchase_order_line_id)
               values
                 (gen_random_uuid(), target_org, v_gr_id, v_line_idx, v_item_key,
                  v_line_desc, v_line_qty,
                  coalesce(nullif(trim(line_elem->>'unit'), ''), 'unit'),
-                 v_line_unit_cost);
+                 v_line_unit_cost,
+                 v_pol.id);
 
               if v_line_product_id is not null then
                 v_sm_key := md5(command_key::text || ':stock:' || v_line_idx::text)::uuid;
@@ -1800,6 +1837,7 @@ begin
 
               v_gr_lines := v_gr_lines || jsonb_build_array(jsonb_build_object(
                 'line_no', v_line_idx,
+                'po_line_id', v_pol.id,
                 'po_line_no', v_pol.line_no,
                 'item_key', v_item_key,
                 'product_id', v_line_product_id,
@@ -1822,19 +1860,23 @@ begin
                where gr.organisation_id = target_org
                  and gr.purchase_order_id = v_po_id
                  and gr.id <> v_gr_id
-                 and (grl.line_no = v_pol.line_no or grl.item_key = coalesce(v_pol.product_id::text, 'line_' || v_pol.line_no::text));
+                 and (
+                   grl.purchase_order_line_id = v_pol.id
+                   or (grl.purchase_order_line_id is null and grl.item_key = v_pol.id::text)
+                 );
 
               v_open_qty := v_pol.quantity - v_prior_qty;
               if v_open_qty > 0 then
                 v_line_idx := v_line_idx + 1;
                 v_line_product_id := v_pol.product_id;
-                v_item_key := coalesce(v_pol.product_id::text, 'line_' || v_pol.line_no::text);
+                v_line_unit_cost := coalesce(v_pol.unit_price, 0);
+                v_item_key := coalesce(v_pol.product_id::text, v_pol.id::text);
 
                 insert into public.goods_receipt_lines
-                  (id, organisation_id, receipt_id, line_no, item_key, description, quantity, unit, unit_cost)
+                  (id, organisation_id, receipt_id, line_no, item_key, description, quantity, unit, unit_cost, purchase_order_line_id)
                 values
                   (gen_random_uuid(), target_org, v_gr_id, v_line_idx, v_item_key,
-                   v_pol.description, v_open_qty, 'unit', v_pol.unit_price);
+                   v_pol.description, v_open_qty, 'unit', v_line_unit_cost, v_pol.id);
 
                 if v_line_product_id is not null then
                   v_sm_key := md5(command_key::text || ':stock:' || v_line_idx::text)::uuid;
@@ -1843,7 +1885,7 @@ begin
                      unit_cost, source_type, source_id, idempotency_key, occurred_at, recorded_by)
                   values
                     (target_org, v_location_id, v_line_product_id, 'receipt', v_open_qty,
-                     v_pol.unit_price, 'goods_receipt', v_gr_id, v_sm_key, v_received_at, target_person)
+                     v_line_unit_cost, 'goods_receipt', v_gr_id, v_sm_key, v_received_at, target_person)
                   returning id into v_movement_id;
 
                   select coalesce(d.derived_quantity, 0) into v_onhand
@@ -1855,19 +1897,20 @@ begin
                     'product_id', v_line_product_id,
                     'movement_type', 'receipt',
                     'quantity', v_open_qty,
-                    'unit_cost', v_pol.unit_price,
+                    'unit_cost', v_line_unit_cost,
                     'derived_onhand', v_onhand
                   ));
                 end if;
 
                 v_gr_lines := v_gr_lines || jsonb_build_array(jsonb_build_object(
                   'line_no', v_line_idx,
+                  'po_line_id', v_pol.id,
                   'po_line_no', v_pol.line_no,
                   'item_key', v_item_key,
                   'product_id', v_line_product_id,
                   'description', v_pol.description,
                   'quantity', v_open_qty,
-                  'unit_cost', v_pol.unit_price,
+                  'unit_cost', v_line_unit_cost,
                   'status', 'complete',
                   'open_quantity_before', v_open_qty
                 ));
@@ -1884,7 +1927,16 @@ begin
             join public.goods_receipts gr on gr.id = grl.receipt_id and gr.organisation_id = grl.organisation_id
            where gr.organisation_id = target_org and gr.purchase_order_id = v_po_id;
 
-          v_remaining_open := greatest(v_total_ordered - v_total_received, 0);
+          select coalesce(sum(greatest(pol.quantity - coalesce(sub.received_qty, 0), 0)), 0) into v_remaining_open
+            from public.commercial_document_lines pol
+            left join (
+              select grl.purchase_order_line_id, sum(grl.quantity) as received_qty
+                from public.goods_receipt_lines grl
+                join public.goods_receipts gr on gr.id = grl.receipt_id and gr.organisation_id = grl.organisation_id
+               where gr.organisation_id = target_org and gr.purchase_order_id = v_po_id
+               group by grl.purchase_order_line_id
+            ) sub on sub.purchase_order_line_id = pol.id
+           where pol.organisation_id = target_org and pol.document_id = v_po_id;
 
           if v_remaining_open > 0 then
             v_receipt_status := 'partial';
@@ -1948,8 +2000,12 @@ begin
               'received_at', v_received_at,
               'received_by', target_person,
               'delivery_status', v_receipt_status,
+              'total_ordered', v_total_ordered,
+              'total_received', v_total_received,
+              'remaining_open', v_remaining_open,
               'lines', v_gr_lines
             ),
+            'stock_movements', v_movements,
             'purchase_order', jsonb_build_object(
               'id', v_po_id,
               'document_no', v_existing_doc.document_no,
@@ -1958,8 +2014,7 @@ begin
               'total_ordered', v_total_ordered,
               'total_received', v_total_received,
               'remaining_open', v_remaining_open
-            ),
-            'stock_movements', v_movements
+            )
           );
         end;
       else

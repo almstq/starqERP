@@ -76,6 +76,18 @@ declare
   v_caught_cross_tenant boolean := false;
   v_caught_illegal_seat boolean := false;
   v_caught_unheld_seat boolean := false;
+  v_caught_mismatch boolean := false;
+  v_po_reorder_id uuid;
+  v_po_dup_id uuid;
+  v_po_tamper_id uuid;
+  v_pol_reorder_1 public.commercial_document_lines%rowtype;
+  v_pol_reorder_2 public.commercial_document_lines%rowtype;
+  v_pol_dup_1 public.commercial_document_lines%rowtype;
+  v_pol_dup_2 public.commercial_document_lines%rowtype;
+  v_tamper_gr_id uuid;
+  v_tamper_grl_cost numeric(20, 6);
+  v_tamper_sm_cost numeric(20, 6);
+  v_mismatch_sm_count integer;
 begin
   -- ─────────────────────────────────────────────────────────────────────────
   -- Fixtures Setup (Tenant A & Tenant B)
@@ -611,7 +623,313 @@ begin
     raise exception 'Invariant Violation: Unheld receiver seat was not rejected with seat_not_authorized';
   end if;
 
-  raise notice 'SERP-541 Probe: All 11 goods receipt persistence invariants verified successfully.';
+  -- ---------------------------------------------------------------------------
+  -- Step 11: Mismatched SKU Refusal (Correction 1)
+  -- Receiver attempts to receive PO Line 1 (Oil Filter / t_product_1) but passes
+  -- product_id = t_product_2 (Brake Pad) or same-tenant mismatched SKU.
+  -- Database must refuse fail-closed with 'receipt_product_mismatches_po_line'.
+  -- Zero stock movements must be created for t_product_2.
+  -- ---------------------------------------------------------------------------
+  select count(*) into v_mismatch_sm_count
+    from public.stock_movements
+   where organisation_id = t_org_a and product_id = t_product_2;
+
+  begin
+    perform public.api_garage_command(
+      t_org_a,
+      t_person_rcv_a,
+      'receiver',
+      gen_random_uuid(),
+      jsonb_build_object(
+        'type', 'PURCHASE',
+        'scm_step', 'receive',
+        'purchase_order_id', v_po_id,
+        'location_id', t_location_a,
+        'items', jsonb_build_array(
+          jsonb_build_object(
+            'line_no', 1,
+            'product_id', t_product_2,
+            'quantity', 1
+          )
+        )
+      ),
+      req_id
+    );
+  exception when others then
+    if sqlerrm = 'receipt_product_mismatches_po_line' then
+      v_caught_mismatch := true;
+    else
+      raise exception 'Unexpected exception for mismatched SKU receipt: %', sqlerrm;
+    end if;
+  end;
+
+  if not v_caught_mismatch then
+    raise exception 'Invariant Violation: Mismatched SKU receipt was not refused with receipt_product_mismatches_po_line';
+  end if;
+
+  select count(*) into v_sm_count
+    from public.stock_movements
+   where organisation_id = t_org_a and product_id = t_product_2;
+  if v_sm_count <> v_mismatch_sm_count then
+    raise exception 'Invariant Violation: Stock movement was created for mismatched SKU!';
+  end if;
+
+  -- ---------------------------------------------------------------------------
+  -- Step 12: Reordered and Subset Receipts (Correction 2)
+  -- Create PO with Line 1: 10 Oil Filters, Line 2: 8 Brake Pads.
+  -- Receipt A (Subset): receive Line 2 ONLY (3 units).
+  -- Invariants: Line 2 remaining = 5; Line 1 remaining = 10; PO receipt_status = 'partial'.
+  -- Persistent PO-line reference in goods_receipt_lines.purchase_order_line_id is verified.
+  -- Receipt B (Reordered): receive Line 1 (10 units).
+  -- Invariants: Line 1 remaining = 0; Line 2 remaining = 5; PO receipt_status = 'partial'.
+  -- Receipt C (Remainder): receive remaining 5 units of Line 2.
+  -- Invariants: Total remaining = 0; PO receipt_status = 'complete'.
+  -- ---------------------------------------------------------------------------
+  res := public.api_garage_command(
+    t_org_a,
+    t_person_qm_a,
+    'quartermaster',
+    gen_random_uuid(),
+    jsonb_build_object(
+      'type', 'PURCHASE',
+      'scm_step', 'need',
+      'supplier_id', t_supplier_a,
+      'notes', 'PO for Reordered/Subset Receipt Test',
+      'items', jsonb_build_array(
+        jsonb_build_object('line_no', 1, 'product_id', t_product_1, 'description', 'Oil Filter', 'quantity', 10, 'unit_price', 15.00),
+        jsonb_build_object('line_no', 2, 'product_id', t_product_2, 'description', 'Brake Pad Set', 'quantity', 8, 'unit_price', 50.00)
+      )
+    ),
+    req_id
+  );
+  v_po_reorder_id := (res->'purchase_order'->>'id')::uuid;
+
+  select * into v_pol_reorder_1 from public.commercial_document_lines where document_id = v_po_reorder_id and line_no = 1;
+  select * into v_pol_reorder_2 from public.commercial_document_lines where document_id = v_po_reorder_id and line_no = 2;
+
+  -- Receipt A: Subset receiving Line 2 only (3 of 8)
+  res := public.api_garage_command(
+    t_org_a,
+    t_person_rcv_a,
+    'receiver',
+    gen_random_uuid(),
+    jsonb_build_object(
+      'type', 'PURCHASE',
+      'scm_step', 'receive',
+      'purchase_order_id', v_po_reorder_id,
+      'location_id', t_location_a,
+      'items', jsonb_build_array(
+        jsonb_build_object('po_line_id', v_pol_reorder_2.id, 'quantity', 3)
+      )
+    ),
+    req_id
+  );
+  if res->'purchase_order'->>'receipt_status' <> 'partial' then
+    raise exception 'Invariant Violation: Subset receipt status expected partial, got %', res->'purchase_order'->>'receipt_status';
+  end if;
+  if (res->'purchase_order'->>'remaining_open')::numeric <> 15 then
+    raise exception 'Invariant Violation: Expected 15 remaining open (10 + 5), got %', res->'purchase_order'->>'remaining_open';
+  end if;
+
+  -- Verify goods_receipt_lines.purchase_order_line_id is persisted
+  select count(*) into v_grl_count
+    from public.goods_receipt_lines
+   where purchase_order_line_id = v_pol_reorder_2.id and quantity = 3;
+  if v_grl_count <> 1 then
+    raise exception 'Invariant Violation: goods_receipt_lines.purchase_order_line_id not persisted for subset receipt';
+  end if;
+
+  -- Receipt B: Reordered receiving Line 1 (10 of 10)
+  res := public.api_garage_command(
+    t_org_a,
+    t_person_rcv_a,
+    'receiver',
+    gen_random_uuid(),
+    jsonb_build_object(
+      'type', 'PURCHASE',
+      'scm_step', 'receive',
+      'purchase_order_id', v_po_reorder_id,
+      'location_id', t_location_a,
+      'items', jsonb_build_array(
+        jsonb_build_object('po_line_no', 1, 'quantity', 10)
+      )
+    ),
+    req_id
+  );
+  if res->'purchase_order'->>'receipt_status' <> 'partial' then
+    raise exception 'Invariant Violation: Reordered receipt status expected partial, got %', res->'purchase_order'->>'receipt_status';
+  end if;
+  if (res->'purchase_order'->>'remaining_open')::numeric <> 5 then
+    raise exception 'Invariant Violation: Expected 5 remaining open for Line 2, got %', res->'purchase_order'->>'remaining_open';
+  end if;
+
+  -- Receipt C: Fulfill remainder of Line 2 (5 units)
+  res := public.api_garage_command(
+    t_org_a,
+    t_person_rcv_a,
+    'receiver',
+    gen_random_uuid(),
+    jsonb_build_object(
+      'type', 'PURCHASE',
+      'scm_step', 'receive',
+      'purchase_order_id', v_po_reorder_id,
+      'location_id', t_location_a,
+      'items', jsonb_build_array(
+        jsonb_build_object('po_line_no', 2, 'quantity', 5)
+      )
+    ),
+    req_id
+  );
+  if res->'purchase_order'->>'receipt_status' <> 'complete' then
+    raise exception 'Invariant Violation: Final receipt status expected complete, got %', res->'purchase_order'->>'receipt_status';
+  end if;
+  if (res->'purchase_order'->>'remaining_open')::numeric <> 0 then
+    raise exception 'Invariant Violation: Expected 0 remaining open, got %', res->'purchase_order'->>'remaining_open';
+  end if;
+
+  -- ---------------------------------------------------------------------------
+  -- Step 13: Duplicate-SKU Lines on PO (Correction 2)
+  -- Create PO with TWO lines having identical product_id (t_product_1):
+  -- Line 1: 10 units @ 15.00
+  -- Line 2: 5 units @ 15.00
+  -- Invariant: Receiving against Line 1 must NOT reduce or conflate Line 2 open quantity.
+  -- ---------------------------------------------------------------------------
+  res := public.api_garage_command(
+    t_org_a,
+    t_person_qm_a,
+    'quartermaster',
+    gen_random_uuid(),
+    jsonb_build_object(
+      'type', 'PURCHASE',
+      'scm_step', 'need',
+      'supplier_id', t_supplier_a,
+      'notes', 'PO with Duplicate SKU lines',
+      'items', jsonb_build_array(
+        jsonb_build_object('line_no', 1, 'product_id', t_product_1, 'description', 'Oil Filter - Bay 1', 'quantity', 10, 'unit_price', 15.00),
+        jsonb_build_object('line_no', 2, 'product_id', t_product_1, 'description', 'Oil Filter - Bay 2', 'quantity', 5, 'unit_price', 15.00)
+      )
+    ),
+    req_id
+  );
+  v_po_dup_id := (res->'purchase_order'->>'id')::uuid;
+
+  select * into v_pol_dup_1 from public.commercial_document_lines where document_id = v_po_dup_id and line_no = 1;
+  select * into v_pol_dup_2 from public.commercial_document_lines where document_id = v_po_dup_id and line_no = 2;
+
+  -- Receive against Line 1 only (10 units)
+  res := public.api_garage_command(
+    t_org_a,
+    t_person_rcv_a,
+    'receiver',
+    gen_random_uuid(),
+    jsonb_build_object(
+      'type', 'PURCHASE',
+      'scm_step', 'receive',
+      'purchase_order_id', v_po_dup_id,
+      'location_id', t_location_a,
+      'items', jsonb_build_array(
+        jsonb_build_object('po_line_id', v_pol_dup_1.id, 'quantity', 10)
+      )
+    ),
+    req_id
+  );
+  if res->'purchase_order'->>'receipt_status' <> 'partial' then
+    raise exception 'Invariant Violation: Duplicate SKU receipt 1 expected partial, got %', res->'purchase_order'->>'receipt_status';
+  end if;
+  if (res->'purchase_order'->>'remaining_open')::numeric <> 5 then
+    raise exception 'Invariant Violation: Duplicate SKU receipt 1 expected 5 remaining for Line 2, got %', res->'purchase_order'->>'remaining_open';
+  end if;
+
+  -- Receive against Line 2 (5 units)
+  res := public.api_garage_command(
+    t_org_a,
+    t_person_rcv_a,
+    'receiver',
+    gen_random_uuid(),
+    jsonb_build_object(
+      'type', 'PURCHASE',
+      'scm_step', 'receive',
+      'purchase_order_id', v_po_dup_id,
+      'location_id', t_location_a,
+      'items', jsonb_build_array(
+        jsonb_build_object('po_line_id', v_pol_dup_2.id, 'quantity', 5)
+      )
+    ),
+    req_id
+  );
+  if res->'purchase_order'->>'receipt_status' <> 'complete' then
+    raise exception 'Invariant Violation: Duplicate SKU receipt 2 expected complete, got %', res->'purchase_order'->>'receipt_status';
+  end if;
+  if (res->'purchase_order'->>'remaining_open')::numeric <> 0 then
+    raise exception 'Invariant Violation: Duplicate SKU receipt 2 expected 0 remaining, got %', res->'purchase_order'->>'remaining_open';
+  end if;
+
+  -- ---------------------------------------------------------------------------
+  -- Step 14: Server-Side Unit Cost Derivation & Tampering Coverage (Correction 3)
+  -- Create PO with Line 1: 5 units @ 15.00.
+  -- Receiver passes tampered unit_cost: 9999.99 and cost: 8888.88 in payload.
+  -- Invariant: Persisted goods_receipt_lines.unit_cost MUST be 15.00.
+  -- Invariant: Persisted stock_movements.unit_cost MUST be 15.00.
+  -- Caller-supplied costs cannot alter server-side inventory valuation.
+  -- ---------------------------------------------------------------------------
+  res := public.api_garage_command(
+    t_org_a,
+    t_person_qm_a,
+    'quartermaster',
+    gen_random_uuid(),
+    jsonb_build_object(
+      'type', 'PURCHASE',
+      'scm_step', 'need',
+      'supplier_id', t_supplier_a,
+      'notes', 'PO for Valuation Tampering Test',
+      'items', jsonb_build_array(
+        jsonb_build_object('line_no', 1, 'product_id', t_product_1, 'description', 'Oil Filter', 'quantity', 5, 'unit_price', 15.00)
+      )
+    ),
+    req_id
+  );
+  v_po_tamper_id := (res->'purchase_order'->>'id')::uuid;
+
+  res := public.api_garage_command(
+    t_org_a,
+    t_person_rcv_a,
+    'receiver',
+    gen_random_uuid(),
+    jsonb_build_object(
+      'type', 'PURCHASE',
+      'scm_step', 'receive',
+      'purchase_order_id', v_po_tamper_id,
+      'location_id', t_location_a,
+      'items', jsonb_build_array(
+        jsonb_build_object(
+          'line_no', 1,
+          'product_id', t_product_1,
+          'quantity', 5,
+          'unit_cost', 9999.99,
+          'cost', 8888.88,
+          'unit_price', 7777.77
+        )
+      )
+    ),
+    req_id
+  );
+  v_tamper_gr_id := (res->'goods_receipt'->>'id')::uuid;
+
+  select unit_cost into v_tamper_grl_cost
+    from public.goods_receipt_lines
+   where receipt_id = v_tamper_gr_id and line_no = 1;
+  if v_tamper_grl_cost <> 15.00 then
+    raise exception 'Invariant Violation: goods_receipt_lines.unit_cost tampered! Expected 15.00, got %', v_tamper_grl_cost;
+  end if;
+
+  select unit_cost into v_tamper_sm_cost
+    from public.stock_movements
+   where source_id = v_tamper_gr_id and source_type = 'goods_receipt' and product_id = t_product_1;
+  if v_tamper_sm_cost <> 15.00 then
+    raise exception 'Invariant Violation: stock_movements.unit_cost tampered! Expected 15.00, got %', v_tamper_sm_cost;
+  end if;
+
+  raise notice 'SERP-541 Probe: All 14 goods receipt persistence invariants verified successfully.';
 end;
 $$;
 
