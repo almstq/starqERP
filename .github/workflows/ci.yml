@@ -87,6 +87,9 @@ jobs:
       - name: ERP-541 / B2 authenticated Goods Receipt Edge boundary test
         run: deno test --allow-read tests/contract/serp541_receipt_persistence_edge_test.ts
 
+      - name: ERP-544 / B2a authenticated GRNI Accrual Edge boundary test
+        run: deno test --allow-read tests/contract/serp544_grni_accrual_edge_test.ts
+
   rls-isolation-probe:
     name: RLS Tenant Isolation Probe (SERP-337)
     runs-on: ubuntu-latest
@@ -191,6 +194,9 @@ jobs:
 
       - name: ERP-541 / B2 Goods Receipt persistence behavioral probe
         run: psql --set ON_ERROR_STOP=1 --file tests/serp541_goods_receipt_persistence_probe.sql
+
+      - name: ERP-544 / B2a GRNI Accrual behavioral probe
+        run: psql --set ON_ERROR_STOP=1 --file tests/serp544_grni_accrual_probe.sql
 
   serp-356-payment-concurrency:
     name: SERP-356 Payment Concurrency (refund ceiling / settlement batch)
