@@ -477,7 +477,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
   {
     id: 'coa-2160',
     code: '2160',
-    name: 'Due To Related Book',
+    name: 'Goods Received Not Invoiced (GRNI)',
     accountClass: 'LIABILITY',
     subtype: 'CURRENT_LIABILITY',
     parentId: 'coa-2100',
@@ -487,9 +487,8 @@ export const DEFAULT_CHART_OF_ACCOUNTS: AccountRecord[] = [
     balance: 0,
     isSystem: true,
     description:
-      'SERP-316. The mirror of 1220 — what this book owes another book of the same legal entity. ' +
-      'Eliminated on consolidation. The sum of 1220 across all books must equal the sum of 2160; the ' +
-      'consolidation reports any difference rather than absorbing it.',
+      'Interim liability accrual for goods physically received but not yet invoiced by the supplier. ' +
+      'Cleared upon supplier bill matching.',
   },
 
   // ==========================================
