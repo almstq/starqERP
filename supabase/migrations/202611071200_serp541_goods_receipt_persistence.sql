@@ -1660,6 +1660,14 @@ begin
              v_delivery_note, v_received_at, target_person, command->>'notes');
 
           v_line_items := coalesce(command->'items', command->'received_items', command->'lines');
+          if v_line_items is null and nullif(coalesce(command->>'qty', command->>'quantity', command->>'amount', ''), '') is not null then
+            v_line_items := jsonb_build_array(jsonb_build_object(
+              'line_no', coalesce(nullif(command->>'line_no', ''), '1')::integer,
+              'quantity', coalesce(nullif(command->>'qty', ''), nullif(command->>'quantity', ''), '1')::numeric,
+              'unit_cost', coalesce(nullif(command->>'cost', ''), nullif(command->>'amount', ''), nullif(command->>'unit_cost', ''), '0')::numeric,
+              'description', coalesce(nullif(trim(command->>'item'), ''), nullif(trim(command->>'description'), ''), 'Received Item')
+            ));
+          end if;
           v_line_idx := 0;
 
           if v_line_items is not null and jsonb_typeof(v_line_items) = 'array' and jsonb_array_length(v_line_items) > 0 then
@@ -1865,10 +1873,6 @@ begin
                 ));
               end if;
             end loop;
-
-            if v_line_idx = 0 then
-              raise exception 'purchase_order_already_fully_received';
-            end if;
           end if;
 
           select coalesce(sum(pol.quantity), 0) into v_total_ordered
