@@ -126,8 +126,8 @@ begin
 
   insert into public.books (id, organisation_id, code, name, is_default, status)
   values
-    (t_book_a, t_org_a, 'ALPHABK541', 'Alpha Main Book', true, 'active'),
-    (t_book_b, t_org_b, 'BETABK541', 'Beta Main Book', true, 'active')
+    (t_book_a, t_org_a, 'ALPHA541', 'Alpha Main Book', true, 'active'),
+    (t_book_b, t_org_b, 'BETA541', 'Beta Main Book', true, 'active')
   on conflict (id) do nothing;
 
   insert into public.contacts (id, organisation_id, kind, display_name)
