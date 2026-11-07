@@ -855,7 +855,7 @@ begin
    where purchase_order_line_id = v_pol_reorder_1.id;
   v_db_line1_open := v_pol_reorder_1.quantity - v_db_line1_received;
   if v_db_line1_received <> 10 or v_db_line1_open <> 0 then
-    raise exception 'Invariant Violation: DB per-line check failed for Line 1 after final receipt', v_db_line1_open;
+    raise exception 'Invariant Violation: DB per-line check failed for Line 1 after final receipt (expected 0 open, got %)', v_db_line1_open;
   end if;
 
   select coalesce(sum(quantity), 0) into v_db_line2_received
@@ -863,7 +863,7 @@ begin
    where purchase_order_line_id = v_pol_reorder_2.id;
   v_db_line2_open := v_pol_reorder_2.quantity - v_db_line2_received;
   if v_db_line2_received <> 8 or v_db_line2_open <> 0 then
-    raise exception 'Invariant Violation: DB per-line check failed for Line 2 after final receipt', v_db_line2_open;
+    raise exception 'Invariant Violation: DB per-line check failed for Line 2 after final receipt (expected 0 open, got %)', v_db_line2_open;
   end if;
 
   -- ---------------------------------------------------------------------------
@@ -1041,7 +1041,7 @@ begin
    where purchase_order_line_id = v_pol_dup_1.id;
   v_db_line1_open := v_pol_dup_1.quantity - v_db_line1_received;
   if v_db_line1_received <> 10 or v_db_line1_open <> 0 then
-    raise exception 'Invariant Violation: DB per-line check failed for Duplicate SKU Line 1 after fulfillment', v_db_line1_open;
+    raise exception 'Invariant Violation: DB per-line check failed for Duplicate SKU Line 1 after fulfillment (expected 0 open, got %)', v_db_line1_open;
   end if;
 
   select coalesce(sum(quantity), 0) into v_db_line2_received
@@ -1049,7 +1049,7 @@ begin
    where purchase_order_line_id = v_pol_dup_2.id;
   v_db_line2_open := v_pol_dup_2.quantity - v_db_line2_received;
   if v_db_line2_received <> 5 or v_db_line2_open <> 0 then
-    raise exception 'Invariant Violation: DB per-line check failed for Duplicate SKU Line 2 after fulfillment', v_db_line2_open;
+    raise exception 'Invariant Violation: DB per-line check failed for Duplicate SKU Line 2 after fulfillment (expected 0 open, got %)', v_db_line2_open;
   end if;
   
   -- ---------------------------------------------------------------------------
