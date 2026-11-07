@@ -75,11 +75,11 @@ All five are **MERGEABLE**, none is merged, none is self-approved.
 
 | PR | Branch | Contains | CI | Blocked on |
 |---|---|---|---|---|
-| [#25](https://github.com/almstq/starqERP/pull/25) | `elder/2026-08-30-serp341-taxonomy` | CoA taxonomy corrections + missing Maldives statutory accounts | green | Founder review |
-| [#26](https://github.com/almstq/starqERP/pull/26) | `elder/2026-08-30-serp343-coa-validation` | CoA structural validation, four gaps enforced. **Carries the Azhad review pack** at `docs/qa/coa-accountant-audit-2026-08-29/AZHAD_SECOND_REVIEW_PACK.md` | green | Founder review |
-| [#27](https://github.com/almstq/starqERP/pull/27) | `elder/2026-08-30-serp356-payment-failure-modes` | Payment failure modes, 12 of 12 guarded | green | Founder review |
-| [#28](https://github.com/almstq/starqERP/pull/28) | `elder/2026-08-30-serp234-reachability` | SERP-234 reachability sweep + standing CI gate | green | Second-party review |
-| [#29](https://github.com/almstq/starqERP/pull/29) | `elder/2026-08-30-starq-account-adr` | ADR 010 Starq Account + task set. **Docs only** | — | Founder acceptance of ADR |
+| [#25](https://github.com/Starq-Technologies-Pvt-Ltd/starqERP/pull/25) | `elder/2026-08-30-serp341-taxonomy` | CoA taxonomy corrections + missing Maldives statutory accounts | green | Founder review |
+| [#26](https://github.com/Starq-Technologies-Pvt-Ltd/starqERP/pull/26) | `elder/2026-08-30-serp343-coa-validation` | CoA structural validation, four gaps enforced. **Carries the Azhad review pack** at `docs/qa/coa-accountant-audit-2026-08-29/AZHAD_SECOND_REVIEW_PACK.md` | green | Founder review |
+| [#27](https://github.com/Starq-Technologies-Pvt-Ltd/starqERP/pull/27) | `elder/2026-08-30-serp356-payment-failure-modes` | Payment failure modes, 12 of 12 guarded | green | Founder review |
+| [#28](https://github.com/Starq-Technologies-Pvt-Ltd/starqERP/pull/28) | `elder/2026-08-30-serp234-reachability` | SERP-234 reachability sweep + standing CI gate | green | Second-party review |
+| [#29](https://github.com/Starq-Technologies-Pvt-Ltd/starqERP/pull/29) | `elder/2026-08-30-starq-account-adr` | ADR 010 Starq Account + task set. **Docs only** | — | Founder acceptance of ADR |
 
 **Merge order for #25 → #26 → #27 is tested, not assumed.** They were merged
 in that order in a scratch worktree against `origin/main`: zero conflicts, no

@@ -19,7 +19,7 @@ Clone the repository and install all web frontend dependencies:
 
 ```bash
 # Clone the repository
-git clone https://github.com/almstq/starqERP.git
+git clone https://github.com/Starq-Technologies-Pvt-Ltd/starqERP.git
 cd starqERP
 
 # Install web dependencies

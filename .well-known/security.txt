@@ -6,8 +6,8 @@ Contact: mailto:founder@starq.mv
 Expires: 2027-08-26T00:00:00.000Z
 Preferred-Languages: en, dv
 Canonical: https://erp.starq.mv/.well-known/security.txt
-Policy: https://github.com/almstq/starqERP/blob/main/SECURITY.md
-Acknowledgments: https://github.com/almstq/starqERP/blob/main/SECURITY.md#hall-of-fame
+Policy: https://github.com/Starq-Technologies-Pvt-Ltd/starqERP/blob/main/SECURITY.md
+Acknowledgments: https://github.com/Starq-Technologies-Pvt-Ltd/starqERP/blob/main/SECURITY.md#hall-of-fame
 
 # Safe Harbor:
 # We will not pursue legal action against security researchers who find and report
