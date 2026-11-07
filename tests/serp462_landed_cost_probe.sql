@@ -61,6 +61,9 @@ declare
   res_replay jsonb;
   v_po_id uuid;
   v_gr_id uuid;
+  v_gr_id_1 uuid;
+  v_gr_id_2 uuid;
+  v_gr_id_3 uuid;
   v_gr_line_1_id uuid;
   v_gr_line_2_id uuid;
   v_gr_line_3_id uuid;
@@ -249,6 +252,7 @@ begin
     raise exception 'Receipt 1 failed: %', res;
   end if;
   v_gr_id := (res->'goods_receipt'->>'id')::uuid;
+  v_gr_id_1 := v_gr_id;
 
   -- Capture GR lines
   select id into v_gr_line_1_id from public.goods_receipt_lines where receipt_id = v_gr_id and line_no = 1;
@@ -476,6 +480,7 @@ begin
     req_id
   );
   v_gr_id := (res->'goods_receipt'->>'id')::uuid;
+  v_gr_id_2 := v_gr_id;
 
   res := public.api_garage_command(
     t_org_a,
@@ -561,6 +566,7 @@ begin
     req_id
   );
   v_gr_id := (res->'goods_receipt'->>'id')::uuid;
+  v_gr_id_3 := v_gr_id;
 
   res := public.api_garage_command(
     t_org_a,
@@ -825,7 +831,7 @@ begin
     jsonb_build_object(
       'type', 'PURCHASE',
       'scm_step', 'receive',
-      'receipt_id', v_gr_id,
+      'receipt_id', v_gr_id_1,
       'charges', jsonb_build_array(
         jsonb_build_object('label', 'Ocean Freight', 'amount', 800.00, 'basis', 'value', 'recoverable', false),
         jsonb_build_object('label', 'Customs Clearing', 'amount', 200.00, 'basis', 'value', 'recoverable', false),
@@ -857,7 +863,7 @@ begin
   -- ─────────────────────────────────────────────────────────────────────────
   -- STEP 11: Invariant 11 — Read-Through Summary Function
   -- ─────────────────────────────────────────────────────────────────────────
-  v_summary := public.receipt_landed_cost_summary(t_org_a, v_gr_id);
+  v_summary := public.receipt_landed_cost_summary(t_org_a, v_gr_id_1);
   if (v_summary->>'allocations_count')::integer < 1 then
     raise exception 'Invariant Violation (Invariant 11): receipt_landed_cost_summary returned invalid allocations_count: %', v_summary;
   end if;
