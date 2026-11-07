@@ -2102,6 +2102,19 @@ begin
                 'receipt_no', v_existing_gr.receipt_no,
                 'landed_cost', v_lc_result
               );
+
+              update public.idempotency_keys
+                 set state = 'accepted', response_code = 200, response_body = response
+               where organisation_id = target_org and key = command_key;
+
+              insert into public.audit_events
+                (organisation_id, actor_person_id, acting_seat, action, object_type,
+                 object_id, request_id, after_state, metadata)
+              values
+                (target_org, target_person, target_seat, 'erp.purchase',
+                 'landed_cost_document', (v_lc_result->>'document_id')::uuid, request_identifier, response,
+                 jsonb_build_object('idempotency_key', command_key));
+
               return response;
             else
               raise exception 'purchase_order_id_required';
