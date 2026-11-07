@@ -110,9 +110,9 @@ $$\text{Identity} \longrightarrow \begin{matrix} \text{Platform Entitlement} \\ 
 
 | PR | What landed | Merge commit |
 | :--- | :--- | :--- |
-| [#123](https://github.com/almstq/starqERP/pull/123) | PACKET-3+4 bank/CoA tenant-scoping | `5049b30` |
-| [#124](https://github.com/almstq/starqERP/pull/124) | PACKET-5 cash-flow + bank-reconciliation tenant isolation | `f040561` |
-| [#122](https://github.com/almstq/starqERP/pull/122) | SERP-314 invoice price auto-resolve from customer tier | `e341e83` |
+| [#123](https://github.com/Starq-Technologies-Pvt-Ltd/starqERP/pull/123) | PACKET-3+4 bank/CoA tenant-scoping | `5049b30` |
+| [#124](https://github.com/Starq-Technologies-Pvt-Ltd/starqERP/pull/124) | PACKET-5 cash-flow + bank-reconciliation tenant isolation | `f040561` |
+| [#122](https://github.com/Starq-Technologies-Pvt-Ltd/starqERP/pull/122) | SERP-314 invoice price auto-resolve from customer tier | `e341e83` |
 
 Candidate `bc6d5fc` is **not** marked retired in this file; that is a Finance-register decision after AG records it.
 
@@ -144,7 +144,7 @@ starqERP is built upon zero-trust architectural principles:
 
 ### 1. Clone & Install Dependencies
 ```bash
-git clone https://github.com/almstq/starqERP.git
+git clone https://github.com/Starq-Technologies-Pvt-Ltd/starqERP.git
 cd starqERP
 npm --prefix web install
 ```
