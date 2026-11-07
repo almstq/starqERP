@@ -15,6 +15,8 @@ Follow this guide to configure and run starqERP on your local development machin
 
 ## 2. Installation & Workspace Setup
 
+> **Repository model (permanent):** `Starq-Technologies-Pvt-Ltd/starqERP` is the **PRIMARY** engineering repository — the single source of truth and the only place you push, branch, open PRs, or merge. `almstq/starqERP` is a **deployment-only mirror** (Vercel target) that receives PRIMARY `main` automatically via one-way sync — **never** clone, push, or develop against it. Your `origin` must always be the PRIMARY repository. See [`../operations/DEPLOYMENT_MIRROR_OPERATING_MANUAL.md`](../operations/DEPLOYMENT_MIRROR_OPERATING_MANUAL.md).
+
 Clone the repository and install all web frontend dependencies:
 
 ```bash
