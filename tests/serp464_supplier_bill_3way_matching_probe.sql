@@ -109,10 +109,10 @@ begin
     (t_org_b, 'supplier_bill', 'BILL-B-', 5)
   on conflict (organisation_id, sequence_type) do nothing;
 
-  insert into public.books (id, organisation_id, name, is_default, currency)
+  insert into public.books (id, organisation_id, code, name, is_default, status)
   values
-    (t_book_a, t_org_a, 'Default Book A', true, 'MVR'),
-    (t_book_b, t_org_b, 'Default Book B', true, 'MVR')
+    (t_book_a, t_org_a, 'BOOK-464A', 'Default Book A', true, 'active'),
+    (t_book_b, t_org_b, 'BOOK-464B', 'Default Book B', true, 'active')
   on conflict (id) do nothing;
 
   insert into public.chart_of_accounts
@@ -126,38 +126,50 @@ begin
     (t_org_b, '2110', 'Accounts Payable (Trade Creditors)', 'LIABILITY', 'CURRENT_LIABILITY', '2100', 2, 'MULTI', 'control', 'active', 'Amounts owed to trade suppliers')
   on conflict (organisation_id, code) do nothing;
 
-  insert into public.persons (id, person_key, display_label, status)
+  insert into public.persons (id, person_key, display_label)
   values
-    (t_person_fc_a, 'key-fc-a', 'Alice Controller A', 'active'),
-    (t_person_rcv_a, 'key-rcv-a', 'Bob Receiver A', 'active'),
-    (t_person_b, 'key-b', 'Charlie Tenant B', 'active')
+    (t_person_fc_a, 'key-fc-a', 'Alice Controller A'),
+    (t_person_rcv_a, 'key-rcv-a', 'Bob Receiver A'),
+    (t_person_b, 'key-b', 'Charlie Tenant B')
   on conflict (id) do nothing;
 
-  insert into public.seats (organisation_id, seat_code, display_name, description)
+  insert into public.memberships (id, organisation_id, person_id, status)
   values
-    (t_org_a, 'financial_controller', 'Financial Controller', 'Finance controller seat'),
-    (t_org_a, 'receiver', 'Goods Receiver', 'Stores receiving seat'),
-    (t_org_b, 'financial_controller', 'Financial Controller', 'Finance controller seat'),
-    (t_org_b, 'receiver', 'Goods Receiver', 'Stores receiving seat')
-  on conflict (organisation_id, seat_code) do nothing;
+    (t_mem_fc_a, t_org_a, t_person_fc_a, 'active'),
+    (t_mem_rcv_a, t_org_a, t_person_rcv_a, 'active'),
+    (t_mem_b, t_org_b, t_person_b, 'active')
+  on conflict (organisation_id, person_id) do nothing;
 
-  insert into public.membership_seats (id, organisation_id, person_id, seat_code, state)
+  select id into t_mem_fc_a from public.memberships where organisation_id = t_org_a and person_id = t_person_fc_a;
+  select id into t_mem_rcv_a from public.memberships where organisation_id = t_org_a and person_id = t_person_rcv_a;
+  select id into t_mem_b from public.memberships where organisation_id = t_org_b and person_id = t_person_b;
+
+  insert into public.seats (code, label)
   values
-    (t_mem_fc_a, t_org_a, t_person_fc_a, 'financial_controller', 'active'),
-    (t_mem_rcv_a, t_org_a, t_person_rcv_a, 'receiver', 'active'),
-    (t_mem_b, t_org_b, t_person_b, 'financial_controller', 'active')
+    ('financial_controller', 'Financial Controller'),
+    ('receiver', 'Receiver'),
+    ('payer', 'Payer'),
+    ('quartermaster', 'Quartermaster')
+  on conflict (code) do nothing;
+
+  insert into public.membership_seats (membership_id, seat_code)
+  values
+    (t_mem_fc_a, 'financial_controller'),
+    (t_mem_rcv_a, 'receiver'),
+    (t_mem_b, 'financial_controller'),
+    (t_mem_b, 'receiver')
+  on conflict (membership_id, seat_code) do nothing;
+
+  insert into public.contacts (id, organisation_id, kind, display_name)
+  values
+    (t_supplier_a, t_org_a, 'supplier', 'Starq Maldives Supplier A'),
+    (t_supplier_b, t_org_b, 'supplier', 'Starq Maldives Supplier B')
   on conflict (id) do nothing;
 
-  insert into public.contacts (id, organisation_id, name, kind)
+  insert into public.products (id, organisation_id, sku, kind, name, active)
   values
-    (t_supplier_a, t_org_a, 'Starq Maldives Supplier A', 'supplier'),
-    (t_supplier_b, t_org_b, 'Starq Maldives Supplier B', 'supplier')
-  on conflict (id) do nothing;
-
-  insert into public.products (id, organisation_id, name, unit)
-  values
-    (t_product_1, t_org_a, 'Premium Oil 5W30', 'bottle'),
-    (t_product_2, t_org_a, 'Brake Pads Set', 'set')
+    (t_product_1, t_org_a, 'SKU-OIL-5W30', 'stock', 'Premium Oil 5W30', true),
+    (t_product_2, t_org_a, 'SKU-PADS-SET', 'stock', 'Brake Pads Set', true)
   on conflict (id) do nothing;
 
   insert into public.locations (id, organisation_id, code, name, kind, active)
