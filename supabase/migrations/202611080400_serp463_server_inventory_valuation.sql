@@ -18,6 +18,11 @@
 
 begin;
 
+-- 0. Extend goods_receipt_lines with landed valuation columns
+alter table public.goods_receipt_lines
+  add column if not exists landed_value numeric(20, 6),
+  add column if not exists landed_unit_cost numeric(20, 6);
+
 -- 1. Table: public.inventory_valuations
 create table if not exists public.inventory_valuations (
   id uuid primary key default gen_random_uuid(),
