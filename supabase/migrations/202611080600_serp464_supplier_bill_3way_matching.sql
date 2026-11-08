@@ -2872,11 +2872,36 @@ begin
           -- 7. Emit balanced immutable accounting event: Dr 2160 (GRNI) / Cr 2110 (AP)
           v_ae_id := gen_random_uuid();
           insert into public.accounting_events (
-            id, organisation_id, event_type, event_key, occurred_at, created_by,
-            gross_amount, metadata
+            id,
+            organisation_id,
+            family,
+            event_type,
+            source_type,
+            source_id,
+            idempotency_key,
+            event_date,
+            currency,
+            gross_amount,
+            net_amount,
+            tax_amount,
+            status,
+            narration,
+            metadata
           ) values (
-            v_ae_id, target_org, 'SUPPLIER_INVOICE', 'bill-match:' || v_bill_id::text,
-            now(), target_person, v_matched_amount,
+            v_ae_id,
+            target_org,
+            'PROCURE_TO_PAY',
+            'SUPPLIER_INVOICE',
+            'supplier_bill',
+            v_bill_id,
+            'bill-match:' || v_bill_id::text,
+            v_bill_date,
+            'MVR',
+            v_matched_amount,
+            v_matched_amount,
+            0,
+            'RECORDED',
+            'Recognise AP and clear GRNI for bill ' || v_bill_no,
             jsonb_build_object(
               'purchase_order_id', v_po_id,
               'bill_id', v_bill_id,
