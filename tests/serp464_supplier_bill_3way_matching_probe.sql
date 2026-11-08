@@ -67,6 +67,7 @@ declare
   v_bill_tol_id uuid;
   v_bill_under_id uuid;
   v_ae1_id uuid;
+  v_match1_payload jsonb;
 
   v_bal_2160_start numeric(20, 6);
   v_bal_2110_start numeric(20, 6);
@@ -431,26 +432,28 @@ begin
   -- ─────────────────────────────────────────────────────────────────────────
   -- Invariant 9 & 10: Clean Match — Creates Payable, Clears GRNI 2160, Credits AP 2110
   -- ─────────────────────────────────────────────────────────────────────────
+  v_match1_payload := jsonb_build_object(
+    'type', 'PURCHASE',
+    'scm_step', 'match',
+    'purchase_order_id', v_po1_id,
+    'bill_no', 'INV-SUP-1001',
+    'bill_date', '2026-11-08',
+    'lines', jsonb_build_array(
+      jsonb_build_object(
+        'po_line_no', 1,
+        'product_id', t_product_1,
+        'quantity', 10,
+        'unit_cost', 450.00
+      )
+    )
+  );
+
   res := public.api_garage_command(
     t_org_a,
     t_person_fc_a,
     'financial_controller',
     cmd_key_match1,
-    jsonb_build_object(
-      'type', 'PURCHASE',
-      'scm_step', 'match',
-      'purchase_order_id', v_po1_id,
-      'bill_no', 'INV-SUP-1001',
-      'bill_date', '2026-11-08',
-      'lines', jsonb_build_array(
-        jsonb_build_object(
-          'po_line_no', 1,
-          'product_id', t_product_1,
-          'quantity', 10,
-          'unit_cost', 450.00
-        )
-      )
-    ),
+    v_match1_payload,
     req_id
   );
 
@@ -497,15 +500,7 @@ begin
     t_person_fc_a,
     'financial_controller',
     cmd_key_match1, -- same key
-    jsonb_build_object(
-      'type', 'PURCHASE',
-      'scm_step', 'match',
-      'purchase_order_id', v_po1_id,
-      'bill_no', 'INV-SUP-1001',
-      'lines', jsonb_build_array(
-        jsonb_build_object('po_line_no', 1, 'product_id', t_product_1, 'quantity', 10, 'unit_cost', 450.00)
-      )
-    ),
+    v_match1_payload,
     req_id
   );
   assert (res_replay->'supplier_bill'->>'id')::uuid = v_bill1_id, 'Replay must return cached supplier bill';
