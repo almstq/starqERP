@@ -116,14 +116,14 @@ begin
   on conflict (id) do nothing;
 
   insert into public.chart_of_accounts
-    (organisation_id, code, name, account_class, subtype, parent_code, level, currency, posting_control, status, description)
+    (organisation_id, code, name, account_class, subtype, parent_code, level, currency, posting_control, description)
   values
-    (t_org_a, '1310', 'Inventory On Hand', 'ASSET', 'CURRENT_ASSET', '1300', 2, 'MULTI', 'control', 'active', 'Inventory asset on hand'),
-    (t_org_b, '1310', 'Inventory On Hand', 'ASSET', 'CURRENT_ASSET', '1300', 2, 'MULTI', 'control', 'active', 'Inventory asset on hand'),
-    (t_org_a, '2160', 'Goods Received Not Invoiced (GRNI)', 'LIABILITY', 'CURRENT_LIABILITY', '2100', 2, 'MULTI', 'control', 'active', 'GRNI Accrual liability'),
-    (t_org_b, '2160', 'Goods Received Not Invoiced (GRNI)', 'LIABILITY', 'CURRENT_LIABILITY', '2100', 2, 'MULTI', 'control', 'active', 'GRNI Accrual liability'),
-    (t_org_a, '2110', 'Accounts Payable (Trade Creditors)', 'LIABILITY', 'CURRENT_LIABILITY', '2100', 2, 'MULTI', 'control', 'active', 'Amounts owed to trade suppliers'),
-    (t_org_b, '2110', 'Accounts Payable (Trade Creditors)', 'LIABILITY', 'CURRENT_LIABILITY', '2100', 2, 'MULTI', 'control', 'active', 'Amounts owed to trade suppliers')
+    (t_org_a, '1310', 'Inventory On Hand', 'ASSET', 'CURRENT_ASSET', null, 2, 'MULTI', 'control', 'Inventory asset on hand'),
+    (t_org_b, '1310', 'Inventory On Hand', 'ASSET', 'CURRENT_ASSET', null, 2, 'MULTI', 'control', 'Inventory asset on hand'),
+    (t_org_a, '2160', 'Goods Received Not Invoiced (GRNI)', 'LIABILITY', 'CURRENT_LIABILITY', null, 2, 'MULTI', 'control', 'GRNI Accrual liability'),
+    (t_org_b, '2160', 'Goods Received Not Invoiced (GRNI)', 'LIABILITY', 'CURRENT_LIABILITY', null, 2, 'MULTI', 'control', 'GRNI Accrual liability'),
+    (t_org_a, '2110', 'Accounts Payable (Trade Creditors)', 'LIABILITY', 'CURRENT_LIABILITY', null, 2, 'MULTI', 'control', 'Amounts owed to trade suppliers'),
+    (t_org_b, '2110', 'Accounts Payable (Trade Creditors)', 'LIABILITY', 'CURRENT_LIABILITY', null, 2, 'MULTI', 'control', 'Amounts owed to trade suppliers')
   on conflict (organisation_id, code) do nothing;
 
   insert into public.persons (id, person_key, display_label)
