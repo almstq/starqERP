@@ -67,7 +67,11 @@ declare
   v_new_val numeric(20, 6);
   v_new_avg numeric(20, 6);
 begin
-  if not app_private.has_organisation_access(p_org) then
+  if app_private.current_person_id() is not null and not app_private.has_organisation_access(p_org) then
+    raise exception 'permission_denied';
+  end if;
+
+  if not exists (select 1 from public.organisations where id = p_org and status = 'active') then
     raise exception 'permission_denied';
   end if;
 
@@ -143,7 +147,11 @@ declare
   v_last_lc uuid;
   v_sku text;
 begin
-  if not app_private.has_organisation_access(p_org) then
+  if app_private.current_person_id() is not null and not app_private.has_organisation_access(p_org) then
+    raise exception 'permission_denied';
+  end if;
+
+  if not exists (select 1 from public.organisations where id = p_org and status = 'active') then
     raise exception 'permission_denied';
   end if;
 

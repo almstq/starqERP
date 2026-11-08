@@ -155,38 +155,38 @@ begin
   -- PO 1: 100 units of Product 1 @ MVR 10.00 = 1000.00
   -- ─────────────────────────────────────────────────────────────────────────
   res := public.api_garage_command(
-    'PURCHASE',
     t_org_a,
     t_person_qm_a,
     'quartermaster',
+    cmd_key_po1,
     jsonb_build_object(
+      'type', 'PURCHASE',
       'scm_step', 'need',
       'supplier_id', t_supplier_a,
       'document_no', 'PO-VAL-001',
       'items', jsonb_build_array(
-        jsonb_build_object('product_id', t_product_1, 'item_key', 'FILT-OIL-001', 'description', 'Oil Filter', 'quantity', 100, 'unit_price', 10.00)
+        jsonb_build_object('line_no', 1, 'product_id', t_product_1, 'item_key', 'FILT-OIL-001', 'description', 'Oil Filter', 'quantity', 100, 'unit_price', 10.00)
       )
     ),
-    cmd_key_po1,
-    'req-po-1'
+    req_id
   );
 
-  v_po1_id := (res->>'id')::uuid;
+  v_po1_id := (res->'purchase_order'->>'id')::uuid;
 
   -- Receive PO 1 via Receiver seat
   res := public.api_garage_command(
-    'PURCHASE',
     t_org_a,
     t_person_rcv_a,
     'receiver',
+    cmd_key_rcv1,
     jsonb_build_object(
+      'type', 'PURCHASE',
       'scm_step', 'receive',
       'purchase_order_id', v_po1_id,
       'location_id', t_location_a,
       'delivery_note_ref', 'DN-VAL-001'
     ),
-    cmd_key_rcv1,
-    'req-rcv-1'
+    req_id
   );
 
   v_gr1_id := (res->'goods_receipt'->>'id')::uuid;
@@ -220,37 +220,37 @@ begin
   --   Avg = round(1500 / 110, 4) = 13.6364  (NOT 50.00!)
   -- ─────────────────────────────────────────────────────────────────────────
   res := public.api_garage_command(
-    'PURCHASE',
     t_org_a,
     t_person_qm_a,
     'quartermaster',
+    cmd_key_po2,
     jsonb_build_object(
+      'type', 'PURCHASE',
       'scm_step', 'need',
       'supplier_id', t_supplier_a,
       'document_no', 'PO-VAL-002',
       'items', jsonb_build_array(
-        jsonb_build_object('product_id', t_product_1, 'item_key', 'FILT-OIL-001', 'description', 'Oil Filter Top-up', 'quantity', 10, 'unit_price', 50.00)
+        jsonb_build_object('line_no', 1, 'product_id', t_product_1, 'item_key', 'FILT-OIL-001', 'description', 'Oil Filter Top-up', 'quantity', 10, 'unit_price', 50.00)
       )
     ),
-    cmd_key_po2,
-    'req-po-2'
+    req_id
   );
 
-  v_po2_id := (res->>'id')::uuid;
+  v_po2_id := (res->'purchase_order'->>'id')::uuid;
 
   res := public.api_garage_command(
-    'PURCHASE',
     t_org_a,
     t_person_rcv_a,
     'receiver',
+    cmd_key_rcv2,
     jsonb_build_object(
+      'type', 'PURCHASE',
       'scm_step', 'receive',
       'purchase_order_id', v_po2_id,
       'location_id', t_location_a,
       'delivery_note_ref', 'DN-VAL-002'
     ),
-    cmd_key_rcv2,
-    'req-rcv-2'
+    req_id
   );
 
   v_gr2_id := (res->'goods_receipt'->>'id')::uuid;
@@ -288,19 +288,19 @@ begin
   -- Moving average becomes: round(1550 / 110, 4) = 14.0909
   -- ─────────────────────────────────────────────────────────────────────────
   res := public.api_garage_command(
-    'PURCHASE',
     t_org_a,
     t_person_rcv_a,
     'receiver',
+    cmd_key_lc2,
     jsonb_build_object(
+      'type', 'PURCHASE',
       'scm_step', 'receive',
       'receipt_id', v_gr2_id,
       'charges', jsonb_build_array(
         jsonb_build_object('label', 'Express courier freight', 'amount', 50.00, 'basis', 'value', 'recoverable', false)
       )
     ),
-    cmd_key_lc2,
-    'req-lc-2'
+    req_id
   );
 
   select * into v_val_row
@@ -331,30 +331,31 @@ begin
   -- Overall Org Total: 1550.00 + 4600.00 = 6150.00
   -- ─────────────────────────────────────────────────────────────────────────
   res := public.api_garage_command(
-    'PURCHASE',
     t_org_a,
     t_person_qm_a,
     'quartermaster',
+    cmd_key_po3,
     jsonb_build_object(
+      'type', 'PURCHASE',
       'scm_step', 'need',
       'supplier_id', t_supplier_a,
       'document_no', 'PO-VAL-003',
       'items', jsonb_build_array(
-        jsonb_build_object('product_id', t_product_2, 'item_key', 'BRAKE-PAD-002', 'description', 'Brake Pads', 'quantity', 20, 'unit_price', 200.00)
+        jsonb_build_object('line_no', 1, 'product_id', t_product_2, 'item_key', 'BRAKE-PAD-002', 'description', 'Brake Pads', 'quantity', 20, 'unit_price', 200.00)
       )
     ),
-    cmd_key_po3,
-    'req-po-3'
+    req_id
   );
 
-  v_po3_id := (res->>'id')::uuid;
+  v_po3_id := (res->'purchase_order'->>'id')::uuid;
 
   res := public.api_garage_command(
-    'PURCHASE',
     t_org_a,
     t_person_rcv_a,
     'receiver',
+    cmd_key_rcv3,
     jsonb_build_object(
+      'type', 'PURCHASE',
       'scm_step', 'receive',
       'purchase_order_id', v_po3_id,
       'location_id', t_location_a,
@@ -364,8 +365,7 @@ begin
         jsonb_build_object('label', 'Import GST', 'amount', 140.00, 'basis', 'value', 'recoverable', true, 'account_code', '1410')
       )
     ),
-    cmd_key_rcv3,
-    'req-rcv-3'
+    req_id
   );
 
   v_gr3_id := (res->'goods_receipt'->>'id')::uuid;
@@ -426,17 +426,17 @@ begin
   -- ─────────────────────────────────────────────────────────────────────────
   begin
     perform public.api_garage_command(
-      'PURCHASE',
       t_org_a,
       t_person_qm_a,
       'quartermaster', -- Quartermaster cannot receive
+      gen_random_uuid(),
       jsonb_build_object(
+        'type', 'PURCHASE',
         'scm_step', 'receive',
         'purchase_order_id', v_po1_id,
         'location_id', t_location_a
       ),
-      gen_random_uuid(),
-      'req-unauth-seat'
+      req_id
     );
   exception
     when others then
@@ -485,11 +485,12 @@ begin
   -- Replay Receipt 3 command with same idempotency key
   -- ─────────────────────────────────────────────────────────────────────────
   res_replay := public.api_garage_command(
-    'PURCHASE',
     t_org_a,
     t_person_rcv_a,
     'receiver',
+    cmd_key_rcv3,
     jsonb_build_object(
+      'type', 'PURCHASE',
       'scm_step', 'receive',
       'purchase_order_id', v_po3_id,
       'location_id', t_location_a,
@@ -499,8 +500,7 @@ begin
         jsonb_build_object('label', 'Import GST', 'amount', 140.00, 'basis', 'value', 'recoverable', true, 'account_code', '1410')
       )
     ),
-    cmd_key_rcv3,
-    'req-rcv-3'
+    req_id
   );
 
   if coalesce((res_replay->>'ok')::boolean, false) <> true then
