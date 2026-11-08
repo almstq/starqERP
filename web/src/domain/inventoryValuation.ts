@@ -247,3 +247,42 @@ export function journalFor(effect: ValuationEffect, reference: string): Valuatio
     },
   ];
 }
+
+/**
+ * ERP-463 / B4 Server-Authoritative Valuation Types
+ *
+ * The canonical source of truth for inventory valuation resides in Postgres:
+ *   - Table: `public.inventory_valuations`
+ *   - Functions: `public.calculate_moving_average_valuation`,
+ *                `public.recompute_product_valuation`,
+ *                `public.product_inventory_valuation`,
+ *                `public.inventory_1310_reconciliation`
+ *
+ * Client components consuming server-side valuation from `api_garage_command`
+ * or RPC read-throughs consume these structures.
+ */
+export interface ServerInventoryValuation {
+  organizationId: string;
+  productId: string;
+  quantityOnHand: number;
+  weightedAverageUnitCost: number;
+  totalAssetValue: number;
+  lastValuationAt?: string;
+  lastSourceType?: string;
+  lastSourceId?: string;
+}
+
+export interface InventoryValuationSummary {
+  organizationId: string;
+  totalProductsValued: number;
+  totalUnitsOnHold: number;
+  totalInventoryAssetValue: number;
+}
+
+export interface Inventory1310Reconciliation {
+  reconciled: boolean;
+  totalValuation: number;
+  account1310Balance: number;
+  difference: number;
+}
+
