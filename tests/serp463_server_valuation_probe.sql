@@ -420,11 +420,9 @@ begin
   -- Verify that inventory_1310_reconciliation detects any valuation / GL divergence
   -- ─────────────────────────────────────────────────────────────────────────
   begin
-    insert into public.inventory_valuations (
-      organisation_id, product_id, quantity_on_hand, average_unit_cost, total_value
-    ) values (
-      t_org_a, gen_random_uuid(), 5, 100.00, 500.00
-    );
+    update public.inventory_valuations
+       set total_value = total_value + 500.00
+     where organisation_id = t_org_a and product_id = t_product_1;
 
     v_recon := public.inventory_1310_reconciliation(t_org_a);
     if coalesce((v_recon->>'reconciled')::boolean, false) = true or (v_recon->>'difference')::numeric = 0 then
