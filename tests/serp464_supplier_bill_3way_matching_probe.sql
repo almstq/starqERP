@@ -111,8 +111,8 @@ begin
 
   insert into public.books (id, organisation_id, code, name, is_default, status)
   values
-    (t_book_a, t_org_a, 'BOOK-464A', 'Default Book A', true, 'active'),
-    (t_book_b, t_org_b, 'BOOK-464B', 'Default Book B', true, 'active')
+    (t_book_a, t_org_a, 'BK464A', 'Default Book A', true, 'active'),
+    (t_book_b, t_org_b, 'BK464B', 'Default Book B', true, 'active')
   on conflict (id) do nothing;
 
   insert into public.chart_of_accounts
