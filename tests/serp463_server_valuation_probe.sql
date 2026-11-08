@@ -490,6 +490,7 @@ begin
   -- ─────────────────────────────────────────────────────────────────────────
   perform set_config('app.organisation_id', t_org_b::text, true);
   perform set_config('app.person_id', t_person_b::text, true);
+  perform set_config('role', 'authenticated', true);
 
   select count(*) into v_count
     from public.inventory_valuations
@@ -500,6 +501,7 @@ begin
   end if;
 
   -- Reset to Tenant A context
+  perform set_config('role', 'postgres', true);
   perform set_config('app.organisation_id', t_org_a::text, true);
   perform set_config('app.person_id', t_person_rcv_a::text, true);
 
