@@ -75,18 +75,19 @@ alter table public.supplier_bill_lines enable row level security;
 
 drop policy if exists supplier_bills_tenant on public.supplier_bills;
 create policy supplier_bills_tenant on public.supplier_bills
-  for all to authenticated, service_role
-  using (organisation_id = app_private.current_organisation_id())
-  with check (organisation_id = app_private.current_organisation_id());
+  using (app_private.has_organisation_access(organisation_id));
 
 drop policy if exists supplier_bill_lines_tenant on public.supplier_bill_lines;
 create policy supplier_bill_lines_tenant on public.supplier_bill_lines
-  for all to authenticated, service_role
-  using (organisation_id = app_private.current_organisation_id())
-  with check (organisation_id = app_private.current_organisation_id());
+  using (app_private.has_organisation_access(organisation_id));
 
-grant select, insert, update on public.supplier_bills to authenticated, service_role;
-grant select, insert, update on public.supplier_bill_lines to authenticated, service_role;
+revoke all on public.supplier_bills from public, anon;
+grant select, insert, update on public.supplier_bills to authenticated;
+grant all on public.supplier_bills to service_role;
+
+revoke all on public.supplier_bill_lines from public, anon;
+grant select, insert, update on public.supplier_bill_lines to authenticated;
+grant all on public.supplier_bill_lines to service_role;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 2. Three-Way Matching Engine (SERP-311 Consolidation)
