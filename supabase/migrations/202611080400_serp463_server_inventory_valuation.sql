@@ -18,11 +18,6 @@
 
 begin;
 
--- 0. Extend goods_receipt_lines with landed valuation columns
-alter table public.goods_receipt_lines
-  add column if not exists landed_value numeric(20, 6),
-  add column if not exists landed_unit_cost numeric(20, 6);
-
 -- 1. Table: public.inventory_valuations
 create table if not exists public.inventory_valuations (
   id uuid primary key default gen_random_uuid(),
@@ -164,18 +159,20 @@ begin
 
   for v_mov in
     select sm.id, sm.movement_type, sm.quantity, sm.unit_cost, sm.source_id, sm.occurred_at,
-           grl.landed_unit_cost, grl.landed_value, grl.receipt_id,
-           (select d.id from public.landed_cost_documents d where d.receipt_id = grl.receipt_id and d.organisation_id = p_org order by d.created_at desc limit 1) as lc_doc_id
+           lca.landed_unit_cost, lca.landed_value, lca.lc_doc_id
       from public.stock_movements sm
       left join lateral (
-        select grl.landed_unit_cost, grl.landed_value, grl.receipt_id
+        select lca.landed_unit_cost, lca.landed_value, lca.document_id as lc_doc_id
           from public.goods_receipt_lines grl
+          join public.landed_cost_allocations lca
+            on lca.organisation_id = grl.organisation_id
+           and lca.receipt_line_id = grl.id
          where grl.organisation_id = p_org
            and grl.receipt_id = sm.source_id
            and (grl.item_key = v_sku or grl.item_key = p_product_id::text)
-         order by grl.line_no asc
+         order by lca.created_at desc
          limit 1
-      ) grl on sm.source_type = 'goods_receipt'
+      ) lca on sm.source_type = 'goods_receipt'
      where sm.organisation_id = p_org and sm.product_id = p_product_id
      order by sm.occurred_at asc, sm.id asc
   loop
@@ -635,11 +632,6 @@ begin
     v_goods_val := round(v_line.quantity * v_line.unit_cost, 2);
     v_landed_val := v_goods_val + v_cur_alloc;
     v_landed_unit := case when v_line.quantity > 0 then round(v_landed_val / v_line.quantity, 4) else 0 end;
-
-    update public.goods_receipt_lines
-       set landed_value = v_landed_val,
-           landed_unit_cost = v_landed_unit
-     where id = v_line.id;
 
     insert into public.landed_cost_allocations (
       organisation_id, document_id, receipt_line_id, item_key,
