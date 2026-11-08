@@ -96,6 +96,9 @@ jobs:
       - name: ERP-463 / B4 authenticated Server Valuation Edge boundary test
         run: deno test --allow-read tests/contract/serp463_server_valuation_edge_test.ts
 
+      - name: ERP-464 / B5 authenticated Supplier Bill Match Edge boundary test
+        run: deno test --allow-read tests/contract/serp464_supplier_bill_edge_test.ts
+
   rls-isolation-probe:
     name: RLS Tenant Isolation Probe (SERP-337)
     runs-on: ubuntu-latest
@@ -209,6 +212,9 @@ jobs:
 
       - name: ERP-463 / B4 Server Valuation behavioral probe
         run: psql --set ON_ERROR_STOP=1 --file tests/serp463_server_valuation_probe.sql
+
+      - name: ERP-464 / B5 Supplier Bill 3-Way Match behavioral probe
+        run: psql --set ON_ERROR_STOP=1 --file tests/serp464_supplier_bill_3way_matching_probe.sql
 
   serp-356-payment-concurrency:
     name: SERP-356 Payment Concurrency (refund ceiling / settlement batch)
