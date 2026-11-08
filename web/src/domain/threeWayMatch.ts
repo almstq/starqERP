@@ -121,6 +121,70 @@ export interface MatchResult {
   netVariance: number;
 }
 
+/**
+ * Server-authoritative Accounts Payable supplier bill line item (ERP-464).
+ */
+export interface ServerSupplierBillLine {
+  id: string;
+  lineNo: number;
+  poLineId?: string;
+  productId?: string;
+  itemKey: string;
+  description: string;
+  quantity: number;
+  unitCost: number;
+  netAmount: number;
+  taxAmount: number;
+  grossAmount: number;
+}
+
+/**
+ * Server-authoritative Accounts Payable supplier bill entity (ERP-464).
+ */
+export interface ServerSupplierBill {
+  id: string;
+  billNo: string;
+  purchaseOrderId: string;
+  supplierId: string;
+  status: 'matched' | 'unmatched' | 'disputed' | 'settled' | 'void';
+  matchedAmount: number;
+  subtotal: number;
+  taxTotal: number;
+  grossTotal: number;
+  accountingEventId?: string;
+  journalProposalId?: string;
+  matchedBy?: string;
+  matchedAt?: string;
+  lines?: ServerSupplierBillLine[];
+}
+
+/**
+ * Authoritative response payload from api_garage_command(PURCHASE/match) (ERP-464).
+ */
+export interface ServerThreeWayMatchResponse {
+  ok: boolean;
+  state: string;
+  verdict: MatchVerdict;
+  exceptions: MatchException[];
+  supplierBill: ServerSupplierBill;
+  accountingEvent?: {
+    id: string;
+    proposalId?: string;
+    grossAmount: number;
+    status: string;
+    lines: Array<{
+      lineNo: number;
+      accountCode: string;
+      debit: number;
+      credit: number;
+    }>;
+  };
+  balances?: {
+    grni2160: number;
+    ap2110: number;
+  };
+}
+
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 function index<T extends MatchLine & { quantity: number }>(lines: readonly T[]): Map<string, T> {

@@ -56,7 +56,9 @@ insert into expected_public_tables (table_name) values
   -- ERP-462: landed cost documents and allocations
   ('landed_cost_documents'), ('landed_cost_allocations'),
   -- ERP-463: server inventory valuation
-  ('inventory_valuations');
+  ('inventory_valuations'),
+  -- ERP-464: supplier bills and three-way matching
+  ('supplier_bills'), ('supplier_bill_lines');
 
 create temporary table expected_policies (
   table_name text not null,
@@ -171,7 +173,10 @@ insert into expected_policies (table_name, policy_name) values
   ('landed_cost_documents', 'landed_cost_documents_tenant'),
   ('landed_cost_allocations', 'landed_cost_allocations_tenant'),
   -- ERP-463: server inventory valuation RLS policy
-  ('inventory_valuations', 'inventory_valuations_tenant');
+  ('inventory_valuations', 'inventory_valuations_tenant'),
+  -- ERP-464: supplier bills and lines RLS policies
+  ('supplier_bills', 'supplier_bills_tenant'),
+  ('supplier_bill_lines', 'supplier_bill_lines_tenant');
 
 do $$
 begin
@@ -273,13 +278,18 @@ select e.table_name,
 -- (inventory_valuations) joins expected_public_tables;
 -- has RLS enabled and tenant policy (protected-by-RLS, 62+1=63).
 -- Total classified public tables: 74+1=75.
+--
+-- Counts updated 2026-11-08 for ERP-464: 2 new supplier bill tables
+-- (supplier_bills, supplier_bill_lines) join expected_public_tables;
+-- both have RLS enabled and tenant policies (protected-by-RLS, 63+2=65).
+-- Total classified public tables: 75+2=77.
 do $$
   begin
-    if (select count(*) from protection_report) <> 75 then
-      raise exception 'SERP-124/337 expected 75 classified public tables';
+    if (select count(*) from protection_report) <> 77 then
+      raise exception 'SERP-124/337 expected 77 classified public tables';
   end if;
-    if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 63 then
-      raise exception 'SERP-124/337 expected 63 RLS-protected tables';
+    if (select count(*) from protection_report where protection = 'protected-by-RLS') <> 65 then
+      raise exception 'SERP-124/337 expected 65 RLS-protected tables';
   end if;
   if (select count(*) from protection_report where protection = 'protected-by-revoked-grant') <> 11 then
     raise exception 'SERP-124/337 expected 11 revoked-grant-protected tables';
