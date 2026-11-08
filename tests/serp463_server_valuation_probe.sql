@@ -77,67 +77,85 @@ begin
   raise notice '=======================================================';
 
   -- ─────────────────────────────────────────────────────────────────────────
-  -- FIXTURE SETUP: Organizations, Persons, Roles, Locations, CoA, Products
+  -- Fixtures Setup (Tenant A & Tenant B)
   -- ─────────────────────────────────────────────────────────────────────────
-  insert into public.organisations (id, code, name, currency, status)
+  insert into public.organisations (id, slug, legal_name)
   values
-    (t_org_a, 'ORG-VAL-A', 'Tenant A Valuation Corp', 'MVR', 'active'),
-    (t_org_b, 'ORG-VAL-B', 'Tenant B Valuation Corp', 'MVR', 'active')
+    (t_org_a, 'alpha-motors-463', 'Alpha Motors 463'),
+    (t_org_b, 'beta-garages-463', 'Beta Garages 463')
   on conflict (id) do nothing;
 
-  insert into public.persons (id, email, display_name)
+  insert into public.persons (id, person_key, display_label, status)
   values
-    (t_person_qm_a, 'qm.val.a@test.local', 'Tenant A Quartermaster'),
-    (t_person_rcv_a, 'rcv.val.a@test.local', 'Tenant A Receiver'),
-    (t_person_b, 'user.val.b@test.local', 'Tenant B Receiver')
+    (t_person_qm_a, 'person_alpha_qm_463', 'Alice Quartermaster 463', 'active'),
+    (t_person_rcv_a, 'person_alpha_rcv_463', 'Charlie Receiver 463', 'active'),
+    (t_person_b, 'person_beta_rcv_463', 'Bob Foreign Receiver 463', 'active')
   on conflict (id) do nothing;
 
-  insert into public.memberships (id, organisation_id, person_id, role)
+  insert into public.memberships (id, organisation_id, person_id, status)
   values
-    (t_mem_qm_a, t_org_a, t_person_qm_a, 'member'),
-    (t_mem_rcv_a, t_org_a, t_person_rcv_a, 'member'),
-    (t_mem_b, t_org_b, t_person_b, 'member')
-  on conflict (id) do nothing;
+    (t_mem_qm_a, t_org_a, t_person_qm_a, 'active'),
+    (t_mem_rcv_a, t_org_a, t_person_rcv_a, 'active'),
+    (t_mem_b, t_org_b, t_person_b, 'active')
+  on conflict (organisation_id, person_id) do nothing;
 
-  insert into public.organisation_seats (organisation_id, person_id, seat)
+  select id into t_mem_qm_a from public.memberships where organisation_id = t_org_a and person_id = t_person_qm_a;
+  select id into t_mem_rcv_a from public.memberships where organisation_id = t_org_a and person_id = t_person_rcv_a;
+  select id into t_mem_b from public.memberships where organisation_id = t_org_b and person_id = t_person_b;
+
+  insert into public.seats (code, label)
   values
-    (t_org_a, t_person_qm_a, 'quartermaster'),
-    (t_org_a, t_person_rcv_a, 'receiver'),
-    (t_org_b, t_person_b, 'receiver')
-  on conflict do nothing;
+    ('quartermaster', 'Quartermaster'),
+    ('financial_controller', 'Financial Controller'),
+    ('receiver', 'Receiver'),
+    ('payer', 'Payer'),
+    ('counter', 'Counter')
+  on conflict (code) do nothing;
+
+  insert into public.membership_seats (membership_id, seat_code)
+  values
+    (t_mem_qm_a, 'quartermaster'),
+    (t_mem_rcv_a, 'receiver'),
+    (t_mem_b, 'receiver')
+  on conflict (membership_id, seat_code) do nothing;
+
+  insert into public.books (id, organisation_id, code, name, is_default, status)
+  values
+    (t_book_a, t_org_a, 'ALPHA463', 'Alpha Main Book', true, 'active'),
+    (t_book_b, t_org_b, 'BETA463', 'Beta Main Book', true, 'active')
+  on conflict (id) do nothing;
 
   insert into public.locations (id, organisation_id, code, name, kind, active)
   values
-    (t_location_a, t_org_a, 'WH-MAIN-A', 'Main Warehouse A', 'warehouse', true),
-    (t_location_b, t_org_b, 'WH-MAIN-B', 'Main Warehouse B', 'warehouse', true)
+    (t_location_a, t_org_a, 'MAIN-WH-463', 'Alpha Main Warehouse', 'warehouse', true),
+    (t_location_b, t_org_b, 'BETA-WH-463', 'Beta Warehouse', 'warehouse', true)
   on conflict (id) do nothing;
 
-  insert into public.contacts (id, organisation_id, kind, display_name, status)
+  insert into public.contacts (id, organisation_id, kind, display_name)
   values
-    (t_supplier_a, t_org_a, 'supplier', 'Apex Global Supplies', 'active'),
-    (t_supplier_b, t_org_b, 'supplier', 'Boreal Trading', 'active')
+    (t_supplier_a, t_org_a, 'supplier', 'Alpha Parts Ltd'),
+    (t_supplier_b, t_org_b, 'supplier', 'Beta Spares Co')
   on conflict (id) do nothing;
 
-  insert into public.products (id, organisation_id, sku, name, kind, active, sale_allowed, inventory_account)
+  insert into public.products (id, organisation_id, sku, kind, name, active)
   values
-    (t_product_1, t_org_a, 'FILT-OIL-001', 'Heavy Duty Oil Filter', 'stock', true, true, '1310'),
-    (t_product_2, t_org_a, 'BRAKE-PAD-002', 'Ceramic Brake Pads', 'stock', true, true, '1310')
+    (t_product_1, t_org_a, 'FILT-OIL-001', 'stock', 'Heavy Duty Oil Filter', true),
+    (t_product_2, t_org_a, 'BRAKE-PAD-002', 'stock', 'Ceramic Brake Pads', true)
   on conflict (id) do nothing;
 
-  -- Ensure GRNI (2160), Inventory (1310), In-Transit (1320), GST (1410) exist for Tenant A
-  perform public.seed_grni_account_for_organisation(t_org_a);
-
-  insert into public.books (id, organisation_id, code, name, currency, status)
-  values (t_book_a, t_org_a, 'PRIMARY', 'Primary Book A', 'MVR', 'open')
-  on conflict do nothing;
-
-  insert into public.accounts (organisation_id, book_id, code, name, class, type, balance_nature, status)
-  values
-    (t_org_a, t_book_a, '1310', 'Merchandise Inventory', 'ASSET', 'CURRENT_ASSET', 'DEBIT', 'active'),
-    (t_org_a, t_book_a, '1320', 'Goods In Transit Clearing', 'ASSET', 'CURRENT_ASSET', 'DEBIT', 'active'),
-    (t_org_a, t_book_a, '1410', 'Input GST Recoverable', 'ASSET', 'CURRENT_ASSET', 'DEBIT', 'active'),
-    (t_org_a, t_book_a, '2160', 'GRNI Accrued Liability', 'LIABILITY', 'CURRENT_LIABILITY', 'CREDIT', 'active')
-  on conflict do nothing;
+  -- Ensure Chart of Accounts: 1310 (Inventory), 1320 (Transit Clearing), 1410 (Input GST), 2160 (GRNI)
+  insert into public.chart_of_accounts (
+    organisation_id, code, name, account_class, subtype, parent_code, level, currency, posting_control, description
+  ) values
+    (t_org_a, '1310', 'Stock on Hand (Inventory)', 'ASSET', 'INVENTORY', '1300', 3, 'MVR', 'control', 'Inventory stock asset'),
+    (t_org_b, '1310', 'Stock on Hand (Inventory)', 'ASSET', 'INVENTORY', '1300', 3, 'MVR', 'control', 'Inventory stock asset'),
+    (t_org_a, '1320', 'Goods in Transit (Clearing)', 'ASSET', 'INVENTORY', '1300', 3, 'MVR', 'postable', 'Landed cost clearing'),
+    (t_org_b, '1320', 'Goods in Transit (Clearing)', 'ASSET', 'INVENTORY', '1300', 3, 'MVR', 'postable', 'Landed cost clearing'),
+    (t_org_a, '1410', 'Input GST Recoverable (MIRA)', 'ASSET', 'INPUT_TAX_RECOVERABLE', '1400', 3, 'MVR', 'control', 'Recoverable tax asset'),
+    (t_org_b, '1410', 'Input GST Recoverable (MIRA)', 'ASSET', 'INPUT_TAX_RECOVERABLE', '1400', 3, 'MVR', 'control', 'Recoverable tax asset'),
+    (t_org_a, '2160', 'Goods Received Not Invoiced', 'LIABILITY', 'CURRENT_LIABILITY', '2100', 3, 'MVR', 'control', 'GRNI accrual liability'),
+    (t_org_b, '2160', 'Goods Received Not Invoiced', 'LIABILITY', 'CURRENT_LIABILITY', '2100', 3, 'MVR', 'control', 'GRNI accrual liability')
+  on conflict (organisation_id, code) do nothing;
 
   -- ─────────────────────────────────────────────────────────────────────────
   -- STEP 1: Invariant 1 — Schema & RLS Setup
