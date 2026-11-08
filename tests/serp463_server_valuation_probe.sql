@@ -157,6 +157,13 @@ begin
     (t_org_b, '2160', 'Goods Received Not Invoiced', 'LIABILITY', 'CURRENT_LIABILITY', '2100', 3, 'MVR', 'control', 'GRNI accrual liability')
   on conflict (organisation_id, code) do nothing;
 
+  -- Ensure Landed Cost Document Sequence
+  insert into public.document_sequences (organisation_id, sequence_type, prefix, padding)
+  values
+    (t_org_a, 'landed_cost', 'LCA-', 5),
+    (t_org_b, 'landed_cost', 'LCA-', 5)
+  on conflict (organisation_id, sequence_type) do nothing;
+
   -- ─────────────────────────────────────────────────────────────────────────
   -- STEP 1: Invariant 1 — Schema & RLS Setup
   -- ─────────────────────────────────────────────────────────────────────────
