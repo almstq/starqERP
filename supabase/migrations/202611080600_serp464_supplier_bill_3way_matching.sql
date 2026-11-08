@@ -2632,63 +2632,6 @@ begin
             'reconciliation_1310', public.inventory_1310_reconciliation(target_org)
           );
         end;
-      else
-        -- Prior job-event lifecycle path for quote, match, pay (and non-B1/B2 steps)
-        -- In B1, do not create or mutate commercial_documents.
-        target_job_id := nullif(command->>'job_id', '')::uuid;
-        if target_job_id is null and nullif(trim(command->>'job_no'), '') is not null then
-          select id into target_job_id from public.garage_jobs
-           where organisation_id = target_org and job_no = trim(command->>'job_no');
-        end if;
-
-        if target_job_id is not null then
-          select * into target_job from public.garage_jobs
-           where organisation_id = target_org and id = target_job_id for update;
-          if not found then
-            raise exception 'job_not_found';
-          end if;
-          target_job_no := target_job.job_no;
-          c_name := target_job.customer_name;
-          v_reg := target_job.vehicle_reg;
-          c_phone := target_job.customer_phone;
-          next_state := target_job.state;
-
-          event_payload := jsonb_strip_nulls(jsonb_build_object(
-            'summary', nullif(left(trim(coalesce(command->>'summary', '')), 500), ''),
-            'customer_name', coalesce(c_name, nullif(left(trim(coalesce(command->>'customer_name', command->>'customer', '')), 200), '')),
-            'phone', coalesce(c_phone, nullif(left(trim(coalesce(command->>'phone', command->>'customer_phone', '')), 50), '')),
-            'customer_phone', coalesce(c_phone, nullif(left(trim(coalesce(command->>'phone', command->>'customer_phone', '')), 50), '')),
-            'vehicle_reg', coalesce(v_reg, nullif(left(trim(coalesce(command->>'vehicle_reg', command->>'vehicle', '')), 100), '')),
-            'scm_step', nullif(scm_step, ''),
-            'item', nullif(left(trim(coalesce(command->>'item', command->>'description', '')), 300), ''),
-            'qty', nullif(command->>'qty', ''),
-            'amount', nullif(coalesce(command->>'amount', command->>'cost', ''), ''),
-            'purchase_order_id', v_po_id,
-            'poId', nullif(command->>'poId', '')
-          ));
-
-          insert into public.job_events
-            (id, organisation_id, job_id, event_type, from_state, to_state,
-             actor_person_id, acting_seat, idempotency_key, payload)
-          values
-            (event_id, target_org, target_job_id, event_name,
-             target_job.state, next_state, target_person, target_seat, command_key, event_payload);
-
-          response := jsonb_build_object(
-            'ok', true,
-            'state', 'accepted',
-            'event', jsonb_build_object(
-              'id', event_id,
-              'type', event_name,
-              'job_id', target_job_id,
-              'job_no', target_job_no,
-              'customer_name', c_name,
-              'vehicle_reg', v_reg,
-              'phone', c_phone,
-              'to_state', next_state,
-              'fields', event_payload
-            )
-          );
       elsif scm_step = 'match' then
         -- ------------------------------------------------------------------
         -- B5 / ERP-464: Supplier Bill Three-Way Matching & Payable Creation
@@ -2788,7 +2731,22 @@ begin
 
           v_bill_lines := coalesce(command->'lines', command->'items', command->'bill_lines');
           if v_bill_lines is null or jsonb_typeof(v_bill_lines) <> 'array' or jsonb_array_length(v_bill_lines) = 0 then
-            raise exception 'bill_lines_required';
+            select jsonb_agg(jsonb_build_object(
+              'po_line_id', pol.id,
+              'po_line_no', pol.line_no,
+              'product_id', pol.product_id,
+              'quantity', pol.quantity,
+              'unit_cost', pol.unit_price,
+              'tax_rate', pol.tax_rate,
+              'description', pol.description
+            ))
+              into v_bill_lines
+              from public.commercial_document_lines pol
+             where pol.organisation_id = target_org and pol.document_id = v_po_id;
+
+            if v_bill_lines is null or jsonb_typeof(v_bill_lines) <> 'array' or jsonb_array_length(v_bill_lines) = 0 then
+              raise exception 'bill_lines_required';
+            end if;
           end if;
 
           -- 3. Duplicate Bill Guard: cannot match same bill twice against same PO
@@ -3020,6 +2978,63 @@ begin
 
           return response;
         end;
+      else
+        -- Prior job-event lifecycle path for quote, match, pay (and non-B1/B2 steps)
+        -- In B1, do not create or mutate commercial_documents.
+        target_job_id := nullif(command->>'job_id', '')::uuid;
+        if target_job_id is null and nullif(trim(command->>'job_no'), '') is not null then
+          select id into target_job_id from public.garage_jobs
+           where organisation_id = target_org and job_no = trim(command->>'job_no');
+        end if;
+
+        if target_job_id is not null then
+          select * into target_job from public.garage_jobs
+           where organisation_id = target_org and id = target_job_id for update;
+          if not found then
+            raise exception 'job_not_found';
+          end if;
+          target_job_no := target_job.job_no;
+          c_name := target_job.customer_name;
+          v_reg := target_job.vehicle_reg;
+          c_phone := target_job.customer_phone;
+          next_state := target_job.state;
+
+          event_payload := jsonb_strip_nulls(jsonb_build_object(
+            'summary', nullif(left(trim(coalesce(command->>'summary', '')), 500), ''),
+            'customer_name', coalesce(c_name, nullif(left(trim(coalesce(command->>'customer_name', command->>'customer', '')), 200), '')),
+            'phone', coalesce(c_phone, nullif(left(trim(coalesce(command->>'phone', command->>'customer_phone', '')), 50), '')),
+            'customer_phone', coalesce(c_phone, nullif(left(trim(coalesce(command->>'phone', command->>'customer_phone', '')), 50), '')),
+            'vehicle_reg', coalesce(v_reg, nullif(left(trim(coalesce(command->>'vehicle_reg', command->>'vehicle', '')), 100), '')),
+            'scm_step', nullif(scm_step, ''),
+            'item', nullif(left(trim(coalesce(command->>'item', command->>'description', '')), 300), ''),
+            'qty', nullif(command->>'qty', ''),
+            'amount', nullif(coalesce(command->>'amount', command->>'cost', ''), ''),
+            'purchase_order_id', v_po_id,
+            'poId', nullif(command->>'poId', '')
+          ));
+
+          insert into public.job_events
+            (id, organisation_id, job_id, event_type, from_state, to_state,
+             actor_person_id, acting_seat, idempotency_key, payload)
+          values
+            (event_id, target_org, target_job_id, event_name,
+             target_job.state, next_state, target_person, target_seat, command_key, event_payload);
+
+          response := jsonb_build_object(
+            'ok', true,
+            'state', 'accepted',
+            'event', jsonb_build_object(
+              'id', event_id,
+              'type', event_name,
+              'job_id', target_job_id,
+              'job_no', target_job_no,
+              'customer_name', c_name,
+              'vehicle_reg', v_reg,
+              'phone', c_phone,
+              'to_state', next_state,
+              'fields', event_payload
+            )
+          );
         else
           -- Standalone procurement step recording to outbox (no job context)
           event_payload := jsonb_strip_nulls(jsonb_build_object(
